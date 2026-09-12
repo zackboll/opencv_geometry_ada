@@ -21,6 +21,14 @@ package OpenCV.Geometry.Internal.C_API is
    type Point_I32_Array is array (Natural range <>) of aliased Point_I32
    with Convention => C;
 
+   type Rect_I32 is record
+      X      : Interfaces.Integer_32;
+      Y      : Interfaces.Integer_32;
+      Width  : Interfaces.Integer_32;
+      Height : Interfaces.Integer_32;
+   end record
+   with Convention => C;
+
    type C_Moments is record
       M00 : Interfaces.C.double;
       M10 : Interfaces.C.double;
@@ -107,6 +115,15 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_approximate_curve";
+
+   function Bounding_Rect
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access Rect_I32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_bounding_rect";
 
    function Last_Error_Message return String;
 

@@ -75,4 +75,11 @@ package OpenCV.Geometry is
      (Points : Contour; Epsilon : OpenCV.Core.Float64_Value; Closed : Boolean)
       return Contour;
 
+   --  Minimal upright axis-aligned bounding rectangle of Points. Integer
+   --  extent is inclusive, so Width = X_Max - X_Min + 1 and Height =
+   --  Y_Max - Y_Min + 1. Empty input returns (0, 0, 0, 0). OpenCV.Core.Rect
+   --  origins are nonnegative; a native box with negative X or Y raises
+   --  OpenCV.OpenCV_Error. Points is unchanged.
+   function Bounding_Rect (Points : Contour) return OpenCV.Core.Rect;
+
 end OpenCV.Geometry;

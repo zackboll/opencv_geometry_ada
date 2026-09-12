@@ -312,4 +312,45 @@ package body OpenCV.Geometry is
          end if;
       end;
    end Approximate_Curve;
+
+   function To_Public_Rect
+     (Value : Internal.C_API.Rect_I32) return OpenCV.Core.Rect
+   is
+      use type Interfaces.Integer_32;
+   begin
+      if Value.X < 0
+        or else Value.Y < 0
+        or else Value.Width < 0
+        or else Value.Height < 0
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "bounding rect cannot be represented as OpenCV.Core.Rect");
+      end if;
+
+      return
+        (X      => OpenCV.Core.Size_Coordinate (Value.X),
+         Y      => OpenCV.Core.Size_Coordinate (Value.Y),
+         Width  => OpenCV.Core.Size_Coordinate (Value.Width),
+         Height => OpenCV.Core.Size_Coordinate (Value.Height));
+   end To_Public_Rect;
+
+   function Bounding_Rect (Points : Contour) return OpenCV.Core.Rect is
+      Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Result : aliased Internal.C_API.Rect_I32 :=
+        (X => 0, Y => 0, Width => 0, Height => 0);
+      Status : Internal.C_API.Status;
+   begin
+      if Packed'Length = 0 then
+         Status := Internal.C_API.Bounding_Rect (null, 0, Result'Access);
+      else
+         Status :=
+           Internal.C_API.Bounding_Rect
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Result'Access);
+      end if;
+      Raise_On_Error (Status, "bounding rect");
+      return To_Public_Rect (Result);
+   end Bounding_Rect;
 end OpenCV.Geometry;

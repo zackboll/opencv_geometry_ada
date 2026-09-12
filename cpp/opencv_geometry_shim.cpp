@@ -285,6 +285,56 @@ opencv_geometry_convex_hull(
 }
 
 opencv_geometry_status
+opencv_geometry_bounding_rect(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rect_i32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null bounding rect output pointer");
+    }
+    out_rect->x = 0;
+    out_rect->y = 0;
+    out_rect->width = 0;
+    out_rect->height = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "bounding rect point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: OpenCV 4.10 and 5.x reject an empty point
+    // vector because checkVector cannot determine an element depth.
+    // Geometry defines an empty contour to produce an empty rectangle,
+    // matching pointSetBoundingRect npoints == 0 return Rect().
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+
+    try {
+        std::vector<cv::Point> contour;
+        contour.reserve(static_cast<std::size_t>(point_count));
+        for (int32_t index = 0; index < point_count; ++index) {
+            contour.emplace_back(points[index].x, points[index].y);
+        }
+        const cv::Rect box = cv::boundingRect(contour);
+        out_rect->x = box.x;
+        out_rect->y = box.y;
+        out_rect->width = box.width;
+        out_rect->height = box.height;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        out_rect->x = 0;
+        out_rect->y = 0;
+        out_rect->width = 0;
+        out_rect->height = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
 opencv_geometry_approximate_curve(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,

@@ -16,14 +16,18 @@ Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
 Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
-`Convex_Hull`, and `Approximate_Curve`. `Contour` is a subtype of
-`OpenCV.Core.Point_Array`; storage stays Ada-owned. `Convex_Hull` returns
+`Convex_Hull`, `Approximate_Curve`, and `Bounding_Rect`. `Contour` is a subtype
+of `OpenCV.Core.Point_Array`; storage stays Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
 counterclockwise using OpenCV's convention (X right, Y up); image coordinates
 that increase Y downward may look reversed. `Approximate_Curve` applies
 Douglas-Peucker; `Epsilon` is the maximum deviation in the range
 `0.0 <= Epsilon < 1.0E30` and `Closed` connects the last vertex to the first.
-Empty input yields an empty Ada-owned contour.
+Empty input yields an empty Ada-owned contour. `Bounding_Rect` returns an
+upright axis-aligned `OpenCV.Core.Rect`. Integer extent is inclusive, so a
+point set spanning X=0..4 and Y=0..3 has Width=5 and Height=4. Empty input
+returns (0, 0, 0, 0). Negative native origins cannot be represented by
+`OpenCV.Core.Rect` and raise `OpenCV.OpenCV_Error`.
 
 Moments include all 24 spatial, central and normalized fields through order 3.
 Handle zero `M_00` before deriving a centroid; self-intersecting contours can
