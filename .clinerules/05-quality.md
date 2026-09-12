@@ -53,8 +53,8 @@ binding.
 Good candidates include:
 
 - range and bounds validation
-- matrix dimension validation
-- matrix type and channel validation
+- contour count checks
+- point packing and unpacking helpers
 - index calculations
 - conversion helpers
 - value-type operations
@@ -125,16 +125,14 @@ Typical checks include:
 
 ## Validation-Boundary Review
 
-Before finishing any feature that modifies `cpp/opencv_geometry_shim.cpp`, inspect every new or changed C++ guard involving:
+Before finishing any feature that modifies
+`cpp/opencv_geometry_shim.cpp`, inspect every new or changed C++ guard
+involving:
 
 - empty
-- rows
-- cols
-- dims
-- depth
-- channels
-- type
-- shape
+- point counts and capacities
+- pointer and count combinations
+- selectors such as oriented or closed
 - semantic ranges
 - public mode or enum combinations
 

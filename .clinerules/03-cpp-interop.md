@@ -1,331 +1,222 @@
 # C++ Shim and ABI Rules
 
-## Stable C ABI Boundary
+Module boundaries, native backends, and platform C++ isolation are in
+`.clinerules/01-architecture.md`. Public Ada design is in
+`.clinerules/02-ada-design.md`. This file covers the Geometry C ABI and
+shim.
 
-All communication between Ada and OpenCV C++ code must cross a C-compatible ABI boundary.
+## Stable C ABI
 
-Export shim functions with `extern "C"`.
+All communication between Ada and OpenCV C++ must cross a C-compatible
+ABI. Export shim functions with `extern "C"`.
 
-Where the shim header may also be consumed by C code, use the normal C++ guard pattern:
+Never expose across the boundary:
 
-```c
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* C ABI declarations */
-
-#ifdef __cplusplus
-}
-#endif
-```
-
-Never expose C++ classes or C++ ABI-dependent types directly to Ada.
-
-Do not expose across the ABI boundary:
-
-- C++ references
-- C++ exceptions
-- STL containers
-- C++ templates
-- overloaded C++ functions
-- C++ name-mangled symbols
-- `std::string`
-- `cv::Mat` or other OpenCV classes by value
-
-Represent C++ objects using opaque handles.
-
-For example:
-
-```c
-/* Mat handles are defined by the opencv_core dependency. */
-typedef struct opencv_core_mat_handle opencv_core_mat_handle;
-```
-
-The actual structure definition remains private to the C++ implementation.
+- C++ references, exceptions, templates, or name-mangled symbols
+- STL containers, including `std::string` and `std::vector`
+- `cv::Mat`, `cv::Point`, `cv::Moments`, or other OpenCV classes
+- Core Mat handles or any Core module-bridge type
 
 Keep the ABI simple, explicit, and mechanically bindable from Ada.
 
-## ABI-Safe Types
+## ABI-safe types
 
-Use simple, explicitly representable C-compatible types across the Ada/C++ boundary.
+Use C-compatible types:
 
-Prefer:
+- fixed-width integers from `<stdint.h>`
+- `float` and `double`
+- plain C structs whose layout is intentionally part of the ABI
+- explicit pointer + count pairs for point buffers
+- fixed-width integer status values and 0/1 selectors
 
-- fixed-width integer types from `<stdint.h>`
-- opaque pointers for C++ object handles
-- plain C structs only when their layout is intentionally part of the ABI
-- explicit pointer + length pairs for buffers and arrays
-- fixed-width integer status values and flags
+Do not expose C++ `bool`, C++ enums, references, STL types, bitfields,
+or overloaded C++ signatures.
 
-Avoid exposing ABI-sensitive or compiler-dependent types directly.
+Geometry currently uses:
 
-Do not expose:
+- `opencv_geometry_point_i32` for packed contour points
+- `opencv_geometry_moments` for the 24 moment fields
+- `int32_t` point counts and 0/1 selectors
+- `double` scalar outputs
 
-- C++ `bool`
-- C++ enum types
-- references
-- STL types
-- compiler-specific class layouts
-- bitfields
-- overloaded function signatures
+Do not assume Ada `Integer` or `Natural` match C integer width. All
+representation conversions belong in the thin Ada interoperability
+layer.
 
-Use explicit representations such as:
+This crate does not currently use opaque C++ object handles. Do not add
+Mat handles, Core module-bridge includes, or a destroy/finalization
+protocol unless an architectural decision introduces a Geometry-owned
+C++ object.
 
-```c
-uint8_t
-int8_t
-uint16_t
-int16_t
-int32_t
-uint32_t
-int64_t
-uint64_t
-float
-double
-```
+## C ABI naming
 
-For boolean values, prefer an explicitly defined integer representation such as `uint8_t`, with documented values `0` and `1`.
+Prefix every exported Geometry shim symbol with `opencv_geometry_`.
+Use lowercase `snake_case`. Each exported function must have one
+unambiguous C ABI signature.
 
-Use `size_t` only when the value genuinely represents a native memory size, buffer size, or byte offset and the Ada binding deliberately maps it to the corresponding C-compatible type.
-
-Do not assume Ada `Integer`, `Natural`, or other native Ada scalar types have the same ABI representation as their C or C++ counterparts.
-
-All representation conversions belong in the thin Ada interoperability layer.
-
-## Opaque Handle Ownership
-
-Every opaque C++ object handle must have explicit ownership semantics.
-
-For owned objects:
-
-- the shim allocates or constructs the underlying C++ object
-- Ada stores only the opaque handle
-- Ada finalization calls the matching shim destroy function
-- destroy functions should safely accept a null handle
-- ownership transfer must be explicit and documented
-
-Do not expose raw `cv::Mat *` or other OpenCV class pointers directly as the public ABI type.
-
-Prefer dedicated opaque handle types for each object family.
-
-The initial Geometry shim uses Ada-owned point buffers, not Mat handles.
-It must not include the Core module bridge or link the Core shim.
-
-After destroying an owned object, the Ada side should clear its stored handle so repeated finalization cannot double-free the object.
-
-## C ABI Naming
-
-Use a consistent module-specific prefix for every exported C shim symbol.
-
-For the OpenCV geometry crate, use:
-
-`opencv_geometry_`
-
-Follow the prefix with the object or functional area and then the operation.
-
-Examples:
+Existing examples:
 
 ```c
-opencv_geometry_cvt_color
 opencv_geometry_last_error_message
+opencv_geometry_contour_area
+opencv_geometry_arc_length
+opencv_geometry_contour_moments
 ```
 
-Other OpenCV module crates should use their own prefixes, for example:
+Do not export short generic names such as `clone` or `destroy`. Do not
+add image-processing symbols such as `opencv_geometry_cvt_color`.
 
-- `opencv_core_`
-- `opencv_imgcodecs_`
-- `opencv_videoio_`
+## Point buffers and variable-length results
 
-Use lowercase `snake_case` for C ABI symbols.
+Geometry inputs and outputs are C-compatible point buffers, not Mat
+handles.
 
-Do not export short or generic names such as:
+Pack and unpack X/Y explicitly. Copy in Ada array iteration order.
+Check the count range before indexing. Never reinterpret public Ada
+point storage as C records.
 
-- `mat_create`
-- `clone`
-- `destroy`
+STL containers may exist only inside the shim. They must never cross
+the C ABI. Borrowed pointers to temporary C++ storage must never
+escape the shim.
 
-Do not encode C++ overloads into ambiguous symbol names.
+Do not return `new`/`malloc` allocated arrays that require Ada callers
+to use C++ ownership rules.
 
-Each exported function must have one unambiguous C ABI signature.
+Prefer caller-provided buffers:
 
-## Strings and Diagnostic Messages
+- Ada allocates a C-compatible output array
+- the ABI receives pointer, capacity, and an output count
+- the shim writes at most `capacity` points and returns the count
+- Ada constructs the public result from that count
 
-Do not transfer ownership of C++ strings directly across the ABI boundary.
+When a safe mathematical upper bound is known from the input, allocate
+that capacity on the Ada side rather than inventing a separate C++
+allocation protocol.
 
-Never expose `std::string` to Ada.
+Preserve iteration order. Handle empty input without indexing.
 
-For diagnostic and exception messages, prefer thread-local storage owned by the C++ shim.
+Copy all 24 moments fields explicitly. Do not `memcpy` a C++
+`cv::Moments` object across the ABI.
 
-The shim may expose a function conceptually similar to:
+## Diagnostics and status
+
+Do not transfer ownership of C++ strings across the ABI. Diagnostic
+storage is thread-local and owned by the shim.
 
 ```c
 const char *opencv_geometry_last_error_message(void);
 ```
 
-The returned pointer is borrowed.
+The returned pointer is borrowed. Ada must not free it. It is valid
+only until a later shim call on the same thread changes the error
+state. The thin Ada layer must copy the message into an Ada-owned
+string before higher layers use it.
 
-Document that:
+Never require Ada to call C++ allocation or deallocation routines.
 
-- Ada must not free the returned pointer
-- the pointer is valid only until a subsequent shim operation changes the error state on the same thread
-- callers that need to retain the message must copy it immediately
-- error state must be maintained independently per thread
+Functions that can fail return `opencv_geometry_status` and place
+successful results in output parameters. Status constants are:
 
-The thin Ada layer should copy borrowed C strings into Ada-owned strings before exposing the diagnostic to higher layers.
+- `OPENCV_GEOMETRY_OK`
+- `OPENCV_GEOMETRY_ERROR_OPENCV`
+- `OPENCV_GEOMETRY_ERROR_STD`
+- `OPENCV_GEOMETRY_ERROR_UNKNOWN`
+- `OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT`
 
-For general API strings passed from Ada to OpenCV, use explicitly documented UTF-8 encoded C strings unless the underlying OpenCV API requires another representation.
+On success, return `OPENCV_GEOMETRY_OK` after initializing required
+outputs. On failure, return a nonzero status, leave outputs in a known
+safe state, and preserve a useful diagnostic. Initialize outputs to
+safe values before any operation that may throw.
 
-For returned strings that are ordinary API data rather than diagnostics, define explicit ownership and lifetime rules instead of using the last-error mechanism.
+Status values are part of the published C ABI and must remain stable
+once released.
 
-Never require Ada code to invoke C++ allocation or deallocation routines directly.
+## Exception containment
 
-## Status and Return Conventions
-
-Use a consistent explicit status representation for shim operations that can fail.
-
-Prefer a fixed-width integer status type with named constants so the ABI representation is explicit.
-
-For example:
-
-```c
-typedef int32_t opencv_geometry_status;
-
-#define OPENCV_GEOMETRY_OK                     ((opencv_geometry_status)0)
-#define OPENCV_GEOMETRY_ERROR_OPENCV           ((opencv_geometry_status)1)
-#define OPENCV_GEOMETRY_ERROR_STD              ((opencv_geometry_status)2)
-#define OPENCV_GEOMETRY_ERROR_UNKNOWN          ((opencv_geometry_status)3)
-#define OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT ((opencv_geometry_status)4)
-```
-
-Functions that can fail should return the status code and place successful results in output parameters.
-
-For example:
-
-```c
-opencv_geometry_status
-opencv_geometry_cvt_color(
-    const opencv_core_mat_handle *source,
-    opencv_core_mat_handle *destination,
-    int32_t conversion);
-```
-
-On success:
-
-- return `OPENCV_GEOMETRY_OK`
-- initialize all required output parameters
-
-On failure:
-
-- return a nonzero status
-- put output handles into a known safe state, normally null
-- preserve useful diagnostic information through the shim error-message mechanism
-
-Output parameters should be initialized to safe values before performing operations that may throw.
-
-Do not return an object handle as the sole indication of success or failure when meaningful error information may be available.
-
-Functions that cannot reasonably fail, such as null-safe destruction, may return `void`.
-
-Status values become part of the published C ABI and must remain stable once released.
-
-## C++ Exception Handling
-
-Every exported shim function that invokes potentially throwing C++ or OpenCV code must prevent exceptions from escaping across `extern "C"`.
-
-Use a consistent exception translation policy.
-
-Conceptually:
+Every exported shim function that can throw must catch C++ exceptions
+before leaving `extern "C"`.
 
 ```cpp
 try {
     /* OpenCV operation */
-}
-catch (const cv::Exception& e) {
+} catch (const cv::Exception& e) {
     /* preserve diagnostic and return OPENCV_GEOMETRY_ERROR_OPENCV */
-}
-catch (const std::exception& e) {
+} catch (const std::exception& e) {
     /* preserve diagnostic and return OPENCV_GEOMETRY_ERROR_STD */
-}
-catch (...) {
+} catch (...) {
     /* preserve diagnostic and return OPENCV_GEOMETRY_ERROR_UNKNOWN */
 }
 ```
 
-Catch more specific exceptions before more general exceptions.
+Catch more specific exceptions first. Cleanup paths exposed through
+the C ABI must not throw. Ada must never depend on the C++ unwinder
+crossing the ABI.
 
-Do not allow destructors or cleanup paths exposed through the C ABI to throw.
+Native failures become `OpenCV.OpenCV_Error` through a private Ada
+helper. Do not expose shim status codes in the public Ada API.
 
-The Ada layer must never depend on the C++ runtime unwinder crossing the ABI boundary.
+## Native OpenCV calls
 
-## Argument Validation
+The shim calls the authoritative OpenCV implementation. Select headers
+and native libraries as required by `.clinerules/01-architecture.md`.
 
-Use Ada's type system and contracts as the primary validation mechanism in the thick public API.
+The shim may contain version-specific native compatibility handling
+when OpenCV 4 and OpenCV 5 declarations differ. It must not paper over
+those differences by depending on Ada Imgproc or Core's C++ shim.
 
-Prefer:
+Do not reimplement Geometry algorithms in the shim. Call OpenCV.
 
-- constrained subtypes
-- strong domain-specific types
-- preconditions
-- range checks
-- explicit null-state checks
+## Argument validation
 
-to passing invalid values into the shim and waiting for OpenCV to reject them.
+Thick Ada is the single source of truth for public semantic policy.
+The shim must not reimplement that policy for defense in depth,
+identical diagnostics, or friendlier messages.
 
-The thick Ada API is the single source of truth for public semantic policy. The C++ shim must not reimplement that policy merely for defense in depth, identical diagnostics, or friendlier messages.
+The shim still protects the ABI. It must not blindly dereference null
+output pointers, null point buffers with a positive count, or other
+pointer/count combinations that would cause undefined behavior.
 
-The C++ shim must nevertheless perform sufficient defensive validation to protect the ABI boundary.
-
-The shim must not blindly dereference:
-
-- null object handles
-- null output pointers
-- invalid buffer pointers
-- obviously invalid lengths or dimensions
-
-when doing so could cause undefined behavior.
-
-A typical result-producing shim function should:
+A typical result-producing Geometry shim function should:
 
 1. clear the thread-local error state
 2. initialize every output parameter to a safe value
-3. reject null output pointers and null input handles
+3. reject null outputs and unsafe pointer/count combinations
 4. reject any other condition required to prevent undefined behavior
 5. call OpenCV
-6. publish owned outputs only after success
+6. publish outputs only after success
 7. translate C++ exceptions into the C status model
 
-The shim should not contain a second copy of the public Ada preconditions.
+Distinguish:
 
-Distinguish between:
+1. Ada-level programmer errors, normally caught before the ABI
+2. invalid ABI arguments, which return an explicit shim status
+3. valid inputs rejected by OpenCV, which preserve the OpenCV
+   diagnostic
 
-1. Ada-level programmer errors
-2. invalid ABI arguments
-3. valid inputs rejected by OpenCV
+Do not duplicate semantic validation in both Ada and C++ unless it is
+required for safety.
 
-Ada-level programmer errors should normally be caught before crossing the ABI boundary.
-
-Invalid ABI arguments should return an explicit shim error status rather than causing undefined behavior.
-
-Valid operations rejected by OpenCV should preserve the resulting OpenCV diagnostic and be translated through the normal exception/error mechanism.
-
-Do not duplicate semantic validation in both Ada and C++ unless it is required for safety.
-
-If a semantic-looking C++ check must remain because bypassing it would be unsafe, document it with:
+If a semantic-looking C++ check must remain because bypassing it would
+be unsafe, document it with:
 
     // ABI safety: <specific reason this cannot safely be Ada-only>
 
 Acceptable reasons include:
 
-- OpenCV does not validate this condition before performing raw pointer access
+- OpenCV does not validate this condition before raw pointer access
 - violating this condition can cause out-of-bounds access
-- OpenCV accepts this representation but leaves part of the result uninitialized
-- the shim itself performs pointer arithmetic that requires this invariant
-- OpenCV performs signed integer arithmetic on dimensions or counts before it
-  validates the result, so overflow must be rejected at the ABI boundary
+- OpenCV accepts this representation but leaves part of the result
+  uninitialized
+- the shim itself performs pointer arithmetic that requires this
+  invariant
+- OpenCV performs signed integer arithmetic on counts before it
+  validates the result, so overflow must be rejected at the ABI
 
 "OpenCV might reject this" is not sufficient justification.
 
-A raw C ABI caller is not entitled to the complete friendly public Ada contract. OpenCV should normally be allowed to reject invalid semantic input that reaches the shim when doing so is safe.
+A raw C ABI caller is not entitled to the complete public Ada contract.
+OpenCV should normally be allowed to reject invalid semantic input that
+reaches the shim when doing so is safe.
 
-Do not add postcondition checks that merely restate documented OpenCV behavior unless they protect ownership, memory, or ABI safety.
+Do not add postcondition checks that merely restate documented OpenCV
+behavior unless they protect ownership, memory, or ABI safety.

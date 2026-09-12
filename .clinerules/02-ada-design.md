@@ -6,7 +6,9 @@ The public API must look and feel like native Ada.
 
 Do not mechanically transliterate the OpenCV C++ API.
 
-Preserve OpenCV semantics, capabilities, and expected performance, but choose Ada constructs that best express those semantics.
+Preserve OpenCV Geometry semantics, capabilities, and expected
+performance, but choose Ada constructs that best express those
+semantics.
 
 Prefer:
 
@@ -15,11 +17,8 @@ Prefer:
 - overloads where they improve readability
 - default parameters where appropriate
 - ranges and subtypes where they add useful constraints
-- controlled types for deterministic resource management
-- generics for compile-time type families
 - contracts for meaningful preconditions, postconditions, and invariants
 - Ada exceptions for exceptional failures
-- clear package boundaries instead of large monolithic APIs
 
 Avoid exposing:
 
@@ -31,157 +30,118 @@ Avoid exposing:
 - STL concepts
 - unnecessary `Interfaces.C` types
 
-A user working only with the thick Ada layer should not need to understand the C++ shim.
+A user working only with the thick Ada layer should not need to
+understand the C++ shim.
 
-## Tagged Types and Object-Oriented Design
+## Public package and types
 
-Use Ada tagged types and primitive operations when the underlying OpenCV abstraction has genuine object identity, ownership, or object-oriented behavior.
+Expose this crate under `OpenCV.Geometry`. Do not define a competing
+root `OpenCV` package. Core owns `OpenCV` and `OpenCV.Core`.
 
-The initial Geometry API uses only Ada-owned point arrays and value records.
-Do not add Mat operations or a module bridge to this feature.
+Reuse public Core value types where they already exist: `Point`,
+`Point_Array`, `Size`, `Rect`, `Scalar`, and `Float64_Value`.
 
-Do not manufacture tagged-type inheritance hierarchies merely to imitate C++ classes.
+Reusing a Core value type is not permission to use `OpenCV.Core.Mat`,
+borrow Mat handles, or introduce a Core module bridge. Geometry
+currently has no Mat API. Do not add one for convenience.
 
-In particular, do not create separate subclasses such as:
+`OpenCV.Geometry` may define a public type only when Geometry requires
+it and Core does not already supply it. `Contour` is a subtype of
+`OpenCV.Core.Point_Array`. `Moments_Result` is a Geometry-owned value
+record.
 
-- `UInt8_Mat`
-- `Float_Mat`
-- `RGB_Mat`
+Keep Geometry types as ordinary Ada arrays and records unless a later
+architectural decision introduces genuine object identity. Do not
+manufacture tagged-type hierarchies, Mat subclasses, or Core-style
+controlled wrappers.
 
-solely to represent runtime OpenCV matrix type metadata.
+Do not add `Find_Contours`, `CvtColor`, filtering, drawing, or other
+image-processing operations to this crate. Those belong in Imgproc.
 
-Use tagged types where they improve the Ada abstraction, not simply because the corresponding OpenCV type is a C++ class.
+## Public naming
 
-Common OpenCV value types and matrix metadata abstractions must be reused from `OpenCV.Core` where they already exist. This includes `Mat`, `Point`, `Size`, `Rect`, `Scalar`, `Depth_Type`, `Mat_Type`, channel information, and their associated operations.
+Use Ada-style names for Geometry operations:
 
-`OpenCV.Geometry` may define a public type only when it is specifically required by the geometry module and is not already supplied by `OpenCV.Core`.
+- `Contour_Area`
+- `Arc_Length`
+- `Compute_Moments`
 
-## Public Naming Conventions
+Prefer descriptive Ada names over terse C++ spellings. Do not expose
+shim status codes, opaque handles, or `Interfaces.C` types in the
+public API.
 
-Reuse recognizable OpenCV domain types from `OpenCV.Core` rather than redeclaring them in `OpenCV.Geometry`.
+Keep raw interoperability under private children such as
+`OpenCV.Geometry.Internal.C_API`. Public packages must not import C
+shim functions directly.
 
-Examples include:
+## Variable-length results
 
-- `Mat`
-- `Point`
-- `Size`
-- `Scalar`
-- `Range`
+Public variable-length Geometry results should normally be Ada-owned.
 
-Reuse `OpenCV.Core` matrix operations such as `Rows`, `Columns`, `Channels`, `Depth`, `Element_Type`, and `Clone` rather than redeclaring them in this crate. Use Ada-style names for geometry-specific public operations.
+Typical results are contours or other point collections. Storage stays
+in Ada arrays. Callers must not receive:
 
-Prefer descriptive Ada names over terse C++ spellings such as:
+- STL containers
+- borrowed pointers to temporary C++ storage
+- `new`/`malloc` arrays that Ada would have to free with C++ rules
 
-- `cols`
-- `elemSize`
-- `ptr`
+When a result length is not known until OpenCV returns, prefer a
+caller-provided C-compatible buffer with explicit capacity and a
+returned count. When a safe mathematical upper bound is known from the
+input, allocate that capacity on the Ada side rather than inventing a
+separate C++ allocation protocol.
 
-When a geometry-specific operation is naturally associated with a tagged type defined by this crate, define it as a primitive operation so prefixed notation is available. Do not redeclare `OpenCV.Core` primitives merely to provide prefixed notation.
+Preserve OpenCV iteration order when packing and unpacking points.
+Handle nonzero Ada array bounds. Never reinterpret a public
+`Point_Array` as C records and never index an empty array.
 
-For example:
+Do not treat this as a mandate for one specific future operation. It
+applies to any Geometry function that returns a variable-length point
+collection.
 
-```ada
-Row_Count     := Image.Rows;
-Column_Count  := Image.Columns;
-Channel_Count := Image.Channels;
-Pixel_Depth   := Image.Depth;
-Size_In_Bytes := Image.Element_Size;
-Empty         := Image.Is_Empty;
-Copy          := Image.Clone;
-```
+ABI buffer mechanics belong in `.clinerules/03-cpp-interop.md`.
 
-Do not expose OpenCV preprocessor macros such as `CV_8UC3` as the primary public type system. Reuse the strong matrix depth, channel, and type abstractions supplied by `OpenCV.Core` rather than redefining them in this crate.
+## Numeric representation
 
-Compatibility constants may be provided later if they are genuinely useful, but the thick Ada API should not depend on C macro naming conventions.
+Keep C-compatible numeric types confined to the thin interoperability
+layer.
 
-## Generic Value Types
+The thin Ada binding may use `Interfaces.C` types and other exact
+C-compatible representations required by the shim ABI.
 
-Use Ada generics to model OpenCV value-type templates when the template parameter represents a genuine compile-time type or dimension.
+The thick public Ada API should expose natural Ada numeric types and
+Core/Geometry domain types. Do not leak `Interfaces.C` into the public
+API merely because OpenCV is implemented in C++.
 
-Good candidates include:
+Perform explicit conversions at the thick/thin boundary. Avoid
+unchecked or implicit narrowing. Use range checks, preconditions, or
+explicit conversion helpers where conversion could lose information.
 
-- `Point_<T>`
-- `Size_<T>`
-- `Rect_<T>`
-- `Vec<T, N>`
-- `Matx<T, M, N>`
+When exact ABI width matters, document and enforce it in the internal
+layer.
 
-Provide a generic foundation, but also provide convenient predefined instances for the common OpenCV variants so ordinary users do not need to instantiate generics for routine use.
-
-For example, predefined public types may include common integer, floating-point, and double-precision point variants corresponding to OpenCV's standard aliases.
-
-Value-like types should normally be ordinary Ada records rather than tagged types.
-
-Prefer stack-friendly, deterministic value semantics for these types.
-
-Do not introduce heap allocation, opaque handles, or controlled types for simple value objects unless required by the underlying OpenCV semantics.
-
-Use strong Ada numeric types and generic parameters rather than encoding type information into names or integer constants where practical.
-
-## Numeric Representation
-
-Keep C-compatible numeric types confined to the thin interoperability layer.
-
-The thin Ada binding may use types such as:
-
-- `Interfaces.C.int`
-- `Interfaces.C.unsigned`
-- `Interfaces.C.C_float`
-- `Interfaces.C.double`
-- other exact C-compatible representations required by the shim ABI
-
-The thick public Ada API should instead expose natural Ada numeric types and strong domain-specific types.
-
-Do not leak `Interfaces.C` types into the public API merely because OpenCV is implemented in C++.
-
-Perform explicit conversions at the boundary between the thick Ada layer and the thin C-compatible layer.
-
-For geometry-specific public value types not already supplied by `OpenCV.Core`, prefer Ada numeric types or clearly defined Ada numeric subtypes whose ranges and precision match the intended OpenCV semantics.
-
-When exact ABI width matters, document and enforce it in the internal layer rather than making the public API C-centric.
-
-Avoid unchecked or implicit narrowing conversions.
-
-Use range checks, preconditions, or explicit conversion helpers where conversion could lose information.
-
-## Matrix Depth and Channel Types
-
-`OpenCV.Core` owns `Depth_Type`, `Mat_Type`, channel information, and the runtime matrix metadata API. Geometry APIs must reuse `Image.Rows`, `Image.Columns`, `Image.Channels`, `Image.Depth`, `Image.Element_Type`, and related `OpenCV.Core` operations.
-
-Do not expose OpenCV packed integer type encodings such as `CV_8U`, `CV_32F`, or `CV_8UC3` as the primary public type system, and do not create geometry-specific replacements for Core matrix metadata abstractions.
-
-`OpenCV.Core.Mat` remains runtime-typed. Do not encode matrix depth or channel count into a tagged-type inheritance hierarchy in this crate.
-
-## Ada vs C++ Responsibility
+## Ada versus C++ responsibility
 
 Keep the C++ shim as small as practical.
 
-Use the C++ shim when OpenCV itself must perform the operation or when access to C++ object lifecycle, methods, overload resolution, templates, or OpenCV-owned storage is required.
+Thick Ada owns:
 
-Typical shim responsibilities include:
+- public semantic policy
+- Ada range and type validation
+- public API design
+- conversion of public Core/Ada values to thin ABI representations
+- translation of private status failures to Ada exceptions
 
-- constructing and destroying OpenCV C++ objects
-- invoking OpenCV member functions
-- calling OpenCV algorithms
-- performing operations that require C++ templates or overload resolution
-- accessing OpenCV-managed data buffers
-- translating C++ exceptions into the C-compatible error model
+Typical Ada work includes contour packing, count-range checks,
+convenience overloads, and Geometry-specific value-type helpers that
+do not require OpenCV itself.
 
-Prefer implementing purely Ada-specific behavior in Ada.
-
-Typical Ada responsibilities include:
-
-- geometry-specific type construction
-- geometry-specific semantic validation using `OpenCV.Core` metadata
-- Ada range checks
-- convenience overloads
-- geometry-specific convenience wrappers
-- Ada exception translation
-- simple geometry-specific value-type helpers
-- representation conversions that do not require OpenCV itself
+The C++ shim owns ABI safety, native OpenCV calls, exception
+containment, and version-specific native compatibility. Details are in
+`.clinerules/03-cpp-interop.md`.
 
 Do not turn the shim into a second high-level wrapper library.
 
-Do not reimplement meaningful OpenCV algorithms in Ada merely to avoid crossing the ABI boundary.
-
-If OpenCV already provides an operation, the binding should normally call OpenCV so behavior, compatibility, and performance remain aligned with the underlying library.
+Do not reimplement meaningful OpenCV algorithms in Ada merely to avoid
+crossing the ABI boundary. If OpenCV already provides the operation,
+the binding should normally call OpenCV.

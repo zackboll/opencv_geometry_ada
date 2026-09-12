@@ -177,7 +177,7 @@ rewrite.
 
 ## Inspect Before Creating Bindings
 
-Before adding or changing an OpenCV binding operation, inspect the
+Before adding or changing an OpenCV Geometry operation, inspect the
 authoritative OpenCV declaration being wrapped.
 
 When the declaration alone does not establish required behavior, inspect the
@@ -193,19 +193,21 @@ Do not invent from memory:
 - template semantics
 - continuity or storage assumptions
 - exception semantics
+- OpenCV 4 versus OpenCV 5 header or library placement
 
 Before designing the Ada API:
 
 - understand the relevant OpenCV overload or template family
-- inspect related existing shim functions
-- inspect the existing public Ada abstraction
-- check whether related functionality already exists
+- inspect related existing Geometry shim functions
+- inspect the existing public `OpenCV.Geometry` abstraction
+- check whether related functionality already exists in Core or
+  belongs in Imgproc instead
 - determine which semantics must be preserved
 
 Do not mechanically expose every C++ overload.
 
-Design the Ada abstraction first, then expose only the C ABI necessary to
-support it.
+Design the public Ada abstraction first, then expose only the C ABI
+necessary to support it.
 
 When OpenCV behavior is uncertain and materially affects the public API or
 safety of the binding, inspect the authoritative source rather than guessing.
@@ -320,20 +322,26 @@ rules in `.clinerules` take precedence over generic examples in a skill.
 Do not silently make significant public API or architecture decisions when
 multiple reasonable designs exist.
 
-Ask for direction before choosing among materially different designs that
-would affect:
+Ask for direction before choosing among materially different designs
+that would affect:
 
 - public package hierarchy
-- public type names
-- ownership semantics
-- shallow-copy versus deep-copy behavior
-- tagged-type inheritance
-- generic package structure
-- exception model
-- ABI compatibility
-- Ada versus C++ responsibility
-- dependency placement
-- compatibility aliases that may become public API
+- public types
+- ownership or lifetime models
+- ABI ownership protocols
+- adding a new Ada crate dependency
+- adding a Mat or module bridge
+- changing native OpenCV backend selection
+- changing cross-platform C++ compiler or runtime strategy
+- changing static versus relocatable shim architecture
+- changing the exception or error model
+- changing established shallow versus deep copy semantics
+
+Ordinary implementation details that clearly follow established
+Geometry rules should not require asking. In particular, do not ask
+whether to keep Ada-owned contours, whether to call OpenCV rather than
+reimplement an algorithm, or whether Linux, macOS, and Windows should
+share one C++ toolchain.
 
 When asking for such a decision:
 
@@ -342,5 +350,5 @@ When asking for such a decision:
 - recommend one
 - explain the important tradeoff
 
-Do not block on ordinary implementation details that already follow clearly
-from established repository rules.
+Do not "simplify" the established platform C++ isolation, native
+backend selection, or Ada-owned result model without that direction.
