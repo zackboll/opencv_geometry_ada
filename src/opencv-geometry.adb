@@ -318,19 +318,15 @@ package body OpenCV.Geometry is
    is
       use type Interfaces.Integer_32;
    begin
-      if Value.X < 0
-        or else Value.Y < 0
-        or else Value.Width < 0
-        or else Value.Height < 0
-      then
+      if Value.Width < 0 or else Value.Height < 0 then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
             "bounding rect cannot be represented as OpenCV.Core.Rect");
       end if;
 
       return
-        (X      => OpenCV.Core.Size_Coordinate (Value.X),
-         Y      => OpenCV.Core.Size_Coordinate (Value.Y),
+        (X      => OpenCV.Core.Point_Coordinate (Value.X),
+         Y      => OpenCV.Core.Point_Coordinate (Value.Y),
          Width  => OpenCV.Core.Size_Coordinate (Value.Width),
          Height => OpenCV.Core.Size_Coordinate (Value.Height));
    end To_Public_Rect;

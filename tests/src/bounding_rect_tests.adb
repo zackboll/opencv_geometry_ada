@@ -1,10 +1,8 @@
-with Ada.Exceptions;
 with Ada.Strings.Fixed;
 with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
-with OpenCV;
 with OpenCV.Core;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
@@ -35,9 +33,10 @@ package body Bounding_Rect_Tests is
      ((X => 4, Y => 3), (X => 0, Y => 3), (X => 4, Y => 0), (X => 0, Y => 0));
 
    procedure Assert_Rect
-     (Actual              : OpenCV.Core.Rect;
-      X, Y, Width, Height : OpenCV.Core.Size_Coordinate;
-      Message             : String) is
+     (Actual        : OpenCV.Core.Rect;
+      X, Y          : OpenCV.Core.Point_Coordinate;
+      Width, Height : OpenCV.Core.Size_Coordinate;
+      Message       : String) is
    begin
       AUnit.Assertions.Assert (Actual.X = X, Message & ": X");
       AUnit.Assertions.Assert (Actual.Y = Y, Message & ": Y");
@@ -329,32 +328,28 @@ package body Bounding_Rect_Tests is
         (Buffer, "inclusive extent Integer_32'Last + 1 must be rejected");
    end Extent_One_Beyond_Maximum;
 
-   procedure Negative_Origin_Rejected (Test : in out Fixture) is
+   procedure Negative_Origin_Preserved (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Points : constant OpenCV.Geometry.Contour :=
+      Negative_X    : constant OpenCV.Geometry.Contour :=
+        ((X => -3, Y => 4), (X => 6, Y => 23));
+      Negative_Y    : constant OpenCV.Geometry.Contour :=
+        ((X => 2, Y => -5), (X => 11, Y => 14));
+      Negative_Both : constant OpenCV.Geometry.Contour :=
         ((X => -2, Y => -3), (X => 4, Y => 1));
-      Raised : Boolean := False;
+      Box_X         : constant OpenCV.Core.Rect :=
+        OpenCV.Geometry.Bounding_Rect (Negative_X);
+      Box_Y         : constant OpenCV.Core.Rect :=
+        OpenCV.Geometry.Bounding_Rect (Negative_Y);
+      Box_Both      : constant OpenCV.Core.Rect :=
+        OpenCV.Geometry.Bounding_Rect (Negative_Both);
    begin
-      begin
-         declare
-            Unused : constant OpenCV.Core.Rect :=
-              OpenCV.Geometry.Bounding_Rect (Points);
-            pragma Unreferenced (Unused);
-         begin
-            null;
-         end;
-      exception
-         when Error : OpenCV.OpenCV_Error =>
-            Raised :=
-              Ada.Strings.Fixed.Index
-                (Ada.Exceptions.Exception_Message (Error), "OpenCV.Core.Rect")
-              /= 0;
-      end;
-
-      AUnit.Assertions.Assert
-        (Raised,
-         "negative origin must be rejected by OpenCV.Core.Rect conversion");
-   end Negative_Origin_Rejected;
+      Assert_Rect
+        (Box_X, -3, 4, 10, 20, "negative X origin must be preserved");
+      Assert_Rect
+        (Box_Y, 2, -5, 10, 20, "negative Y origin must be preserved");
+      Assert_Rect
+        (Box_Both, -2, -3, 7, 5, "negative X and Y origins must be preserved");
+   end Negative_Origin_Preserved;
 
    procedure C_ABI_Validation (Test : in out Fixture) is
       pragma Unreferenced (Test);
@@ -472,8 +467,8 @@ package body Bounding_Rect_Tests is
             Extent_One_Beyond_Maximum'Access));
       Result.Add_Test
         (Caller.Create
-           ("Bounding rect negative origin rejected",
-            Negative_Origin_Rejected'Access));
+           ("Bounding rect negative origin preserved",
+            Negative_Origin_Preserved'Access));
       Result.Add_Test
         (Caller.Create
            ("Bounding rect C ABI validation", C_ABI_Validation'Access));
