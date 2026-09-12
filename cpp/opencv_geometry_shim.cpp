@@ -464,6 +464,106 @@ opencv_geometry_hu_moments(
     }
 }
 
+namespace {
+
+std::vector<cv::Point> contour_from_points(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count)
+{
+    std::vector<cv::Point> contour;
+    if (point_count <= 0) {
+        return contour;
+    }
+    contour.reserve(static_cast<std::size_t>(point_count));
+    for (int32_t index = 0; index < point_count; ++index) {
+        contour.emplace_back(points[index].x, points[index].y);
+    }
+    return contour;
+}
+
+bool match_shapes_method(
+    int32_t method,
+    int *native_method) noexcept
+{
+    // OpenCV 4 exposes CONTOURS_MATCH_I1/I2/I3 in imgproc.hpp. OpenCV 5
+    // matchShapes lives in geometry.hpp, which documents ShapeMatchModes
+    // but does not declare the enumerators. Native 4.x/5.x still switch
+    // on 1/2/3, matching those documented values.
+#if CV_VERSION_MAJOR >= 5
+    const int contours_match_i1 = 1;
+    const int contours_match_i2 = 2;
+    const int contours_match_i3 = 3;
+#else
+    const int contours_match_i1 = cv::CONTOURS_MATCH_I1;
+    const int contours_match_i2 = cv::CONTOURS_MATCH_I2;
+    const int contours_match_i3 = cv::CONTOURS_MATCH_I3;
+#endif
+    switch (method) {
+    case OPENCV_GEOMETRY_MATCH_SHAPES_RECIPROCAL_LOG_DIFFERENCE:
+        *native_method = contours_match_i1;
+        return true;
+    case OPENCV_GEOMETRY_MATCH_SHAPES_LOG_DIFFERENCE:
+        *native_method = contours_match_i2;
+        return true;
+    case OPENCV_GEOMETRY_MATCH_SHAPES_RELATIVE_LOG_DIFFERENCE:
+        *native_method = contours_match_i3;
+        return true;
+    default:
+        return false;
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_match_shapes(
+    const opencv_geometry_point_i32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_i32 *right_points,
+    int32_t right_count,
+    int32_t method,
+    double *out_score)
+{
+    clear_error();
+    if (out_score == nullptr) {
+        return invalid_argument("null match shapes output pointer");
+    }
+    *out_score = 0.0;
+    if (left_count < 0) {
+        return invalid_argument(
+            "left contour point count must not be negative");
+    }
+    if (right_count < 0) {
+        return invalid_argument(
+            "right contour point count must not be negative");
+    }
+    if (left_count > 0 && left_points == nullptr) {
+        return invalid_argument(
+            "null left contour points with positive count");
+    }
+    if (right_count > 0 && right_points == nullptr) {
+        return invalid_argument(
+            "null right contour points with positive count");
+    }
+    int native_method = 0;
+    if (!match_shapes_method(method, &native_method)) {
+        return invalid_argument("match shapes method selector is invalid");
+    }
+
+    try {
+        const std::vector<cv::Point> left =
+            contour_from_points(left_points, left_count);
+        const std::vector<cv::Point> right =
+            contour_from_points(right_points, right_count);
+        // Supported OpenCV 4.x/5.x ignore the unused native parameter.
+        *out_score = cv::matchShapes(left, right, native_method, 0.0);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_score = 0.0;
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_bounding_rect(
     const opencv_geometry_point_i32 *points,

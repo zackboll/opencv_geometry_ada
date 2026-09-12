@@ -106,4 +106,21 @@ package OpenCV.Geometry is
    --  not convex. Points is unchanged.
    function Is_Convex (Points : Contour) return Boolean;
 
+   --  Compares Left and Right using OpenCV Hu-moment matching. Lower scores
+   --  indicate more similar shapes; identical or equivalent contours
+   --  normally approach zero, though floating-point evaluation can leave
+   --  a tiny residual. Reciprocal_Log_Difference, Log_Difference, and
+   --  Relative_Log_Difference select OpenCV I1, I2, and I3. Relative
+   --  comparison is directional: the Left contour supplies the
+   --  denominator. The unused native OpenCV parameter is not exposed.
+   --  Left and Right are unchanged. If native matching produces a
+   --  non-finite value that cannot be represented by Float64_Value,
+   --  Match_Shapes raises OpenCV_Error.
+   type Shape_Match_Method is
+     (Reciprocal_Log_Difference, Log_Difference, Relative_Log_Difference);
+
+   function Match_Shapes
+     (Left, Right : Contour; Method : Shape_Match_Method)
+      return OpenCV.Core.Float64_Value;
+
 end OpenCV.Geometry;

@@ -124,6 +124,19 @@ opencv_geometry_hu_moments(
     const opencv_geometry_moments *moments,
     opencv_geometry_hu_result *out_hu);
 
+#define OPENCV_GEOMETRY_MATCH_SHAPES_RECIPROCAL_LOG_DIFFERENCE ((int32_t)0)
+#define OPENCV_GEOMETRY_MATCH_SHAPES_LOG_DIFFERENCE            ((int32_t)1)
+#define OPENCV_GEOMETRY_MATCH_SHAPES_RELATIVE_LOG_DIFFERENCE   ((int32_t)2)
+
+opencv_geometry_status
+opencv_geometry_match_shapes(
+    const opencv_geometry_point_i32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_i32 *right_points,
+    int32_t right_count,
+    int32_t method,
+    double *out_score);
+
 #ifdef __cplusplus
 }
 #endif

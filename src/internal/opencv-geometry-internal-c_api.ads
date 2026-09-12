@@ -147,6 +147,25 @@ package OpenCV.Geometry.Internal.C_API is
       return Status
    with Import, Convention => C, External_Name => "opencv_geometry_hu_moments";
 
+   Match_Shapes_Reciprocal_Log_Difference : constant Interfaces.Integer_32 :=
+     0;
+   Match_Shapes_Log_Difference            : constant Interfaces.Integer_32 :=
+     1;
+   Match_Shapes_Relative_Log_Difference   : constant Interfaces.Integer_32 :=
+     2;
+
+   function Match_Shapes
+     (Left_Points  : access Point_I32;
+      Left_Count   : Interfaces.Integer_32;
+      Right_Points : access Point_I32;
+      Right_Count  : Interfaces.Integer_32;
+      Method       : Interfaces.Integer_32;
+      Out_Score    : access Interfaces.C.double) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_match_shapes";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;

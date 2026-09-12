@@ -26,6 +26,21 @@ package body OpenCV.Geometry is
       end case;
    end To_C_Clockwise;
 
+   function To_C_Match_Method
+     (Method : Shape_Match_Method) return Interfaces.Integer_32 is
+   begin
+      case Method is
+         when Reciprocal_Log_Difference =>
+            return Internal.C_API.Match_Shapes_Reciprocal_Log_Difference;
+
+         when Log_Difference            =>
+            return Internal.C_API.Match_Shapes_Log_Difference;
+
+         when Relative_Log_Difference   =>
+            return Internal.C_API.Match_Shapes_Relative_Log_Difference;
+      end case;
+   end To_C_Match_Method;
+
    function Pack_Contour
      (Points : Contour) return Internal.C_API.Point_I32_Array is
    begin
@@ -203,30 +218,43 @@ package body OpenCV.Geometry is
       return To_Public_Moments (Result);
    end Compute_Moments;
 
-   function To_Public_Hu_Value
-     (Value : Interfaces.C.double; Index : Hu_Moment_Index)
-      return OpenCV.Core.Float64_Value
-   is
+   function Is_Finite_C_Double (Value : Interfaces.C.double) return Boolean is
       pragma Suppress (Validity_Check);
       use type Interfaces.C.double;
-      Finite : Boolean;
    begin
       --  Public Float64_Value is finite-only. Inspect the raw C double
       --  before converting so Inf/NaN become OpenCV_Error, not an Ada
       --  validity failure.
-      Finite :=
+      return
         Value'Valid
         and then Value = Value
         and then Value >= Interfaces.C.double (OpenCV.Core.Float64_Value'First)
         and then Value <= Interfaces.C.double (OpenCV.Core.Float64_Value'Last);
-      if not Finite then
+   end Is_Finite_C_Double;
+
+   function To_Public_Float64
+     (Value : Interfaces.C.double; Diagnostic : String)
+      return OpenCV.Core.Float64_Value
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      if not Is_Finite_C_Double (Value) then
          Ada.Exceptions.Raise_Exception
-           (OpenCV.OpenCV_Error'Identity,
-            "Hu moment"
-            & Hu_Moment_Index'Image (Index)
-            & " result is not finite");
+           (OpenCV.OpenCV_Error'Identity, Diagnostic);
       end if;
       return OpenCV.Core.Float64_Value (Value);
+   end To_Public_Float64;
+
+   function To_Public_Hu_Value
+     (Value : Interfaces.C.double; Index : Hu_Moment_Index)
+      return OpenCV.Core.Float64_Value is
+   begin
+      return
+        To_Public_Float64
+          (Value,
+           "Hu moment"
+           & Hu_Moment_Index'Image (Index)
+           & " result is not finite");
    end To_Public_Hu_Value;
 
    function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result is
@@ -462,4 +490,52 @@ package body OpenCV.Geometry is
                "is convex failed: invalid Boolean encoding");
       end case;
    end Is_Convex;
+
+   function Match_Shapes
+     (Left, Right : Contour; Method : Shape_Match_Method)
+      return OpenCV.Core.Float64_Value
+   is
+      --  Native scores may be Inf/NaN. Suppress Ada validity checks until
+      --  To_Public_Float64 inspects the raw C double.
+      pragma Suppress (Validity_Check);
+      Packed_Left  : Internal.C_API.Point_I32_Array := Pack_Contour (Left);
+      Packed_Right : Internal.C_API.Point_I32_Array := Pack_Contour (Right);
+      Score        : aliased Interfaces.C.double := 0.0;
+      Status       : Internal.C_API.Status;
+   begin
+      if Packed_Left'Length = 0 and then Packed_Right'Length = 0 then
+         Status :=
+           Internal.C_API.Match_Shapes
+             (null, 0, null, 0, To_C_Match_Method (Method), Score'Access);
+      elsif Packed_Left'Length = 0 then
+         Status :=
+           Internal.C_API.Match_Shapes
+             (null,
+              0,
+              Packed_Right (Packed_Right'First)'Access,
+              Interfaces.Integer_32 (Packed_Right'Length),
+              To_C_Match_Method (Method),
+              Score'Access);
+      elsif Packed_Right'Length = 0 then
+         Status :=
+           Internal.C_API.Match_Shapes
+             (Packed_Left (Packed_Left'First)'Access,
+              Interfaces.Integer_32 (Packed_Left'Length),
+              null,
+              0,
+              To_C_Match_Method (Method),
+              Score'Access);
+      else
+         Status :=
+           Internal.C_API.Match_Shapes
+             (Packed_Left (Packed_Left'First)'Access,
+              Interfaces.Integer_32 (Packed_Left'Length),
+              Packed_Right (Packed_Right'First)'Access,
+              Interfaces.Integer_32 (Packed_Right'Length),
+              To_C_Match_Method (Method),
+              Score'Access);
+      end if;
+      Raise_On_Error (Status, "match shapes");
+      return To_Public_Float64 (Score, "Match_Shapes result is not finite");
+   end Match_Shapes;
 end OpenCV.Geometry;
