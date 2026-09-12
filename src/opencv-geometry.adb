@@ -14,6 +14,18 @@ package body OpenCV.Geometry is
       end if;
    end To_C_Boolean;
 
+   function To_C_Clockwise
+     (Orientation : Hull_Orientation) return Interfaces.Integer_32 is
+   begin
+      case Orientation is
+         when Clockwise        =>
+            return 1;
+
+         when Counterclockwise =>
+            return 0;
+      end case;
+   end To_C_Clockwise;
+
    function Pack_Contour
      (Points : Contour) return Internal.C_API.Point_I32_Array is
    begin
@@ -161,4 +173,79 @@ package body OpenCV.Geometry is
       return To_Public_Moments (Result);
    end Compute_Moments;
 
+   function Unpack_Contour
+     (Packed : Internal.C_API.Point_I32_Array; Count : Natural) return Contour
+   is
+   begin
+      if Count = 0 then
+         declare
+            Empty : Contour (1 .. 0);
+         begin
+            return Empty;
+         end;
+      end if;
+
+      declare
+         Result : Contour (0 .. Count - 1);
+         Index  : Natural := Result'First;
+      begin
+         for Offset in 0 .. Count - 1 loop
+            Result (Index) :=
+              (X =>
+                 OpenCV.Core.Point_Coordinate
+                   (Packed (Packed'First + Offset).X),
+               Y =>
+                 OpenCV.Core.Point_Coordinate
+                   (Packed (Packed'First + Offset).Y));
+            Index := Index + 1;
+         end loop;
+         return Result;
+      end;
+   end Unpack_Contour;
+
+   function Convex_Hull
+     (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
+      return Contour
+   is
+      use type Interfaces.Integer_32;
+
+      Packed    : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Count     : aliased Interfaces.Integer_32 := 0;
+      Status    : Internal.C_API.Status;
+      Clockwise : constant Interfaces.Integer_32 :=
+        To_C_Clockwise (Orientation);
+   begin
+      if Packed'Length = 0 then
+         Status :=
+           Internal.C_API.Convex_Hull
+             (null, 0, Clockwise, null, 0, Count'Access);
+         Raise_On_Error (Status, "convex hull");
+         return Unpack_Contour (Packed, 0);
+      else
+         declare
+            Output : Internal.C_API.Point_I32_Array (0 .. Packed'Length - 1);
+         begin
+            Status :=
+              Internal.C_API.Convex_Hull
+                (Packed (Packed'First)'Access,
+                 Interfaces.Integer_32 (Packed'Length),
+                 Clockwise,
+                 Output (Output'First)'Access,
+                 Interfaces.Integer_32 (Output'Length),
+                 Count'Access);
+            Raise_On_Error (Status, "convex hull");
+            if Count < 0 then
+               Ada.Exceptions.Raise_Exception
+                 (OpenCV.OpenCV_Error'Identity,
+                  "convex hull failed: negative hull count");
+            end if;
+            if Natural (Count) > Output'Length then
+               Ada.Exceptions.Raise_Exception
+                 (OpenCV.OpenCV_Error'Identity,
+                  "convex hull failed: hull count exceeds capacity");
+            end if;
+            return Unpack_Contour (Output, Natural (Count));
+         end;
+      end if;
+   end Convex_Hull;
 end OpenCV.Geometry;

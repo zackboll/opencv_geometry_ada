@@ -216,3 +216,70 @@ opencv_geometry_contour_moments(
     }
 }
 
+opencv_geometry_status
+opencv_geometry_convex_hull(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t clockwise,
+    opencv_geometry_point_i32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument("null convex hull output count pointer");
+    }
+    *out_count = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "convex hull point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (clockwise != 0 && clockwise != 1) {
+        return invalid_argument(
+            "convex hull clockwise selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "convex hull output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any hull points.
+    if (out_capacity > 0 && out_points == nullptr) {
+        return invalid_argument(
+            "null convex hull output points with positive capacity");
+    }
+    // ABI safety: OpenCV 4.10 convexHull asserts on an empty point vector
+    // because checkVector cannot determine an element depth.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+
+    try {
+        std::vector<cv::Point> contour;
+        contour.reserve(static_cast<std::size_t>(point_count));
+        for (int32_t index = 0; index < point_count; ++index) {
+            contour.emplace_back(points[index].x, points[index].y);
+        }
+        std::vector<cv::Point> hull;
+        cv::convexHull(contour, hull, clockwise != 0, true);
+        // ABI safety: copying more points than capacity would overflow the
+        // caller-provided buffer. Hull cardinality is at most point_count.
+        if (hull.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "convex hull output capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < hull.size(); ++index) {
+            out_points[index].x = hull[index].x;
+            out_points[index].y = hull[index].y;
+        }
+        *out_count = static_cast<int32_t>(hull.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+

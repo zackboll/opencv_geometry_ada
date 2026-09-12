@@ -5,6 +5,7 @@ with AUnit.Run;
 with AUnit.Test_Suites;
 with Contour_Geometry_Tests;
 with Contour_Moments_Tests;
+with Convex_Hull_Tests;
 
 procedure Tests is
 
@@ -21,6 +22,7 @@ procedure Tests is
    Reporter : AUnit.Reporter.Text.Text_Reporter;
 begin
    Suite.Add_Test (Contour_Moments_Tests.Suite);
+   Suite.Add_Test (Convex_Hull_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;

@@ -55,4 +55,15 @@ package OpenCV.Geometry is
 
    function Compute_Moments (Points : Contour) return Moments_Result;
 
+   --  Convex hull of Points as an Ada-owned contour of hull points, not
+   --  source-point indices. Orientation uses OpenCV's convention: X
+   --  increases rightward and Y increases upward. Image coordinates often
+   --  increase Y downward, so the visual winding may appear reversed.
+   --  Empty input returns an empty contour. Points is unchanged.
+   type Hull_Orientation is (Counterclockwise, Clockwise);
+
+   function Convex_Hull
+     (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
+      return Contour;
+
 end OpenCV.Geometry;

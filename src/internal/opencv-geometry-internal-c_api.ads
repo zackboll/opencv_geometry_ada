@@ -83,6 +83,18 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_contour_moments";
 
+   function Convex_Hull
+     (Points       : access Point_I32;
+      Point_Count  : Interfaces.Integer_32;
+      Clockwise    : Interfaces.Integer_32;
+      Out_Points   : access Point_I32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_convex_hull";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;
