@@ -27,7 +27,8 @@ Empty input yields an empty Ada-owned contour. `Bounding_Rect` returns an
 upright axis-aligned `OpenCV.Core.Rect`. Integer extent is inclusive, so a
 point set spanning X=0..4 and Y=0..3 has Width=5 and Height=4. Empty input
 returns (0, 0, 0, 0). Negative native origins cannot be represented by
-`OpenCV.Core.Rect` and raise `OpenCV.OpenCV_Error`.
+`OpenCV.Core.Rect` and raise `OpenCV.OpenCV_Error`. Inclusive extents that
+cannot be represented as signed 32-bit width or height are rejected.
 
 Moments include all 24 spatial, central and normalized fields through order 3.
 Handle zero `M_00` before deriving a centroid; self-intersecting contours can

@@ -274,6 +274,61 @@ package body Bounding_Rect_Tests is
          "max representable inclusive extent must remain exact");
    end Extreme_Representable_Extent;
 
+   procedure Assert_Rejected_Span
+     (Points : in out C_API.Point_I32_Array; Message : String)
+   is
+      Box    : aliased C_API.Rect_I32 :=
+        (X => -1, Y => -1, Width => -1, Height => -1);
+      Status : C_API.Status;
+   begin
+      Status :=
+        C_API.Bounding_Rect
+          (Points (Points'First)'Access,
+           Interfaces.Integer_32 (Points'Length),
+           Box'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument, Message & ": status");
+      AUnit.Assertions.Assert
+        (Ada.Strings.Fixed.Index (C_API.Last_Error_Message, "extent") /= 0
+         or else Ada.Strings.Fixed.Index (C_API.Last_Error_Message, "range")
+                 /= 0,
+         Message & ": diagnostic");
+      Assert_C_Rect
+        (Box, 0, 0, 0, 0, Message & ": output must be reset to zero");
+   end Assert_Rejected_Span;
+
+   procedure Full_Signed_X_Range (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Buffer : aliased C_API.Point_I32_Array :=
+        ((X => Interfaces.Integer_32'First, Y => 0),
+         (X => Interfaces.Integer_32'Last, Y => 0));
+   begin
+      Assert_Rejected_Span
+        (Buffer, "full signed X range must not reach native boundingRect");
+   end Full_Signed_X_Range;
+
+   procedure Full_Signed_Y_Range (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Buffer : aliased C_API.Point_I32_Array :=
+        ((X => 0, Y => Interfaces.Integer_32'First),
+         (X => 0, Y => Interfaces.Integer_32'Last));
+   begin
+      Assert_Rejected_Span
+        (Buffer, "full signed Y range must not reach native boundingRect");
+   end Full_Signed_Y_Range;
+
+   procedure Extent_One_Beyond_Maximum (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      --  Inclusive width is Integer_32'Last + 1: xmax - xmin + 1 with
+      --  xmin = 0 and xmax = Integer_32'Last. Both coordinates remain
+      --  representable; only the span is unrepresentable.
+      Buffer : aliased C_API.Point_I32_Array :=
+        ((X => 0, Y => 0), (X => Interfaces.Integer_32'Last, Y => 0));
+   begin
+      Assert_Rejected_Span
+        (Buffer, "inclusive extent Integer_32'Last + 1 must be rejected");
+   end Extent_One_Beyond_Maximum;
+
    procedure Negative_Origin_Rejected (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Points : constant OpenCV.Geometry.Contour :=
@@ -403,6 +458,18 @@ package body Bounding_Rect_Tests is
         (Caller.Create
            ("Bounding rect extreme representable extent",
             Extreme_Representable_Extent'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Bounding rect full signed X range rejected",
+            Full_Signed_X_Range'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Bounding rect full signed Y range rejected",
+            Full_Signed_Y_Range'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Bounding rect extent one beyond maximum",
+            Extent_One_Beyond_Maximum'Access));
       Result.Add_Test
         (Caller.Create
            ("Bounding rect negative origin rejected",

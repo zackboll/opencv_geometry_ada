@@ -79,7 +79,9 @@ package OpenCV.Geometry is
    --  extent is inclusive, so Width = X_Max - X_Min + 1 and Height =
    --  Y_Max - Y_Min + 1. Empty input returns (0, 0, 0, 0). OpenCV.Core.Rect
    --  origins are nonnegative; a native box with negative X or Y raises
-   --  OpenCV.OpenCV_Error. Points is unchanged.
+   --  OpenCV.OpenCV_Error. Inclusive extents that cannot be represented as
+   --  signed 32-bit width or height also raise OpenCV.OpenCV_Error.
+   --  Points is unchanged.
    function Bounding_Rect (Points : Contour) return OpenCV.Core.Rect;
 
 end OpenCV.Geometry;

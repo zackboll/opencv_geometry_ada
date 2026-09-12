@@ -313,6 +313,40 @@ opencv_geometry_bounding_rect(
         return OPENCV_GEOMETRY_OK;
     }
 
+    // ABI safety: supported OpenCV 4.10/5.0 point-set boundingRect
+    // computes extrema spans in signed int. Validate the span in int64_t
+    // before the native call so extreme int32 coordinates cannot overflow.
+    int32_t xmin = points[0].x;
+    int32_t xmax = points[0].x;
+    int32_t ymin = points[0].y;
+    int32_t ymax = points[0].y;
+    for (int32_t index = 1; index < point_count; ++index) {
+        const int32_t x = points[index].x;
+        const int32_t y = points[index].y;
+        if (x < xmin) {
+            xmin = x;
+        }
+        if (x > xmax) {
+            xmax = x;
+        }
+        if (y < ymin) {
+            ymin = y;
+        }
+        if (y > ymax) {
+            ymax = y;
+        }
+    }
+    const int64_t width =
+        static_cast<int64_t>(xmax) - static_cast<int64_t>(xmin) + 1;
+    const int64_t height =
+        static_cast<int64_t>(ymax) - static_cast<int64_t>(ymin) + 1;
+    if (width <= 0 || height <= 0
+        || width > static_cast<int64_t>(INT32_MAX)
+        || height > static_cast<int64_t>(INT32_MAX)) {
+        return invalid_argument(
+            "bounding rect extent exceeds signed 32-bit range");
+    }
+
     try {
         std::vector<cv::Point> contour;
         contour.reserve(static_cast<std::size_t>(point_count));
