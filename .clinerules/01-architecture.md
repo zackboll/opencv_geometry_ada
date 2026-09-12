@@ -46,8 +46,8 @@ shim rules belong in `.clinerules/03-cpp-interop.md`.
 Select headers by `CV_VERSION_MAJOR` and native libraries from the
 configured OpenCV:
 
-- OpenCV 4: `opencv2/imgproc.hpp` and `libopencv_imgproc`
-- OpenCV 5 and later: `opencv2/geometry.hpp` and `libopencv_geometry`
+- OpenCV 4.x: `opencv2/imgproc.hpp` and `libopencv_imgproc`
+- OpenCV 5.x: `opencv2/geometry.hpp` and `libopencv_geometry`
 
 Both also link native `libopencv_core`. The public Ada package remains
 `OpenCV.Geometry` on every supported OpenCV version.
@@ -56,7 +56,9 @@ Linux OpenCV 4 therefore links native `imgproc`. That is the correct
 backend, not an Ada Imgproc dependency. OpenCV 5 shims must not pick up
 `libopencv_imgproc` merely because OpenCV 4 used that native library.
 
-Changing native backend selection is an architectural decision. See
+Future major versions, including OpenCV 6+, are unsupported until
+deliberately evaluated. Changing native backend selection or extending
+the supported major-version range is an architectural decision. See
 `.clinerules/06-agent-workflow.md`.
 
 ## Platform C++ isolation

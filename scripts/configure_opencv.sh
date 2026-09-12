@@ -62,8 +62,12 @@ version=$("$pkg_config" --modversion "$package")
 major=${version%%.*}
 case "$major" in
     4) native_geometry_module=imgproc ;;
-    5|[6-9]|[1-9][0-9]*) native_geometry_module=geometry ;;
-    *) echo "error: unsupported OpenCV version: $version" >&2; exit 1 ;;
+    5) native_geometry_module=geometry ;;
+    *)
+        echo "error: unsupported OpenCV version: $version" >&2
+        echo "error: opencv_geometry supports OpenCV 4.x and 5.x only" >&2
+        exit 1
+        ;;
 esac
 
 include_dir=$("$pkg_config" --variable=includedir "$package")
