@@ -137,6 +137,18 @@ opencv_geometry_match_shapes(
     int32_t method,
     double *out_score);
 
+#define OPENCV_GEOMETRY_POINT_POLYGON_CLASSIFY ((int32_t)0)
+#define OPENCV_GEOMETRY_POINT_POLYGON_DISTANCE ((int32_t)1)
+
+opencv_geometry_status
+opencv_geometry_point_polygon_test(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    float query_x,
+    float query_y,
+    int32_t measure_distance,
+    double *out_result);
+
 #ifdef __cplusplus
 }
 #endif

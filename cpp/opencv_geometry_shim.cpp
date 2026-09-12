@@ -9,6 +9,9 @@
 
 #include <cstdio>
 #include <exception>
+#include <cmath>
+#include <cstdint>
+#include <limits>
 #include <vector>
 
 namespace {
@@ -560,6 +563,157 @@ opencv_geometry_match_shapes(
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         *out_score = 0.0;
+        return translate_current_exception();
+    }
+}
+
+namespace {
+
+bool query_is_integral_int32(float query_x, float query_y) noexcept
+{
+    if (!std::isfinite(query_x) || !std::isfinite(query_y)) {
+        return false;
+    }
+    // OpenCV's integer fast path requires cvRound(pt) == pt exactly.
+    // Compare against every representable int32 rather than depending
+    // on the current floating-point rounding mode.
+    if (query_x < static_cast<float>(INT32_MIN)
+        || query_x > static_cast<float>(INT32_MAX)
+        || query_y < static_cast<float>(INT32_MIN)
+        || query_y > static_cast<float>(INT32_MAX)) {
+        return false;
+    }
+    const int32_t ix = static_cast<int32_t>(query_x);
+    const int32_t iy = static_cast<int32_t>(query_y);
+    return static_cast<float>(ix) == query_x
+        && static_cast<float>(iy) == query_y;
+}
+
+bool product_fits_int64(int64_t left, int64_t right) noexcept
+{
+    if (left == 0 || right == 0) {
+        return true;
+    }
+    const uint64_t int64_limit = static_cast<uint64_t>(INT64_MAX);
+    const uint64_t a =
+        left == INT64_MIN
+            ? static_cast<uint64_t>(INT64_MAX) + 1U
+            : static_cast<uint64_t>(left < 0 ? -left : left);
+    const uint64_t b =
+        right == INT64_MIN
+            ? static_cast<uint64_t>(INT64_MAX) + 1U
+            : static_cast<uint64_t>(right < 0 ? -right : right);
+    return a <= int64_limit / b;
+}
+
+bool integer_point_polygon_edge_is_safe(
+    const opencv_geometry_point_i32 *points,
+    int32_t from,
+    int32_t to,
+    int32_t query_x,
+    int32_t query_y) noexcept
+{
+    const int64_t int32_min = static_cast<int64_t>(INT32_MIN);
+    const int64_t int32_max = static_cast<int64_t>(INT32_MAX);
+    const int64_t v0x = static_cast<int64_t>(points[from].x);
+    const int64_t v0y = static_cast<int64_t>(points[from].y);
+    const int64_t vx = static_cast<int64_t>(points[to].x);
+    const int64_t vy = static_cast<int64_t>(points[to].y);
+    const int64_t ipy_v0y = static_cast<int64_t>(query_y) - v0y;
+    const int64_t vx_v0x = vx - v0x;
+    const int64_t ipx_v0x = static_cast<int64_t>(query_x) - v0x;
+    const int64_t vy_v0y = vy - v0y;
+    if (ipy_v0y < int32_min || ipy_v0y > int32_max
+        || vx_v0x < int32_min || vx_v0x > int32_max
+        || ipx_v0x < int32_min || ipx_v0x > int32_max
+        || vy_v0y < int32_min || vy_v0y > int32_max) {
+        return false;
+    }
+    return product_fits_int64(ipy_v0y, vx_v0x)
+        && product_fits_int64(ipx_v0x, vy_v0y);
+}
+
+bool integer_point_polygon_arithmetic_is_safe(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t query_x,
+    int32_t query_y) noexcept
+{
+    // Native-call arithmetic safety: OpenCV 4.10/5.x integer
+    // pointPolygonTest subtracts contour and query coordinates in
+    // signed int, then multiplies those deltas as int64_t. Reject
+    // contours whose native int subtractions or int64 products would
+    // overflow. This check does not classify the query.
+    if (point_count <= 1) {
+        return true;
+    }
+    for (int32_t index = 0; index + 1 < point_count; ++index) {
+        if (!integer_point_polygon_edge_is_safe(
+                points, index, index + 1, query_x, query_y)) {
+            return false;
+        }
+    }
+    return integer_point_polygon_edge_is_safe(
+        points, point_count - 1, 0, query_x, query_y);
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_point_polygon_test(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    float query_x,
+    float query_y,
+    int32_t measure_distance,
+    double *out_result)
+{
+    clear_error();
+    if (out_result == nullptr) {
+        return invalid_argument("null point polygon test output pointer");
+    }
+    *out_result = 0.0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "point polygon test point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (measure_distance != 0 && measure_distance != 1) {
+        return invalid_argument(
+            "point polygon test mode selector must be zero or one");
+    }
+    // OpenCV compatibility: OpenCV 4.10 and 5.x reject an empty point
+    // vector because checkVector cannot determine an element depth.
+    // Native pointPolygonTest returns -1 / -DBL_MAX for total == 0 when
+    // the depth is known, so Geometry preserves those empty-input results.
+    if (point_count == 0) {
+        *out_result =
+            measure_distance != 0
+                ? -std::numeric_limits<double>::max()
+                : -1.0;
+        return OPENCV_GEOMETRY_OK;
+    }
+    if (measure_distance == 0 && query_is_integral_int32(query_x, query_y)) {
+        const int32_t qx = static_cast<int32_t>(query_x);
+        const int32_t qy = static_cast<int32_t>(query_y);
+        if (!integer_point_polygon_arithmetic_is_safe(
+                points, point_count, qx, qy)) {
+            return invalid_argument(
+                "point polygon test exceeds signed 32-bit arithmetic range");
+        }
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        const cv::Point2f query(query_x, query_y);
+        *out_result =
+            cv::pointPolygonTest(contour, query, measure_distance != 0);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_result = 0.0;
         return translate_current_exception();
     }
 }

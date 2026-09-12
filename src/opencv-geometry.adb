@@ -538,4 +538,72 @@ package body OpenCV.Geometry is
       Raise_On_Error (Status, "match shapes");
       return To_Public_Float64 (Score, "Match_Shapes result is not finite");
    end Match_Shapes;
+
+   function Call_Point_Polygon_Test
+     (Points           : Contour;
+      Query            : OpenCV.Core.Float32_Point;
+      Measure_Distance : Interfaces.Integer_32) return Interfaces.C.double
+   is
+      pragma Suppress (Validity_Check);
+      Packed  : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Result  : aliased Interfaces.C.double := 0.0;
+      Status  : Internal.C_API.Status;
+      Query_X : constant Interfaces.C.C_float :=
+        Interfaces.C.C_float (Query.X);
+      Query_Y : constant Interfaces.C.C_float :=
+        Interfaces.C.C_float (Query.Y);
+   begin
+      if Packed'Length = 0 then
+         Status :=
+           Internal.C_API.Point_Polygon_Test
+             (null, 0, Query_X, Query_Y, Measure_Distance, Result'Access);
+      else
+         Status :=
+           Internal.C_API.Point_Polygon_Test
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Query_X,
+              Query_Y,
+              Measure_Distance,
+              Result'Access);
+      end if;
+      Raise_On_Error (Status, "point polygon test");
+      return Result;
+   end Call_Point_Polygon_Test;
+
+   function Locate_Point
+     (Points : Contour; Query : OpenCV.Core.Float32_Point)
+      return Contour_Point_Location
+   is
+      pragma Suppress (Validity_Check);
+      use type Interfaces.C.double;
+      Result : constant Interfaces.C.double :=
+        Call_Point_Polygon_Test
+          (Points, Query, Internal.C_API.Point_Polygon_Classify);
+   begin
+      if Result = -1.0 then
+         return Outside_Contour;
+      elsif Result = 0.0 then
+         return On_Contour_Boundary;
+      elsif Result = 1.0 then
+         return Inside_Contour;
+      else
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "point polygon classification result is invalid");
+      end if;
+   end Locate_Point;
+
+   function Signed_Distance_To_Contour
+     (Points : Contour; Query : OpenCV.Core.Float32_Point)
+      return OpenCV.Core.Float64_Value
+   is
+      Result : constant Interfaces.C.double :=
+        Call_Point_Polygon_Test
+          (Points, Query, Internal.C_API.Point_Polygon_Distance);
+   begin
+      return
+        To_Public_Float64
+          (Result, "Signed_Distance_To_Contour result is not finite");
+   end Signed_Distance_To_Contour;
 end OpenCV.Geometry;

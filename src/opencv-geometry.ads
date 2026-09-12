@@ -123,4 +123,25 @@ package OpenCV.Geometry is
      (Left, Right : Contour; Method : Shape_Match_Method)
       return OpenCV.Core.Float64_Value;
 
+   --  Classifies Query relative to the polygon defined by Points.
+   --  Query coordinates are binary32 and may be fractional. Empty
+   --  contours are Outside_Contour. Points is unchanged.
+   type Contour_Point_Location is
+     (Outside_Contour, On_Contour_Boundary, Inside_Contour);
+
+   function Locate_Point
+     (Points : Contour; Query : OpenCV.Core.Float32_Point)
+      return Contour_Point_Location;
+
+   --  Signed distance from Query to the nearest edge of Points.
+   --  Positive is inside, zero is on the boundary, and negative is
+   --  outside. Empty contours follow OpenCV and return the largest
+   --  finite negative Float64_Value. Points is unchanged. If native
+   --  computation produces a non-finite value that cannot be
+   --  represented by Float64_Value, Signed_Distance_To_Contour raises
+   --  OpenCV_Error.
+   function Signed_Distance_To_Contour
+     (Points : Contour; Query : OpenCV.Core.Float32_Point)
+      return OpenCV.Core.Float64_Value;
+
 end OpenCV.Geometry;

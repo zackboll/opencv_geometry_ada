@@ -166,6 +166,21 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_match_shapes";
 
+   Point_Polygon_Classify : constant Interfaces.Integer_32 := 0;
+   Point_Polygon_Distance : constant Interfaces.Integer_32 := 1;
+
+   function Point_Polygon_Test
+     (Points           : access Point_I32;
+      Point_Count      : Interfaces.Integer_32;
+      Query_X          : Interfaces.C.C_float;
+      Query_Y          : Interfaces.C.C_float;
+      Measure_Distance : Interfaces.Integer_32;
+      Out_Result       : access Interfaces.C.double) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_point_polygon_test";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;
