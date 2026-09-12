@@ -1,0 +1,25 @@
+name = "tests"
+description = "Unit tests for opencv_geometry crate"
+version = "0.1.0"
+
+authors = ["Zack Boll"]
+maintainers = ["Zack Boll <zackboll@gmail.com>"]
+maintainers-logins = ["zackboll"]
+licenses = "Apache-2.0"
+website = ""
+tags = []
+
+[[depends-on]]
+aunit = "^26.0.0"
+
+[[depends-on]]
+opencv_geometry = "*"
+
+[[pins]]
+opencv_geometry = { path='..' }
+
+[[depends-on]]
+gnatprove = "^16.1.0"
+
+[[depends-on]]
+gnatcov = "^26.2.1"
