@@ -62,6 +62,8 @@ package OpenCV.Geometry is
    --  under reflection. Rasterized-image transforms can differ slightly.
    --  Compose with Compute_Moments as Hu_Moments (Compute_Moments (Points)).
    --  Moments is unchanged.
+   --  If native Hu computation produces a non-finite value that cannot
+   --  be represented by Float64_Value, Hu_Moments raises OpenCV_Error.
    type Hu_Moment_Index is range 1 .. 7;
 
    type Hu_Moments_Result is

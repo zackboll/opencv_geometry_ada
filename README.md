@@ -45,6 +45,8 @@ invariants indexed `1 .. 7`, not logarithmically transformed values.
 Compose as `Hu_Moments (Compute_Moments (Points))`. The invariants are
 unchanged by translation, scale, rotation, and reflection except the seventh,
 whose sign changes under reflection.
+If native Hu computation produces a non-finite value that cannot be represented
+by `Float64_Value`, `Hu_Moments` raises `OpenCV_Error`.
 
 Architecture: thick Ada -> thin Ada C interop -> C ABI -> C++ shim -> OpenCV.
 No STL, C++ exceptions or native objects cross the C ABI. Native errors become

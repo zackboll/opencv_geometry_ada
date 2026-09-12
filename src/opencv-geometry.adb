@@ -203,7 +203,36 @@ package body OpenCV.Geometry is
       return To_Public_Moments (Result);
    end Compute_Moments;
 
+   function To_Public_Hu_Value
+     (Value : Interfaces.C.double; Index : Hu_Moment_Index)
+      return OpenCV.Core.Float64_Value
+   is
+      pragma Suppress (Validity_Check);
+      use type Interfaces.C.double;
+      Finite : Boolean;
+   begin
+      --  Public Float64_Value is finite-only. Inspect the raw C double
+      --  before converting so Inf/NaN become OpenCV_Error, not an Ada
+      --  validity failure.
+      Finite :=
+        Value'Valid
+        and then Value = Value
+        and then Value >= Interfaces.C.double (OpenCV.Core.Float64_Value'First)
+        and then Value <= Interfaces.C.double (OpenCV.Core.Float64_Value'Last);
+      if not Finite then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Hu moment"
+            & Hu_Moment_Index'Image (Index)
+            & " result is not finite");
+      end if;
+      return OpenCV.Core.Float64_Value (Value);
+   end To_Public_Hu_Value;
+
    function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result is
+      --  Native Hu results may be Inf/NaN. Suppress Ada validity checks
+      --  until To_Public_Hu_Value inspects the raw C doubles.
+      pragma Suppress (Validity_Check);
       Packed : aliased Internal.C_API.C_Moments := To_C_Moments (Moments);
       Result : aliased Internal.C_API.C_Hu_Result :=
         (Hu_1 => 0.0,
@@ -218,13 +247,13 @@ package body OpenCV.Geometry is
       Status := Internal.C_API.Hu_Moments (Packed'Access, Result'Access);
       Raise_On_Error (Status, "Hu moments");
       return
-        (1 => OpenCV.Core.Float64_Value (Result.Hu_1),
-         2 => OpenCV.Core.Float64_Value (Result.Hu_2),
-         3 => OpenCV.Core.Float64_Value (Result.Hu_3),
-         4 => OpenCV.Core.Float64_Value (Result.Hu_4),
-         5 => OpenCV.Core.Float64_Value (Result.Hu_5),
-         6 => OpenCV.Core.Float64_Value (Result.Hu_6),
-         7 => OpenCV.Core.Float64_Value (Result.Hu_7));
+        (1 => To_Public_Hu_Value (Result.Hu_1, 1),
+         2 => To_Public_Hu_Value (Result.Hu_2, 2),
+         3 => To_Public_Hu_Value (Result.Hu_3, 3),
+         4 => To_Public_Hu_Value (Result.Hu_4, 4),
+         5 => To_Public_Hu_Value (Result.Hu_5, 5),
+         6 => To_Public_Hu_Value (Result.Hu_6, 6),
+         7 => To_Public_Hu_Value (Result.Hu_7, 7));
    end Hu_Moments;
 
    function Unpack_Contour

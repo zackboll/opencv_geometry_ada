@@ -1,8 +1,10 @@
+with Ada.Exceptions;
 with Ada.Strings.Fixed;
 with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces.C;
+with OpenCV;
 with OpenCV.Core;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
@@ -51,11 +53,27 @@ package body Hu_Moments_Tests is
         or else Difference <= Relative_Tolerance * Scale;
    end Close;
 
+   function C_Close (Left, Right : Interfaces.C.double) return Boolean is
+      Difference : constant Interfaces.C.double := abs (Left - Right);
+      Scale      : constant Interfaces.C.double :=
+        Interfaces.C.double'Max (abs (Left), abs (Right));
+   begin
+      return
+        Difference <= Interfaces.C.double (Absolute_Tolerance)
+        or else Difference <= Interfaces.C.double (Relative_Tolerance) * Scale;
+   end C_Close;
+
    procedure Assert_Close
      (Actual, Expected : OpenCV.Core.Float64_Value; Message : String) is
    begin
       AUnit.Assertions.Assert (Close (Actual, Expected), Message);
    end Assert_Close;
+
+   procedure Assert_C_Close
+     (Actual, Expected : Interfaces.C.double; Message : String) is
+   begin
+      AUnit.Assertions.Assert (C_Close (Actual, Expected), Message);
+   end Assert_C_Close;
 
    procedure Assert_Hu
      (Actual, Expected : OpenCV.Geometry.Hu_Moments_Result; Message : String)
@@ -390,16 +408,119 @@ package body Hu_Moments_Tests is
       Status := C_API.Hu_Moments (Input'Access, Output'Access);
       AUnit.Assertions.Assert
         (Status = C_API.Success, "valid Hu moments ABI call must succeed");
-      AUnit.Assertions.Assert
-        (Output.Hu_1 = 0.40000000000000002
-         and then Output.Hu_2 = 0.20000000000000001
-         and then Output.Hu_3 = 2.5999999999999996
-         and then Output.Hu_4 = 2.4399999999999999
-         and then Output.Hu_5 = 6.1456
-         and then Output.Hu_6 = 1.048
-         and then Output.Hu_7 = -0.035200000000001008,
-         "C ABI must return raw Hu values in OpenCV order");
+      Assert_C_Close
+        (Output.Hu_1, 0.40000000000000002, "C ABI Hu_1 must match OpenCV");
+      Assert_C_Close
+        (Output.Hu_2, 0.20000000000000001, "C ABI Hu_2 must match OpenCV");
+      Assert_C_Close
+        (Output.Hu_3, 2.5999999999999996, "C ABI Hu_3 must match OpenCV");
+      Assert_C_Close
+        (Output.Hu_4, 2.4399999999999999, "C ABI Hu_4 must match OpenCV");
+      Assert_C_Close (Output.Hu_5, 6.1456, "C ABI Hu_5 must match OpenCV");
+      Assert_C_Close (Output.Hu_6, 1.048, "C ABI Hu_6 must match OpenCV");
+      Assert_C_Close
+        (Output.Hu_7, -0.035200000000001008, "C ABI Hu_7 must match OpenCV");
    end C_ABI_Validation;
+
+   procedure Overflow_Raises_OpenCV_Error (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Moments : constant OpenCV.Geometry.Moments_Result :=
+        (Nu_20  => OpenCV.Core.Float64_Value'Last,
+         Nu_02  => OpenCV.Core.Float64_Value'Last,
+         others => <>);
+      Raised  : Boolean := False;
+      Packed  : aliased C_API.C_Moments :=
+        (Nu20   => Interfaces.C.double (OpenCV.Core.Float64_Value'Last),
+         Nu02   => Interfaces.C.double (OpenCV.Core.Float64_Value'Last),
+         others => 0.0);
+      Output  : aliased C_API.C_Hu_Result;
+      Status  : C_API.Status;
+   begin
+      Status := C_API.Hu_Moments (Packed'Access, Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success,
+         "finite overflow input must still invoke native Hu_Moments");
+      begin
+         declare
+            Unused : constant OpenCV.Geometry.Hu_Moments_Result :=
+              OpenCV.Geometry.Hu_Moments (Moments);
+            pragma Unreferenced (Unused);
+         begin
+            null;
+         end;
+      exception
+         when Error : OpenCV.OpenCV_Error =>
+            Raised :=
+              Ada.Strings.Fixed.Index
+                (Ada.Exceptions.Exception_Message (Error), "not finite")
+              /= 0;
+         when others =>
+            AUnit.Assertions.Assert
+              (False,
+               "overflow must raise OpenCV_Error, not Constraint_Error");
+      end;
+      AUnit.Assertions.Assert
+        (Raised, "overflowing finite Nu_20+Nu_02 must raise OpenCV_Error");
+   end Overflow_Raises_OpenCV_Error;
+
+   procedure Finite_NaN_Raises_OpenCV_Error (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Moments : constant OpenCV.Geometry.Moments_Result :=
+        (Nu_20  => OpenCV.Core.Float64_Value'Last,
+         Nu_02  => -OpenCV.Core.Float64_Value'Last,
+         others => <>);
+      Raised  : Boolean := False;
+      Packed  : aliased C_API.C_Moments :=
+        (Nu20   => Interfaces.C.double (OpenCV.Core.Float64_Value'Last),
+         Nu02   => Interfaces.C.double (-OpenCV.Core.Float64_Value'Last),
+         others => 0.0);
+      Output  : aliased C_API.C_Hu_Result;
+      Status  : C_API.Status;
+   begin
+      Status := C_API.Hu_Moments (Packed'Access, Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success,
+         "finite NaN-producing input must still invoke native Hu_Moments");
+      begin
+         declare
+            Unused : constant OpenCV.Geometry.Hu_Moments_Result :=
+              OpenCV.Geometry.Hu_Moments (Moments);
+            pragma Unreferenced (Unused);
+         begin
+            null;
+         end;
+      exception
+         when Error : OpenCV.OpenCV_Error =>
+            Raised :=
+              Ada.Strings.Fixed.Index
+                (Ada.Exceptions.Exception_Message (Error), "not finite")
+              /= 0;
+         when others =>
+            AUnit.Assertions.Assert
+              (False,
+               "NaN result must raise OpenCV_Error, not Constraint_Error");
+      end;
+      AUnit.Assertions.Assert
+        (Raised, "finite input producing native NaN must raise OpenCV_Error");
+   end Finite_NaN_Raises_OpenCV_Error;
+
+   procedure Large_Finite_Result (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Half    : constant OpenCV.Core.Float64_Value :=
+        OpenCV.Core.Float64_Value'Last / 2.0;
+      Moments : constant OpenCV.Geometry.Moments_Result :=
+        (Nu_20 => Half, Nu_02 => Half, others => <>);
+      Hu      : constant OpenCV.Geometry.Hu_Moments_Result :=
+        OpenCV.Geometry.Hu_Moments (Moments);
+   begin
+      Assert_Close
+        (Hu (1),
+         OpenCV.Core.Float64_Value'Last,
+         "largest finite Hu_1 must be accepted");
+      for Index in OpenCV.Geometry.Hu_Moment_Index range 3 .. 7 loop
+         Assert_Close (Hu (Index), 0.0, "half+half remaining Hu must be 0");
+      end loop;
+   end Large_Finite_Result;
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
@@ -441,6 +562,17 @@ package body Hu_Moments_Tests is
       Result.Add_Test
         (Caller.Create
            ("Hu moments C ABI validation", C_ABI_Validation'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Hu moments overflow raises OpenCV_Error",
+            Overflow_Raises_OpenCV_Error'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Hu moments finite NaN raises OpenCV_Error",
+            Finite_NaN_Raises_OpenCV_Error'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Hu moments large finite result", Large_Finite_Result'Access));
       return Result'Access;
    end Suite;
 
