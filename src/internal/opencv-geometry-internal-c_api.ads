@@ -125,6 +125,12 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_bounding_rect";
 
+   function Is_Convex
+     (Points        : access Point_I32;
+      Point_Count   : Interfaces.Integer_32;
+      Out_Is_Convex : access Interfaces.Integer_32) return Status
+   with Import, Convention => C, External_Name => "opencv_geometry_is_convex";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;

@@ -284,6 +284,116 @@ opencv_geometry_convex_hull(
     }
 }
 
+namespace {
+
+bool integer_contour_arithmetic_is_safe(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count) noexcept
+{
+    // Native-call arithmetic safety: OpenCV 4.10 and 5.x isContourConvex_
+    // for CV_32S points computes each consecutive (and wrap-around) edge
+    // as signed int subtraction, then multiplies those deltas as signed
+    // int. Reject contours whose native int operations would overflow.
+    if (point_count <= 0) {
+        return true;
+    }
+
+    const int64_t int32_min = static_cast<int64_t>(INT32_MIN);
+    const int64_t int32_max = static_cast<int64_t>(INT32_MAX);
+    int32_t previous_index = point_count - 2;
+    if (previous_index < 0) {
+        previous_index += point_count;
+    }
+
+    int32_t current_x = points[point_count - 1].x;
+    int32_t current_y = points[point_count - 1].y;
+    int64_t dx0 =
+        static_cast<int64_t>(current_x)
+        - static_cast<int64_t>(points[previous_index].x);
+    int64_t dy0 =
+        static_cast<int64_t>(current_y)
+        - static_cast<int64_t>(points[previous_index].y);
+    if (dx0 < int32_min || dx0 > int32_max
+        || dy0 < int32_min || dy0 > int32_max) {
+        return false;
+    }
+
+    for (int32_t index = 0; index < point_count; ++index) {
+        const int64_t dx =
+            static_cast<int64_t>(points[index].x)
+            - static_cast<int64_t>(current_x);
+        const int64_t dy =
+            static_cast<int64_t>(points[index].y)
+            - static_cast<int64_t>(current_y);
+        if (dx < int32_min || dx > int32_max
+            || dy < int32_min || dy > int32_max) {
+            return false;
+        }
+        const int64_t dxdy0 = dx * dy0;
+        const int64_t dydx0 = dy * dx0;
+        if (dxdy0 < int32_min || dxdy0 > int32_max
+            || dydx0 < int32_min || dydx0 > int32_max) {
+            return false;
+        }
+        dx0 = dx;
+        dy0 = dy;
+        current_x = points[index].x;
+        current_y = points[index].y;
+    }
+
+    return true;
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_is_convex(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t *out_is_convex)
+{
+    clear_error();
+    if (out_is_convex == nullptr) {
+        return invalid_argument("null is-convex output pointer");
+    }
+    *out_is_convex = 0;
+    if (point_count < 0) {
+        return invalid_argument("is-convex point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: OpenCV 4.10 and 5.x reject an empty point
+    // vector because checkVector cannot determine an element depth.
+    // Native isContourConvex returns false for total == 0 when the depth
+    // is known, so Geometry preserves that empty-input result.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+
+    // ABI safety: OpenCV 4.10/5.x integer isContourConvex subtracts and
+    // multiplies consecutive Point coordinates in signed int. Validate
+    // those operations in int64_t so extreme int32 contours cannot
+    // overflow native arithmetic. This check does not decide convexity.
+    if (!integer_contour_arithmetic_is_safe(points, point_count)) {
+        return invalid_argument(
+            "is-convex contour exceeds signed 32-bit arithmetic range");
+    }
+
+    try {
+        std::vector<cv::Point> contour;
+        contour.reserve(static_cast<std::size_t>(point_count));
+        for (int32_t index = 0; index < point_count; ++index) {
+            contour.emplace_back(points[index].x, points[index].y);
+        }
+        *out_is_convex = cv::isContourConvex(contour) ? 1 : 0;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_is_convex = 0;
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_bounding_rect(
     const opencv_geometry_point_i32 *points,

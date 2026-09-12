@@ -16,8 +16,9 @@ Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
 Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
-`Convex_Hull`, `Approximate_Curve`, and `Bounding_Rect`. `Contour` is a subtype
-of `OpenCV.Core.Point_Array`; storage stays Ada-owned. `Convex_Hull` returns
+`Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, and `Is_Convex`.
+`Contour` is a subtype of `OpenCV.Core.Point_Array`; storage stays
+Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
 counterclockwise using OpenCV's convention (X right, Y up); image coordinates
 that increase Y downward may look reversed. `Approximate_Curve` applies
@@ -29,6 +30,11 @@ point set spanning X=0..4 and Y=0..3 has Width=5 and Height=4. Empty input
 returns (0, 0, 0, 0). Negative native origins are preserved as signed
 `OpenCV.Core.Rect` X/Y values. Inclusive extents that
 cannot be represented as signed 32-bit width or height are rejected.
+`Is_Convex` tests contour convexity and does not depend on winding direction.
+The contour is expected to be simple; OpenCV leaves the result for
+self-intersecting contours undefined. Empty, one-point, two-point, and
+collinear contours are not convex. Integer contours whose native signed-32-bit
+edge or cross-product arithmetic would overflow are rejected.
 
 Moments include all 24 spatial, central and normalized fields through order 3.
 Handle zero `M_00` before deriving a centroid; self-intersecting contours can

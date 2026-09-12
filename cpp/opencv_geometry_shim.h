@@ -103,6 +103,12 @@ opencv_geometry_bounding_rect(
     int32_t point_count,
     opencv_geometry_rect_i32 *out_rect);
 
+opencv_geometry_status
+opencv_geometry_is_convex(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t *out_is_convex);
+
 #ifdef __cplusplus
 }
 #endif

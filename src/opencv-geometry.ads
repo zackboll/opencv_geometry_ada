@@ -83,4 +83,11 @@ package OpenCV.Geometry is
    --  or height raise OpenCV.OpenCV_Error. Points is unchanged.
    function Bounding_Rect (Points : Contour) return OpenCV.Core.Rect;
 
+   --  Tests whether Points is a convex contour. The contour is expected to
+   --  be simple (non-self-intersecting); OpenCV leaves the result for
+   --  non-simple contours undefined. Convexity does not depend on winding
+   --  direction. Empty, one-point, two-point, and collinear contours are
+   --  not convex. Points is unchanged.
+   function Is_Convex (Points : Contour) return Boolean;
+
 end OpenCV.Geometry;

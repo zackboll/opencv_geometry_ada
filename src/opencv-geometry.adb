@@ -349,4 +349,34 @@ package body OpenCV.Geometry is
       Raise_On_Error (Status, "bounding rect");
       return To_Public_Rect (Result);
    end Bounding_Rect;
+
+   function Is_Convex (Points : Contour) return Boolean is
+      Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Result : aliased Interfaces.Integer_32 := 0;
+      Status : Internal.C_API.Status;
+   begin
+      if Packed'Length = 0 then
+         Status := Internal.C_API.Is_Convex (null, 0, Result'Access);
+      else
+         Status :=
+           Internal.C_API.Is_Convex
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Result'Access);
+      end if;
+      Raise_On_Error (Status, "is convex");
+
+      case Result is
+         when 0      =>
+            return False;
+
+         when 1      =>
+            return True;
+
+         when others =>
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "is convex failed: invalid Boolean encoding");
+      end case;
+   end Is_Convex;
 end OpenCV.Geometry;
