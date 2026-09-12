@@ -80,6 +80,16 @@ opencv_geometry_convex_hull(
     int32_t out_capacity,
     int32_t *out_count);
 
+opencv_geometry_status
+opencv_geometry_approximate_curve(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    double epsilon,
+    int32_t closed,
+    opencv_geometry_point_i32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count);
+
 #ifdef __cplusplus
 }
 #endif

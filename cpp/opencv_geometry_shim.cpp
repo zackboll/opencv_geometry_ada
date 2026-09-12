@@ -284,3 +284,74 @@ opencv_geometry_convex_hull(
     }
 }
 
+opencv_geometry_status
+opencv_geometry_approximate_curve(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    double epsilon,
+    int32_t closed,
+    opencv_geometry_point_i32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null approximate curve output count pointer");
+    }
+    *out_count = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "approximate curve point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (closed != 0 && closed != 1) {
+        return invalid_argument(
+            "approximate curve closed selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "approximate curve output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any approximation points.
+    if (out_capacity > 0 && out_points == nullptr) {
+        return invalid_argument(
+            "null approximate curve output points with positive capacity");
+    }
+    // OpenCV compatibility: OpenCV 4.10 rejects an empty point vector
+    // because checkVector cannot determine an element depth. Geometry
+    // defines an empty contour to produce an empty approximation.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+
+    try {
+        std::vector<cv::Point> contour;
+        contour.reserve(static_cast<std::size_t>(point_count));
+        for (int32_t index = 0; index < point_count; ++index) {
+            contour.emplace_back(points[index].x, points[index].y);
+        }
+        std::vector<cv::Point> approx;
+        cv::approxPolyDP(contour, approx, epsilon, closed != 0);
+        // ABI safety: copying more points than capacity would overflow the
+        // caller-provided buffer. Approximation cardinality is at most
+        // point_count.
+        if (approx.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "approximate curve output capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < approx.size(); ++index) {
+            out_points[index].x = approx[index].x;
+            out_points[index].y = approx[index].y;
+        }
+        *out_count = static_cast<int32_t>(approx.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+

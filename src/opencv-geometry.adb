@@ -248,4 +248,67 @@ package body OpenCV.Geometry is
          end;
       end if;
    end Convex_Hull;
+
+   function Approximate_Curve
+     (Points : Contour; Epsilon : OpenCV.Core.Float64_Value; Closed : Boolean)
+      return Contour
+   is
+      use type OpenCV.Core.Float64_Value;
+   begin
+      if not Epsilon'Valid or else Epsilon < 0.0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "approximate curve epsilon must be finite and nonnegative");
+      end if;
+
+      declare
+         use type Interfaces.Integer_32;
+
+         Packed      : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+         Count       : aliased Interfaces.Integer_32 := 0;
+         Status      : Internal.C_API.Status;
+         Closed_Flag : constant Interfaces.Integer_32 := To_C_Boolean (Closed);
+      begin
+         if Packed'Length = 0 then
+            Status :=
+              Internal.C_API.Approximate_Curve
+                (null,
+                 0,
+                 Interfaces.C.double (Epsilon),
+                 Closed_Flag,
+                 null,
+                 0,
+                 Count'Access);
+            Raise_On_Error (Status, "approximate curve");
+            return Unpack_Contour (Packed, 0);
+         else
+            declare
+               Output :
+                 Internal.C_API.Point_I32_Array (0 .. Packed'Length - 1);
+            begin
+               Status :=
+                 Internal.C_API.Approximate_Curve
+                   (Packed (Packed'First)'Access,
+                    Interfaces.Integer_32 (Packed'Length),
+                    Interfaces.C.double (Epsilon),
+                    Closed_Flag,
+                    Output (Output'First)'Access,
+                    Interfaces.Integer_32 (Output'Length),
+                    Count'Access);
+               Raise_On_Error (Status, "approximate curve");
+               if Count < 0 then
+                  Ada.Exceptions.Raise_Exception
+                    (OpenCV.OpenCV_Error'Identity,
+                     "approximate curve failed: negative point count");
+               end if;
+               if Natural (Count) > Output'Length then
+                  Ada.Exceptions.Raise_Exception
+                    (OpenCV.OpenCV_Error'Identity,
+                     "approximate curve failed: count exceeds capacity");
+               end if;
+               return Unpack_Contour (Output, Natural (Count));
+            end;
+         end if;
+      end;
+   end Approximate_Curve;
 end OpenCV.Geometry;

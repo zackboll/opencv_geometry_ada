@@ -15,11 +15,16 @@ Both link native OpenCV Core. There is no Ada Imgproc dependency.
 Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
-Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`, and
-`Convex_Hull`. `Contour` is a subtype of `OpenCV.Core.Point_Array`; storage
-stays Ada-owned. `Convex_Hull` returns hull points, not source indices.
-`Hull_Orientation` defaults to counterclockwise using OpenCV's convention
-(X right, Y up); image coordinates that increase Y downward may look reversed.
+Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
+`Convex_Hull`, and `Approximate_Curve`. `Contour` is a subtype of
+`OpenCV.Core.Point_Array`; storage stays Ada-owned. `Convex_Hull` returns
+hull points, not source indices. `Hull_Orientation` defaults to
+counterclockwise using OpenCV's convention (X right, Y up); image coordinates
+that increase Y downward may look reversed. `Approximate_Curve` applies
+Douglas-Peucker; `Epsilon` is the maximum finite nonnegative deviation and
+`Closed` connects the last vertex to the first. Empty input yields an empty
+Ada-owned contour.
+
 Moments include all 24 spatial, central and normalized fields through order 3.
 Handle zero `M_00` before deriving a centroid; self-intersecting contours can
 produce surprising results under Green's formula.

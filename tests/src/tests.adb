@@ -3,6 +3,7 @@ with AUnit;
 with AUnit.Reporter.Text;
 with AUnit.Run;
 with AUnit.Test_Suites;
+with Approximate_Curve_Tests;
 with Contour_Geometry_Tests;
 with Contour_Moments_Tests;
 with Convex_Hull_Tests;
@@ -23,6 +24,7 @@ procedure Tests is
 begin
    Suite.Add_Test (Contour_Moments_Tests.Suite);
    Suite.Add_Test (Convex_Hull_Tests.Suite);
+   Suite.Add_Test (Approximate_Curve_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;

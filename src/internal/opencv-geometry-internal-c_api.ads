@@ -95,6 +95,19 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_convex_hull";
 
+   function Approximate_Curve
+     (Points       : access Point_I32;
+      Point_Count  : Interfaces.Integer_32;
+      Epsilon      : Interfaces.C.double;
+      Closed       : Interfaces.Integer_32;
+      Out_Points   : access Point_I32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_approximate_curve";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;
