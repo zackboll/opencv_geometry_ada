@@ -68,9 +68,9 @@ package OpenCV.Geometry is
 
    --  Approximates Points with Douglas-Peucker. Epsilon is the maximum
    --  distance between the original curve and the result and must be
-   --  finite and nonnegative. Closed connects the last vertex to the
-   --  first. The result is an Ada-owned contour. Empty input returns an
-   --  empty contour. Points is unchanged.
+   --  in the range 0.0 <= Epsilon < 1.0E30. Closed connects the last
+   --  vertex to the first. The result is an Ada-owned contour. Empty
+   --  input returns an empty contour. Points is unchanged.
    function Approximate_Curve
      (Points : Contour; Epsilon : OpenCV.Core.Float64_Value; Closed : Boolean)
       return Contour;

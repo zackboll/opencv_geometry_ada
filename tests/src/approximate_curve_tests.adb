@@ -1,3 +1,4 @@
+with Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Unchecked_Conversion;
 with AUnit.Assertions;
@@ -304,8 +305,12 @@ package body Approximate_Curve_Tests is
                null;
             end;
          exception
-            when OpenCV.OpenCV_Error =>
-               Raised := True;
+            when Error : OpenCV.OpenCV_Error =>
+               Raised :=
+                 Ada.Strings.Fixed.Index
+                   (Ada.Exceptions.Exception_Message (Error),
+                    "0.0 <= epsilon < 1.0E30")
+                 /= 0;
          end;
 
          AUnit.Assertions.Assert (Raised, Message);
@@ -321,6 +326,17 @@ package body Approximate_Curve_Tests is
       Assert_Rejected
         (Bits_To_Epsilon (16#7FF8_0000_0000_0000#),
          "NaN epsilon must be rejected");
+      Assert_Rejected (1.0E30, "epsilon equal to 1.0E30 must be rejected");
+      Assert_Rejected (1.1E30, "epsilon greater than 1.0E30 must be rejected");
+
+      declare
+         Approx : constant OpenCV.Geometry.Contour :=
+           OpenCV.Geometry.Approximate_Curve (Points, 1.0E29, Closed => False);
+      begin
+         AUnit.Assertions.Assert
+           (Approx'Length <= Points'Length,
+            "finite epsilon below 1.0E30 must return a valid contour");
+      end;
    end Invalid_Public_Epsilon;
 
    procedure C_ABI_Validation (Test : in out Fixture) is

@@ -255,10 +255,11 @@ package body OpenCV.Geometry is
    is
       use type OpenCV.Core.Float64_Value;
    begin
-      if not Epsilon'Valid or else Epsilon < 0.0 then
+      if not Epsilon'Valid or else Epsilon < 0.0 or else Epsilon >= 1.0E30 then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
-            "approximate curve epsilon must be finite and nonnegative");
+            "approximate curve epsilon must be in the range "
+            & "0.0 <= epsilon < 1.0E30");
       end if;
 
       declare
