@@ -66,6 +66,13 @@ package body Convex_Hull_Tests is
             return False;
          end if;
       end loop;
+
+      for Point of Right loop
+         if not Contains_Point (Left, Point) then
+            return False;
+         end if;
+      end loop;
+
       return True;
    end Same_Vertex_Set;
 
@@ -282,6 +289,21 @@ package body Convex_Hull_Tests is
         (Hull'Length = 4, "interior input must still produce a square hull");
    end Input_Unchanged;
 
+   procedure Vertex_Set_Rejects_Duplicate_Omission (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      With_Duplicate : constant OpenCV.Geometry.Contour :=
+        ((X => 0, Y => 0), (X => 0, Y => 0), (X => 1, Y => 0));
+      Distinct       : constant OpenCV.Geometry.Contour :=
+        ((X => 0, Y => 0), (X => 1, Y => 0), (X => 0, Y => 1));
+   begin
+      AUnit.Assertions.Assert
+        (not Same_Vertex_Set (With_Duplicate, Distinct),
+         "vertex-set comparison must reject duplicate vs omitted point");
+      AUnit.Assertions.Assert
+        (not Same_Vertex_Set (Distinct, With_Duplicate),
+         "vertex-set comparison must be independent of argument order");
+   end Vertex_Set_Rejects_Duplicate_Omission;
+
    procedure C_ABI_Validation (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Count  : aliased Interfaces.Integer_32 := -1;
@@ -409,6 +431,10 @@ package body Convex_Hull_Tests is
       Result.Add_Test
         (Caller.Create
            ("Convex hull leaves input unchanged", Input_Unchanged'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Convex hull vertex-set helper rejects duplicate omission",
+            Vertex_Set_Rejects_Duplicate_Omission'Access));
       Result.Add_Test
         (Caller.Create
            ("Convex hull C ABI validation", C_ABI_Validation'Access));

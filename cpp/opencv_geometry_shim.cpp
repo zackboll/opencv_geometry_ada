@@ -251,8 +251,9 @@ opencv_geometry_convex_hull(
         return invalid_argument(
             "null convex hull output points with positive capacity");
     }
-    // ABI safety: OpenCV 4.10 convexHull asserts on an empty point vector
-    // because checkVector cannot determine an element depth.
+    // OpenCV compatibility: OpenCV 4.10 rejects an empty point vector
+    // because checkVector cannot determine an element depth. Geometry
+    // defines an empty contour to produce an empty hull.
     if (point_count == 0) {
         return OPENCV_GEOMETRY_OK;
     }
