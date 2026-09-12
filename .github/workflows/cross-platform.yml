@@ -185,7 +185,29 @@ jobs:
           grep 'OpenCV_Major := "5"' config/opencv_geometry_install.gpr
           grep 'Native_Geometry_Module := "geometry"' config/opencv_geometry_install.gpr
           echo "Found: ${shim_dylib}"
+          grep 'Shim_Build : Shim_Build_Kind := "External_Relocatable"' \
+            config/opencv_geometry_install.gpr
+          grep 'Cxx_Toolchain : Cxx_Toolchain_Kind := "Apple_Clang"' \
+            config/opencv_geometry_install.gpr
+          cxx_driver=$(sed -n 's/.*Cxx_Driver := "\(.*\)";/\1/p' \
+            config/opencv_geometry_install.gpr)
+          case "$cxx_driver" in
+            *gnat_native*)
+              echo "error: C++ driver resolved to the GNAT toolchain: $cxx_driver" >&2
+              exit 1
+              ;;
+          esac
+
           if otool -L "${shim_dylib}" | grep -E 'libopencv_(imgproc\.|core_shim)'; then
+            echo "error: Geometry shim dylib depends on libopencv_imgproc or libopencv_core_shim" >&2
+            otool -L "${shim_dylib}"
+            exit 1
+          fi
+
+          otool -D "${shim_dylib}"
+          shim_id=$(otool -D "${shim_dylib}" | sed -n '2p')
+          if [ "${shim_id}" != "@rpath/libopencv_geometry_shim.dylib" ]; then
+            echo "error: Geometry shim install name is not @rpath/libopencv_geometry_shim.dylib: ${shim_id}" >&2
             exit 1
           fi
 

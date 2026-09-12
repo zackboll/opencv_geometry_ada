@@ -20,15 +20,24 @@ project Opencv_Geometry is
         external ("LIBRARY_TYPE", "static-pic"));
    for Library_Kind use Library_Type;
 
-   --  When the Windows C++ shim is built externally as a DLL, consumers
-   --  of the Ada library must explicitly link its import library.
+   --  When the C++ shim is built externally as a shared library, Ada
+   --  consumers must explicitly link it. macOS uses a dylib; Windows
+   --  uses a DLL/import library.
    case Library_Type is
       when "relocatable" =>
          case Opencv_Geometry_Install.Shim_Build is
             when "External_Relocatable" =>
-               for Library_Options use
-                 ("-L" & Project'Project_Dir & "lib",
-                  "-lopencv_geometry_shim");
+               case Opencv_Geometry_Install.Cxx_Toolchain is
+                  when "Apple_Clang" =>
+                     for Library_Options use
+                       ("-L" & Project'Project_Dir & "lib",
+                        "-lopencv_geometry_shim",
+                        "-Wl,-rpath," & Project'Project_Dir & "lib");
+                  when "GNU" =>
+                     for Library_Options use
+                       ("-L" & Project'Project_Dir & "lib",
+                        "-lopencv_geometry_shim");
+               end case;
             when "Static_PIC" | "Relocatable" =>
                null;
          end case;
@@ -47,14 +56,24 @@ project Opencv_Geometry is
    end Binder;
 
    package Linker is
-      --  External_Relocatable is the Windows/MSYS2 configuration.
-      --  The C++ shim is an independently built DLL, so Ada consumers
-      --  must link against its import library.
+      --  External_Relocatable is used on macOS and Windows. The C++ shim
+      --  is independently built, so Ada consumers must link it explicitly.
       case Opencv_Geometry_Install.Shim_Build is
          when "External_Relocatable" =>
-            for Linker_Options use
-              ("-L" & Project'Project_Dir & "lib",
-               "-lopencv_geometry_shim");
+            case Opencv_Geometry_Install.Cxx_Toolchain is
+               when "Apple_Clang" =>
+                  --  The macOS shim uses @rpath. Consumers need this
+                  --  crate's lib directory at runtime; -L is link-time
+                  --  only. Do not apply Mach-O rpath on Windows.
+                  for Linker_Options use
+                    ("-L" & Project'Project_Dir & "lib",
+                     "-lopencv_geometry_shim",
+                     "-Wl,-rpath," & Project'Project_Dir & "lib");
+               when "GNU" =>
+                  for Linker_Options use
+                    ("-L" & Project'Project_Dir & "lib",
+                     "-lopencv_geometry_shim");
+            end case;
 
          when "Static_PIC" | "Relocatable" =>
             null;

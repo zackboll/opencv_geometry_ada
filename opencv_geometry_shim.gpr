@@ -56,7 +56,9 @@ project OpenCV_Geometry_Shim is
 
    case OpenCV_Geometry_Install.Shim_Build is
       when "Relocatable" =>
-         --  The Geometry dylib owns its OpenCV/libc++ boundary.
+         --  GPR-managed relocatable linking inherits Core's relocatable
+         --  shim through the Ada project closure. macOS therefore uses
+         --  External_Relocatable instead of this path.
          for Library_Options use
            ("-isysroot",
             OpenCV_Geometry_Install.Cxx_Sysroot,

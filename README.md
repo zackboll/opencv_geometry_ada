@@ -25,9 +25,10 @@ Architecture: thick Ada -> thin Ada C interop -> C ABI -> C++ shim -> OpenCV.
 No STL, C++ exceptions or native objects cross the C ABI. Native errors become
 `OpenCV.OpenCV_Error`. No Core module bridge or Core shim is used by this shim.
 
-Linux uses GNU g++, libstdc++ and a static-PIC shim. macOS uses Apple clang++,
-libc++ and a relocatable dylib. Windows builds an external DLL/import library
-with the MinGW g++ from the same prefix as OpenCV, not GNAT's g++.
+Linux uses GNU g++, libstdc++ and a static-PIC shim. macOS and Windows build
+the C++ shim outside GPRbuild so it cannot inherit Core's Ada C++ shim:
+macOS uses Apple clang++, libc++ and a dylib; Windows uses a MinGW
+DLL/import library from the same prefix as OpenCV, not GNAT's g++.
 
 ## Development
 

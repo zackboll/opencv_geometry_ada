@@ -91,7 +91,9 @@ opencv_geometry_link_option="-lopencv_${native_geometry_module}"
 opencv_core_link_option="-lopencv_core"
 
 if [ "$sysname" = "Darwin" ]; then
-    shim_build="Relocatable"
+    # Build the C++ shim outside GPRbuild. A GPR-managed relocatable dylib
+    # inherits Core's relocatable shim through the Ada project closure.
+    shim_build="External_Relocatable"
     cxx_toolchain="Apple_Clang"
     cxx_runtime_switch="-lc++"
     if ! command -v xcrun >/dev/null 2>&1; then
