@@ -55,6 +55,20 @@ package OpenCV.Geometry is
 
    function Compute_Moments (Points : Contour) return Moments_Result;
 
+   --  Seven Hu invariants of Moments in OpenCV order, indexed 1 .. 7.
+   --  The values are the raw invariants, not logarithmically transformed
+   --  Match_Shapes scores. They are invariant to translation, scale,
+   --  rotation, and reflection except the seventh, whose sign changes
+   --  under reflection. Rasterized-image transforms can differ slightly.
+   --  Compose with Compute_Moments as Hu_Moments (Compute_Moments (Points)).
+   --  Moments is unchanged.
+   type Hu_Moment_Index is range 1 .. 7;
+
+   type Hu_Moments_Result is
+     array (Hu_Moment_Index) of OpenCV.Core.Float64_Value;
+
+   function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result;
+
    --  Convex hull of Points as an Ada-owned contour of hull points, not
    --  source-point indices. Orientation uses OpenCV's convention: X
    --  increases rightward and Y increases upward. Image coordinates often

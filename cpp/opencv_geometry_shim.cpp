@@ -179,6 +179,43 @@ void copy_moments(
     out_moments->nu03 = source.nu03;
 }
 
+void copy_moments_from_abi(
+    const opencv_geometry_moments *source,
+    cv::Moments &out_moments) noexcept
+{
+    out_moments.m00 = source->m00;
+    out_moments.m10 = source->m10;
+    out_moments.m01 = source->m01;
+    out_moments.m20 = source->m20;
+    out_moments.m11 = source->m11;
+    out_moments.m02 = source->m02;
+    out_moments.m30 = source->m30;
+    out_moments.m21 = source->m21;
+    out_moments.m12 = source->m12;
+    out_moments.m03 = source->m03;
+
+    out_moments.mu20 = source->mu20;
+    out_moments.mu11 = source->mu11;
+    out_moments.mu02 = source->mu02;
+    out_moments.mu30 = source->mu30;
+    out_moments.mu21 = source->mu21;
+    out_moments.mu12 = source->mu12;
+    out_moments.mu03 = source->mu03;
+
+    out_moments.nu20 = source->nu20;
+    out_moments.nu11 = source->nu11;
+    out_moments.nu02 = source->nu02;
+    out_moments.nu30 = source->nu30;
+    out_moments.nu21 = source->nu21;
+    out_moments.nu12 = source->nu12;
+    out_moments.nu03 = source->nu03;
+}
+
+void zero_hu(opencv_geometry_hu_result *out_hu) noexcept
+{
+    *out_hu = opencv_geometry_hu_result{};
+}
+
 }
 
 opencv_geometry_status
@@ -390,6 +427,39 @@ opencv_geometry_is_convex(
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         *out_is_convex = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_hu_moments(
+    const opencv_geometry_moments *moments,
+    opencv_geometry_hu_result *out_hu)
+{
+    clear_error();
+    if (out_hu == nullptr) {
+        return invalid_argument("null Hu moments output pointer");
+    }
+    zero_hu(out_hu);
+    if (moments == nullptr) {
+        return invalid_argument("null Hu moments input pointer");
+    }
+
+    try {
+        cv::Moments native;
+        copy_moments_from_abi(moments, native);
+        double hu[7] = {};
+        cv::HuMoments(native, hu);
+        out_hu->hu1 = hu[0];
+        out_hu->hu2 = hu[1];
+        out_hu->hu3 = hu[2];
+        out_hu->hu4 = hu[3];
+        out_hu->hu5 = hu[4];
+        out_hu->hu6 = hu[5];
+        out_hu->hu7 = hu[6];
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_hu(out_hu);
         return translate_current_exception();
     }
 }

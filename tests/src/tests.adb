@@ -9,6 +9,7 @@ with Contour_Geometry_Tests;
 with Contour_Moments_Tests;
 with Convex_Hull_Tests;
 with Is_Convex_Tests;
+with Hu_Moments_Tests;
 
 procedure Tests is
 
@@ -29,6 +30,7 @@ begin
    Suite.Add_Test (Approximate_Curve_Tests.Suite);
    Suite.Add_Test (Bounding_Rect_Tests.Suite);
    Suite.Add_Test (Is_Convex_Tests.Suite);
+   Suite.Add_Test (Hu_Moments_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;

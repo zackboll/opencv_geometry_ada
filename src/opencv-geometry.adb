@@ -155,6 +155,36 @@ package body OpenCV.Geometry is
          Nu_03 => OpenCV.Core.Float64_Value (Value.Nu03));
    end To_Public_Moments;
 
+   function To_C_Moments
+     (Value : Moments_Result) return Internal.C_API.C_Moments is
+   begin
+      return
+        (M00  => Interfaces.C.double (Value.M_00),
+         M10  => Interfaces.C.double (Value.M_10),
+         M01  => Interfaces.C.double (Value.M_01),
+         M20  => Interfaces.C.double (Value.M_20),
+         M11  => Interfaces.C.double (Value.M_11),
+         M02  => Interfaces.C.double (Value.M_02),
+         M30  => Interfaces.C.double (Value.M_30),
+         M21  => Interfaces.C.double (Value.M_21),
+         M12  => Interfaces.C.double (Value.M_12),
+         M03  => Interfaces.C.double (Value.M_03),
+         Mu20 => Interfaces.C.double (Value.Mu_20),
+         Mu11 => Interfaces.C.double (Value.Mu_11),
+         Mu02 => Interfaces.C.double (Value.Mu_02),
+         Mu30 => Interfaces.C.double (Value.Mu_30),
+         Mu21 => Interfaces.C.double (Value.Mu_21),
+         Mu12 => Interfaces.C.double (Value.Mu_12),
+         Mu03 => Interfaces.C.double (Value.Mu_03),
+         Nu20 => Interfaces.C.double (Value.Nu_20),
+         Nu11 => Interfaces.C.double (Value.Nu_11),
+         Nu02 => Interfaces.C.double (Value.Nu_02),
+         Nu30 => Interfaces.C.double (Value.Nu_30),
+         Nu21 => Interfaces.C.double (Value.Nu_21),
+         Nu12 => Interfaces.C.double (Value.Nu_12),
+         Nu03 => Interfaces.C.double (Value.Nu_03));
+   end To_C_Moments;
+
    function Compute_Moments (Points : Contour) return Moments_Result is
       Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
       Result : aliased Internal.C_API.C_Moments;
@@ -172,6 +202,30 @@ package body OpenCV.Geometry is
       Raise_On_Error (Status, "contour moments");
       return To_Public_Moments (Result);
    end Compute_Moments;
+
+   function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result is
+      Packed : aliased Internal.C_API.C_Moments := To_C_Moments (Moments);
+      Result : aliased Internal.C_API.C_Hu_Result :=
+        (Hu_1 => 0.0,
+         Hu_2 => 0.0,
+         Hu_3 => 0.0,
+         Hu_4 => 0.0,
+         Hu_5 => 0.0,
+         Hu_6 => 0.0,
+         Hu_7 => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      Status := Internal.C_API.Hu_Moments (Packed'Access, Result'Access);
+      Raise_On_Error (Status, "Hu moments");
+      return
+        (1 => OpenCV.Core.Float64_Value (Result.Hu_1),
+         2 => OpenCV.Core.Float64_Value (Result.Hu_2),
+         3 => OpenCV.Core.Float64_Value (Result.Hu_3),
+         4 => OpenCV.Core.Float64_Value (Result.Hu_4),
+         5 => OpenCV.Core.Float64_Value (Result.Hu_5),
+         6 => OpenCV.Core.Float64_Value (Result.Hu_6),
+         7 => OpenCV.Core.Float64_Value (Result.Hu_7));
+   end Hu_Moments;
 
    function Unpack_Contour
      (Packed : Internal.C_API.Point_I32_Array; Count : Natural) return Contour

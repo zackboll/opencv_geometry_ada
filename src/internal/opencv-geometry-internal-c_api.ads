@@ -59,6 +59,17 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   type C_Hu_Result is record
+      Hu_1 : Interfaces.C.double;
+      Hu_2 : Interfaces.C.double;
+      Hu_3 : Interfaces.C.double;
+      Hu_4 : Interfaces.C.double;
+      Hu_5 : Interfaces.C.double;
+      Hu_6 : Interfaces.C.double;
+      Hu_7 : Interfaces.C.double;
+   end record
+   with Convention => C;
+
    function Last_Error_Message_Pointer return Interfaces.C.Strings.chars_ptr
    with
      Import,
@@ -130,6 +141,11 @@ package OpenCV.Geometry.Internal.C_API is
       Point_Count   : Interfaces.Integer_32;
       Out_Is_Convex : access Interfaces.Integer_32) return Status
    with Import, Convention => C, External_Name => "opencv_geometry_is_convex";
+
+   function Hu_Moments
+     (Moments : access constant C_Moments; Result : access C_Hu_Result)
+      return Status
+   with Import, Convention => C, External_Name => "opencv_geometry_hu_moments";
 
    function Last_Error_Message return String;
 

@@ -48,6 +48,16 @@ typedef struct opencv_geometry_moments {
     double nu03;
 } opencv_geometry_moments;
 
+typedef struct {
+    double hu1;
+    double hu2;
+    double hu3;
+    double hu4;
+    double hu5;
+    double hu6;
+    double hu7;
+} opencv_geometry_hu_result;
+
 typedef int32_t opencv_geometry_status;
 
 #define OPENCV_GEOMETRY_OK                     ((opencv_geometry_status)0)
@@ -108,6 +118,11 @@ opencv_geometry_is_convex(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,
     int32_t *out_is_convex);
+
+opencv_geometry_status
+opencv_geometry_hu_moments(
+    const opencv_geometry_moments *moments,
+    opencv_geometry_hu_result *out_hu);
 
 #ifdef __cplusplus
 }

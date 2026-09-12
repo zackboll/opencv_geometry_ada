@@ -16,7 +16,8 @@ Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
 Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
-`Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, and `Is_Convex`.
+`Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`, and
+`Hu_Moments`.
 `Contour` is a subtype of `OpenCV.Core.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -39,6 +40,11 @@ edge or cross-product arithmetic would overflow are rejected.
 Moments include all 24 spatial, central and normalized fields through order 3.
 Handle zero `M_00` before deriving a centroid; self-intersecting contours can
 produce surprising results under Green's formula.
+`Hu_Moments` takes an existing `Moments_Result` and returns the seven raw Hu
+invariants indexed `1 .. 7`, not logarithmically transformed values.
+Compose as `Hu_Moments (Compute_Moments (Points))`. The invariants are
+unchanged by translation, scale, rotation, and reflection except the seventh,
+whose sign changes under reflection.
 
 Architecture: thick Ada -> thin Ada C interop -> C ABI -> C++ shim -> OpenCV.
 No STL, C++ exceptions or native objects cross the C ABI. Native errors become
