@@ -918,6 +918,64 @@ opencv_geometry_min_enclosing_circle(
     }
 }
 
+namespace {
+
+void zero_affine_2x3(opencv_geometry_affine_2x3_f64 *out_transform) noexcept
+{
+    out_transform->m00 = 0.0;
+    out_transform->m01 = 0.0;
+    out_transform->m02 = 0.0;
+    out_transform->m10 = 0.0;
+    out_transform->m11 = 0.0;
+    out_transform->m12 = 0.0;
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_get_rotation_matrix_2d(
+    float center_x,
+    float center_y,
+    double angle_degrees,
+    double scale,
+    opencv_geometry_affine_2x3_f64 *out_transform)
+{
+    clear_error();
+    if (out_transform == nullptr) {
+        return invalid_argument("null rotation matrix output pointer");
+    }
+    zero_affine_2x3(out_transform);
+
+    // ABI safety: OpenCV applies std::cos / std::sin and writes six
+    // coefficients. Non-finite center, angle, or scale produce NaN/Inf
+    // values rather than a documented rejection, so this ABI would copy
+    // IEEE specials into the POD instead of a defined finite matrix.
+    if (!std::isfinite(center_x)
+        || !std::isfinite(center_y)
+        || !std::isfinite(angle_degrees)
+        || !std::isfinite(scale)) {
+        return invalid_argument(
+            "getRotationMatrix2D center, angle, and scale must be finite");
+    }
+
+    try {
+        const cv::Mat matrix = cv::getRotationMatrix2D(
+            cv::Point2f(center_x, center_y),
+            angle_degrees,
+            scale);
+        out_transform->m00 = matrix.at<double>(0, 0);
+        out_transform->m01 = matrix.at<double>(0, 1);
+        out_transform->m02 = matrix.at<double>(0, 2);
+        out_transform->m10 = matrix.at<double>(1, 0);
+        out_transform->m11 = matrix.at<double>(1, 1);
+        out_transform->m12 = matrix.at<double>(1, 2);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_affine_2x3(out_transform);
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_bounding_rect(
     const opencv_geometry_point_i32 *points,

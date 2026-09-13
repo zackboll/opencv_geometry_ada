@@ -64,6 +64,15 @@ typedef struct {
     float radius;
 } opencv_geometry_enclosing_circle_f32;
 
+typedef struct {
+    double m00;
+    double m01;
+    double m02;
+    double m10;
+    double m11;
+    double m12;
+} opencv_geometry_affine_2x3_f64;
+
 typedef int32_t opencv_geometry_status;
 
 #define OPENCV_GEOMETRY_OK                     ((opencv_geometry_status)0)
@@ -160,6 +169,14 @@ opencv_geometry_min_enclosing_circle(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,
     opencv_geometry_enclosing_circle_f32 *out_circle);
+
+opencv_geometry_status
+opencv_geometry_get_rotation_matrix_2d(
+    float center_x,
+    float center_y,
+    double angle_degrees,
+    double scale,
+    opencv_geometry_affine_2x3_f64 *out_transform);
 
 #ifdef __cplusplus
 }

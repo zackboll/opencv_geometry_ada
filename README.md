@@ -16,9 +16,10 @@ Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
 Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
-`Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`, and
+`Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
-`Signed_Distance_To_Contour`, and `Minimum_Enclosing_Circle`.
+`Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`, and
+`Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Core.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -63,6 +64,51 @@ contours are outside and return the largest finite negative distance.
 binary32 center and radius, including OpenCV's native EPS. Empty input is
 center (0, 0) and radius 0. Integer contours whose native signed-32-bit pair
 addition or subtraction would overflow are rejected.
+
+## Rotation matrix
+
+API:
+
+```ada
+function Get_Rotation_Matrix_2D
+  (Center : OpenCV.Core.Float32_Point;
+   Angle  : OpenCV.Core.Float64_Value;
+   Scale  : OpenCV.Core.Float64_Value := 1.0;
+   Units  : OpenCV.Core.Angle_Unit := OpenCV.Core.Degrees)
+   return OpenCV.Core.Mat;
+```
+
+`Get_Rotation_Matrix_2D` is a transform generator. It does not warp an
+image. The returned Mat is always:
+
+```text
+Rows     = 2
+Columns  = 3
+Depth    = Float64
+Channels = 1
+```
+
+and is suitable for affine warping operations such as
+`OpenCV.Image_Processing.Warp_Affine`. There is no Ada Imgproc dependency;
+callers that already use Imgproc can pass this Core Mat through.
+
+`Angle` may be supplied in `Degrees` or `Radians`. `Degrees` is the default
+because that matches `cv::getRotationMatrix2D`. Finite angles are reduced
+modulo one full turn before any radians-to-degrees conversion, so large
+finite values cannot overflow the conversion. There is no OpenCV unit flag.
+
+Positive angles are counter-clockwise according to OpenCV's image-coordinate
+convention (origin at the top-left). The rotation center maps to itself.
+
+`Scale` is isotropic and defaults to `1.0`. Finite zero and negative Scale
+values are mathematically defined by OpenCV and remain accepted.
+
+`Center.X`, `Center.Y`, `Angle`, and `Scale` must all be finite. NaN and
+`+/-Infinity` raise `OpenCV.OpenCV_Error`.
+
+OpenCV 4 implements the native call from the legacy Imgproc header;
+OpenCV 5 implements it from Geometry. The public Ada API does not expose
+that split.
 
 Architecture: thick Ada -> thin Ada C interop -> C ABI -> C++ shim -> OpenCV.
 No STL, C++ exceptions or native objects cross the C ABI. Native errors become

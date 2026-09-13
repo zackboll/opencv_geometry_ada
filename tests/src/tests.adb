@@ -13,6 +13,7 @@ with Hu_Moments_Tests;
 with Match_Shapes_Tests;
 with Point_Polygon_Tests;
 with Minimum_Enclosing_Circle_Tests;
+with Rotation_Matrix_Tests;
 
 procedure Tests is
 
@@ -37,6 +38,7 @@ begin
    Suite.Add_Test (Match_Shapes_Tests.Suite);
    Suite.Add_Test (Point_Polygon_Tests.Suite);
    Suite.Add_Test (Minimum_Enclosing_Circle_Tests.Suite);
+   Suite.Add_Test (Rotation_Matrix_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;

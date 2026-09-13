@@ -1,6 +1,8 @@
 with Ada.Exceptions;
+with Ada.Numerics;
 with Interfaces;
 with Interfaces.C;
+with OpenCV.Core.Float64_Access;
 with OpenCV.Geometry.Internal.C_API;
 
 package body OpenCV.Geometry is
@@ -680,4 +682,118 @@ package body OpenCV.Geometry is
       Raise_On_Error (Status, "minimum enclosing circle");
       return To_Public_Enclosing_Circle (Result);
    end Minimum_Enclosing_Circle;
+
+   procedure Validate_Get_Rotation_Matrix_2D
+     (Center : OpenCV.Core.Float32_Point;
+      Angle  : OpenCV.Core.Float64_Value;
+      Scale  : OpenCV.Core.Float64_Value)
+   is
+      use type OpenCV.Core.Float32_Value;
+      use type OpenCV.Core.Float64_Value;
+   begin
+      if Center.X /= Center.X
+        or else Center.X > OpenCV.Core.Float32_Value'Last
+        or else Center.X < OpenCV.Core.Float32_Value'First
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Get_Rotation_Matrix_2D requires a finite Center.X");
+      end if;
+
+      if Center.Y /= Center.Y
+        or else Center.Y > OpenCV.Core.Float32_Value'Last
+        or else Center.Y < OpenCV.Core.Float32_Value'First
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Get_Rotation_Matrix_2D requires a finite Center.Y");
+      end if;
+
+      if Angle /= Angle
+        or else Angle > OpenCV.Core.Float64_Value'Last
+        or else Angle < OpenCV.Core.Float64_Value'First
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Get_Rotation_Matrix_2D requires a finite Angle");
+      end if;
+
+      if Scale /= Scale
+        or else Scale > OpenCV.Core.Float64_Value'Last
+        or else Scale < OpenCV.Core.Float64_Value'First
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Get_Rotation_Matrix_2D requires a finite Scale");
+      end if;
+   end Validate_Get_Rotation_Matrix_2D;
+
+   function Reduced_Degrees
+     (Angle : OpenCV.Core.Float64_Value; Units : OpenCV.Core.Angle_Unit)
+      return OpenCV.Core.Float64_Value
+   is
+      use type OpenCV.Core.Angle_Unit;
+      use type OpenCV.Core.Float64_Value;
+      Full_Turn : OpenCV.Core.Float64_Value;
+      Reduced   : OpenCV.Core.Float64_Value;
+   begin
+      if Units = OpenCV.Core.Degrees then
+         Full_Turn := 360.0;
+         return OpenCV.Core.Float64_Value'Remainder (Angle, Full_Turn);
+      end if;
+
+      Full_Turn :=
+        OpenCV.Core.Float64_Value (2.0)
+        * OpenCV.Core.Float64_Value (Ada.Numerics.Pi);
+      Reduced := OpenCV.Core.Float64_Value'Remainder (Angle, Full_Turn);
+      return
+        Reduced
+        * (OpenCV.Core.Float64_Value (180.0)
+           / OpenCV.Core.Float64_Value (Ada.Numerics.Pi));
+   end Reduced_Degrees;
+
+   function Get_Rotation_Matrix_2D
+     (Center : OpenCV.Core.Float32_Point;
+      Angle  : OpenCV.Core.Float64_Value;
+      Scale  : OpenCV.Core.Float64_Value := 1.0;
+      Units  : OpenCV.Core.Angle_Unit := OpenCV.Core.Degrees)
+      return OpenCV.Core.Mat
+   is
+      Degrees : OpenCV.Core.Float64_Value;
+      Result  : aliased Internal.C_API.C_Affine_2x3_F64 :=
+        (M00 => 0.0,
+         M01 => 0.0,
+         M02 => 0.0,
+         M10 => 0.0,
+         M11 => 0.0,
+         M12 => 0.0);
+      Status  : Internal.C_API.Status;
+      Matrix  : OpenCV.Core.Mat;
+   begin
+      Validate_Get_Rotation_Matrix_2D (Center, Angle, Scale);
+      Degrees := Reduced_Degrees (Angle, Units);
+      Status :=
+        Internal.C_API.Get_Rotation_Matrix_2D
+          (Interfaces.C.C_float (Center.X),
+           Interfaces.C.C_float (Center.Y),
+           Interfaces.C.double (Degrees),
+           Interfaces.C.double (Scale),
+           Result'Access);
+      Raise_On_Error (Status, "Get_Rotation_Matrix_2D");
+
+      Matrix := OpenCV.Core.Create (2, 3, (OpenCV.Core.Float64, 1));
+      OpenCV.Core.Float64_Access.Set
+        (Matrix, 0, 0, To_Public_Float64 (Result.M00, "M00 is not finite"));
+      OpenCV.Core.Float64_Access.Set
+        (Matrix, 0, 1, To_Public_Float64 (Result.M01, "M01 is not finite"));
+      OpenCV.Core.Float64_Access.Set
+        (Matrix, 0, 2, To_Public_Float64 (Result.M02, "M02 is not finite"));
+      OpenCV.Core.Float64_Access.Set
+        (Matrix, 1, 0, To_Public_Float64 (Result.M10, "M10 is not finite"));
+      OpenCV.Core.Float64_Access.Set
+        (Matrix, 1, 1, To_Public_Float64 (Result.M11, "M11 is not finite"));
+      OpenCV.Core.Float64_Access.Set
+        (Matrix, 1, 2, To_Public_Float64 (Result.M12, "M12 is not finite"));
+      return Matrix;
+   end Get_Rotation_Matrix_2D;
 end OpenCV.Geometry;

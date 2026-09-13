@@ -77,6 +77,16 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   type C_Affine_2x3_F64 is record
+      M00 : Interfaces.C.double;
+      M01 : Interfaces.C.double;
+      M02 : Interfaces.C.double;
+      M10 : Interfaces.C.double;
+      M11 : Interfaces.C.double;
+      M12 : Interfaces.C.double;
+   end record
+   with Convention => C;
+
    function Last_Error_Message_Pointer return Interfaces.C.Strings.chars_ptr
    with
      Import,
@@ -196,6 +206,17 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_min_enclosing_circle";
+
+   function Get_Rotation_Matrix_2D
+     (Center_X      : Interfaces.C.C_float;
+      Center_Y      : Interfaces.C.C_float;
+      Angle_Degrees : Interfaces.C.double;
+      Scale         : Interfaces.C.double;
+      Result        : access C_Affine_2x3_F64) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_get_rotation_matrix_2d";
 
    function Last_Error_Message return String;
 
