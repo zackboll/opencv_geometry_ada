@@ -1,4 +1,5 @@
 with Ada.Strings.Fixed;
+with Ada.Unchecked_Conversion;
 with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
@@ -13,6 +14,7 @@ package body Point_Polygon_Tests is
    package C_API renames OpenCV.Geometry.Internal.C_API;
 
    use type C_API.Status;
+   use type Interfaces.C.C_float;
    use type Interfaces.C.double;
    use type Interfaces.Integer_32;
    use type OpenCV.Core.Float32_Value;
@@ -429,7 +431,45 @@ package body Point_Polygon_Tests is
          "safe large contour integral query");
    end Safe_Integral_Fast_Path;
 
-   procedure Unsafe_Integral_Delta (Test : in out Fixture) is
+   First_Above_Int32_Max : constant Interfaces.C.C_float := 2_147_483_648.0;
+   Largest_Safe_Positive : constant Interfaces.C.C_float := 2_147_483_520.0;
+   Int32_Min_Query       : constant Interfaces.C.C_float := -2_147_483_648.0;
+   First_Below_Int32_Min : constant Interfaces.C.C_float := -2_147_483_904.0;
+
+   procedure Assert_Rejected_Query
+     (Query_X, Query_Y : Interfaces.C.C_float;
+      Mode             : Interfaces.Integer_32;
+      Needle           : String;
+      Message          : String)
+   is
+      Points : aliased C_API.Point_I32_Array :=
+        ((X => 0, Y => 0),
+         (X => 4, Y => 0),
+         (X => 4, Y => 4),
+         (X => 0, Y => 4));
+      Output : aliased Interfaces.C.double := -7.0;
+      Status : C_API.Status;
+      pragma Suppress (Validity_Check);
+   begin
+      Status :=
+        C_API.Point_Polygon_Test
+          (Points (Points'First)'Access,
+           Interfaces.Integer_32 (Points'Length),
+           Query_X,
+           Query_Y,
+           Mode,
+           Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument, Message & ": status");
+      AUnit.Assertions.Assert
+        (Ada.Strings.Fixed.Index (C_API.Last_Error_Message, Needle) /= 0,
+         Message & ": diagnostic");
+      AUnit.Assertions.Assert (Output = 0.0, Message & ": output reset");
+   end Assert_Rejected_Query;
+
+   procedure Boundary_Shortcut_Avoids_Unreachable_Overflow
+     (Test : in out Fixture)
+   is
       pragma Unreferenced (Test);
       Buffer : aliased C_API.Point_I32_Array :=
         ((X => Interfaces.Integer_32'First, Y => 0),
@@ -448,12 +488,205 @@ package body Point_Polygon_Tests is
            C_API.Point_Polygon_Classify,
            Output'Access);
       AUnit.Assertions.Assert
-        (Status = C_API.Error_Invalid_Argument, "unsafe delta status");
+        (Status = C_API.Success, "boundary shortcut must reach OpenCV");
+      AUnit.Assertions.Assert
+        (Output = 0.0, "query (0,0) is a vertex on this contour");
+   end Boundary_Shortcut_Avoids_Unreachable_Overflow;
+
+   procedure Reached_Unsafe_Delta_Rejected (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Buffer : aliased C_API.Point_I32_Array :=
+        ((X => Interfaces.Integer_32'First, Y => -1), (X => 0, Y => 1));
+      Output : aliased Interfaces.C.double := -7.0;
+      Status : C_API.Status;
+   begin
+      Status :=
+        C_API.Point_Polygon_Test
+          (Buffer (Buffer'First)'Access,
+           Interfaces.Integer_32 (Buffer'Length),
+           0.0,
+           0.0,
+           C_API.Point_Polygon_Classify,
+           Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument, "reached overflow status");
       AUnit.Assertions.Assert
         (Ada.Strings.Fixed.Index (C_API.Last_Error_Message, "range") /= 0,
-         "unsafe delta diagnostic");
-      AUnit.Assertions.Assert (Output = 0.0, "unsafe delta zeros output");
-   end Unsafe_Integral_Delta;
+         "reached overflow diagnostic");
+      AUnit.Assertions.Assert (Output = 0.0, "reached overflow zeros output");
+   end Reached_Unsafe_Delta_Rejected;
+
+   procedure CvRound_First_Overflow_Rejected (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      pragma Suppress (Validity_Check);
+   begin
+      Assert_Rejected_Query
+        (First_Above_Int32_Max,
+         0.0,
+         C_API.Point_Polygon_Classify,
+         "cvRound",
+         "classify 2147483648");
+      Assert_Rejected_Query
+        (First_Above_Int32_Max,
+         0.0,
+         C_API.Point_Polygon_Distance,
+         "cvRound",
+         "distance 2147483648");
+   end CvRound_First_Overflow_Rejected;
+
+   procedure Largest_Safe_Positive_Query (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Points : aliased C_API.Point_I32_Array :=
+        ((X => 0, Y => 0),
+         (X => 4, Y => 0),
+         (X => 4, Y => 4),
+         (X => 0, Y => 4));
+      Output : aliased Interfaces.C.double := -7.0;
+      Status : C_API.Status;
+   begin
+      Status :=
+        C_API.Point_Polygon_Test
+          (Points (Points'First)'Access,
+           4,
+           Largest_Safe_Positive,
+           0.0,
+           C_API.Point_Polygon_Classify,
+           Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success, "largest safe positive classify");
+      AUnit.Assertions.Assert (Output = -1.0, "largest safe positive outside");
+
+      Output := -7.0;
+      Status :=
+        C_API.Point_Polygon_Test
+          (Points (Points'First)'Access,
+           4,
+           Largest_Safe_Positive,
+           0.0,
+           C_API.Point_Polygon_Distance,
+           Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success, "largest safe positive distance");
+      AUnit.Assertions.Assert (Output < 0.0, "largest safe positive negative");
+   end Largest_Safe_Positive_Query;
+
+   procedure Minimum_Safe_Signed_Query (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Buffer : aliased C_API.Point_I32_Array :=
+        ((X => Interfaces.Integer_32'First, Y => 0),
+         (X => Interfaces.Integer_32'First + 4, Y => 0),
+         (X => Interfaces.Integer_32'First + 4, Y => 4),
+         (X => Interfaces.Integer_32'First, Y => 4));
+      Output : aliased Interfaces.C.double := -7.0;
+      Status : C_API.Status;
+   begin
+      Status :=
+        C_API.Point_Polygon_Test
+          (Buffer (Buffer'First)'Access,
+           Interfaces.Integer_32 (Buffer'Length),
+           Int32_Min_Query,
+           0.0,
+           C_API.Point_Polygon_Classify,
+           Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success, "INT32_MIN query must not be rejected");
+      AUnit.Assertions.Assert
+        (Output = 0.0, "INT32_MIN query is a vertex of this contour");
+   end Minimum_Safe_Signed_Query;
+
+   procedure Huge_Public_Query_Raises_OpenCV_Error (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Query           : constant OpenCV.Core.Float32_Point :=
+        (X => OpenCV.Core.Float32_Value'Last, Y => 0.0);
+      Locate_Raised   : Boolean := False;
+      Distance_Raised : Boolean := False;
+   begin
+      begin
+         declare
+            Unused : constant OpenCV.Geometry.Contour_Point_Location :=
+              OpenCV.Geometry.Locate_Point (Square, Query);
+            pragma Unreferenced (Unused);
+         begin
+            null;
+         end;
+      exception
+         when OpenCV.OpenCV_Error =>
+            Locate_Raised := True;
+         when Constraint_Error =>
+            AUnit.Assertions.Assert
+              (False, "huge query must not raise Constraint_Error");
+      end;
+      begin
+         declare
+            Unused : constant OpenCV.Core.Float64_Value :=
+              OpenCV.Geometry.Signed_Distance_To_Contour (Square, Query);
+            pragma Unreferenced (Unused);
+         begin
+            null;
+         end;
+      exception
+         when OpenCV.OpenCV_Error =>
+            Distance_Raised := True;
+         when Constraint_Error =>
+            AUnit.Assertions.Assert
+              (False, "huge distance query must not raise Constraint_Error");
+      end;
+      AUnit.Assertions.Assert
+        (Locate_Raised, "huge Locate_Point must raise OpenCV_Error");
+      AUnit.Assertions.Assert
+        (Distance_Raised,
+         "huge Signed_Distance_To_Contour must raise OpenCV_Error");
+   end Huge_Public_Query_Raises_OpenCV_Error;
+
+   procedure Below_Int32_Min_Rejected (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      pragma Suppress (Validity_Check);
+   begin
+      Assert_Rejected_Query
+        (First_Below_Int32_Min,
+         0.0,
+         C_API.Point_Polygon_Classify,
+         "cvRound",
+         "classify below INT32_MIN");
+      Assert_Rejected_Query
+        (First_Below_Int32_Min,
+         0.0,
+         C_API.Point_Polygon_Distance,
+         "cvRound",
+         "distance below INT32_MIN");
+   end Below_Int32_Min_Rejected;
+
+   procedure Nonfinite_Query_Rejected (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      pragma Suppress (Validity_Check);
+      function Bits_To_C_Float is new
+        Ada.Unchecked_Conversion
+          (Interfaces.Unsigned_32,
+           Interfaces.C.C_float);
+      Positive_Infinity : constant Interfaces.C.C_float :=
+        Bits_To_C_Float (16#7F80_0000#);
+      Negative_Infinity : constant Interfaces.C.C_float :=
+        Bits_To_C_Float (16#FF80_0000#);
+      Quiet_NaN         : constant Interfaces.C.C_float :=
+        Bits_To_C_Float (16#7FC0_0000#);
+   begin
+      Assert_Rejected_Query
+        (Quiet_NaN, 0.0, C_API.Point_Polygon_Classify, "cvRound", "NaN class");
+      Assert_Rejected_Query
+        (Quiet_NaN, 0.0, C_API.Point_Polygon_Distance, "cvRound", "NaN dist");
+      Assert_Rejected_Query
+        (Positive_Infinity,
+         0.0,
+         C_API.Point_Polygon_Classify,
+         "cvRound",
+         "+Inf class");
+      Assert_Rejected_Query
+        (Negative_Infinity,
+         0.0,
+         C_API.Point_Polygon_Distance,
+         "cvRound",
+         "-Inf distance");
+   end Nonfinite_Query_Rejected;
 
    procedure Fractional_Bypasses_Integer_Path (Test : in out Fixture) is
       pragma Unreferenced (Test);
@@ -680,7 +913,34 @@ package body Point_Polygon_Tests is
            ("Safe integral fast path", Safe_Integral_Fast_Path'Access));
       Result.Add_Test
         (Caller.Create
-           ("Unsafe integral delta rejected", Unsafe_Integral_Delta'Access));
+           ("Boundary shortcut avoids unreachable overflow",
+            Boundary_Shortcut_Avoids_Unreachable_Overflow'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Reached unsafe delta rejected",
+            Reached_Unsafe_Delta_Rejected'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("cvRound first overflow rejected",
+            CvRound_First_Overflow_Rejected'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Largest safe positive query",
+            Largest_Safe_Positive_Query'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Minimum safe signed query", Minimum_Safe_Signed_Query'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Huge public query raises OpenCV_Error",
+            Huge_Public_Query_Raises_OpenCV_Error'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Below INT32_MIN query rejected",
+            Below_Int32_Min_Rejected'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Nonfinite query rejected", Nonfinite_Query_Rejected'Access));
       Result.Add_Test
         (Caller.Create
            ("Fractional query bypasses integer path",
