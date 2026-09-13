@@ -70,6 +70,13 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   type C_Enclosing_Circle is record
+      Center_X : Interfaces.C.C_float;
+      Center_Y : Interfaces.C.C_float;
+      Radius   : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
    function Last_Error_Message_Pointer return Interfaces.C.Strings.chars_ptr
    with
      Import,
@@ -180,6 +187,15 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_point_polygon_test";
+
+   function Min_Enclosing_Circle
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Enclosing_Circle) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_min_enclosing_circle";
 
    function Last_Error_Message return String;
 

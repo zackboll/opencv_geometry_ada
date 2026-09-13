@@ -741,6 +741,183 @@ opencv_geometry_point_polygon_test(
     }
 }
 
+namespace {
+
+void zero_enclosing_circle(
+    opencv_geometry_enclosing_circle_f32 *out_circle) noexcept
+{
+    out_circle->center_x = 0.0f;
+    out_circle->center_y = 0.0f;
+    out_circle->radius = 0.0f;
+}
+
+bool signed_int_sum_is_safe(int64_t left, int64_t right) noexcept
+{
+    const int64_t sum = left + right;
+    return sum >= static_cast<int64_t>(INT32_MIN)
+        && sum <= static_cast<int64_t>(INT32_MAX);
+}
+
+bool signed_int_difference_is_safe(int64_t left, int64_t right) noexcept
+{
+    const int64_t delta = left - right;
+    return delta >= static_cast<int64_t>(INT32_MIN)
+        && delta <= static_cast<int64_t>(INT32_MAX);
+}
+
+bool enclosing_circle_extrema_are_safe(
+    int64_t min_value,
+    int64_t second_min,
+    int64_t max_value,
+    int64_t second_max) noexcept
+{
+    // Native-call arithmetic safety: integer minEnclosingCircle helpers
+    // evaluate pts[a].x + pts[b].x and pts[a].x - pts[b].x (and the Y
+    // equivalents) as signed int before converting to float. After a
+    // possible OpenCV 5 shuffle, any distinct pair may be selected.
+    // Every pair sum is between min+second_min and max+second_max.
+    // Every pair difference is between min-max and max-min. Checking
+    // those extrema in int64_t therefore covers all pairs.
+    return signed_int_sum_is_safe(min_value, second_min)
+        && signed_int_sum_is_safe(max_value, second_max)
+        && signed_int_difference_is_safe(max_value, min_value)
+        && signed_int_difference_is_safe(min_value, max_value);
+}
+
+bool enclosing_circle_pair_arithmetic_is_safe(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count) noexcept
+{
+    if (point_count < 2) {
+        return true;
+    }
+
+    int64_t min_x = points[0].x;
+    int64_t max_x = points[0].x;
+    int64_t second_min_x = points[1].x;
+    int64_t second_max_x = points[1].x;
+    if (second_min_x < min_x) {
+        const int64_t tmp = min_x;
+        min_x = second_min_x;
+        second_min_x = tmp;
+    }
+    if (second_max_x > max_x) {
+        const int64_t tmp = max_x;
+        max_x = second_max_x;
+        second_max_x = tmp;
+    }
+
+    int64_t min_y = points[0].y;
+    int64_t max_y = points[0].y;
+    int64_t second_min_y = points[1].y;
+    int64_t second_max_y = points[1].y;
+    if (second_min_y < min_y) {
+        const int64_t tmp = min_y;
+        min_y = second_min_y;
+        second_min_y = tmp;
+    }
+    if (second_max_y > max_y) {
+        const int64_t tmp = max_y;
+        max_y = second_max_y;
+        second_max_y = tmp;
+    }
+
+    for (int32_t index = 2; index < point_count; ++index) {
+        const int64_t x = points[index].x;
+        if (x < min_x) {
+            second_min_x = min_x;
+            min_x = x;
+        } else if (x < second_min_x) {
+            second_min_x = x;
+        }
+        if (x > max_x) {
+            second_max_x = max_x;
+            max_x = x;
+        } else if (x > second_max_x) {
+            second_max_x = x;
+        }
+
+        const int64_t y = points[index].y;
+        if (y < min_y) {
+            second_min_y = min_y;
+            min_y = y;
+        } else if (y < second_min_y) {
+            second_min_y = y;
+        }
+        if (y > max_y) {
+            second_max_y = max_y;
+            max_y = y;
+        } else if (y > second_max_y) {
+            second_max_y = y;
+        }
+    }
+
+    return enclosing_circle_extrema_are_safe(
+               min_x, second_min_x, max_x, second_max_x)
+        && enclosing_circle_extrema_are_safe(
+               min_y, second_min_y, max_y, second_max_y);
+}
+
+bool enclosing_circle_requires_pair_arithmetic(int32_t point_count) noexcept
+{
+    // OpenCV 4.10 converts count == 2 to Point2f before addition.
+    // OpenCV 5.x routes count >= 2 through integer helper arithmetic.
+#if CV_VERSION_MAJOR >= 5
+    return point_count >= 2;
+#else
+    return point_count >= 3;
+#endif
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_min_enclosing_circle(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_enclosing_circle_f32 *out_circle)
+{
+    clear_error();
+    if (out_circle == nullptr) {
+        return invalid_argument("null enclosing circle output pointer");
+    }
+    zero_enclosing_circle(out_circle);
+    if (point_count < 0) {
+        return invalid_argument(
+            "enclosing circle point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: OpenCV 4.10 and 5.x reject an empty point
+    // vector because checkVector cannot determine an element depth.
+    // Native minEnclosingCircle returns center (0,0) and radius 0 when
+    // total == 0 and the depth is known, so Geometry preserves that result.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    if (enclosing_circle_requires_pair_arithmetic(point_count)
+        && !enclosing_circle_pair_arithmetic_is_safe(points, point_count)) {
+        return invalid_argument(
+            "enclosing circle exceeds signed 32-bit arithmetic range");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        cv::Point2f center;
+        float radius = 0.0f;
+        cv::minEnclosingCircle(contour, center, radius);
+        out_circle->center_x = center.x;
+        out_circle->center_y = center.y;
+        out_circle->radius = radius;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_enclosing_circle(out_circle);
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_bounding_rect(
     const opencv_geometry_point_i32 *points,

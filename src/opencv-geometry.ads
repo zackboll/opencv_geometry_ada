@@ -144,4 +144,21 @@ package OpenCV.Geometry is
      (Points : Contour; Query : OpenCV.Core.Float32_Point)
       return OpenCV.Core.Float64_Value;
 
+   --  Smallest circle enclosing Points. Center and Radius are binary32
+   --  OpenCV results, including the native EPS added to radii. Empty
+   --  contours return center (0, 0) and radius 0. One-point contours
+   --  return that point as Center and the native EPS as Radius. Points
+   --  is unchanged. Integer contours whose native signed-32-bit pair
+   --  addition or subtraction would overflow raise OpenCV_Error. If a
+   --  native center or radius component is non-finite, or if a successful
+   --  native radius is negative, Minimum_Enclosing_Circle raises
+   --  OpenCV_Error.
+   type Enclosing_Circle is record
+      Center : OpenCV.Core.Float32_Point := (X => 0.0, Y => 0.0);
+      Radius : OpenCV.Core.Float32_Value := 0.0;
+   end record;
+
+   function Minimum_Enclosing_Circle
+     (Points : Contour) return Enclosing_Circle;
+
 end OpenCV.Geometry;

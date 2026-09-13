@@ -58,6 +58,12 @@ typedef struct {
     double hu7;
 } opencv_geometry_hu_result;
 
+typedef struct {
+    float center_x;
+    float center_y;
+    float radius;
+} opencv_geometry_enclosing_circle_f32;
+
 typedef int32_t opencv_geometry_status;
 
 #define OPENCV_GEOMETRY_OK                     ((opencv_geometry_status)0)
@@ -148,6 +154,12 @@ opencv_geometry_point_polygon_test(
     float query_y,
     int32_t measure_distance,
     double *out_result);
+
+opencv_geometry_status
+opencv_geometry_min_enclosing_circle(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_enclosing_circle_f32 *out_circle);
 
 #ifdef __cplusplus
 }

@@ -17,8 +17,8 @@ reports the actual version/backend and generates the install GPR configuration.
 
 Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`, and
-`Hu_Moments`, `Match_Shapes`, `Locate_Point`, and
-`Signed_Distance_To_Contour`.
+`Hu_Moments`, `Match_Shapes`, `Locate_Point`,
+`Signed_Distance_To_Contour`, and `Minimum_Enclosing_Circle`.
 `Contour` is a subtype of `OpenCV.Core.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -59,6 +59,10 @@ matching produces a non-finite value that cannot be represented by
 outside a contour. `Signed_Distance_To_Contour` returns OpenCV's signed
 distance: positive inside, zero on the boundary, negative outside. Empty
 contours are outside and return the largest finite negative distance.
+`Minimum_Enclosing_Circle` returns the smallest enclosing circle as a
+binary32 center and radius, including OpenCV's native EPS. Empty input is
+center (0, 0) and radius 0. Integer contours whose native signed-32-bit pair
+addition or subtraction would overflow are rejected.
 
 Architecture: thick Ada -> thin Ada C interop -> C ABI -> C++ shim -> OpenCV.
 No STL, C++ exceptions or native objects cross the C ABI. Native errors become

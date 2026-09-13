@@ -606,4 +606,78 @@ package body OpenCV.Geometry is
         To_Public_Float64
           (Result, "Signed_Distance_To_Contour result is not finite");
    end Signed_Distance_To_Contour;
+
+   function Is_Finite_C_Float (Value : Interfaces.C.C_float) return Boolean is
+      pragma Suppress (Validity_Check);
+      use type Interfaces.C.C_float;
+   begin
+      --  Public Float32_Value is finite-only. Inspect the raw C float
+      --  before converting so Inf/NaN become OpenCV_Error, not an Ada
+      --  validity failure.
+      return
+        Value'Valid
+        and then Value = Value
+        and then Value
+                 >= Interfaces.C.C_float (OpenCV.Core.Float32_Value'First)
+        and then Value
+                 <= Interfaces.C.C_float (OpenCV.Core.Float32_Value'Last);
+   end Is_Finite_C_Float;
+
+   function To_Public_Float32
+     (Value : Interfaces.C.C_float; Diagnostic : String)
+      return OpenCV.Core.Float32_Value
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      if not Is_Finite_C_Float (Value) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity, Diagnostic);
+      end if;
+      return OpenCV.Core.Float32_Value (Value);
+   end To_Public_Float32;
+
+   function To_Public_Enclosing_Circle
+     (Value : Internal.C_API.C_Enclosing_Circle) return Enclosing_Circle
+   is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Core.Float32_Value;
+      Center_X : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Center_X, "enclosing circle center X is not finite");
+      Center_Y : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Center_Y, "enclosing circle center Y is not finite");
+      Radius   : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Radius, "enclosing circle radius is not finite");
+   begin
+      if Radius < 0.0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "enclosing circle radius is negative");
+      end if;
+      return (Center => (X => Center_X, Y => Center_Y), Radius => Radius);
+   end To_Public_Enclosing_Circle;
+
+   function Minimum_Enclosing_Circle (Points : Contour) return Enclosing_Circle
+   is
+      pragma Suppress (Validity_Check);
+      Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Result : aliased Internal.C_API.C_Enclosing_Circle :=
+        (Center_X => 0.0, Center_Y => 0.0, Radius => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      if Packed'Length = 0 then
+         Status :=
+           Internal.C_API.Min_Enclosing_Circle (null, 0, Result'Access);
+      else
+         Status :=
+           Internal.C_API.Min_Enclosing_Circle
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Result'Access);
+      end if;
+      Raise_On_Error (Status, "minimum enclosing circle");
+      return To_Public_Enclosing_Circle (Result);
+   end Minimum_Enclosing_Circle;
 end OpenCV.Geometry;
