@@ -161,9 +161,9 @@ package body Minimum_Area_Rectangle_Tests is
            (OpenCV.Geometry.Minimum_Area_Rectangle (Horizontal),
             3.0,
             0.0,
+            0.0,
             6.0,
-            0.0,
-            0.0,
+            -90.0,
             "horizontal pair");
          Assert_Rect
            (OpenCV.Geometry.Minimum_Area_Rectangle (Vertical),
@@ -177,8 +177,8 @@ package body Minimum_Area_Rectangle_Tests is
            (OpenCV.Geometry.Minimum_Area_Rectangle (Positive),
             1.5,
             2.0,
-            5.0,
             0.0,
+            5.0,
             -36.869896,
             "positive pair");
          Assert_Rect
