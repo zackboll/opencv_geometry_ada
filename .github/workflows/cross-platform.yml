@@ -71,7 +71,15 @@ jobs:
           grep 'OpenCV_Geometry_Link_Option := "-lopencv_imgproc"' config/opencv_geometry_install.gpr
 
       - name: Run Geometry tests
-        run: alr -n -C tests run
+        run: |
+          set -o pipefail
+          alr -n -C tests run 2>&1 | tee geometry-tests.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            failures=$(grep -E '^FAIL |^    ' geometry-tests.log | tr '\n' ' ')
+            echo "::error title=Geometry test failure::${failures}"
+            exit "$status"
+          fi
 
   macos-arm64:
     name: macOS ARM64
@@ -230,7 +238,15 @@ jobs:
           fi
 
       - name: Run Geometry tests
-        run: alr -n -C tests run
+        run: |
+          set -o pipefail
+          alr -n -C tests run 2>&1 | tee geometry-tests.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            failures=$(grep -E '^FAIL |^    ' geometry-tests.log | tr '\n' ' ')
+            echo "::error title=Geometry test failure::${failures}"
+            exit "$status"
+          fi
 
   windows-x86_64-msys2:
     name: Windows x86_64 (MSYS2)
@@ -333,5 +349,12 @@ jobs:
 
       - name: Run Geometry tests
         run: |
+          set -o pipefail
           PATH="$PWD/lib:$PWD/../core/lib:/mingw64/bin:$PATH" \
-            alr -n -C tests run
+            alr -n -C tests run 2>&1 | tee geometry-tests.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            failures=$(grep -E '^FAIL |^    ' geometry-tests.log | tr '\n' ' ')
+            echo "::error title=Geometry test failure::${failures}"
+            exit "$status"
+          fi
