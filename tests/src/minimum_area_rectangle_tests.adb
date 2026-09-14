@@ -39,18 +39,37 @@ package body Minimum_Area_Rectangle_Tests is
      (Actual                       : OpenCV.Core.Rotated_Rect;
       Center_X, Center_Y           : OpenCV.Core.Float32_Value;
       Width, Height, Angle_Degrees : OpenCV.Core.Float32_Value;
-      Message                      : String) is
+      Message                      : String)
+   is
+      function Detail
+        (Name : String; Actual, Expected : OpenCV.Core.Float32_Value)
+         return String is
+      begin
+         return
+           Message
+           & ": "
+           & Name
+           & " actual="
+           & OpenCV.Core.Float32_Value'Image (Actual)
+           & " expected="
+           & OpenCV.Core.Float32_Value'Image (Expected);
+      end Detail;
    begin
       AUnit.Assertions.Assert
-        (Close (Actual.Center.X, Center_X), Message & ": X");
+        (Close (Actual.Center.X, Center_X),
+         Detail ("X", Actual.Center.X, Center_X));
       AUnit.Assertions.Assert
-        (Close (Actual.Center.Y, Center_Y), Message & ": Y");
+        (Close (Actual.Center.Y, Center_Y),
+         Detail ("Y", Actual.Center.Y, Center_Y));
       AUnit.Assertions.Assert
-        (Close (Actual.Size.Width, Width), Message & ": width");
+        (Close (Actual.Size.Width, Width),
+         Detail ("width", Actual.Size.Width, Width));
       AUnit.Assertions.Assert
-        (Close (Actual.Size.Height, Height), Message & ": height");
+        (Close (Actual.Size.Height, Height),
+         Detail ("height", Actual.Size.Height, Height));
       AUnit.Assertions.Assert
-        (Close (Actual.Angle_Degrees, Angle_Degrees), Message & ": angle");
+        (Close (Actual.Angle_Degrees, Angle_Degrees),
+         Detail ("angle", Actual.Angle_Degrees, Angle_Degrees));
    end Assert_Rect;
 
    function Same_Contour (Left, Right : OpenCV.Geometry.Contour) return Boolean
