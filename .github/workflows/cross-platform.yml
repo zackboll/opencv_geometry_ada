@@ -72,9 +72,11 @@ jobs:
 
       - name: Run Geometry tests
         run: |
+          set +e
           set -o pipefail
           alr -n -C tests run 2>&1 | tee geometry-tests.log
           status=${PIPESTATUS[0]}
+          set -e
           if [ "$status" -ne 0 ]; then
             failures=$(grep -E '^FAIL |^    ' geometry-tests.log | tr '\n' ' ')
             echo "::error title=Geometry test failure::${failures}"
@@ -239,9 +241,11 @@ jobs:
 
       - name: Run Geometry tests
         run: |
+          set +e
           set -o pipefail
           alr -n -C tests run 2>&1 | tee geometry-tests.log
           status=${PIPESTATUS[0]}
+          set -e
           if [ "$status" -ne 0 ]; then
             failures=$(grep -E '^FAIL |^    ' geometry-tests.log | tr '\n' ' ')
             echo "::error title=Geometry test failure::${failures}"
@@ -349,10 +353,12 @@ jobs:
 
       - name: Run Geometry tests
         run: |
+          set +e
           set -o pipefail
           PATH="$PWD/lib:$PWD/../core/lib:/mingw64/bin:$PATH" \
             alr -n -C tests run 2>&1 | tee geometry-tests.log
           status=${PIPESTATUS[0]}
+          set -e
           if [ "$status" -ne 0 ]; then
             failures=$(grep -E '^FAIL |^    ' geometry-tests.log | tr '\n' ' ')
             echo "::error title=Geometry test failure::${failures}"

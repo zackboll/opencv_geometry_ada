@@ -303,14 +303,25 @@ package body Minimum_Area_Rectangle_Tests is
          14 => (X => 0, Y => 4));
       Before : constant OpenCV.Geometry.Contour := Points;
    begin
-      Assert_Rect
-        (OpenCV.Geometry.Minimum_Area_Rectangle (Points),
-         3.0,
-         2.0,
-         4.0,
-         6.0,
-         90.0,
-         "nonzero bounds");
+      if Is_OpenCV_5 then
+         Assert_Rect
+           (OpenCV.Geometry.Minimum_Area_Rectangle (Points),
+            3.0,
+            2.0,
+            4.0,
+            6.0,
+            -90.0,
+            "nonzero bounds");
+      else
+         Assert_Rect
+           (OpenCV.Geometry.Minimum_Area_Rectangle (Points),
+            3.0,
+            2.0,
+            4.0,
+            6.0,
+            90.0,
+            "nonzero bounds");
+      end if;
       AUnit.Assertions.Assert
         (Same_Contour (Points, Before), "input unchanged");
    end Nonzero_Bounds_And_Input_Unchanged;
