@@ -683,6 +683,64 @@ package body OpenCV.Geometry is
       return To_Public_Enclosing_Circle (Result);
    end Minimum_Enclosing_Circle;
 
+   function To_Public_Rotated_Rect
+     (Value : Internal.C_API.C_Rotated_Rect) return OpenCV.Core.Rotated_Rect
+   is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Core.Float32_Value;
+      Center_X : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Center_X, "rotated rectangle center X is not finite");
+      Center_Y : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Center_Y, "rotated rectangle center Y is not finite");
+      Width    : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Width, "rotated rectangle width is not finite");
+      Height   : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Height, "rotated rectangle height is not finite");
+      Angle    : constant OpenCV.Core.Float32_Value :=
+        To_Public_Float32
+          (Value.Angle_Degrees, "rotated rectangle angle is not finite");
+   begin
+      if Width < 0.0 or else Height < 0.0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "rotated rectangle size is negative");
+      end if;
+      return
+        (Center        => (X => Center_X, Y => Center_Y),
+         Size          => (Width => Width, Height => Height),
+         Angle_Degrees => Angle);
+   end To_Public_Rotated_Rect;
+
+   function Minimum_Area_Rectangle
+     (Points : Contour) return OpenCV.Core.Rotated_Rect
+   is
+      pragma Suppress (Validity_Check);
+      Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Result : aliased Internal.C_API.C_Rotated_Rect :=
+        (Center_X      => 0.0,
+         Center_Y      => 0.0,
+         Width         => 0.0,
+         Height        => 0.0,
+         Angle_Degrees => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      if Packed'Length = 0 then
+         Status := Internal.C_API.Min_Area_Rect (null, 0, Result'Access);
+      else
+         Status :=
+           Internal.C_API.Min_Area_Rect
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Result'Access);
+      end if;
+      Raise_On_Error (Status, "minimum area rectangle");
+      return To_Public_Rotated_Rect (Result);
+   end Minimum_Area_Rectangle;
+
    procedure Validate_Get_Rotation_Matrix_2D
      (Center : OpenCV.Core.Float32_Point;
       Angle  : OpenCV.Core.Float64_Value;

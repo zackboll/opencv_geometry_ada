@@ -65,6 +65,14 @@ typedef struct {
 } opencv_geometry_enclosing_circle_f32;
 
 typedef struct {
+    float center_x;
+    float center_y;
+    float width;
+    float height;
+    float angle_degrees;
+} opencv_geometry_rotated_rect_f32;
+
+typedef struct {
     double m00;
     double m01;
     double m02;
@@ -82,6 +90,8 @@ typedef int32_t opencv_geometry_status;
 #define OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT ((opencv_geometry_status)4)
 
 const char *opencv_geometry_last_error_message(void);
+
+int32_t opencv_geometry_opencv_major_version(void);
 
 opencv_geometry_status
 opencv_geometry_contour_area(
@@ -169,6 +179,12 @@ opencv_geometry_min_enclosing_circle(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,
     opencv_geometry_enclosing_circle_f32 *out_circle);
+
+opencv_geometry_status
+opencv_geometry_min_area_rect(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
 
 opencv_geometry_status
 opencv_geometry_get_rotation_matrix_2d(

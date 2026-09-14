@@ -60,11 +60,52 @@ opencv_geometry_status translate_current_exception() noexcept
     }
 }
 
+bool integer_convex_hull_arithmetic_is_safe(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count) noexcept
+{
+    // Native-call arithmetic safety: Sklansky_ for CV_32S starts using
+    // signed-int coordinate subtraction at three points. Every subtraction
+    // is bounded by an axis span, so spans no greater than INT32_MAX keep
+    // each native delta representable before its int64_t multiplication. If
+    // D = INT32_MAX, each product is in [-D*D, D*D], and their difference is
+    // in [-2*D*D, 2*D*D] = [-9223372028264841218, 9223372028264841218], which
+    // lies within int64_t's [-9223372036854775808, 9223372036854775807].
+    if (point_count < 3) {
+        return true;
+    }
+
+    int64_t min_x = points[0].x;
+    int64_t max_x = min_x;
+    int64_t min_y = points[0].y;
+    int64_t max_y = min_y;
+    for (int32_t index = 1; index < point_count; ++index) {
+        const int64_t x = points[index].x;
+        const int64_t y = points[index].y;
+        min_x = x < min_x ? x : min_x;
+        max_x = x > max_x ? x : max_x;
+        min_y = y < min_y ? y : min_y;
+        max_y = y > max_y ? y : max_y;
+    }
+    return max_x - min_x <= static_cast<int64_t>(INT32_MAX)
+        && max_y - min_y <= static_cast<int64_t>(INT32_MAX);
+}
+
+void zero_rotated_rect(opencv_geometry_rotated_rect_f32 *out_rect) noexcept
+{
+    *out_rect = opencv_geometry_rotated_rect_f32{};
+}
+
 }
 
 const char *opencv_geometry_last_error_message(void)
 {
     return last_error_message;
+}
+
+int32_t opencv_geometry_opencv_major_version(void)
+{
+    return CV_VERSION_MAJOR;
 }
 
 opencv_geometry_status
@@ -91,7 +132,6 @@ opencv_geometry_contour_area(
     if (point_count == 0) {
         return OPENCV_GEOMETRY_OK;
     }
-
     try {
         std::vector<cv::Point> contour;
         contour.reserve(static_cast<std::size_t>(point_count));
@@ -241,7 +281,6 @@ opencv_geometry_contour_moments(
     if (point_count == 0) {
         return OPENCV_GEOMETRY_OK;
     }
-
     try {
         std::vector<cv::Point> contour;
         contour.reserve(static_cast<std::size_t>(point_count));
@@ -296,6 +335,10 @@ opencv_geometry_convex_hull(
     // defines an empty contour to produce an empty hull.
     if (point_count == 0) {
         return OPENCV_GEOMETRY_OK;
+    }
+    if (!integer_convex_hull_arithmetic_is_safe(points, point_count)) {
+        return invalid_argument(
+            "convex hull exceeds signed 32-bit arithmetic range");
     }
 
     try {
@@ -914,6 +957,54 @@ opencv_geometry_min_enclosing_circle(
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         zero_enclosing_circle(out_circle);
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_min_area_rect(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null minimum area rectangle output pointer");
+    }
+    zero_rotated_rect(out_rect);
+    if (point_count < 0) {
+        return invalid_argument(
+            "minimum area rectangle point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: an empty std::vector<cv::Point> has no depth for
+    // checkVector. Native typed empty behavior is a zero rectangle with 0
+    // degrees in OpenCV 4 and -90 degrees in OpenCV 5.
+    if (point_count == 0) {
+#if CV_VERSION_MAJOR >= 5
+        out_rect->angle_degrees = -90.0f;
+#endif
+        return OPENCV_GEOMETRY_OK;
+    }
+    if (!integer_convex_hull_arithmetic_is_safe(points, point_count)) {
+        return invalid_argument(
+            "minimum area rectangle exceeds signed 32-bit arithmetic range");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        const cv::RotatedRect rect = cv::minAreaRect(contour);
+        out_rect->center_x = rect.center.x;
+        out_rect->center_y = rect.center.y;
+        out_rect->width = rect.size.width;
+        out_rect->height = rect.size.height;
+        out_rect->angle_degrees = rect.angle;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_rotated_rect(out_rect);
         return translate_current_exception();
     }
 }

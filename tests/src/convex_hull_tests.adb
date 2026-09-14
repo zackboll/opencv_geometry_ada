@@ -12,6 +12,7 @@ package body Convex_Hull_Tests is
    package C_API renames OpenCV.Geometry.Internal.C_API;
 
    use type C_API.Status;
+   use type C_API.Point_I32_Array;
    use type Interfaces.Integer_32;
    use type OpenCV.Core.Float64_Value;
    use type OpenCV.Core.Point_Coordinate;
@@ -395,6 +396,53 @@ package body Convex_Hull_Tests is
          "zero-count null convex hull must succeed with empty output");
    end C_ABI_Validation;
 
+   procedure C_ABI_Arithmetic_Span_Safety (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Safe     : aliased C_API.Point_I32_Array (0 .. 2) :=
+        ((X => Interfaces.Integer_32'First, Y => 0),
+         (X => -1, Y => 0),
+         (X => -2, Y => 1));
+      Unsafe   : aliased C_API.Point_I32_Array (0 .. 2) :=
+        ((X => Interfaces.Integer_32'First, Y => 0),
+         (X => Interfaces.Integer_32'Last, Y => 0),
+         (X => 0, Y => 1));
+      Unsafe_Y : aliased C_API.Point_I32_Array (0 .. 2) :=
+        ((X => 0, Y => Interfaces.Integer_32'First),
+         (X => 0, Y => Interfaces.Integer_32'Last),
+         (X => 1, Y => 0));
+      Output   : aliased C_API.Point_I32_Array (0 .. 2) :=
+        ((X => 11, Y => 12), (X => 13, Y => 14), (X => 15, Y => 16));
+      Before   : constant C_API.Point_I32_Array := Output;
+      Count    : aliased Interfaces.Integer_32 := -1;
+      Status   : C_API.Status;
+   begin
+      Status :=
+        C_API.Convex_Hull
+          (Safe (0)'Access, 3, 0, Output (0)'Access, 3, Count'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success, "safe full span status");
+      Count := -1;
+      Output := Before;
+      Status :=
+        C_API.Convex_Hull
+          (Unsafe (0)'Access, 3, 0, Output (0)'Access, 3, Count'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument, "unsafe X span status");
+      AUnit.Assertions.Assert (Count = 0, "unsafe X span zero count");
+      AUnit.Assertions.Assert
+        (Output = Before, "unsafe X span preserves output buffer");
+      AUnit.Assertions.Assert
+        (Ada.Strings.Fixed.Index (C_API.Last_Error_Message, "arithmetic") /= 0,
+         "unsafe X span diagnostic");
+      Count := -1;
+      Status :=
+        C_API.Convex_Hull
+          (Unsafe_Y (0)'Access, 3, 0, Output (0)'Access, 3, Count'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument, "unsafe Y span status");
+      AUnit.Assertions.Assert (Count = 0, "unsafe Y span zero count");
+   end C_ABI_Arithmetic_Span_Safety;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       Result.Add_Test
@@ -415,6 +463,10 @@ package body Convex_Hull_Tests is
            ("Convex hull collinear points", Collinear_Points'Access));
       Result.Add_Test
         (Caller.Create ("Convex hull empty contour", Empty_Contour'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Convex hull C ABI arithmetic span safety",
+            C_ABI_Arithmetic_Span_Safety'Access));
       Result.Add_Test
         (Caller.Create
            ("Convex hull one-point contour", One_Point_Contour'Access));

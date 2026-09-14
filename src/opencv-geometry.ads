@@ -82,6 +82,16 @@ package OpenCV.Geometry is
      (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
       return Contour;
 
+   --  Returns OpenCV's native minimum-area rotated rectangle. Center, Size,
+   --  and Angle_Degrees are binary32 native results; Angle_Degrees is in
+   --  degrees. OpenCV 4.x and 5.x can encode an equivalent rectangle with
+   --  different width, height, and angle fields, so callers must not assume
+   --  one cross-version angle range. Empty and degenerate contours preserve
+   --  the active backend representation. Points is unchanged. Inputs that
+   --  would overflow native integer convex-hull arithmetic raise OpenCV_Error.
+   function Minimum_Area_Rectangle
+     (Points : Contour) return OpenCV.Core.Rotated_Rect;
+
    --  Approximates Points with Douglas-Peucker. Epsilon is the maximum
    --  distance between the original curve and the result and must be
    --  in the range 0.0 <= Epsilon < 1.0E30. Closed connects the last

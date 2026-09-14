@@ -77,6 +77,15 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   type C_Rotated_Rect is record
+      Center_X      : Interfaces.C.C_float;
+      Center_Y      : Interfaces.C.C_float;
+      Width         : Interfaces.C.C_float;
+      Height        : Interfaces.C.C_float;
+      Angle_Degrees : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
    type C_Affine_2x3_F64 is record
       M00 : Interfaces.C.double;
       M01 : Interfaces.C.double;
@@ -92,6 +101,12 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_last_error_message";
+
+   function OpenCV_Major_Version return Interfaces.Integer_32
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_opencv_major_version";
 
    function Contour_Area
      (Points      : access Point_I32;
@@ -206,6 +221,15 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_min_enclosing_circle";
+
+   function Min_Area_Rect
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_min_area_rect";
 
    function Get_Rotation_Matrix_2D
      (Center_X      : Interfaces.C.C_float;

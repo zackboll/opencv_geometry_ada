@@ -19,7 +19,7 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`, and
-`Get_Rotation_Matrix_2D`.
+`Minimum_Area_Rectangle`, and `Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Core.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -64,6 +64,11 @@ contours are outside and return the largest finite negative distance.
 binary32 center and radius, including OpenCV's native EPS. Empty input is
 center (0, 0) and radius 0. Integer contours whose native signed-32-bit pair
 addition or subtraction would overflow are rejected.
+`Minimum_Area_Rectangle` returns `OpenCV.Core.Rotated_Rect`, preserving native
+binary32 center, size, and angle-in-degrees fields. OpenCV 4.x and 5.x may use
+different width/height/angle representations for the same rectangle; no output
+normalization is applied. Inputs unsafe for native integer convex-hull
+arithmetic are rejected.
 
 ## Rotation matrix
 
