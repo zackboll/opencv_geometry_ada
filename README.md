@@ -19,7 +19,8 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
-`Minimum_Area_Rectangle`, `Fit_Ellipse`, and `Get_Rotation_Matrix_2D`.
+`Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
+and `Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -64,6 +65,21 @@ contours are outside and return the largest finite negative distance.
 binary32 center and radius, including OpenCV's native EPS. Empty input is
 center (0, 0) and radius 0. Integer contours whose native signed-32-bit pair
 addition or subtraction would overflow are rejected.
+`Minimum_Enclosing_Triangle` returns the smallest-area enclosing triangle as
+an Ada-owned `Enclosing_Triangle`. `Area` is OpenCV's native double result.
+`Vertices` are the three native binary32 (`CV_32F`) triangle vertices. Vertex
+ordering is native OpenCV output and should not be relied upon unless upstream
+guarantees a cyclic start or winding. Empty input is rejected by OpenCV.
+One-point, two-point, collinear, and repeated-point inputs may return repeated
+vertices and zero area. Integer contours whose native convex-hull arithmetic
+would overflow are rejected. Non-finite or negative native area, or a
+non-finite vertex component, raises `OpenCV_Error`.
+
+```ada
+Triangle : constant OpenCV.Geometry.Enclosing_Triangle :=
+  OpenCV.Geometry.Minimum_Enclosing_Triangle (Points);
+```
+
 `Minimum_Area_Rectangle` returns `OpenCV.Rotated_Rect`, preserving native
 binary32 center, size, and angle-in-degrees fields. OpenCV 4.x and 5.x may use
 different width/height/angle representations for the same rectangle; no output

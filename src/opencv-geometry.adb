@@ -677,6 +677,77 @@ package body OpenCV.Geometry is
       return To_Public_Enclosing_Circle (Result);
    end Minimum_Enclosing_Circle;
 
+   function To_Public_Enclosing_Triangle
+     (Area : Interfaces.C.double; Value : Internal.C_API.C_Triangle)
+      return Enclosing_Triangle
+   is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float64_Value;
+      Public_Area : constant OpenCV.Float64_Value :=
+        To_Public_Float64 (Area, "enclosing triangle area is not finite");
+      V0_X        : constant OpenCV.Float32_Value :=
+        To_Public_Float32
+          (Value.V0_X, "enclosing triangle vertex 1 X is not finite");
+      V0_Y        : constant OpenCV.Float32_Value :=
+        To_Public_Float32
+          (Value.V0_Y, "enclosing triangle vertex 1 Y is not finite");
+      V1_X        : constant OpenCV.Float32_Value :=
+        To_Public_Float32
+          (Value.V1_X, "enclosing triangle vertex 2 X is not finite");
+      V1_Y        : constant OpenCV.Float32_Value :=
+        To_Public_Float32
+          (Value.V1_Y, "enclosing triangle vertex 2 Y is not finite");
+      V2_X        : constant OpenCV.Float32_Value :=
+        To_Public_Float32
+          (Value.V2_X, "enclosing triangle vertex 3 X is not finite");
+      V2_Y        : constant OpenCV.Float32_Value :=
+        To_Public_Float32
+          (Value.V2_Y, "enclosing triangle vertex 3 Y is not finite");
+   begin
+      if Public_Area < 0.0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "enclosing triangle area is negative");
+      end if;
+      return
+        (Area     => Public_Area,
+         Vertices =>
+           (1 => (X => V0_X, Y => V0_Y),
+            2 => (X => V1_X, Y => V1_Y),
+            3 => (X => V2_X, Y => V2_Y)));
+   end To_Public_Enclosing_Triangle;
+
+   function Minimum_Enclosing_Triangle
+     (Points : Contour) return Enclosing_Triangle
+   is
+      pragma Suppress (Validity_Check);
+      Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Area   : aliased Interfaces.C.double := 0.0;
+      Result : aliased Internal.C_API.C_Triangle :=
+        (V0_X => 0.0,
+         V0_Y => 0.0,
+         V1_X => 0.0,
+         V1_Y => 0.0,
+         V2_X => 0.0,
+         V2_Y => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      if Packed'Length = 0 then
+         Status :=
+           Internal.C_API.Min_Enclosing_Triangle
+             (null, 0, Area'Access, Result'Access);
+      else
+         Status :=
+           Internal.C_API.Min_Enclosing_Triangle
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Area'Access,
+              Result'Access);
+      end if;
+      Raise_On_Error (Status, "minimum enclosing triangle");
+      return To_Public_Enclosing_Triangle (Area, Result);
+   end Minimum_Enclosing_Triangle;
+
    function To_Public_Rotated_Rect
      (Value : Internal.C_API.C_Rotated_Rect) return OpenCV.Rotated_Rect
    is

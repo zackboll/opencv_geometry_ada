@@ -65,6 +65,15 @@ typedef struct {
 } opencv_geometry_enclosing_circle_f32;
 
 typedef struct {
+    float v0_x;
+    float v0_y;
+    float v1_x;
+    float v1_y;
+    float v2_x;
+    float v2_y;
+} opencv_geometry_triangle_f32;
+
+typedef struct {
     float center_x;
     float center_y;
     float width;
@@ -179,6 +188,13 @@ opencv_geometry_min_enclosing_circle(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,
     opencv_geometry_enclosing_circle_f32 *out_circle);
+
+opencv_geometry_status
+opencv_geometry_min_enclosing_triangle(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    double *out_area,
+    opencv_geometry_triangle_f32 *out_triangle);
 
 opencv_geometry_status
 opencv_geometry_min_area_rect(

@@ -13,6 +13,7 @@ with Hu_Moments_Tests;
 with Match_Shapes_Tests;
 with Point_Polygon_Tests;
 with Minimum_Enclosing_Circle_Tests;
+with Minimum_Enclosing_Triangle_Tests;
 with Minimum_Area_Rectangle_Tests;
 with Fit_Ellipse_Tests;
 with Rotation_Matrix_Tests;
@@ -40,6 +41,7 @@ begin
    Suite.Add_Test (Match_Shapes_Tests.Suite);
    Suite.Add_Test (Point_Polygon_Tests.Suite);
    Suite.Add_Test (Minimum_Enclosing_Circle_Tests.Suite);
+   Suite.Add_Test (Minimum_Enclosing_Triangle_Tests.Suite);
    Suite.Add_Test (Minimum_Area_Rectangle_Tests.Suite);
    Suite.Add_Test (Fit_Ellipse_Tests.Suite);
    Suite.Add_Test (Rotation_Matrix_Tests.Suite);

@@ -185,6 +185,30 @@ package OpenCV.Geometry is
    function Minimum_Enclosing_Circle
      (Points : Contour) return Enclosing_Circle;
 
+   --  Smallest-area triangle enclosing Points. Area is OpenCV's native
+   --  double result. Vertices are the three native CV_32F triangle
+   --  vertices in native order; callers must not assume a cyclic start
+   --  or winding. Fractional and negative coordinates are preserved.
+   --  Empty input is rejected by OpenCV. One-point, two-point, collinear,
+   --  and repeated-point inputs may return repeated vertices and zero
+   --  area. Points is unchanged. Inputs that would overflow native
+   --  integer convex-hull arithmetic raise OpenCV.OpenCV_Error. If a
+   --  native area or vertex component is non-finite, or if a successful
+   --  native area is negative, Minimum_Enclosing_Triangle raises
+   --  OpenCV.OpenCV_Error.
+   type Triangle_Vertex_Index is range 1 .. 3;
+
+   type Triangle_Vertices is
+     array (Triangle_Vertex_Index) of OpenCV.Float32_Point;
+
+   type Enclosing_Triangle is record
+      Area     : OpenCV.Float64_Value := 0.0;
+      Vertices : Triangle_Vertices := (others => (X => 0.0, Y => 0.0));
+   end record;
+
+   function Minimum_Enclosing_Triangle
+     (Points : Contour) return Enclosing_Triangle;
+
    --  Get_Rotation_Matrix_2D generates a 2x3 Float64 C1 affine transform
    --  that rotates around Center and applies an isotropic Scale. This
    --  function does not warp an image; the returned Mat may be passed

@@ -961,6 +961,80 @@ opencv_geometry_min_enclosing_circle(
     }
 }
 
+namespace {
+
+void zero_triangle(opencv_geometry_triangle_f32 *out_triangle) noexcept
+{
+    *out_triangle = opencv_geometry_triangle_f32{};
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_min_enclosing_triangle(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    double *out_area,
+    opencv_geometry_triangle_f32 *out_triangle)
+{
+    clear_error();
+    if (out_area == nullptr) {
+        if (out_triangle != nullptr) {
+            zero_triangle(out_triangle);
+        }
+        return invalid_argument("null enclosing triangle area output pointer");
+    }
+    *out_area = 0.0;
+    if (out_triangle == nullptr) {
+        return invalid_argument("null enclosing triangle output pointer");
+    }
+    zero_triangle(out_triangle);
+    if (point_count < 0) {
+        return invalid_argument(
+            "enclosing triangle point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // ABI safety: OpenCV minEnclosingTriangle always calls convexHull on
+    // CV_32S input. Sklansky_ performs signed-int coordinate subtraction
+    // once three or more points are present. Spans larger than INT32_MAX
+    // overflow that arithmetic before the hull result is produced.
+    if (!integer_convex_hull_arithmetic_is_safe(points, point_count)) {
+        return invalid_argument(
+            "enclosing triangle exceeds signed 32-bit arithmetic range");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        std::vector<cv::Point2f> triangle;
+        const double area = cv::minEnclosingTriangle(contour, triangle);
+        // ABI safety: the public Ada result is a fixed three-vertex record.
+        // Native success is documented to write three CV_32F points, but a
+        // shorter or longer vector would overflow or leave vertices
+        // uninitialized if copied blindly.
+        if (triangle.size() != 3) {
+            *out_area = 0.0;
+            zero_triangle(out_triangle);
+            return invalid_argument(
+                "enclosing triangle did not return three vertices");
+        }
+        *out_area = area;
+        out_triangle->v0_x = triangle[0].x;
+        out_triangle->v0_y = triangle[0].y;
+        out_triangle->v1_x = triangle[1].x;
+        out_triangle->v1_y = triangle[1].y;
+        out_triangle->v2_x = triangle[2].x;
+        out_triangle->v2_y = triangle[2].y;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_area = 0.0;
+        zero_triangle(out_triangle);
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_min_area_rect(
     const opencv_geometry_point_i32 *points,

@@ -77,6 +77,16 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   type C_Triangle is record
+      V0_X : Interfaces.C.C_float;
+      V0_Y : Interfaces.C.C_float;
+      V1_X : Interfaces.C.C_float;
+      V1_Y : Interfaces.C.C_float;
+      V2_X : Interfaces.C.C_float;
+      V2_Y : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
    type C_Rotated_Rect is record
       Center_X      : Interfaces.C.C_float;
       Center_Y      : Interfaces.C.C_float;
@@ -221,6 +231,16 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_min_enclosing_circle";
+
+   function Min_Enclosing_Triangle
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Out_Area    : access Interfaces.C.double;
+      Result      : access C_Triangle) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_min_enclosing_triangle";
 
    function Min_Area_Rect
      (Points      : access Point_I32;
