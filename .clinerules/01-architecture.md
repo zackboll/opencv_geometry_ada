@@ -22,12 +22,14 @@ Do not migrate `Find_Contours`, color conversion, filtering, drawing, or
 other image-processing operations into Geometry.
 
 Do not introduce a Core Mat module bridge, borrow Mat handles, or link
-`libopencv_core_shim`. Reusing a public Core value type is allowed.
+`libopencv_core_shim`. Reusing a public root OpenCV value type is allowed.
 Taking a dependency on Core's C++ objects or shim is not.
 
-Core remains the owner of shared public value types such as `Point`,
-`Point_Array`, `Size`, `Rect`, `Scalar`, and `Float64_Value`. Geometry
-may reuse those types. Geometry must not redeclare them.
+`OpenCV` owns the shared public value types such as `Point`,
+`Point_Array`, `Size`, `Rect`, `Scalar`, and `Float64_Value`. The
+`opencv_core` crate still distributes the parent package. Geometry may
+reuse those types. Geometry must not redeclare them. `OpenCV.Core` owns
+`Mat` and matrix-specific abstractions.
 
 ## Layering
 
@@ -90,7 +92,7 @@ decision. See `.clinerules/06-agent-workflow.md`.
 
 ## Contour storage
 
-The public `Contour` is a subtype of `OpenCV.Core.Point_Array`. Storage
+The public `Contour` is a subtype of `OpenCV.Point_Array`. Storage
 is Ada-owned.
 
 Pack X/Y explicitly into signed 32-bit C records in array iteration

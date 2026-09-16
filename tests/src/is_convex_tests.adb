@@ -3,7 +3,7 @@ with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -13,7 +13,7 @@ package body Is_Convex_Tests is
 
    use type C_API.Status;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Point_Coordinate;
+   use type OpenCV.Point_Coordinate;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -35,7 +35,7 @@ package body Is_Convex_Tests is
       (X => 2, Y => 1),
       (X => 0, Y => 3));
 
-   function Same_Point (Left, Right : OpenCV.Core.Point) return Boolean is
+   function Same_Point (Left, Right : OpenCV.Point) return Boolean is
    begin
       return Left.X = Right.X and then Left.Y = Right.Y;
    end Same_Point;
@@ -124,7 +124,7 @@ package body Is_Convex_Tests is
    procedure Empty_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
    begin
       AUnit.Assertions.Assert
         (not OpenCV.Geometry.Is_Convex (Empty),
@@ -134,7 +134,7 @@ package body Is_Convex_Tests is
    procedure One_Point (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Points : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 1, Y => 2));
+        (0 => OpenCV.Point'(X => 1, Y => 2));
    begin
       AUnit.Assertions.Assert
         (not OpenCV.Geometry.Is_Convex (Points),
@@ -209,8 +209,8 @@ package body Is_Convex_Tests is
 
    procedure Large_Safe_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Last   : constant OpenCV.Core.Point_Coordinate :=
-        OpenCV.Core.Point_Coordinate (Interfaces.Integer_32'Last);
+      Last   : constant OpenCV.Point_Coordinate :=
+        OpenCV.Point_Coordinate (Interfaces.Integer_32'Last);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0),
          (X => Last, Y => 0),
@@ -224,8 +224,8 @@ package body Is_Convex_Tests is
 
    procedure Safe_Delta_Boundary (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      First  : constant OpenCV.Core.Point_Coordinate :=
-        OpenCV.Core.Point_Coordinate (Interfaces.Integer_32'First);
+      First  : constant OpenCV.Point_Coordinate :=
+        OpenCV.Point_Coordinate (Interfaces.Integer_32'First);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => First, Y => 0),
          (X => -1, Y => 0),
@@ -241,7 +241,7 @@ package body Is_Convex_Tests is
       pragma Unreferenced (Test);
       --  46340^2 = 2_147_395_600, the largest square that still fits in
       --  signed 32-bit native products used by isContourConvex.
-      Limit  : constant OpenCV.Core.Point_Coordinate := 46_340;
+      Limit  : constant OpenCV.Point_Coordinate := 46_340;
       Points : constant OpenCV.Geometry.Contour :=
         ((X => Limit, Y => Limit), (X => 0, Y => 0), (X => 0, Y => Limit));
    begin

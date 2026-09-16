@@ -38,16 +38,16 @@ understand the C++ shim.
 Expose this crate under `OpenCV.Geometry`. Do not define a competing
 root `OpenCV` package. Core owns `OpenCV` and `OpenCV.Core`.
 
-Reuse public Core value types where they already exist: `Point`,
+Reuse public OpenCV value types where they already exist: `Point`,
 `Point_Array`, `Size`, `Rect`, `Scalar`, and `Float64_Value`.
 
-Reusing a Core value type is not permission to use `OpenCV.Core.Mat`,
+Reusing a root OpenCV value type is not permission to use `OpenCV.Core.Mat`,
 borrow Mat handles, or introduce a Core module bridge. Geometry
 currently has no Mat API. Do not add one for convenience.
 
 `OpenCV.Geometry` may define a public type only when Geometry requires
-it and Core does not already supply it. `Contour` is a subtype of
-`OpenCV.Core.Point_Array`. `Moments_Result` is a Geometry-owned value
+it and OpenCV/OpenCV.Core does not already supply it. `Contour` is a subtype of
+`OpenCV.Point_Array`. `Moments_Result` is a Geometry-owned value
 record.
 
 Keep Geometry types as ordinary Ada arrays and records unless a later

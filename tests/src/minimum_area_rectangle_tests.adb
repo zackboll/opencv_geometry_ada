@@ -4,7 +4,7 @@ with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
 with Interfaces.C;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -15,34 +15,34 @@ package body Minimum_Area_Rectangle_Tests is
    use type C_API.Status;
    use type Interfaces.Integer_32;
    use type Interfaces.C.C_float;
-   use type OpenCV.Core.Float32_Value;
-   use type OpenCV.Core.Point;
-   use type OpenCV.Core.Point_Coordinate;
+   use type OpenCV.Float32_Value;
+   use type OpenCV.Point;
+   use type OpenCV.Point_Coordinate;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
    Result : aliased AUnit.Test_Suites.Test_Suite;
 
-   Tolerance : constant OpenCV.Core.Float32_Value := 1.0E-4;
+   Tolerance : constant OpenCV.Float32_Value := 1.0E-4;
 
    function Is_OpenCV_5 return Boolean is
    begin
       return C_API.OpenCV_Major_Version = 5;
    end Is_OpenCV_5;
 
-   function Close (Left, Right : OpenCV.Core.Float32_Value) return Boolean is
+   function Close (Left, Right : OpenCV.Float32_Value) return Boolean is
    begin
       return abs (Left - Right) <= Tolerance;
    end Close;
 
    procedure Assert_Rect
-     (Actual                       : OpenCV.Core.Rotated_Rect;
-      Center_X, Center_Y           : OpenCV.Core.Float32_Value;
-      Width, Height, Angle_Degrees : OpenCV.Core.Float32_Value;
+     (Actual                       : OpenCV.Rotated_Rect;
+      Center_X, Center_Y           : OpenCV.Float32_Value;
+      Width, Height, Angle_Degrees : OpenCV.Float32_Value;
       Message                      : String)
    is
       function Detail
-        (Name : String; Actual, Expected : OpenCV.Core.Float32_Value)
+        (Name : String; Actual, Expected : OpenCV.Float32_Value)
          return String is
       begin
          return
@@ -50,9 +50,9 @@ package body Minimum_Area_Rectangle_Tests is
            & ": "
            & Name
            & " actual="
-           & OpenCV.Core.Float32_Value'Image (Actual)
+           & OpenCV.Float32_Value'Image (Actual)
            & " expected="
-           & OpenCV.Core.Float32_Value'Image (Expected);
+           & OpenCV.Float32_Value'Image (Expected);
       end Detail;
    begin
       AUnit.Assertions.Assert
@@ -122,7 +122,7 @@ package body Minimum_Area_Rectangle_Tests is
          (X => 2, Y => 0),
          (X => 4, Y => 2),
          (X => 2, Y => 4));
-      Actual : constant OpenCV.Core.Rotated_Rect :=
+      Actual : constant OpenCV.Rotated_Rect :=
         OpenCV.Geometry.Minimum_Area_Rectangle (Points);
    begin
       AUnit.Assertions.Assert (Close (Actual.Center.X, 2.0), "diamond X");
@@ -142,7 +142,7 @@ package body Minimum_Area_Rectangle_Tests is
       Point : constant OpenCV.Geometry.Contour := (0 => (X => -3, Y => 7));
    begin
       declare
-         Angle : constant OpenCV.Core.Float32_Value :=
+         Angle : constant OpenCV.Float32_Value :=
            (if Is_OpenCV_5 then -90.0 else 0.0);
       begin
          Assert_Rect
@@ -333,7 +333,7 @@ package body Minimum_Area_Rectangle_Tests is
          (X => 16_777_223, Y => 0),
          (X => 16_777_223, Y => 4),
          (X => 16_777_217, Y => 4));
-      Actual : constant OpenCV.Core.Rotated_Rect :=
+      Actual : constant OpenCV.Rotated_Rect :=
         OpenCV.Geometry.Minimum_Area_Rectangle (Points);
    begin
       AUnit.Assertions.Assert (Actual.Size.Width > 0.0, "large width");

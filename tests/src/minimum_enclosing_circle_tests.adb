@@ -4,7 +4,7 @@ with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
 with Interfaces.C;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -15,17 +15,17 @@ package body Minimum_Enclosing_Circle_Tests is
    use type C_API.Status;
    use type Interfaces.C.C_float;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Float32_Value;
-   use type OpenCV.Core.Point;
-   use type OpenCV.Core.Point_Coordinate;
+   use type OpenCV.Float32_Value;
+   use type OpenCV.Point;
+   use type OpenCV.Point_Coordinate;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
    Result : aliased AUnit.Test_Suites.Test_Suite;
 
-   Native_EPS         : constant OpenCV.Core.Float32_Value := 1.0E-4;
-   Absolute_Tolerance : constant OpenCV.Core.Float32_Value := 1.0E-4;
-   Relative_Tolerance : constant OpenCV.Core.Float32_Value := 1.0E-5;
+   Native_EPS         : constant OpenCV.Float32_Value := 1.0E-4;
+   Absolute_Tolerance : constant OpenCV.Float32_Value := 1.0E-4;
+   Relative_Tolerance : constant OpenCV.Float32_Value := 1.0E-5;
    Square             : constant OpenCV.Geometry.Contour :=
      ((X => 0, Y => 0), (X => 4, Y => 0), (X => 4, Y => 4), (X => 0, Y => 4));
    Clockwise          : constant OpenCV.Geometry.Contour :=
@@ -38,10 +38,10 @@ package body Minimum_Enclosing_Circle_Tests is
       (X => -6, Y => -6),
       (X => -10, Y => -6));
 
-   function Close (Left, Right : OpenCV.Core.Float32_Value) return Boolean is
-      Difference : constant OpenCV.Core.Float32_Value := abs (Left - Right);
-      Scale      : constant OpenCV.Core.Float32_Value :=
-        OpenCV.Core.Float32_Value'Max (abs (Left), abs (Right));
+   function Close (Left, Right : OpenCV.Float32_Value) return Boolean is
+      Difference : constant OpenCV.Float32_Value := abs (Left - Right);
+      Scale      : constant OpenCV.Float32_Value :=
+        OpenCV.Float32_Value'Max (abs (Left), abs (Right));
    begin
       return
         Difference <= Absolute_Tolerance
@@ -49,14 +49,14 @@ package body Minimum_Enclosing_Circle_Tests is
    end Close;
 
    procedure Assert_Close
-     (Actual, Expected : OpenCV.Core.Float32_Value; Message : String) is
+     (Actual, Expected : OpenCV.Float32_Value; Message : String) is
    begin
       AUnit.Assertions.Assert (Close (Actual, Expected), Message);
    end Assert_Close;
 
    procedure Assert_Circle
      (Actual                     : OpenCV.Geometry.Enclosing_Circle;
-      Center_X, Center_Y, Radius : OpenCV.Core.Float32_Value;
+      Center_X, Center_Y, Radius : OpenCV.Float32_Value;
       Message                    : String) is
    begin
       Assert_Close (Actual.Center.X, Center_X, Message & ": X");
@@ -240,7 +240,7 @@ package body Minimum_Enclosing_Circle_Tests is
 
    procedure Safe_Large_Coordinates (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Limit  : constant OpenCV.Core.Point_Coordinate := 1_000_000;
+      Limit  : constant OpenCV.Point_Coordinate := 1_000_000;
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => Limit, Y => 0), (X => Limit, Y => 1));
       Circle : constant OpenCV.Geometry.Enclosing_Circle :=
@@ -325,8 +325,8 @@ package body Minimum_Enclosing_Circle_Tests is
 
    procedure Safe_Sum_Boundary (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Half   : constant OpenCV.Core.Point_Coordinate :=
-        OpenCV.Core.Point_Coordinate (Interfaces.Integer_32'Last / 2);
+      Half   : constant OpenCV.Point_Coordinate :=
+        OpenCV.Point_Coordinate (Interfaces.Integer_32'Last / 2);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => Half, Y => 0), (X => Half, Y => 1), (X => 0, Y => 0));
       Circle : constant OpenCV.Geometry.Enclosing_Circle :=
@@ -337,8 +337,8 @@ package body Minimum_Enclosing_Circle_Tests is
 
    procedure Safe_Difference_Boundary (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Last   : constant OpenCV.Core.Point_Coordinate :=
-        OpenCV.Core.Point_Coordinate (Interfaces.Integer_32'Last);
+      Last   : constant OpenCV.Point_Coordinate :=
+        OpenCV.Point_Coordinate (Interfaces.Integer_32'Last);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => Last, Y => 0), (X => 0, Y => 1));
       Circle : constant OpenCV.Geometry.Enclosing_Circle :=

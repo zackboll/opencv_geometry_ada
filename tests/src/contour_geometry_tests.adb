@@ -4,7 +4,7 @@ with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
 with Interfaces.C;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -15,7 +15,7 @@ package body Contour_Geometry_Tests is
    use type C_API.Status;
    use type Interfaces.C.double;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Float64_Value;
+   use type OpenCV.Float64_Value;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -25,7 +25,7 @@ package body Contour_Geometry_Tests is
      ((X => 0, Y => 0), (X => 4, Y => 0), (X => 4, Y => 3), (X => 0, Y => 3));
 
    procedure Assert_Equal
-     (Actual, Expected : OpenCV.Core.Float64_Value; Message : String) is
+     (Actual, Expected : OpenCV.Float64_Value; Message : String) is
    begin
       AUnit.Assertions.Assert (Actual = Expected, Message);
    end Assert_Equal;
@@ -54,9 +54,9 @@ package body Contour_Geometry_Tests is
          (X => 4, Y => 3),
          (X => 4, Y => 0),
          (X => 0, Y => 0));
-      Forward_Area : constant OpenCV.Core.Float64_Value :=
+      Forward_Area : constant OpenCV.Float64_Value :=
         OpenCV.Geometry.Contour_Area (Rectangle, Oriented => True);
-      Reverse_Area : constant OpenCV.Core.Float64_Value :=
+      Reverse_Area : constant OpenCV.Float64_Value :=
         OpenCV.Geometry.Contour_Area (Reversed, Oriented => True);
    begin
       Assert_Equal
@@ -72,12 +72,12 @@ package body Contour_Geometry_Tests is
    procedure Degenerate_Contours (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty      : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
       One_Point  : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (0 => OpenCV.Point'(X => 0, Y => 0));
       Two_Points : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 0, Y => 0),
-         1 => OpenCV.Core.Point'(X => 3, Y => 4));
+        (0 => OpenCV.Point'(X => 0, Y => 0),
+         1 => OpenCV.Point'(X => 3, Y => 4));
    begin
       Assert_Equal
         (OpenCV.Geometry.Contour_Area (Empty),

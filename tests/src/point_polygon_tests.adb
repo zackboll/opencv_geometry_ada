@@ -5,7 +5,7 @@ with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
 with Interfaces.C;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -17,18 +17,18 @@ package body Point_Polygon_Tests is
    use type Interfaces.C.C_float;
    use type Interfaces.C.double;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Float32_Value;
-   use type OpenCV.Core.Float64_Value;
-   use type OpenCV.Core.Point_Coordinate;
-   use type OpenCV.Core.Point;
+   use type OpenCV.Float32_Value;
+   use type OpenCV.Float64_Value;
+   use type OpenCV.Point_Coordinate;
+   use type OpenCV.Point;
    use type OpenCV.Geometry.Contour_Point_Location;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
    Result : aliased AUnit.Test_Suites.Test_Suite;
 
-   Absolute_Tolerance : constant OpenCV.Core.Float64_Value := 1.0E-12;
-   Relative_Tolerance : constant OpenCV.Core.Float64_Value := 1.0E-9;
+   Absolute_Tolerance : constant OpenCV.Float64_Value := 1.0E-12;
+   Relative_Tolerance : constant OpenCV.Float64_Value := 1.0E-9;
 
    Square : constant OpenCV.Geometry.Contour :=
      ((X => 0, Y => 0), (X => 4, Y => 0), (X => 4, Y => 4), (X => 0, Y => 4));
@@ -46,13 +46,13 @@ package body Point_Polygon_Tests is
      ((X => 0, Y => 0), (X => 4, Y => 4), (X => 0, Y => 4));
 
    function Q
-     (X, Y : OpenCV.Core.Float32_Value) return OpenCV.Core.Float32_Point
+     (X, Y : OpenCV.Float32_Value) return OpenCV.Float32_Point
    is ((X => X, Y => Y));
 
-   function Close (Left, Right : OpenCV.Core.Float64_Value) return Boolean is
-      Difference : constant OpenCV.Core.Float64_Value := abs (Left - Right);
-      Scale      : constant OpenCV.Core.Float64_Value :=
-        OpenCV.Core.Float64_Value'Max (abs (Left), abs (Right));
+   function Close (Left, Right : OpenCV.Float64_Value) return Boolean is
+      Difference : constant OpenCV.Float64_Value := abs (Left - Right);
+      Scale      : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Max (abs (Left), abs (Right));
    begin
       return
         Difference <= Absolute_Tolerance
@@ -60,14 +60,14 @@ package body Point_Polygon_Tests is
    end Close;
 
    procedure Assert_Close
-     (Actual, Expected : OpenCV.Core.Float64_Value; Message : String) is
+     (Actual, Expected : OpenCV.Float64_Value; Message : String) is
    begin
       AUnit.Assertions.Assert (Close (Actual, Expected), Message);
    end Assert_Close;
 
    procedure Assert_Location
      (Points   : OpenCV.Geometry.Contour;
-      Query    : OpenCV.Core.Float32_Point;
+      Query    : OpenCV.Float32_Point;
       Expected : OpenCV.Geometry.Contour_Point_Location;
       Message  : String) is
    begin
@@ -207,7 +207,7 @@ package body Point_Polygon_Tests is
    procedure Empty_Classification (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
    begin
       Assert_Location
         (Empty, Q (0.0, 0.0), OpenCV.Geometry.Outside_Contour, "empty class");
@@ -351,11 +351,11 @@ package body Point_Polygon_Tests is
    procedure Empty_Distance (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
    begin
       AUnit.Assertions.Assert
         (OpenCV.Geometry.Signed_Distance_To_Contour (Empty, Q (0.0, 0.0))
-         = -OpenCV.Core.Float64_Value'Last,
+         = -OpenCV.Float64_Value'Last,
          "empty distance is -Float64_Value'Last");
    end Empty_Distance;
 
@@ -389,7 +389,7 @@ package body Point_Polygon_Tests is
       pragma Warnings (Off, "could be declared constant");
       Points   : OpenCV.Geometry.Contour := Original;
       pragma Warnings (On, "could be declared constant");
-      Distance : constant OpenCV.Core.Float64_Value :=
+      Distance : constant OpenCV.Float64_Value :=
         OpenCV.Geometry.Signed_Distance_To_Contour (Points, Q (2.0, 2.0));
    begin
       AUnit.Assertions.Assert
@@ -416,8 +416,8 @@ package body Point_Polygon_Tests is
 
    procedure Safe_Integral_Fast_Path (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Last   : constant OpenCV.Core.Point_Coordinate :=
-        OpenCV.Core.Point_Coordinate (Interfaces.Integer_32'Last);
+      Last   : constant OpenCV.Point_Coordinate :=
+        OpenCV.Point_Coordinate (Interfaces.Integer_32'Last);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0),
          (X => Last, Y => 0),
@@ -596,8 +596,8 @@ package body Point_Polygon_Tests is
 
    procedure Huge_Public_Query_Raises_OpenCV_Error (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Query           : constant OpenCV.Core.Float32_Point :=
-        (X => OpenCV.Core.Float32_Value'Last, Y => 0.0);
+      Query           : constant OpenCV.Float32_Point :=
+        (X => OpenCV.Float32_Value'Last, Y => 0.0);
       Locate_Raised   : Boolean := False;
       Distance_Raised : Boolean := False;
    begin
@@ -618,7 +618,7 @@ package body Point_Polygon_Tests is
       end;
       begin
          declare
-            Unused : constant OpenCV.Core.Float64_Value :=
+            Unused : constant OpenCV.Float64_Value :=
               OpenCV.Geometry.Signed_Distance_To_Contour (Square, Query);
             pragma Unreferenced (Unused);
          begin

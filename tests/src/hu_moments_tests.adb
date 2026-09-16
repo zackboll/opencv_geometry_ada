@@ -5,7 +5,6 @@ with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces.C;
 with OpenCV;
-with OpenCV.Core;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -15,16 +14,16 @@ package body Hu_Moments_Tests is
 
    use type C_API.Status;
    use type Interfaces.C.double;
-   use type OpenCV.Core.Float64_Value;
-   use type OpenCV.Core.Point_Coordinate;
+   use type OpenCV.Float64_Value;
+   use type OpenCV.Point_Coordinate;
    use type OpenCV.Geometry.Hu_Moment_Index;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
    Result : aliased AUnit.Test_Suites.Test_Suite;
 
-   Absolute_Tolerance : constant OpenCV.Core.Float64_Value := 1.0E-12;
-   Relative_Tolerance : constant OpenCV.Core.Float64_Value := 1.0E-9;
+   Absolute_Tolerance : constant OpenCV.Float64_Value := 1.0E-12;
+   Relative_Tolerance : constant OpenCV.Float64_Value := 1.0E-9;
 
    L_Shape : constant OpenCV.Geometry.Contour :=
      ((X => 0, Y => 0),
@@ -43,10 +42,10 @@ package body Hu_Moments_Tests is
       6 => -6.3303311766766415E-05,
       7 => -1.8013342596489417E-06);
 
-   function Close (Left, Right : OpenCV.Core.Float64_Value) return Boolean is
-      Difference : constant OpenCV.Core.Float64_Value := abs (Left - Right);
-      Scale      : constant OpenCV.Core.Float64_Value :=
-        OpenCV.Core.Float64_Value'Max (abs (Left), abs (Right));
+   function Close (Left, Right : OpenCV.Float64_Value) return Boolean is
+      Difference : constant OpenCV.Float64_Value := abs (Left - Right);
+      Scale      : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Max (abs (Left), abs (Right));
    begin
       return
         Difference <= Absolute_Tolerance
@@ -64,7 +63,7 @@ package body Hu_Moments_Tests is
    end C_Close;
 
    procedure Assert_Close
-     (Actual, Expected : OpenCV.Core.Float64_Value; Message : String) is
+     (Actual, Expected : OpenCV.Float64_Value; Message : String) is
    begin
       AUnit.Assertions.Assert (Close (Actual, Expected), Message);
    end Assert_Close;
@@ -119,19 +118,19 @@ package body Hu_Moments_Tests is
 
    function Transformed
      (Points : OpenCV.Geometry.Contour;
-      Scale  : OpenCV.Core.Point_Coordinate;
+      Scale  : OpenCV.Point_Coordinate;
       Swap   : Boolean;
       Neg_X  : Boolean;
       Neg_Y  : Boolean;
-      DX, DY : OpenCV.Core.Point_Coordinate) return OpenCV.Geometry.Contour
+      DX, DY : OpenCV.Point_Coordinate) return OpenCV.Geometry.Contour
    is
       Result : OpenCV.Geometry.Contour (Points'Range);
    begin
       for Index in Points'Range loop
          declare
-            X : OpenCV.Core.Point_Coordinate := Points (Index).X * Scale;
-            Y : OpenCV.Core.Point_Coordinate := Points (Index).Y * Scale;
-            T : OpenCV.Core.Point_Coordinate;
+            X : OpenCV.Point_Coordinate := Points (Index).X * Scale;
+            Y : OpenCV.Point_Coordinate := Points (Index).Y * Scale;
+            T : OpenCV.Point_Coordinate;
          begin
             if Swap then
                T := X;
@@ -316,7 +315,7 @@ package body Hu_Moments_Tests is
    procedure Degenerate_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty   : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
       Line    : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => 4, Y => 0));
       Hu      : constant OpenCV.Geometry.Hu_Moments_Result :=
@@ -425,13 +424,13 @@ package body Hu_Moments_Tests is
    procedure Overflow_Raises_OpenCV_Error (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Moments : constant OpenCV.Geometry.Moments_Result :=
-        (Nu_20  => OpenCV.Core.Float64_Value'Last,
-         Nu_02  => OpenCV.Core.Float64_Value'Last,
+        (Nu_20  => OpenCV.Float64_Value'Last,
+         Nu_02  => OpenCV.Float64_Value'Last,
          others => <>);
       Raised  : Boolean := False;
       Packed  : aliased C_API.C_Moments :=
-        (Nu20   => Interfaces.C.double (OpenCV.Core.Float64_Value'Last),
-         Nu02   => Interfaces.C.double (OpenCV.Core.Float64_Value'Last),
+        (Nu20   => Interfaces.C.double (OpenCV.Float64_Value'Last),
+         Nu02   => Interfaces.C.double (OpenCV.Float64_Value'Last),
          others => 0.0);
       Output  : aliased C_API.C_Hu_Result;
       Status  : C_API.Status;
@@ -466,13 +465,13 @@ package body Hu_Moments_Tests is
    procedure Finite_NaN_Raises_OpenCV_Error (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Moments : constant OpenCV.Geometry.Moments_Result :=
-        (Nu_20  => OpenCV.Core.Float64_Value'Last,
-         Nu_02  => -OpenCV.Core.Float64_Value'Last,
+        (Nu_20  => OpenCV.Float64_Value'Last,
+         Nu_02  => -OpenCV.Float64_Value'Last,
          others => <>);
       Raised  : Boolean := False;
       Packed  : aliased C_API.C_Moments :=
-        (Nu20   => Interfaces.C.double (OpenCV.Core.Float64_Value'Last),
-         Nu02   => Interfaces.C.double (-OpenCV.Core.Float64_Value'Last),
+        (Nu20   => Interfaces.C.double (OpenCV.Float64_Value'Last),
+         Nu02   => Interfaces.C.double (-OpenCV.Float64_Value'Last),
          others => 0.0);
       Output  : aliased C_API.C_Hu_Result;
       Status  : C_API.Status;
@@ -506,8 +505,8 @@ package body Hu_Moments_Tests is
 
    procedure Large_Finite_Result (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Half    : constant OpenCV.Core.Float64_Value :=
-        OpenCV.Core.Float64_Value'Last / 2.0;
+      Half    : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Last / 2.0;
       Moments : constant OpenCV.Geometry.Moments_Result :=
         (Nu_20 => Half, Nu_02 => Half, others => <>);
       Hu      : constant OpenCV.Geometry.Hu_Moments_Result :=
@@ -515,7 +514,7 @@ package body Hu_Moments_Tests is
    begin
       Assert_Close
         (Hu (1),
-         OpenCV.Core.Float64_Value'Last,
+         OpenCV.Float64_Value'Last,
          "largest finite Hu_1 must be accepted");
       for Index in OpenCV.Geometry.Hu_Moment_Index range 3 .. 7 loop
          Assert_Close (Hu (Index), 0.0, "half+half remaining Hu must be 0");

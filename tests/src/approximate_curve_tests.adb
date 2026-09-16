@@ -6,7 +6,6 @@ with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
 with OpenCV;
-with OpenCV.Core;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -16,8 +15,8 @@ package body Approximate_Curve_Tests is
 
    use type C_API.Status;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Float64_Value;
-   use type OpenCV.Core.Point_Coordinate;
+   use type OpenCV.Float64_Value;
+   use type OpenCV.Point_Coordinate;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -49,13 +48,13 @@ package body Approximate_Curve_Tests is
    Collinear : constant OpenCV.Geometry.Contour :=
      ((X => 0, Y => 0), (X => 2, Y => 0), (X => 4, Y => 0), (X => 6, Y => 0));
 
-   function Same_Point (Left, Right : OpenCV.Core.Point) return Boolean is
+   function Same_Point (Left, Right : OpenCV.Point) return Boolean is
    begin
       return Left.X = Right.X and then Left.Y = Right.Y;
    end Same_Point;
 
    function Contains_Point
-     (Points : OpenCV.Geometry.Contour; Item : OpenCV.Core.Point)
+     (Points : OpenCV.Geometry.Contour; Item : OpenCV.Point)
       return Boolean is
    begin
       for Point of Points loop
@@ -211,7 +210,7 @@ package body Approximate_Curve_Tests is
    procedure Empty_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty  : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
       Approx : constant OpenCV.Geometry.Contour :=
         OpenCV.Geometry.Approximate_Curve (Empty, 1.0, Closed => True);
    begin
@@ -288,10 +287,10 @@ package body Approximate_Curve_Tests is
       function Bits_To_Epsilon is new
         Ada.Unchecked_Conversion
           (Interfaces.Unsigned_64,
-           OpenCV.Core.Float64_Value);
+           OpenCV.Float64_Value);
 
       procedure Assert_Rejected
-        (Epsilon : OpenCV.Core.Float64_Value; Message : String)
+        (Epsilon : OpenCV.Float64_Value; Message : String)
       is
          Raised : Boolean := False;
       begin

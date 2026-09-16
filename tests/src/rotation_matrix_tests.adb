@@ -20,8 +20,8 @@ package body Rotation_Matrix_Tests is
    use type Interfaces.C.double;
    use type OpenCV.Core.Channel_Count;
    use type OpenCV.Core.Depth_Type;
-   use type OpenCV.Core.Float32_Value;
-   use type OpenCV.Core.Float64_Value;
+   use type OpenCV.Float32_Value;
+   use type OpenCV.Float64_Value;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -30,23 +30,23 @@ package body Rotation_Matrix_Tests is
    function Bits_To_Float32 is new
      Ada.Unchecked_Conversion
        (Source => Interfaces.Unsigned_32,
-        Target => OpenCV.Core.Float32_Value);
+        Target => OpenCV.Float32_Value);
 
    function Bits_To_Float64 is new
      Ada.Unchecked_Conversion
        (Source => Interfaces.Unsigned_64,
-        Target => OpenCV.Core.Float64_Value);
+        Target => OpenCV.Float64_Value);
 
    NaN_Bits_32   : constant Interfaces.Unsigned_32 := 16#7FC0_0000#;
    Inf_Bits_32   : constant Interfaces.Unsigned_32 := 16#7F80_0000#;
    Infinity_Bits : constant Interfaces.Unsigned_64 := 16#7FF0_0000_0000_0000#;
    Neg_Inf_Bits  : constant Interfaces.Unsigned_64 := 16#FFF0_0000_0000_0000#;
    NaN_Bits      : constant Interfaces.Unsigned_64 := 16#7FF8_0000_0000_0000#;
-   Coeff_Tol     : constant OpenCV.Core.Float64_Value := 1.0E-12;
+   Coeff_Tol     : constant OpenCV.Float64_Value := 1.0E-12;
 
    function Nearly_Equal
-     (Left, Right : OpenCV.Core.Float64_Value;
-      Tolerance   : OpenCV.Core.Float64_Value := Coeff_Tol) return Boolean is
+     (Left, Right : OpenCV.Float64_Value;
+      Tolerance   : OpenCV.Float64_Value := Coeff_Tol) return Boolean is
    begin
       return abs (Left - Right) <= Tolerance;
    end Nearly_Equal;
@@ -80,13 +80,13 @@ package body Rotation_Matrix_Tests is
    function Is_Finite_Coefficient
      (Transform : OpenCV.Core.Mat; Row, Column : Integer) return Boolean
    is
-      Value : constant OpenCV.Core.Float64_Value :=
+      Value : constant OpenCV.Float64_Value :=
         OpenCV.Core.Float64_Access.Get (Transform, Row, Column);
    begin
       return
         Value = Value
-        and then Value >= OpenCV.Core.Float64_Value'First
-        and then Value <= OpenCV.Core.Float64_Value'Last;
+        and then Value >= OpenCV.Float64_Value'First
+        and then Value <= OpenCV.Float64_Value'Last;
    end Is_Finite_Coefficient;
 
    procedure Assert_All_Coefficients_Finite
@@ -104,7 +104,7 @@ package body Rotation_Matrix_Tests is
 
    procedure Assert_Coefficients
      (Transform                    : OpenCV.Core.Mat;
-      M00, M01, M02, M10, M11, M12 : OpenCV.Core.Float64_Value;
+      M00, M01, M02, M10, M11, M12 : OpenCV.Float64_Value;
       Message                      : String) is
    begin
       AUnit.Assertions.Assert
@@ -177,7 +177,7 @@ package body Rotation_Matrix_Tests is
 
    procedure Ninety_Degree_Coefficients (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Center    : constant OpenCV.Core.Float32_Point := (X => 10.0, Y => 20.0);
+      Center    : constant OpenCV.Float32_Point := (X => 10.0, Y => 20.0);
       Transform : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D (Center, 90.0);
    begin
@@ -215,14 +215,14 @@ package body Rotation_Matrix_Tests is
 
    procedure Negative_Angle_Flips_Beta (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Center   : constant OpenCV.Core.Float32_Point := (X => 10.0, Y => 20.0);
+      Center   : constant OpenCV.Float32_Point := (X => 10.0, Y => 20.0);
       Positive : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D (Center, 90.0);
       Negative : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D (Center, -90.0);
-      Pos_Beta : constant OpenCV.Core.Float64_Value :=
+      Pos_Beta : constant OpenCV.Float64_Value :=
         OpenCV.Core.Float64_Access.Get (Positive, 0, 1);
-      Neg_Beta : constant OpenCV.Core.Float64_Value :=
+      Neg_Beta : constant OpenCV.Float64_Value :=
         OpenCV.Core.Float64_Access.Get (Negative, 0, 1);
    begin
       AUnit.Assertions.Assert
@@ -236,16 +236,16 @@ package body Rotation_Matrix_Tests is
 
    procedure Radians_Match_Degrees (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Center  : constant OpenCV.Core.Float32_Point := (X => 7.5, Y => 3.25);
+      Center  : constant OpenCV.Float32_Point := (X => 7.5, Y => 3.25);
       Degrees : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D
-          (Center, 90.0, 1.0, OpenCV.Core.Degrees);
+          (Center, 90.0, 1.0, OpenCV.Degrees);
       Radians : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D
           (Center,
-           OpenCV.Core.Float64_Value (Ada.Numerics.Pi / 2.0),
+           OpenCV.Float64_Value (Ada.Numerics.Pi / 2.0),
            1.0,
-           OpenCV.Core.Radians);
+           OpenCV.Radians);
    begin
       Assert_Matrices_Match
         (Radians, Degrees, "pi/2 radians must match 90 degrees");
@@ -291,31 +291,31 @@ package body Rotation_Matrix_Tests is
 
    procedure Large_Finite_Angles_Are_Reduced (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Center         : constant OpenCV.Core.Float32_Point :=
+      Center         : constant OpenCV.Float32_Point :=
         (X => 3.0, Y => 4.0);
-      Large_Degrees  : constant OpenCV.Core.Float64_Value :=
+      Large_Degrees  : constant OpenCV.Float64_Value :=
         360.0 * 1.0E12 + 90.0;
-      Reduced_Deg    : constant OpenCV.Core.Float64_Value :=
-        OpenCV.Core.Float64_Value'Remainder (Large_Degrees, 360.0);
-      Two_Pi         : constant OpenCV.Core.Float64_Value :=
-        OpenCV.Core.Float64_Value (2.0)
-        * OpenCV.Core.Float64_Value (Ada.Numerics.Pi);
-      Large_Radians  : constant OpenCV.Core.Float64_Value :=
+      Reduced_Deg    : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Remainder (Large_Degrees, 360.0);
+      Two_Pi         : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value (2.0)
+        * OpenCV.Float64_Value (Ada.Numerics.Pi);
+      Large_Radians  : constant OpenCV.Float64_Value :=
         Two_Pi
-        * OpenCV.Core.Float64_Value (1.0E12)
-        + OpenCV.Core.Float64_Value (Ada.Numerics.Pi / 2.0);
-      Reduced_Rad    : constant OpenCV.Core.Float64_Value :=
-        OpenCV.Core.Float64_Value'Remainder (Large_Radians, Two_Pi);
+        * OpenCV.Float64_Value (1.0E12)
+        + OpenCV.Float64_Value (Ada.Numerics.Pi / 2.0);
+      Reduced_Rad    : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Remainder (Large_Radians, Two_Pi);
       From_Large_Deg : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D (Center, Large_Degrees);
       From_Reduced_D : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D (Center, Reduced_Deg);
       From_Large_Rad : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D
-          (Center, Large_Radians, 1.0, OpenCV.Core.Radians);
+          (Center, Large_Radians, 1.0, OpenCV.Radians);
       From_Reduced_R : constant OpenCV.Core.Mat :=
         OpenCV.Geometry.Get_Rotation_Matrix_2D
-          (Center, Reduced_Rad, 1.0, OpenCV.Core.Radians);
+          (Center, Reduced_Rad, 1.0, OpenCV.Radians);
    begin
       Assert_Is_2x3_Float64_C1
         (From_Large_Deg, "large finite degrees must return 2x3 Float64 C1");
@@ -342,7 +342,7 @@ package body Rotation_Matrix_Tests is
 
       procedure Nan_Center_X is
          pragma Suppress (Validity_Check);
-         Value : OpenCV.Core.Float32_Value;
+         Value : OpenCV.Float32_Value;
       begin
          Value := Bits_To_Float32 (NaN_Bits_32);
          Discard :=
@@ -352,7 +352,7 @@ package body Rotation_Matrix_Tests is
 
       procedure Inf_Center_Y is
          pragma Suppress (Validity_Check);
-         Value : OpenCV.Core.Float32_Value;
+         Value : OpenCV.Float32_Value;
       begin
          Value := Bits_To_Float32 (Inf_Bits_32);
          Discard :=
@@ -362,7 +362,7 @@ package body Rotation_Matrix_Tests is
 
       procedure Nan_Angle is
          pragma Suppress (Validity_Check);
-         Value : OpenCV.Core.Float64_Value;
+         Value : OpenCV.Float64_Value;
       begin
          Value := Bits_To_Float64 (NaN_Bits);
          Discard :=
@@ -372,7 +372,7 @@ package body Rotation_Matrix_Tests is
 
       procedure Inf_Angle is
          pragma Suppress (Validity_Check);
-         Value : OpenCV.Core.Float64_Value;
+         Value : OpenCV.Float64_Value;
       begin
          Value := Bits_To_Float64 (Infinity_Bits);
          Discard :=
@@ -382,7 +382,7 @@ package body Rotation_Matrix_Tests is
 
       procedure Nan_Scale is
          pragma Suppress (Validity_Check);
-         Value : OpenCV.Core.Float64_Value;
+         Value : OpenCV.Float64_Value;
       begin
          Value := Bits_To_Float64 (NaN_Bits);
          Discard :=
@@ -392,7 +392,7 @@ package body Rotation_Matrix_Tests is
 
       procedure Inf_Scale is
          pragma Suppress (Validity_Check);
-         Value : OpenCV.Core.Float64_Value;
+         Value : OpenCV.Float64_Value;
       begin
          Value := Bits_To_Float64 (Neg_Inf_Bits);
          Discard :=

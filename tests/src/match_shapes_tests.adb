@@ -5,7 +5,6 @@ with AUnit.Test_Fixtures;
 with Interfaces;
 with Interfaces.C;
 with OpenCV;
-with OpenCV.Core;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -16,16 +15,16 @@ package body Match_Shapes_Tests is
    use type C_API.Status;
    use type Interfaces.C.double;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Float64_Value;
-   use type OpenCV.Core.Point_Coordinate;
-   use type OpenCV.Core.Point;
+   use type OpenCV.Float64_Value;
+   use type OpenCV.Point_Coordinate;
+   use type OpenCV.Point;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
    Result : aliased AUnit.Test_Suites.Test_Suite;
 
-   Absolute_Tolerance : constant OpenCV.Core.Float64_Value := 1.0E-12;
-   Relative_Tolerance : constant OpenCV.Core.Float64_Value := 1.0E-9;
+   Absolute_Tolerance : constant OpenCV.Float64_Value := 1.0E-12;
+   Relative_Tolerance : constant OpenCV.Float64_Value := 1.0E-9;
 
    L_Shape : constant OpenCV.Geometry.Contour :=
      ((X => 0, Y => 0),
@@ -45,18 +44,18 @@ package body Match_Shapes_Tests is
       (X => 3, Y => 2),
       (X => 0, Y => 2));
 
-   Native_L_Vs_T_I1 : constant OpenCV.Core.Float64_Value :=
+   Native_L_Vs_T_I1 : constant OpenCV.Float64_Value :=
      0.39635522664611955;
-   Native_L_Vs_T_I2 : constant OpenCV.Core.Float64_Value := 2.6179131665323814;
-   Native_L_Vs_T_I3 : constant OpenCV.Core.Float64_Value :=
+   Native_L_Vs_T_I2 : constant OpenCV.Float64_Value := 2.6179131665323814;
+   Native_L_Vs_T_I3 : constant OpenCV.Float64_Value :=
      0.60893324608629362;
-   Native_T_Vs_L_I3 : constant OpenCV.Core.Float64_Value :=
+   Native_T_Vs_L_I3 : constant OpenCV.Float64_Value :=
      0.37847017430183305;
 
-   function Close (Left, Right : OpenCV.Core.Float64_Value) return Boolean is
-      Difference : constant OpenCV.Core.Float64_Value := abs (Left - Right);
-      Scale      : constant OpenCV.Core.Float64_Value :=
-        OpenCV.Core.Float64_Value'Max (abs (Left), abs (Right));
+   function Close (Left, Right : OpenCV.Float64_Value) return Boolean is
+      Difference : constant OpenCV.Float64_Value := abs (Left - Right);
+      Scale      : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Max (abs (Left), abs (Right));
    begin
       return
         Difference <= Absolute_Tolerance
@@ -74,7 +73,7 @@ package body Match_Shapes_Tests is
    end C_Close;
 
    procedure Assert_Close
-     (Actual, Expected : OpenCV.Core.Float64_Value; Message : String) is
+     (Actual, Expected : OpenCV.Float64_Value; Message : String) is
    begin
       AUnit.Assertions.Assert (Close (Actual, Expected), Message);
    end Assert_Close;
@@ -104,19 +103,19 @@ package body Match_Shapes_Tests is
 
    function Transformed
      (Points : OpenCV.Geometry.Contour;
-      Scale  : OpenCV.Core.Point_Coordinate;
+      Scale  : OpenCV.Point_Coordinate;
       Swap   : Boolean;
       Neg_X  : Boolean;
       Neg_Y  : Boolean;
-      DX, DY : OpenCV.Core.Point_Coordinate) return OpenCV.Geometry.Contour
+      DX, DY : OpenCV.Point_Coordinate) return OpenCV.Geometry.Contour
    is
       Result : OpenCV.Geometry.Contour (Points'Range);
    begin
       for Index in Points'Range loop
          declare
-            X : OpenCV.Core.Point_Coordinate := Points (Index).X * Scale;
-            Y : OpenCV.Core.Point_Coordinate := Points (Index).Y * Scale;
-            T : OpenCV.Core.Point_Coordinate;
+            X : OpenCV.Point_Coordinate := Points (Index).X * Scale;
+            Y : OpenCV.Point_Coordinate := Points (Index).Y * Scale;
+            T : OpenCV.Point_Coordinate;
          begin
             if Swap then
                T := X;
@@ -293,10 +292,10 @@ package body Match_Shapes_Tests is
 
    procedure Relative_Directionality (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Forward  : constant OpenCV.Core.Float64_Value :=
+      Forward  : constant OpenCV.Float64_Value :=
         OpenCV.Geometry.Match_Shapes
           (L_Shape, T_Shape, OpenCV.Geometry.Relative_Log_Difference);
-      Backward : constant OpenCV.Core.Float64_Value :=
+      Backward : constant OpenCV.Float64_Value :=
         OpenCV.Geometry.Match_Shapes
           (T_Shape, L_Shape, OpenCV.Geometry.Relative_Log_Difference);
    begin
@@ -327,7 +326,7 @@ package body Match_Shapes_Tests is
    procedure Both_Degenerate (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
       Line  : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => 4, Y => 0));
    begin
@@ -356,24 +355,24 @@ package body Match_Shapes_Tests is
    procedure One_Degenerate (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
       Line  : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => 4, Y => 0));
    begin
       AUnit.Assertions.Assert
         (OpenCV.Geometry.Match_Shapes
            (Empty, L_Shape, OpenCV.Geometry.Reciprocal_Log_Difference)
-         = OpenCV.Core.Float64_Value'Last,
+         = OpenCV.Float64_Value'Last,
          "empty vs ordinary I1 must be DBL_MAX");
       AUnit.Assertions.Assert
         (OpenCV.Geometry.Match_Shapes
            (L_Shape, Empty, OpenCV.Geometry.Log_Difference)
-         = OpenCV.Core.Float64_Value'Last,
+         = OpenCV.Float64_Value'Last,
          "ordinary vs empty I2 must be DBL_MAX");
       AUnit.Assertions.Assert
         (OpenCV.Geometry.Match_Shapes
            (Line, L_Shape, OpenCV.Geometry.Relative_Log_Difference)
-         = OpenCV.Core.Float64_Value'Last,
+         = OpenCV.Float64_Value'Last,
          "zero-area vs ordinary I3 must be DBL_MAX");
    end One_Degenerate;
 
@@ -407,7 +406,7 @@ package body Match_Shapes_Tests is
       Left           : OpenCV.Geometry.Contour := Original_Left;
       Right          : OpenCV.Geometry.Contour := Original_Right;
       pragma Warnings (On, "could be declared constant");
-      Score          : constant OpenCV.Core.Float64_Value :=
+      Score          : constant OpenCV.Float64_Value :=
         OpenCV.Geometry.Match_Shapes
           (Left, Right, OpenCV.Geometry.Log_Difference);
    begin

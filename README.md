@@ -20,7 +20,7 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`, and
 `Minimum_Area_Rectangle`, and `Get_Rotation_Matrix_2D`.
-`Contour` is a subtype of `OpenCV.Core.Point_Array`; storage stays
+`Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
 counterclockwise using OpenCV's convention (X right, Y up); image coordinates
@@ -28,10 +28,10 @@ that increase Y downward may look reversed. `Approximate_Curve` applies
 Douglas-Peucker; `Epsilon` is the maximum deviation in the range
 `0.0 <= Epsilon < 1.0E30` and `Closed` connects the last vertex to the first.
 Empty input yields an empty Ada-owned contour. `Bounding_Rect` returns an
-upright axis-aligned `OpenCV.Core.Rect`. Integer extent is inclusive, so a
+upright axis-aligned `OpenCV.Rect`. Integer extent is inclusive, so a
 point set spanning X=0..4 and Y=0..3 has Width=5 and Height=4. Empty input
 returns (0, 0, 0, 0). Negative native origins are preserved as signed
-`OpenCV.Core.Rect` X/Y values. Inclusive extents that
+`OpenCV.Rect` X/Y values. Inclusive extents that
 cannot be represented as signed 32-bit width or height are rejected.
 `Is_Convex` tests contour convexity and does not depend on winding direction.
 The contour is expected to be simple; OpenCV leaves the result for
@@ -64,7 +64,7 @@ contours are outside and return the largest finite negative distance.
 binary32 center and radius, including OpenCV's native EPS. Empty input is
 center (0, 0) and radius 0. Integer contours whose native signed-32-bit pair
 addition or subtraction would overflow are rejected.
-`Minimum_Area_Rectangle` returns `OpenCV.Core.Rotated_Rect`, preserving native
+`Minimum_Area_Rectangle` returns `OpenCV.Rotated_Rect`, preserving native
 binary32 center, size, and angle-in-degrees fields. OpenCV 4.x and 5.x may use
 different width/height/angle representations for the same rectangle; no output
 normalization is applied. Inputs unsafe for native integer convex-hull
@@ -76,10 +76,10 @@ API:
 
 ```ada
 function Get_Rotation_Matrix_2D
-  (Center : OpenCV.Core.Float32_Point;
-   Angle  : OpenCV.Core.Float64_Value;
-   Scale  : OpenCV.Core.Float64_Value := 1.0;
-   Units  : OpenCV.Core.Angle_Unit := OpenCV.Core.Degrees)
+  (Center : OpenCV.Float32_Point;
+   Angle  : OpenCV.Float64_Value;
+   Scale  : OpenCV.Float64_Value := 1.0;
+   Units  : OpenCV.Angle_Unit := OpenCV.Degrees)
    return OpenCV.Core.Mat;
 ```
 
@@ -114,6 +114,21 @@ values are mathematically defined by OpenCV and remain accepted.
 OpenCV 4 implements the native call from the legacy Imgproc header;
 OpenCV 5 implements it from Geometry. The public Ada API does not expose
 that split.
+
+The `opencv_core` crate still distributes the parent package. `OpenCV.Core`
+continues to own `Mat`. Geometry does not redeclare `Point`,
+`Point_Array`, `Size`, `Rect`, `Scalar`, `Float32_Point`,
+`Rotated_Rect`, `Angle_Unit`, or `Float64_Value`.
+
+This relocation is source-breaking. Callers that previously wrote
+`OpenCV.Core.Point_Array` or `OpenCV.Core.Rect` must update
+qualification to the root `OpenCV` package.
+
+`Contour` remains a subtype of the shared point array:
+
+```ada
+subtype Contour is OpenCV.Point_Array;
+```
 
 Architecture: thick Ada -> thin Ada C interop -> C ABI -> C++ shim -> OpenCV.
 No STL, C++ exceptions or native objects cross the C ABI. Native errors become

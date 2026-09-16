@@ -4,7 +4,7 @@ with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
 with Interfaces.C;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -15,8 +15,8 @@ package body Contour_Moments_Tests is
    use type C_API.Status;
    use type Interfaces.C.double;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Float64_Value;
-   use type OpenCV.Core.Point_Coordinate;
+   use type OpenCV.Float64_Value;
+   use type OpenCV.Point_Coordinate;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -31,15 +31,15 @@ package body Contour_Moments_Tests is
       (X => -3, Y => 8),
       (X => -7, Y => 8));
 
-   Tolerance : constant OpenCV.Core.Float64_Value := 1.0E-9;
+   Tolerance : constant OpenCV.Float64_Value := 1.0E-9;
 
-   function Close (Left, Right : OpenCV.Core.Float64_Value) return Boolean is
+   function Close (Left, Right : OpenCV.Float64_Value) return Boolean is
    begin
       return abs (Left - Right) <= Tolerance;
    end Close;
 
    procedure Assert_Close
-     (Actual, Expected : OpenCV.Core.Float64_Value; Message : String) is
+     (Actual, Expected : OpenCV.Float64_Value; Message : String) is
    begin
       AUnit.Assertions.Assert (Close (Actual, Expected), Message);
    end Assert_Close;
@@ -193,12 +193,12 @@ package body Contour_Moments_Tests is
    procedure Degenerate_Contours (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty         : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
       One_Point     : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 1, Y => 2));
+        (0 => OpenCV.Point'(X => 1, Y => 2));
       Two_Points    : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 0, Y => 0),
-         1 => OpenCV.Core.Point'(X => 3, Y => 4));
+        (0 => OpenCV.Point'(X => 0, Y => 0),
+         1 => OpenCV.Point'(X => 3, Y => 4));
       Empty_Moments : constant OpenCV.Geometry.Moments_Result :=
         OpenCV.Geometry.Compute_Moments (Empty);
       One_Moments   : constant OpenCV.Geometry.Moments_Result :=

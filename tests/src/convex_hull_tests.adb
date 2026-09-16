@@ -3,7 +3,7 @@ with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -14,8 +14,8 @@ package body Convex_Hull_Tests is
    use type C_API.Status;
    use type C_API.Point_I32_Array;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Float64_Value;
-   use type OpenCV.Core.Point_Coordinate;
+   use type OpenCV.Float64_Value;
+   use type OpenCV.Point_Coordinate;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -38,13 +38,13 @@ package body Convex_Hull_Tests is
       (X => 2, Y => 1),
       (X => 0, Y => 3));
 
-   function Same_Point (Left, Right : OpenCV.Core.Point) return Boolean is
+   function Same_Point (Left, Right : OpenCV.Point) return Boolean is
    begin
       return Left.X = Right.X and then Left.Y = Right.Y;
    end Same_Point;
 
    function Contains_Point
-     (Points : OpenCV.Geometry.Contour; Item : OpenCV.Core.Point)
+     (Points : OpenCV.Geometry.Contour; Item : OpenCV.Point)
       return Boolean is
    begin
       for Point of Points loop
@@ -199,7 +199,7 @@ package body Convex_Hull_Tests is
    procedure Empty_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
       Hull  : constant OpenCV.Geometry.Contour :=
         OpenCV.Geometry.Convex_Hull (Empty);
    begin
@@ -210,7 +210,7 @@ package body Convex_Hull_Tests is
    procedure One_Point_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
       One  : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 1, Y => 2));
+        (0 => OpenCV.Point'(X => 1, Y => 2));
       Hull : constant OpenCV.Geometry.Contour :=
         OpenCV.Geometry.Convex_Hull (One);
    begin
@@ -224,8 +224,8 @@ package body Convex_Hull_Tests is
    procedure Two_Point_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Two  : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 0, Y => 0),
-         1 => OpenCV.Core.Point'(X => 3, Y => 4));
+        (0 => OpenCV.Point'(X => 0, Y => 0),
+         1 => OpenCV.Point'(X => 3, Y => 4));
       Hull : constant OpenCV.Geometry.Contour :=
         OpenCV.Geometry.Convex_Hull (Two);
    begin

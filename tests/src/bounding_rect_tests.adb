@@ -3,7 +3,7 @@ with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
 with Interfaces;
-with OpenCV.Core;
+with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
 
@@ -13,8 +13,8 @@ package body Bounding_Rect_Tests is
 
    use type C_API.Status;
    use type Interfaces.Integer_32;
-   use type OpenCV.Core.Point_Coordinate;
-   use type OpenCV.Core.Size_Coordinate;
+   use type OpenCV.Point_Coordinate;
+   use type OpenCV.Size_Coordinate;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -33,9 +33,9 @@ package body Bounding_Rect_Tests is
      ((X => 4, Y => 3), (X => 0, Y => 3), (X => 4, Y => 0), (X => 0, Y => 0));
 
    procedure Assert_Rect
-     (Actual        : OpenCV.Core.Rect;
-      X, Y          : OpenCV.Core.Point_Coordinate;
-      Width, Height : OpenCV.Core.Size_Coordinate;
+     (Actual        : OpenCV.Rect;
+      X, Y          : OpenCV.Point_Coordinate;
+      Width, Height : OpenCV.Size_Coordinate;
       Message       : String) is
    begin
       AUnit.Assertions.Assert (Actual.X = X, Message & ": X");
@@ -55,7 +55,7 @@ package body Bounding_Rect_Tests is
       AUnit.Assertions.Assert (Actual.Height = Height, Message & ": Height");
    end Assert_C_Rect;
 
-   function Same_Point (Left, Right : OpenCV.Core.Point) return Boolean is
+   function Same_Point (Left, Right : OpenCV.Point) return Boolean is
    begin
       return Left.X = Right.X and then Left.Y = Right.Y;
    end Same_Point;
@@ -80,7 +80,7 @@ package body Bounding_Rect_Tests is
 
    procedure Ordinary_Rectangle (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Box : constant OpenCV.Core.Rect :=
+      Box : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Square);
    begin
       Assert_Rect
@@ -89,7 +89,7 @@ package body Bounding_Rect_Tests is
 
    procedure Translated_Rectangle (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Box : constant OpenCV.Core.Rect :=
+      Box : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Translated);
    begin
       Assert_Rect
@@ -105,7 +105,7 @@ package body Bounding_Rect_Tests is
       pragma Unreferenced (Test);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => 4, Y => 3));
-      Box    : constant OpenCV.Core.Rect :=
+      Box    : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Points);
    begin
       Assert_Rect
@@ -115,8 +115,8 @@ package body Bounding_Rect_Tests is
    procedure Single_Point (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Points : constant OpenCV.Geometry.Contour :=
-        (0 => OpenCV.Core.Point'(X => 7, Y => 11));
-      Box    : constant OpenCV.Core.Rect :=
+        (0 => OpenCV.Point'(X => 7, Y => 11));
+      Box    : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Points);
    begin
       Assert_Rect (Box, 7, 11, 1, 1, "one point must have width and height 1");
@@ -126,7 +126,7 @@ package body Bounding_Rect_Tests is
       pragma Unreferenced (Test);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 1, Y => 2), (X => 4, Y => 6));
-      Box    : constant OpenCV.Core.Rect :=
+      Box    : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Points);
    begin
       Assert_Rect (Box, 1, 2, 4, 5, "two-point box must span both extrema");
@@ -136,7 +136,7 @@ package body Bounding_Rect_Tests is
       pragma Unreferenced (Test);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 5), (X => 3, Y => 5), (X => 8, Y => 5));
-      Box    : constant OpenCV.Core.Rect :=
+      Box    : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Points);
    begin
       Assert_Rect
@@ -147,7 +147,7 @@ package body Bounding_Rect_Tests is
       pragma Unreferenced (Test);
       Points : constant OpenCV.Geometry.Contour :=
         ((X => 2, Y => 0), (X => 2, Y => 4), (X => 2, Y => 7));
-      Box    : constant OpenCV.Core.Rect :=
+      Box    : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Points);
    begin
       Assert_Rect
@@ -156,9 +156,9 @@ package body Bounding_Rect_Tests is
 
    procedure Unordered_Points (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Ordered_Box   : constant OpenCV.Core.Rect :=
+      Ordered_Box   : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Square);
-      Unordered_Box : constant OpenCV.Core.Rect :=
+      Unordered_Box : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Unordered);
    begin
       Assert_Rect
@@ -179,7 +179,7 @@ package body Bounding_Rect_Tests is
          (X => 0, Y => 3),
          (X => 0, Y => 0),
          (X => 4, Y => 3));
-      Box        : constant OpenCV.Core.Rect :=
+      Box        : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Duplicated);
    begin
       Assert_Rect
@@ -194,8 +194,8 @@ package body Bounding_Rect_Tests is
    procedure Empty_Contour (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Empty : constant OpenCV.Geometry.Contour :=
-        (1 .. 0 => OpenCV.Core.Point'(X => 0, Y => 0));
-      Box   : constant OpenCV.Core.Rect :=
+        (1 .. 0 => OpenCV.Point'(X => 0, Y => 0));
+      Box   : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Empty);
    begin
       Assert_Rect (Box, 0, 0, 0, 0, "empty contour must return an empty rect");
@@ -204,9 +204,9 @@ package body Bounding_Rect_Tests is
    procedure Nonzero_Array_Bounds (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Shifted  : constant OpenCV.Geometry.Contour (7 .. 10) := Square;
-      Ordinary : constant OpenCV.Core.Rect :=
+      Ordinary : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Square);
-      Offset   : constant OpenCV.Core.Rect :=
+      Offset   : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Shifted);
    begin
       Assert_Rect
@@ -224,7 +224,7 @@ package body Bounding_Rect_Tests is
       pragma Warnings (Off, "could be declared constant");
       Points   : OpenCV.Geometry.Contour := Original;
       pragma Warnings (On, "could be declared constant");
-      Box      : constant OpenCV.Core.Rect :=
+      Box      : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Points);
    begin
       AUnit.Assertions.Assert
@@ -241,9 +241,9 @@ package body Bounding_Rect_Tests is
          (X => 4, Y => 3),
          (X => 2, Y => 1),
          (X => 0, Y => 3));
-      Direct  : constant OpenCV.Core.Rect :=
+      Direct  : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Concave);
-      Hulled  : constant OpenCV.Core.Rect :=
+      Hulled  : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (OpenCV.Geometry.Convex_Hull (Concave));
    begin
       Assert_Rect
@@ -257,19 +257,19 @@ package body Bounding_Rect_Tests is
 
    procedure Extreme_Representable_Extent (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Last_Minus_One : constant OpenCV.Core.Point_Coordinate :=
-        OpenCV.Core.Point_Coordinate (Interfaces.Integer_32'Last - 1);
+      Last_Minus_One : constant OpenCV.Point_Coordinate :=
+        OpenCV.Point_Coordinate (Interfaces.Integer_32'Last - 1);
       Points         : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => Last_Minus_One, Y => Last_Minus_One));
-      Box            : constant OpenCV.Core.Rect :=
+      Box            : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Points);
    begin
       Assert_Rect
         (Box,
          0,
          0,
-         OpenCV.Core.Size_Coordinate (Interfaces.Integer_32'Last),
-         OpenCV.Core.Size_Coordinate (Interfaces.Integer_32'Last),
+         OpenCV.Size_Coordinate (Interfaces.Integer_32'Last),
+         OpenCV.Size_Coordinate (Interfaces.Integer_32'Last),
          "max representable inclusive extent must remain exact");
    end Extreme_Representable_Extent;
 
@@ -336,11 +336,11 @@ package body Bounding_Rect_Tests is
         ((X => 2, Y => -5), (X => 11, Y => 14));
       Negative_Both : constant OpenCV.Geometry.Contour :=
         ((X => -2, Y => -3), (X => 4, Y => 1));
-      Box_X         : constant OpenCV.Core.Rect :=
+      Box_X         : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Negative_X);
-      Box_Y         : constant OpenCV.Core.Rect :=
+      Box_Y         : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Negative_Y);
-      Box_Both      : constant OpenCV.Core.Rect :=
+      Box_Both      : constant OpenCV.Rect :=
         OpenCV.Geometry.Bounding_Rect (Negative_Both);
    begin
       Assert_Rect

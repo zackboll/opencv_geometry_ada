@@ -97,7 +97,7 @@ package body OpenCV.Geometry is
 
    function Contour_Area
      (Points : Contour; Oriented : Boolean := False)
-      return OpenCV.Core.Float64_Value
+      return OpenCV.Float64_Value
    is
       Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
       Area   : aliased Interfaces.C.double := 0.0;
@@ -116,11 +116,11 @@ package body OpenCV.Geometry is
               Area'Access);
       end if;
       Raise_On_Error (Status, "contour area");
-      return OpenCV.Core.Float64_Value (Area);
+      return OpenCV.Float64_Value (Area);
    end Contour_Area;
 
    function Arc_Length
-     (Points : Contour; Closed : Boolean) return OpenCV.Core.Float64_Value
+     (Points : Contour; Closed : Boolean) return OpenCV.Float64_Value
    is
       Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
       Length : aliased Interfaces.C.double := 0.0;
@@ -139,37 +139,37 @@ package body OpenCV.Geometry is
               Length'Access);
       end if;
       Raise_On_Error (Status, "arc length");
-      return OpenCV.Core.Float64_Value (Length);
+      return OpenCV.Float64_Value (Length);
    end Arc_Length;
 
    function To_Public_Moments
      (Value : Internal.C_API.C_Moments) return Moments_Result is
    begin
       return
-        (M_00  => OpenCV.Core.Float64_Value (Value.M00),
-         M_10  => OpenCV.Core.Float64_Value (Value.M10),
-         M_01  => OpenCV.Core.Float64_Value (Value.M01),
-         M_20  => OpenCV.Core.Float64_Value (Value.M20),
-         M_11  => OpenCV.Core.Float64_Value (Value.M11),
-         M_02  => OpenCV.Core.Float64_Value (Value.M02),
-         M_30  => OpenCV.Core.Float64_Value (Value.M30),
-         M_21  => OpenCV.Core.Float64_Value (Value.M21),
-         M_12  => OpenCV.Core.Float64_Value (Value.M12),
-         M_03  => OpenCV.Core.Float64_Value (Value.M03),
-         Mu_20 => OpenCV.Core.Float64_Value (Value.Mu20),
-         Mu_11 => OpenCV.Core.Float64_Value (Value.Mu11),
-         Mu_02 => OpenCV.Core.Float64_Value (Value.Mu02),
-         Mu_30 => OpenCV.Core.Float64_Value (Value.Mu30),
-         Mu_21 => OpenCV.Core.Float64_Value (Value.Mu21),
-         Mu_12 => OpenCV.Core.Float64_Value (Value.Mu12),
-         Mu_03 => OpenCV.Core.Float64_Value (Value.Mu03),
-         Nu_20 => OpenCV.Core.Float64_Value (Value.Nu20),
-         Nu_11 => OpenCV.Core.Float64_Value (Value.Nu11),
-         Nu_02 => OpenCV.Core.Float64_Value (Value.Nu02),
-         Nu_30 => OpenCV.Core.Float64_Value (Value.Nu30),
-         Nu_21 => OpenCV.Core.Float64_Value (Value.Nu21),
-         Nu_12 => OpenCV.Core.Float64_Value (Value.Nu12),
-         Nu_03 => OpenCV.Core.Float64_Value (Value.Nu03));
+        (M_00  => OpenCV.Float64_Value (Value.M00),
+         M_10  => OpenCV.Float64_Value (Value.M10),
+         M_01  => OpenCV.Float64_Value (Value.M01),
+         M_20  => OpenCV.Float64_Value (Value.M20),
+         M_11  => OpenCV.Float64_Value (Value.M11),
+         M_02  => OpenCV.Float64_Value (Value.M02),
+         M_30  => OpenCV.Float64_Value (Value.M30),
+         M_21  => OpenCV.Float64_Value (Value.M21),
+         M_12  => OpenCV.Float64_Value (Value.M12),
+         M_03  => OpenCV.Float64_Value (Value.M03),
+         Mu_20 => OpenCV.Float64_Value (Value.Mu20),
+         Mu_11 => OpenCV.Float64_Value (Value.Mu11),
+         Mu_02 => OpenCV.Float64_Value (Value.Mu02),
+         Mu_30 => OpenCV.Float64_Value (Value.Mu30),
+         Mu_21 => OpenCV.Float64_Value (Value.Mu21),
+         Mu_12 => OpenCV.Float64_Value (Value.Mu12),
+         Mu_03 => OpenCV.Float64_Value (Value.Mu03),
+         Nu_20 => OpenCV.Float64_Value (Value.Nu20),
+         Nu_11 => OpenCV.Float64_Value (Value.Nu11),
+         Nu_02 => OpenCV.Float64_Value (Value.Nu02),
+         Nu_30 => OpenCV.Float64_Value (Value.Nu30),
+         Nu_21 => OpenCV.Float64_Value (Value.Nu21),
+         Nu_12 => OpenCV.Float64_Value (Value.Nu12),
+         Nu_03 => OpenCV.Float64_Value (Value.Nu03));
    end To_Public_Moments;
 
    function To_C_Moments
@@ -230,13 +230,13 @@ package body OpenCV.Geometry is
       return
         Value'Valid
         and then Value = Value
-        and then Value >= Interfaces.C.double (OpenCV.Core.Float64_Value'First)
-        and then Value <= Interfaces.C.double (OpenCV.Core.Float64_Value'Last);
+        and then Value >= Interfaces.C.double (OpenCV.Float64_Value'First)
+        and then Value <= Interfaces.C.double (OpenCV.Float64_Value'Last);
    end Is_Finite_C_Double;
 
    function To_Public_Float64
      (Value : Interfaces.C.double; Diagnostic : String)
-      return OpenCV.Core.Float64_Value
+      return OpenCV.Float64_Value
    is
       pragma Suppress (Validity_Check);
    begin
@@ -244,12 +244,12 @@ package body OpenCV.Geometry is
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity, Diagnostic);
       end if;
-      return OpenCV.Core.Float64_Value (Value);
+      return OpenCV.Float64_Value (Value);
    end To_Public_Float64;
 
    function To_Public_Hu_Value
      (Value : Interfaces.C.double; Index : Hu_Moment_Index)
-      return OpenCV.Core.Float64_Value is
+      return OpenCV.Float64_Value is
    begin
       return
         To_Public_Float64
@@ -304,12 +304,9 @@ package body OpenCV.Geometry is
       begin
          for Offset in 0 .. Count - 1 loop
             Result (Index) :=
-              (X =>
-                 OpenCV.Core.Point_Coordinate
-                   (Packed (Packed'First + Offset).X),
+              (X => OpenCV.Point_Coordinate (Packed (Packed'First + Offset).X),
                Y =>
-                 OpenCV.Core.Point_Coordinate
-                   (Packed (Packed'First + Offset).Y));
+                 OpenCV.Point_Coordinate (Packed (Packed'First + Offset).Y));
             Index := Index + 1;
          end loop;
          return Result;
@@ -363,10 +360,10 @@ package body OpenCV.Geometry is
    end Convex_Hull;
 
    function Approximate_Curve
-     (Points : Contour; Epsilon : OpenCV.Core.Float64_Value; Closed : Boolean)
+     (Points : Contour; Epsilon : OpenCV.Float64_Value; Closed : Boolean)
       return Contour
    is
-      use type OpenCV.Core.Float64_Value;
+      use type OpenCV.Float64_Value;
    begin
       if not Epsilon'Valid or else Epsilon < 0.0 or else Epsilon >= 1.0E30 then
          Ada.Exceptions.Raise_Exception
@@ -426,25 +423,24 @@ package body OpenCV.Geometry is
       end;
    end Approximate_Curve;
 
-   function To_Public_Rect
-     (Value : Internal.C_API.Rect_I32) return OpenCV.Core.Rect
+   function To_Public_Rect (Value : Internal.C_API.Rect_I32) return OpenCV.Rect
    is
       use type Interfaces.Integer_32;
    begin
       if Value.Width < 0 or else Value.Height < 0 then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
-            "bounding rect cannot be represented as OpenCV.Core.Rect");
+            "bounding rect cannot be represented as OpenCV.Rect");
       end if;
 
       return
-        (X      => OpenCV.Core.Point_Coordinate (Value.X),
-         Y      => OpenCV.Core.Point_Coordinate (Value.Y),
-         Width  => OpenCV.Core.Size_Coordinate (Value.Width),
-         Height => OpenCV.Core.Size_Coordinate (Value.Height));
+        (X      => OpenCV.Point_Coordinate (Value.X),
+         Y      => OpenCV.Point_Coordinate (Value.Y),
+         Width  => OpenCV.Size_Coordinate (Value.Width),
+         Height => OpenCV.Size_Coordinate (Value.Height));
    end To_Public_Rect;
 
-   function Bounding_Rect (Points : Contour) return OpenCV.Core.Rect is
+   function Bounding_Rect (Points : Contour) return OpenCV.Rect is
       Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
       Result : aliased Internal.C_API.Rect_I32 :=
         (X => 0, Y => 0, Width => 0, Height => 0);
@@ -495,7 +491,7 @@ package body OpenCV.Geometry is
 
    function Match_Shapes
      (Left, Right : Contour; Method : Shape_Match_Method)
-      return OpenCV.Core.Float64_Value
+      return OpenCV.Float64_Value
    is
       --  Native scores may be Inf/NaN. Suppress Ada validity checks until
       --  To_Public_Float64 inspects the raw C double.
@@ -543,7 +539,7 @@ package body OpenCV.Geometry is
 
    function Call_Point_Polygon_Test
      (Points           : Contour;
-      Query            : OpenCV.Core.Float32_Point;
+      Query            : OpenCV.Float32_Point;
       Measure_Distance : Interfaces.Integer_32) return Interfaces.C.double
    is
       pragma Suppress (Validity_Check);
@@ -574,7 +570,7 @@ package body OpenCV.Geometry is
    end Call_Point_Polygon_Test;
 
    function Locate_Point
-     (Points : Contour; Query : OpenCV.Core.Float32_Point)
+     (Points : Contour; Query : OpenCV.Float32_Point)
       return Contour_Point_Location
    is
       pragma Suppress (Validity_Check);
@@ -597,8 +593,8 @@ package body OpenCV.Geometry is
    end Locate_Point;
 
    function Signed_Distance_To_Contour
-     (Points : Contour; Query : OpenCV.Core.Float32_Point)
-      return OpenCV.Core.Float64_Value
+     (Points : Contour; Query : OpenCV.Float32_Point)
+      return OpenCV.Float64_Value
    is
       Result : constant Interfaces.C.double :=
         Call_Point_Polygon_Test
@@ -619,15 +615,13 @@ package body OpenCV.Geometry is
       return
         Value'Valid
         and then Value = Value
-        and then Value
-                 >= Interfaces.C.C_float (OpenCV.Core.Float32_Value'First)
-        and then Value
-                 <= Interfaces.C.C_float (OpenCV.Core.Float32_Value'Last);
+        and then Value >= Interfaces.C.C_float (OpenCV.Float32_Value'First)
+        and then Value <= Interfaces.C.C_float (OpenCV.Float32_Value'Last);
    end Is_Finite_C_Float;
 
    function To_Public_Float32
      (Value : Interfaces.C.C_float; Diagnostic : String)
-      return OpenCV.Core.Float32_Value
+      return OpenCV.Float32_Value
    is
       pragma Suppress (Validity_Check);
    begin
@@ -635,21 +629,21 @@ package body OpenCV.Geometry is
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity, Diagnostic);
       end if;
-      return OpenCV.Core.Float32_Value (Value);
+      return OpenCV.Float32_Value (Value);
    end To_Public_Float32;
 
    function To_Public_Enclosing_Circle
      (Value : Internal.C_API.C_Enclosing_Circle) return Enclosing_Circle
    is
       pragma Suppress (Validity_Check);
-      use type OpenCV.Core.Float32_Value;
-      Center_X : constant OpenCV.Core.Float32_Value :=
+      use type OpenCV.Float32_Value;
+      Center_X : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Center_X, "enclosing circle center X is not finite");
-      Center_Y : constant OpenCV.Core.Float32_Value :=
+      Center_Y : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Center_Y, "enclosing circle center Y is not finite");
-      Radius   : constant OpenCV.Core.Float32_Value :=
+      Radius   : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Radius, "enclosing circle radius is not finite");
    begin
@@ -684,23 +678,23 @@ package body OpenCV.Geometry is
    end Minimum_Enclosing_Circle;
 
    function To_Public_Rotated_Rect
-     (Value : Internal.C_API.C_Rotated_Rect) return OpenCV.Core.Rotated_Rect
+     (Value : Internal.C_API.C_Rotated_Rect) return OpenCV.Rotated_Rect
    is
       pragma Suppress (Validity_Check);
-      use type OpenCV.Core.Float32_Value;
-      Center_X : constant OpenCV.Core.Float32_Value :=
+      use type OpenCV.Float32_Value;
+      Center_X : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Center_X, "rotated rectangle center X is not finite");
-      Center_Y : constant OpenCV.Core.Float32_Value :=
+      Center_Y : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Center_Y, "rotated rectangle center Y is not finite");
-      Width    : constant OpenCV.Core.Float32_Value :=
+      Width    : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Width, "rotated rectangle width is not finite");
-      Height   : constant OpenCV.Core.Float32_Value :=
+      Height   : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Height, "rotated rectangle height is not finite");
-      Angle    : constant OpenCV.Core.Float32_Value :=
+      Angle    : constant OpenCV.Float32_Value :=
         To_Public_Float32
           (Value.Angle_Degrees, "rotated rectangle angle is not finite");
    begin
@@ -716,7 +710,7 @@ package body OpenCV.Geometry is
    end To_Public_Rotated_Rect;
 
    function Minimum_Area_Rectangle
-     (Points : Contour) return OpenCV.Core.Rotated_Rect
+     (Points : Contour) return OpenCV.Rotated_Rect
    is
       pragma Suppress (Validity_Check);
       Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
@@ -742,16 +736,16 @@ package body OpenCV.Geometry is
    end Minimum_Area_Rectangle;
 
    procedure Validate_Get_Rotation_Matrix_2D
-     (Center : OpenCV.Core.Float32_Point;
-      Angle  : OpenCV.Core.Float64_Value;
-      Scale  : OpenCV.Core.Float64_Value)
+     (Center : OpenCV.Float32_Point;
+      Angle  : OpenCV.Float64_Value;
+      Scale  : OpenCV.Float64_Value)
    is
-      use type OpenCV.Core.Float32_Value;
-      use type OpenCV.Core.Float64_Value;
+      use type OpenCV.Float32_Value;
+      use type OpenCV.Float64_Value;
    begin
       if Center.X /= Center.X
-        or else Center.X > OpenCV.Core.Float32_Value'Last
-        or else Center.X < OpenCV.Core.Float32_Value'First
+        or else Center.X > OpenCV.Float32_Value'Last
+        or else Center.X < OpenCV.Float32_Value'First
       then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
@@ -759,8 +753,8 @@ package body OpenCV.Geometry is
       end if;
 
       if Center.Y /= Center.Y
-        or else Center.Y > OpenCV.Core.Float32_Value'Last
-        or else Center.Y < OpenCV.Core.Float32_Value'First
+        or else Center.Y > OpenCV.Float32_Value'Last
+        or else Center.Y < OpenCV.Float32_Value'First
       then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
@@ -768,8 +762,8 @@ package body OpenCV.Geometry is
       end if;
 
       if Angle /= Angle
-        or else Angle > OpenCV.Core.Float64_Value'Last
-        or else Angle < OpenCV.Core.Float64_Value'First
+        or else Angle > OpenCV.Float64_Value'Last
+        or else Angle < OpenCV.Float64_Value'First
       then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
@@ -777,8 +771,8 @@ package body OpenCV.Geometry is
       end if;
 
       if Scale /= Scale
-        or else Scale > OpenCV.Core.Float64_Value'Last
-        or else Scale < OpenCV.Core.Float64_Value'First
+        or else Scale > OpenCV.Float64_Value'Last
+        or else Scale < OpenCV.Float64_Value'First
       then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
@@ -787,37 +781,34 @@ package body OpenCV.Geometry is
    end Validate_Get_Rotation_Matrix_2D;
 
    function Reduced_Degrees
-     (Angle : OpenCV.Core.Float64_Value; Units : OpenCV.Core.Angle_Unit)
-      return OpenCV.Core.Float64_Value
+     (Angle : OpenCV.Float64_Value; Units : OpenCV.Angle_Unit)
+      return OpenCV.Float64_Value
    is
-      use type OpenCV.Core.Angle_Unit;
-      use type OpenCV.Core.Float64_Value;
-      Full_Turn : OpenCV.Core.Float64_Value;
-      Reduced   : OpenCV.Core.Float64_Value;
+      use type OpenCV.Float64_Value;
+      Full_Turn : OpenCV.Float64_Value;
+      Reduced   : OpenCV.Float64_Value;
    begin
-      if Units = OpenCV.Core.Degrees then
+      if Units = OpenCV.Degrees then
          Full_Turn := 360.0;
-         return OpenCV.Core.Float64_Value'Remainder (Angle, Full_Turn);
+         return OpenCV.Float64_Value'Remainder (Angle, Full_Turn);
       end if;
 
       Full_Turn :=
-        OpenCV.Core.Float64_Value (2.0)
-        * OpenCV.Core.Float64_Value (Ada.Numerics.Pi);
-      Reduced := OpenCV.Core.Float64_Value'Remainder (Angle, Full_Turn);
+        OpenCV.Float64_Value (2.0) * OpenCV.Float64_Value (Ada.Numerics.Pi);
+      Reduced := OpenCV.Float64_Value'Remainder (Angle, Full_Turn);
       return
         Reduced
-        * (OpenCV.Core.Float64_Value (180.0)
-           / OpenCV.Core.Float64_Value (Ada.Numerics.Pi));
+        * (OpenCV.Float64_Value (180.0)
+           / OpenCV.Float64_Value (Ada.Numerics.Pi));
    end Reduced_Degrees;
 
    function Get_Rotation_Matrix_2D
-     (Center : OpenCV.Core.Float32_Point;
-      Angle  : OpenCV.Core.Float64_Value;
-      Scale  : OpenCV.Core.Float64_Value := 1.0;
-      Units  : OpenCV.Core.Angle_Unit := OpenCV.Core.Degrees)
-      return OpenCV.Core.Mat
+     (Center : OpenCV.Float32_Point;
+      Angle  : OpenCV.Float64_Value;
+      Scale  : OpenCV.Float64_Value := 1.0;
+      Units  : OpenCV.Angle_Unit := OpenCV.Degrees) return OpenCV.Core.Mat
    is
-      Degrees : OpenCV.Core.Float64_Value;
+      Degrees : OpenCV.Float64_Value;
       Result  : aliased Internal.C_API.C_Affine_2x3_F64 :=
         (M00 => 0.0,
          M01 => 0.0,
