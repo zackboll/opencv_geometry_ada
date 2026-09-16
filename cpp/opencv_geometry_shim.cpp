@@ -1009,6 +1009,49 @@ opencv_geometry_min_area_rect(
     }
 }
 
+opencv_geometry_status
+opencv_geometry_fit_ellipse(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null fit ellipse output pointer");
+    }
+    zero_rotated_rect(out_rect);
+    if (point_count < 0) {
+        return invalid_argument(
+            "fit ellipse point count must not be negative");
+    }
+    // ABI safety: OpenCV fitEllipseNoDirect allocates
+    // AutoBuffer<double>(n*12+n) with signed int arithmetic on the
+    // point count. Overflowing n*13 truncates the allocation size and
+    // can then write out of bounds.
+    if (point_count > INT32_MAX / 13) {
+        return invalid_argument(
+            "fit ellipse point count exceeds native allocation range");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        const cv::RotatedRect rect = cv::fitEllipse(contour);
+        out_rect->center_x = rect.center.x;
+        out_rect->center_y = rect.center.y;
+        out_rect->width = rect.size.width;
+        out_rect->height = rect.size.height;
+        out_rect->angle_degrees = rect.angle;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_rotated_rect(out_rect);
+        return translate_current_exception();
+    }
+}
+
 namespace {
 
 void zero_affine_2x3(opencv_geometry_affine_2x3_f64 *out_transform) noexcept

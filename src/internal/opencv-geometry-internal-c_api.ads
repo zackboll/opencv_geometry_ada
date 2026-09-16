@@ -231,6 +231,15 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_min_area_rect";
 
+   function Fit_Ellipse
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse";
+
    function Get_Rotation_Matrix_2D
      (Center_X      : Interfaces.C.C_float;
       Center_Y      : Interfaces.C.C_float;

@@ -187,6 +187,12 @@ opencv_geometry_min_area_rect(
     opencv_geometry_rotated_rect_f32 *out_rect);
 
 opencv_geometry_status
+opencv_geometry_fit_ellipse(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+opencv_geometry_status
 opencv_geometry_get_rotation_matrix_2d(
     float center_x,
     float center_y,

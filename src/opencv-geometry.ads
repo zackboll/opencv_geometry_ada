@@ -91,6 +91,21 @@ package OpenCV.Geometry is
    function Minimum_Area_Rectangle
      (Points : Contour) return OpenCV.Rotated_Rect;
 
+   --  Least-squares ellipse fitted to Points by cv::fitEllipse. This is a
+   --  fitted ellipse, not a minimum enclosing ellipse. The result is the
+   --  rotated rectangle in which that ellipse is inscribed. Center, Size,
+   --  and Angle_Degrees are native binary32 values; Angle_Degrees is in
+   --  degrees. Size.Width and Size.Height are full axis lengths, not
+   --  radii. Native width, height, and angle fields are preserved without
+   --  normalization, axis swapping, or a preferred orientation. Negative
+   --  centers are preserved. Points is unchanged. Fewer than five points
+   --  raise OpenCV.OpenCV_Error. Five or more points need not be convex,
+   --  uniquely ordered, or enclose nonzero area. Repeated, collinear, and
+   --  other degenerate sets may still produce a finite native result,
+   --  including a zero-sized rectangle. Native failures and non-finite or
+   --  negative size components raise OpenCV.OpenCV_Error.
+   function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect;
+
    --  Approximates Points with Douglas-Peucker. Epsilon is the maximum
    --  distance between the original curve and the result and must be
    --  in the range 0.0 <= Epsilon < 1.0E30. Closed connects the last

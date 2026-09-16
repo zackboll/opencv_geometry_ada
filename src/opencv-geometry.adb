@@ -735,6 +735,43 @@ package body OpenCV.Geometry is
       return To_Public_Rotated_Rect (Result);
    end Minimum_Area_Rectangle;
 
+   function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect is
+      pragma Suppress (Validity_Check);
+      Result : aliased Internal.C_API.C_Rotated_Rect :=
+        (Center_X      => 0.0,
+         Center_Y      => 0.0,
+         Width         => 0.0,
+         Height        => 0.0,
+         Angle_Degrees => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      if Points'Length < 5 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Ellipse requires at least five points");
+      end if;
+
+      --  OpenCV fitEllipseNoDirect allocates n*12+n doubles with signed
+      --  int arithmetic. Reject that overflow before packing or the ABI.
+      if Points'Length > Natural (Interfaces.Integer_32'Last) / 13 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Ellipse point count exceeds native allocation range");
+      end if;
+
+      declare
+         Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      begin
+         Status :=
+           Internal.C_API.Fit_Ellipse
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Result'Access);
+      end;
+      Raise_On_Error (Status, "fit ellipse");
+      return To_Public_Rotated_Rect (Result);
+   end Fit_Ellipse;
+
    procedure Validate_Get_Rotation_Matrix_2D
      (Center : OpenCV.Float32_Point;
       Angle  : OpenCV.Float64_Value;

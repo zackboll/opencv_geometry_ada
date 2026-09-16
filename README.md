@@ -18,8 +18,8 @@ reports the actual version/backend and generates the install GPR configuration.
 Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
-`Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`, and
-`Minimum_Area_Rectangle`, and `Get_Rotation_Matrix_2D`.
+`Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
+`Minimum_Area_Rectangle`, `Fit_Ellipse`, and `Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -69,6 +69,20 @@ binary32 center, size, and angle-in-degrees fields. OpenCV 4.x and 5.x may use
 different width/height/angle representations for the same rectangle; no output
 normalization is applied. Inputs unsafe for native integer convex-hull
 arithmetic are rejected.
+`Fit_Ellipse` fits a least-squares ellipse to an Ada-owned contour through
+`cv::fitEllipse`. This is a fitted ellipse, not a minimum enclosing ellipse.
+The result is an `OpenCV.Rotated_Rect` describing the rectangle in which the
+ellipse is inscribed. Native binary32 center, full-axis size, and
+angle-in-degrees fields are preserved without normalization. Fewer than five
+points raise `OpenCV.OpenCV_Error`. Repeated, collinear, or otherwise
+degenerate five-or-more-point sets may still produce a finite native result,
+including a zero-sized rectangle. Native failures and non-finite or negative
+size components raise `OpenCV_Error`.
+
+```ada
+Ellipse : constant OpenCV.Rotated_Rect :=
+  OpenCV.Geometry.Fit_Ellipse (Points);
+```
 
 ## Rotation matrix
 
