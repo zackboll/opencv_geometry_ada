@@ -96,6 +96,11 @@ void zero_rotated_rect(opencv_geometry_rotated_rect_f32 *out_rect) noexcept
     *out_rect = opencv_geometry_rotated_rect_f32{};
 }
 
+void zero_box_vertices(opencv_geometry_box_vertices_f32 *out_vertices) noexcept
+{
+    *out_vertices = opencv_geometry_box_vertices_f32{};
+}
+
 }
 
 const char *opencv_geometry_last_error_message(void)
@@ -1122,6 +1127,51 @@ opencv_geometry_fit_ellipse(
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         zero_rotated_rect(out_rect);
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_box_points(
+    const opencv_geometry_rotated_rect_f32 *box,
+    opencv_geometry_box_vertices_f32 *out_vertices)
+{
+    clear_error();
+    if (out_vertices == nullptr) {
+        return invalid_argument("null box vertices output pointer");
+    }
+    zero_box_vertices(out_vertices);
+    if (box == nullptr) {
+        return invalid_argument("null rotated rectangle pointer");
+    }
+
+    try {
+        const cv::RotatedRect native_box(
+            cv::Point2f(box->center_x, box->center_y),
+            cv::Size2f(box->width, box->height),
+            box->angle_degrees);
+        cv::Mat points;
+        cv::boxPoints(native_box, points);
+        // ABI safety: this fixed four-vertex ABI can copy native storage only
+        // after verifying cv::boxPoints produced exactly four CV_32F 2D points.
+        if (points.rows != 4 || points.cols != 2 || points.type() != CV_32FC1) {
+            return invalid_argument(
+                "box points did not return four CV_32F vertices");
+        }
+        const cv::Point2f *vertices = points.ptr<cv::Point2f>();
+        opencv_geometry_box_vertices_f32 result{};
+        result.v0_x = vertices[0].x;
+        result.v0_y = vertices[0].y;
+        result.v1_x = vertices[1].x;
+        result.v1_y = vertices[1].y;
+        result.v2_x = vertices[2].x;
+        result.v2_y = vertices[2].y;
+        result.v3_x = vertices[3].x;
+        result.v3_y = vertices[3].y;
+        *out_vertices = result;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_box_vertices(out_vertices);
         return translate_current_exception();
     }
 }

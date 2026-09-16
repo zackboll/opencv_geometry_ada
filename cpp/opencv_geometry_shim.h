@@ -74,6 +74,17 @@ typedef struct {
 } opencv_geometry_triangle_f32;
 
 typedef struct {
+    float v0_x;
+    float v0_y;
+    float v1_x;
+    float v1_y;
+    float v2_x;
+    float v2_y;
+    float v3_x;
+    float v3_y;
+} opencv_geometry_box_vertices_f32;
+
+typedef struct {
     float center_x;
     float center_y;
     float width;
@@ -207,6 +218,11 @@ opencv_geometry_fit_ellipse(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,
     opencv_geometry_rotated_rect_f32 *out_rect);
+
+opencv_geometry_status
+opencv_geometry_box_points(
+    const opencv_geometry_rotated_rect_f32 *box,
+    opencv_geometry_box_vertices_f32 *out_vertices);
 
 opencv_geometry_status
 opencv_geometry_get_rotation_matrix_2d(

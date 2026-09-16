@@ -748,6 +748,84 @@ package body OpenCV.Geometry is
       return To_Public_Enclosing_Triangle (Area, Result);
    end Minimum_Enclosing_Triangle;
 
+   function Is_Finite_Public_Float32
+     (Value : OpenCV.Float32_Value) return Boolean
+   is
+      use type OpenCV.Float32_Value;
+   begin
+      return
+        Value = Value
+        and then Value >= OpenCV.Float32_Value'First
+        and then Value <= OpenCV.Float32_Value'Last;
+   end Is_Finite_Public_Float32;
+
+   procedure Validate_Box (Box : OpenCV.Rotated_Rect) is
+   begin
+      if not Is_Finite_Public_Float32 (Box.Center.X)
+        or else not Is_Finite_Public_Float32 (Box.Center.Y)
+        or else not Is_Finite_Public_Float32 (Box.Size.Width)
+        or else not Is_Finite_Public_Float32 (Box.Size.Height)
+        or else not Is_Finite_Public_Float32 (Box.Angle_Degrees)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Box_Points requires finite rotated rectangle fields");
+      end if;
+   end Validate_Box;
+
+   function To_Public_Box_Vertices
+     (Value : Internal.C_API.C_Box_Vertices) return Box_Vertices
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      return
+        (1 =>
+           (X =>
+              To_Public_Float32 (Value.V0_X, "box vertex 1 X is not finite"),
+            Y =>
+              To_Public_Float32 (Value.V0_Y, "box vertex 1 Y is not finite")),
+         2 =>
+           (X =>
+              To_Public_Float32 (Value.V1_X, "box vertex 2 X is not finite"),
+            Y =>
+              To_Public_Float32 (Value.V1_Y, "box vertex 2 Y is not finite")),
+         3 =>
+           (X =>
+              To_Public_Float32 (Value.V2_X, "box vertex 3 X is not finite"),
+            Y =>
+              To_Public_Float32 (Value.V2_Y, "box vertex 3 Y is not finite")),
+         4 =>
+           (X =>
+              To_Public_Float32 (Value.V3_X, "box vertex 4 X is not finite"),
+            Y =>
+              To_Public_Float32 (Value.V3_Y, "box vertex 4 Y is not finite")));
+   end To_Public_Box_Vertices;
+
+   function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices is
+      pragma Suppress (Validity_Check);
+      Packed : aliased Internal.C_API.C_Rotated_Rect :=
+        (Center_X      => Interfaces.C.C_float (Box.Center.X),
+         Center_Y      => Interfaces.C.C_float (Box.Center.Y),
+         Width         => Interfaces.C.C_float (Box.Size.Width),
+         Height        => Interfaces.C.C_float (Box.Size.Height),
+         Angle_Degrees => Interfaces.C.C_float (Box.Angle_Degrees));
+      Result : aliased Internal.C_API.C_Box_Vertices :=
+        (V0_X => 0.0,
+         V0_Y => 0.0,
+         V1_X => 0.0,
+         V1_Y => 0.0,
+         V2_X => 0.0,
+         V2_Y => 0.0,
+         V3_X => 0.0,
+         V3_Y => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Box (Box);
+      Status := Internal.C_API.Box_Points (Packed'Access, Result'Access);
+      Raise_On_Error (Status, "Box_Points");
+      return To_Public_Box_Vertices (Result);
+   end Box_Points;
+
    function To_Public_Rotated_Rect
      (Value : Internal.C_API.C_Rotated_Rect) return OpenCV.Rotated_Rect
    is

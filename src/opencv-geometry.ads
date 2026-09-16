@@ -106,6 +106,18 @@ package OpenCV.Geometry is
    --  negative size components raise OpenCV.OpenCV_Error.
    function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect;
 
+   --  Converts Box to four native CV_32F rectangle vertices. Vertices are
+   --  returned in the active OpenCV backend's native order without rounding,
+   --  reordering, or normalization. OpenCV 5 documents clockwise order
+   --  beginning with greatest Y, using rightmost for a greatest-Y tie; OpenCV
+   --  4 does not document that starting-vertex convention. Portable callers
+   --  must not depend on the starting vertex. Box is unchanged.
+   type Box_Vertex_Index is range 1 .. 4;
+
+   type Box_Vertices is array (Box_Vertex_Index) of OpenCV.Float32_Point;
+
+   function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices;
+
    --  Approximates Points with Douglas-Peucker. Epsilon is the maximum
    --  distance between the original curve and the result and must be
    --  in the range 0.0 <= Epsilon < 1.0E30. Closed connects the last

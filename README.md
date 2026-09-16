@@ -20,7 +20,7 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
-and `Get_Rotation_Matrix_2D`.
+`Box_Points`, and `Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -98,6 +98,28 @@ size components raise `OpenCV_Error`.
 ```ada
 Ellipse : constant OpenCV.Rotated_Rect :=
   OpenCV.Geometry.Fit_Ellipse (Points);
+```
+
+`Box_Points` converts an `OpenCV.Rotated_Rect` to exactly four Ada-owned
+binary32 (`OpenCV.Float32_Point`) vertices. It is directly useful with the
+rotated rectangle returned by `Minimum_Area_Rectangle` and the rectangle in
+which `Fit_Ellipse` is inscribed. Coordinates are preserved without integer
+rounding, normalization, or reordering. Zero and negative finite dimensions,
+and unusual finite angles, are forwarded to OpenCV unchanged. Non-finite
+rectangle fields and non-finite native coordinates raise `OpenCV_Error`.
+
+Vertices preserve the active native OpenCV order. OpenCV 5 documents clockwise
+order beginning with the greatest-Y vertex, using the rightmost vertex for a
+greatest-Y tie. OpenCV 4 documents four vertices but does not document that
+starting-vertex convention. Portable OpenCV-4/5 callers must not depend on the
+starting vertex.
+
+```ada
+Box : constant OpenCV.Rotated_Rect :=
+  OpenCV.Geometry.Minimum_Area_Rectangle (Points);
+
+Corners : constant OpenCV.Geometry.Box_Vertices :=
+  OpenCV.Geometry.Box_Points (Box);
 ```
 
 ## Rotation matrix

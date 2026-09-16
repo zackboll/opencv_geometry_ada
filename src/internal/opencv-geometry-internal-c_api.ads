@@ -87,6 +87,18 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   type C_Box_Vertices is record
+      V0_X : Interfaces.C.C_float;
+      V0_Y : Interfaces.C.C_float;
+      V1_X : Interfaces.C.C_float;
+      V1_Y : Interfaces.C.C_float;
+      V2_X : Interfaces.C.C_float;
+      V2_Y : Interfaces.C.C_float;
+      V3_X : Interfaces.C.C_float;
+      V3_Y : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
    type C_Rotated_Rect is record
       Center_X      : Interfaces.C.C_float;
       Center_Y      : Interfaces.C.C_float;
@@ -259,6 +271,11 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_fit_ellipse";
+
+   function Box_Points
+     (Box : access constant C_Rotated_Rect; Result : access C_Box_Vertices)
+      return Status
+   with Import, Convention => C, External_Name => "opencv_geometry_box_points";
 
    function Get_Rotation_Matrix_2D
      (Center_X      : Interfaces.C.C_float;
