@@ -1022,8 +1022,8 @@ opencv_geometry_min_enclosing_triangle(
         if (triangle.size() != 3) {
             *out_area = 0.0;
             zero_triangle(out_triangle);
-            return invalid_argument(
-                "enclosing triangle did not return three vertices");
+            set_error("enclosing triangle did not return three vertices");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
         }
         *out_area = area;
         out_triangle->v0_x = triangle[0].x;
@@ -1155,8 +1155,9 @@ opencv_geometry_box_points(
         // ABI safety: this fixed four-vertex ABI can copy native storage only
         // after verifying cv::boxPoints produced exactly four CV_32F 2D points.
         if (points.rows != 4 || points.cols != 2 || points.type() != CV_32FC1) {
-            return invalid_argument(
-                "box points did not return four CV_32F vertices");
+            zero_box_vertices(out_vertices);
+            set_error("box points did not return four CV_32F vertices");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
         }
         const cv::Point2f *vertices = points.ptr<cv::Point2f>();
         opencv_geometry_box_vertices_f32 result{};
