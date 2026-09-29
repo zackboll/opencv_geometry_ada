@@ -109,11 +109,15 @@ rounding, normalization, or reordering. Zero and negative finite dimensions,
 and unusual finite angles, are forwarded to OpenCV unchanged. Non-finite
 rectangle fields and non-finite native coordinates raise `OpenCV_Error`.
 
-Vertices preserve the active native OpenCV order. OpenCV 5 documents clockwise
-order beginning with the greatest-Y vertex, using the rightmost vertex for a
-greatest-Y tie. OpenCV 4 documents four vertices but does not document that
-starting-vertex convention. Portable OpenCV-4/5 callers must not depend on the
-starting vertex.
+Vertices preserve the active native OpenCV order without normalization. OpenCV
+4.x and 5.0 `boxPoints` both delegate to `RotatedRect::points`, which lists
+the corners in a fixed sequence attached to the rectangle, so the starting
+vertex moves as the angle changes. The OpenCV 4.12+ and 5.0 `boxPoints`
+documentation states a start at the greatest-Y vertex, using the rightmost
+vertex for a greatest-Y tie, but the implementation does not consistently
+satisfy that convention for arbitrary rectangles; an unrotated (angle 0)
+rectangle, for example, starts at its greatest-Y leftmost vertex. Portable
+callers must not depend on a particular starting vertex.
 
 ```ada
 Box : constant OpenCV.Rotated_Rect :=

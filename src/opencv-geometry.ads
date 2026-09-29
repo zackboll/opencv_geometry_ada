@@ -190,10 +190,14 @@ package OpenCV.Geometry is
 
    --  Converts Box to four native CV_32F rectangle vertices. Vertices are
    --  returned in the active OpenCV backend's native order without rounding,
-   --  reordering, or normalization. OpenCV 5 documents clockwise order
-   --  beginning with greatest Y, using rightmost for a greatest-Y tie; OpenCV
-   --  4 does not document that starting-vertex convention. Portable callers
-   --  must not depend on the starting vertex. Box is unchanged.
+   --  reordering, or normalization. OpenCV 4.x and 5.0 compute them with
+   --  RotatedRect::points, a fixed corner sequence attached to the rectangle,
+   --  so the starting vertex moves as Angle_Degrees changes. OpenCV 4.12+
+   --  and 5.0 document a start at the greatest-Y vertex, rightmost on a tie,
+   --  but the implementation does not provide that for arbitrary rectangles;
+   --  an unrotated rectangle, for example, starts at its greatest-Y leftmost
+   --  vertex. Portable callers must not depend on the starting vertex. Box
+   --  is unchanged.
    type Box_Vertex_Index is range 1 .. 4;
 
    type Box_Vertices is array (Box_Vertex_Index) of OpenCV.Float32_Point;

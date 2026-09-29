@@ -2,7 +2,6 @@ with Ada.Strings.Fixed;
 with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
-with Interfaces;
 with Interfaces.C;
 with OpenCV;
 with OpenCV.Geometry;
@@ -13,7 +12,6 @@ package body Box_Points_Tests is
    package C_API renames OpenCV.Geometry.Internal.C_API;
 
    use type C_API.Status;
-   use type Interfaces.Integer_32;
    use type Interfaces.C.C_float;
    use type OpenCV.Float32_Value;
    use type OpenCV.Point_Coordinate;
@@ -221,6 +219,13 @@ package body Box_Points_Tests is
         (Center        => (X => 1.0, Y => -2.0),
          Size          => (Width => 4.0, Height => 2.0),
          Angle_Degrees => 30.0);
+      --  OpenCV 4.12+ and 5.0 document a boxPoints start at the greatest-Y
+      --  vertex, but the implementation delegates to RotatedRect::points and
+      --  does not provide that start for arbitrary rectangles, including
+      --  this one. The binding's contract is to preserve whatever native
+      --  order the active OpenCV produces, so this test verifies that the
+      --  Ada result matches the raw Geometry C ABI sequence element for
+      --  element rather than asserting an undocumented fixed native start.
       Packed   : aliased C_API.C_Rotated_Rect := To_C (Box);
       Raw      : aliased C_API.C_Box_Vertices := (others => 0.0);
       Vertices : constant OpenCV.Geometry.Box_Vertices :=
@@ -239,15 +244,6 @@ package body Box_Points_Tests is
          and then Close (Vertices (4).X, OpenCV.Float32_Value (Raw.V3_X))
          and then Close (Vertices (4).Y, OpenCV.Float32_Value (Raw.V3_Y)),
          "Ada result preserves C ABI sequence");
-      if C_API.OpenCV_Major_Version = 5 then
-         for Vertex of Vertices loop
-            AUnit.Assertions.Assert
-              (Vertices (1).Y > Vertex.Y
-               or else (Close (Vertices (1).Y, Vertex.Y)
-                        and then Vertices (1).X >= Vertex.X),
-               "OpenCV 5 documented greatest-Y/rightmost start");
-         end loop;
-      end if;
    end Native_Order_Is_Preserved;
 
    procedure C_ABI_Safety (Test : in out Fixture) is
