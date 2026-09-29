@@ -372,6 +372,221 @@ opencv_geometry_convex_hull(
     }
 }
 
+opencv_geometry_status
+opencv_geometry_convex_hull_indices(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t clockwise,
+    int32_t *out_indices,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null convex hull indices output count pointer");
+    }
+    *out_count = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "convex hull indices point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (clockwise != 0 && clockwise != 1) {
+        return invalid_argument(
+            "convex hull indices clockwise selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "convex hull indices output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any hull indices.
+    if (out_capacity > 0 && out_indices == nullptr) {
+        return invalid_argument(
+            "null convex hull output indices with positive capacity");
+    }
+    // OpenCV compatibility: OpenCV 4.x rejects an empty point vector
+    // because checkVector cannot determine an element depth. Geometry
+    // defines an empty contour to produce an empty hull.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    if (!integer_convex_hull_arithmetic_is_safe(points, point_count)) {
+        return invalid_argument(
+            "convex hull indices exceed signed 32-bit arithmetic range");
+    }
+
+    try {
+        std::vector<cv::Point> contour;
+        contour.reserve(static_cast<std::size_t>(point_count));
+        for (int32_t index = 0; index < point_count; ++index) {
+            contour.emplace_back(points[index].x, points[index].y);
+        }
+        // A std::vector<int> output has fixed type CV_32S, so OpenCV returns
+        // zero-based source indices rather than hull points.
+        std::vector<int> hull;
+        cv::convexHull(contour, hull, clockwise != 0, false);
+        // ABI safety: copying more indices than capacity would overflow the
+        // caller-provided buffer. Hull cardinality is at most point_count.
+        if (hull.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "convex hull indices output capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < hull.size(); ++index) {
+            out_indices[index] = hull[index];
+        }
+        *out_count = static_cast<int32_t>(hull.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+namespace {
+
+// OpenCV stores a convexity-defect depth as cvRound(depth * 256) in a
+// signed int, so INT32_MAX / 256 is the largest integral depth whose
+// fixed-point value is representable.
+constexpr int64_t maximum_convexity_defect_extent =
+    static_cast<int64_t>(INT32_MAX) / 256;
+
+bool convexity_defect_arithmetic_is_safe(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count) noexcept
+{
+    // Native-call arithmetic safety: convexityDefects in OpenCV 4.6, 4.10,
+    // and 5.0 (identical source) computes pt1.x - pt0.x, pt1.y - pt0.y,
+    // ptr[j].x - pt0.x, and ptr[j].y - pt0.y as signed int subtraction
+    // between contour points, then stores cvRound(depth * 256) in an int,
+    // where depth is the distance from ptr[j] to the line through the hull
+    // points pt0 and pt1. That perpendicular distance never exceeds
+    // |ptr[j] - pt0|, which never exceeds the bounding-box diagonal
+    // sqrt(W * W + H * H), W and H being the X and Y spans. Requiring
+    // W * W + H * H <= M * M with M = INT32_MAX / 256 = 8388607 therefore
+    // bounds every native coordinate delta by M < INT32_MAX and every true
+    // depth by M. Native deltas are exact doubles, their products are below
+    // 2^47 and exact, and sqrt, division, and multiplication each add at
+    // most half an ulp, so the computed depth times 256 stays below
+    // 2147483393 < INT32_MAX before cvRound.
+    int64_t min_x = points[0].x;
+    int64_t max_x = min_x;
+    int64_t min_y = points[0].y;
+    int64_t max_y = min_y;
+    for (int32_t index = 1; index < point_count; ++index) {
+        const int64_t x = points[index].x;
+        const int64_t y = points[index].y;
+        min_x = x < min_x ? x : min_x;
+        max_x = x > max_x ? x : max_x;
+        min_y = y < min_y ? y : min_y;
+        max_y = y > max_y ? y : max_y;
+    }
+    const int64_t width = max_x - min_x;
+    const int64_t height = max_y - min_y;
+    if (width > maximum_convexity_defect_extent
+        || height > maximum_convexity_defect_extent) {
+        return false;
+    }
+    return width * width + height * height
+        <= maximum_convexity_defect_extent * maximum_convexity_defect_extent;
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_convexity_defects(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    const int32_t *hull_indices,
+    int32_t hull_count,
+    opencv_geometry_convexity_defect *out_defects,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null convexity defects output count pointer");
+    }
+    *out_count = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "convexity defects point count must not be negative");
+    }
+    if (hull_count < 0) {
+        return invalid_argument(
+            "convexity defects hull count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (hull_count > 0 && hull_indices == nullptr) {
+        return invalid_argument("null hull indices with positive count");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "convexity defects output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any defects.
+    if (out_capacity > 0 && out_defects == nullptr) {
+        return invalid_argument(
+            "null convexity defects output with positive capacity");
+    }
+    // Thick Ada returns no defects for contours of at most three points
+    // without calling this function. A raw empty contour reaches OpenCV,
+    // which rejects it by assertion before reading points or hull indices.
+
+    // ABI safety: native convexityDefects performs signed int coordinate
+    // subtraction and cvRound(depth * 256) only when the contour has more
+    // than three points and the hull has at least three indices. Reject
+    // extents for which that arithmetic could overflow a signed int.
+    if (point_count > 3 && hull_count >= 3
+        && !convexity_defect_arithmetic_is_safe(points, point_count)) {
+        return invalid_argument(
+            "convexity defects contour exceeds native fixed-point depth "
+            "range");
+    }
+
+    try {
+        std::vector<cv::Point> contour;
+        contour.reserve(static_cast<std::size_t>(point_count));
+        for (int32_t index = 0; index < point_count; ++index) {
+            contour.emplace_back(points[index].x, points[index].y);
+        }
+        std::vector<int> hull;
+        if (hull_count > 0) {
+            hull.assign(hull_indices, hull_indices + hull_count);
+        }
+        // OpenCV asserts that every hull index lies in [0, point_count)
+        // before it dereferences the contour, and raises for hull indices
+        // that are not monotonic. Those native errors are translated below.
+        std::vector<cv::Vec4i> defects;
+        cv::convexityDefects(contour, hull, defects);
+        // ABI safety: copying more defects than capacity would overflow the
+        // caller-provided buffer. Native convexityDefects appends at most
+        // one defect per hull index.
+        if (defects.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "convexity defects output capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < defects.size(); ++index) {
+            out_defects[index].start_index = defects[index][0];
+            out_defects[index].end_index = defects[index][1];
+            out_defects[index].farthest_index = defects[index][2];
+            out_defects[index].fixed_point_depth = defects[index][3];
+        }
+        *out_count = static_cast<int32_t>(defects.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
 namespace {
 
 bool integer_contour_arithmetic_is_safe(

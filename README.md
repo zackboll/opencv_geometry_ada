@@ -16,7 +16,8 @@ Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
 Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
-`Convex_Hull`, `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`,
+`Convex_Hull`, `Convex_Hull_Indices`, `Convexity_Defects`,
+`Approximate_Curve`, `Bounding_Rect`, `Is_Convex`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
@@ -121,6 +122,47 @@ Box : constant OpenCV.Rotated_Rect :=
 Corners : constant OpenCV.Geometry.Box_Vertices :=
   OpenCV.Geometry.Box_Points (Box);
 ```
+
+## Convexity analysis
+
+```ada
+type Point_Index_Array is array (Natural range <>) of Natural;
+
+function Convex_Hull_Indices
+  (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
+   return Point_Index_Array;
+
+function Convexity_Defects
+  (Points : Contour; Hull : Point_Index_Array) return Convexity_Defect_Array;
+
+function Convexity_Defects (Points : Contour) return Convexity_Defect_Array;
+```
+
+Hull indices and defect indices are Ada indices in `Points'Range`, never
+native zero-based offsets, so a contour declared as `Contour (10 .. 14)`
+yields indices in `10 .. 14`. `Convex_Hull_Indices` describes the same hull
+as `Convex_Hull`. When several points share a hull vertex's coordinates,
+OpenCV 4.x and 5.x may return different indices among them; each returned
+index still selects a hull vertex.
+
+A `Convexity_Defect` records the bounding hull vertices (`Start_Index`,
+`End_Index`), the contour point farthest inside that hull edge
+(`Farthest_Index`), and `Depth`, OpenCV's 8-fractional-bit fixed-point depth
+divided by `256.0`. A caller-supplied `Hull` must be strictly increasing or
+strictly decreasing; out-of-range, repeated, or non-monotonic indices raise
+`OpenCV_Error`. Both directions give the same defects: the closing edge from
+the largest to the smallest hull index first, then ascending edges. Contours
+of at most three points, and hulls of fewer than three indices, have no
+defects. The single-argument form uses `Convex_Hull_Indices (Points)` and
+reports a non-monotonic hull as a self-intersecting contour.
+
+OpenCV stores `cvRound (Depth * 256)` in a signed 32-bit integer, and no
+depth exceeds the bounding-box diagonal. When defects are computed, the X and
+Y spans of `Points` must therefore satisfy
+`Width**2 + Height**2 <= 8_388_607**2`, where
+`8_388_607 = Integer_32'Last / 256`. The bound also keeps OpenCV's signed
+32-bit coordinate subtraction from overflowing. Larger spans raise
+`OpenCV_Error` before native code runs.
 
 ## Rotation matrix
 

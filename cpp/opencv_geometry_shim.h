@@ -101,6 +101,16 @@ typedef struct {
     double m12;
 } opencv_geometry_affine_2x3_f64;
 
+/* One native convexity defect. Indices are zero-based offsets into the
+   contour point buffer. fixed_point_depth is OpenCV's depth with eight
+   fractional bits, so the geometric depth is fixed_point_depth / 256. */
+typedef struct {
+    int32_t start_index;
+    int32_t end_index;
+    int32_t farthest_index;
+    int32_t fixed_point_depth;
+} opencv_geometry_convexity_defect;
+
 typedef int32_t opencv_geometry_status;
 
 #define OPENCV_GEOMETRY_OK                     ((opencv_geometry_status)0)
@@ -139,6 +149,25 @@ opencv_geometry_convex_hull(
     int32_t point_count,
     int32_t clockwise,
     opencv_geometry_point_i32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count);
+
+opencv_geometry_status
+opencv_geometry_convex_hull_indices(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t clockwise,
+    int32_t *out_indices,
+    int32_t out_capacity,
+    int32_t *out_count);
+
+opencv_geometry_status
+opencv_geometry_convexity_defects(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    const int32_t *hull_indices,
+    int32_t hull_count,
+    opencv_geometry_convexity_defect *out_defects,
     int32_t out_capacity,
     int32_t *out_count);
 

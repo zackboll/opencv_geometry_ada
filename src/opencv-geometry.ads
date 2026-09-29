@@ -81,6 +81,88 @@ package OpenCV.Geometry is
      (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
       return Contour;
 
+   --  Convex hull of Points as indices into Points. Every value is an index
+   --  in Points'Range, not a native zero-based offset, so shifted and other
+   --  nonzero Points bounds are preserved. The indices describe the same
+   --  hull as Convex_Hull with the same Orientation. OpenCV cyclically
+   --  shifts the sequence to be strictly increasing or strictly decreasing
+   --  when possible, which holds for simple contours; a self-intersecting
+   --  contour may yield a sequence that is neither. When several points
+   --  share one hull vertex's coordinates, any of their indices may be
+   --  returned, and OpenCV 4.x and 5.x can choose differently. The result is
+   --  zero-based; empty input returns the null range 1 .. 0. Points is
+   --  unchanged. Inputs that would overflow native integer convex-hull
+   --  arithmetic raise OpenCV_Error.
+   type Point_Index_Array is array (Natural range <>) of Natural;
+
+   function Convex_Hull_Indices
+     (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
+      return Point_Index_Array
+   with
+     Post =>
+       Convex_Hull_Indices'Result'Length <= Points'Length
+       and then (for all Index of Convex_Hull_Indices'Result =>
+                   Index in Points'Range);
+
+   --  A region where Points departs inward from one hull edge. Start_Index
+   --  and End_Index are the hull vertices bounding that edge, and
+   --  Farthest_Index is the contour point between them farthest from the
+   --  edge's line; all three are indices in Points'Range. Depth is that
+   --  distance at OpenCV's 1/256 fixed-point resolution: the native
+   --  fixed-point value divided by 256.0, which is exactly representable.
+   --  Depth is nonnegative; a defect shallower than 1/512 reports 0.0.
+   type Convexity_Defect is record
+      Start_Index    : Natural := 0;
+      End_Index      : Natural := 0;
+      Farthest_Index : Natural := 0;
+      Depth          : OpenCV.Float64_Value := 0.0;
+   end record;
+
+   type Convexity_Defect_Array is array (Natural range <>) of Convexity_Defect;
+
+   --  Convexity defects of Points relative to Hull, a sequence of indices in
+   --  Points'Range such as the result of Convex_Hull_Indices. Hull must be
+   --  strictly increasing or strictly decreasing; out-of-range, repeated,
+   --  or otherwise non-monotonic indices raise OpenCV_Error. Hull is not
+   --  checked to be the convex hull of Points: defects are measured against
+   --  the edges between consecutive Hull indices, including the closing
+   --  edge. Both Hull directions give the same result, ordered by OpenCV:
+   --  the closing edge from the largest to the smallest Hull index first,
+   --  then edges in ascending index order. Points should be a simple
+   --  contour. After Hull is validated, a Points of at most three points or
+   --  a Hull of fewer than three indices yields an empty result. Otherwise
+   --  the X and Y spans of Points, Width and Height, must satisfy
+   --  Width**2 + Height**2 <= 8_388_607**2, where 8_388_607 is
+   --  Integer_32'Last / 256: OpenCV stores Depth * 256 rounded in a signed
+   --  32-bit integer, and no Depth exceeds the bounding-box diagonal. This
+   --  also keeps native signed 32-bit coordinate subtraction from
+   --  overflowing. Larger spans raise OpenCV_Error before native code runs.
+   --  The result is zero-based, with the null range 1 .. 0 when empty, and
+   --  has at most Hull'Length defects. Points and Hull are unchanged.
+   function Convexity_Defects
+     (Points : Contour; Hull : Point_Index_Array) return Convexity_Defect_Array
+   with
+     Post =>
+       Convexity_Defects'Result'Length <= Hull'Length
+       and then (for all Defect of Convexity_Defects'Result =>
+                   Defect.Start_Index in Points'Range
+                   and then Defect.End_Index in Points'Range
+                   and then Defect.Farthest_Index in Points'Range);
+
+   --  Convexity defects of Points relative to its own convex hull. Points
+   --  of at most three points yield an empty result. Otherwise this is
+   --  Convexity_Defects (Points, Convex_Hull_Indices (Points)), except that
+   --  a hull whose indices are not monotonic, which indicates that Points is
+   --  self-intersecting, raises OpenCV_Error with that diagnosis.
+   function Convexity_Defects (Points : Contour) return Convexity_Defect_Array
+   with
+     Post =>
+       Convexity_Defects'Result'Length <= Points'Length
+       and then (for all Defect of Convexity_Defects'Result =>
+                   Defect.Start_Index in Points'Range
+                   and then Defect.End_Index in Points'Range
+                   and then Defect.Farthest_Index in Points'Range);
+
    --  Returns OpenCV's native minimum-area rotated rectangle. Center, Size,
    --  and Angle_Degrees are binary32 native results; Angle_Degrees is in
    --  degrees. OpenCV 4.x and 5.x can encode an equivalent rectangle with
