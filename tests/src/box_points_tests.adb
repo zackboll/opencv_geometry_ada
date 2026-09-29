@@ -219,17 +219,13 @@ package body Box_Points_Tests is
         (Center        => (X => 1.0, Y => -2.0),
          Size          => (Width => 4.0, Height => 2.0),
          Angle_Degrees => 30.0);
-      --  OpenCV 4.6, 4.10, and 5.0 cv::boxPoints all delegate to
-      --  RotatedRect::points, whose corner sequence for this box is below.
-      --  The OpenCV 4.12+ and 5.0 boxPoints documentation describes a start
-      --  at the greatest-Y vertex, but the implementation starts here at the
-      --  first vertex below, not at the greatest-Y fourth vertex. A failure
-      --  against this sequence means the native OpenCV order changed.
-      Native   : constant OpenCV.Geometry.Box_Vertices :=
-        ((X => -1.232_050_8, Y => -2.133_974_6),
-         (X => -0.232_050_8, Y => -3.866_025_4),
-         (X => 3.232_050_8, Y => -1.866_025_4),
-         (X => 2.232_050_8, Y => -0.133_974_6));
+      --  OpenCV 4.12+ and 5.0 document a boxPoints start at the greatest-Y
+      --  vertex, but the implementation delegates to RotatedRect::points and
+      --  does not provide that start for arbitrary rectangles, including
+      --  this one. The binding's contract is to preserve whatever native
+      --  order the active OpenCV produces, so this test verifies that the
+      --  Ada result matches the raw Geometry C ABI sequence element for
+      --  element rather than asserting an undocumented fixed native start.
       Packed   : aliased C_API.C_Rotated_Rect := To_C (Box);
       Raw      : aliased C_API.C_Box_Vertices := (others => 0.0);
       Vertices : constant OpenCV.Geometry.Box_Vertices :=
@@ -248,13 +244,6 @@ package body Box_Points_Tests is
          and then Close (Vertices (4).X, OpenCV.Float32_Value (Raw.V3_X))
          and then Close (Vertices (4).Y, OpenCV.Float32_Value (Raw.V3_Y)),
          "Ada result preserves C ABI sequence");
-      for Index in Native'Range loop
-         AUnit.Assertions.Assert
-           (Same_Point (Vertices (Index), Native (Index)),
-            "vertex"
-            & OpenCV.Geometry.Box_Vertex_Index'Image (Index)
-            & " preserves the native RotatedRect::points sequence");
-      end loop;
    end Native_Order_Is_Preserved;
 
    procedure C_ABI_Safety (Test : in out Fixture) is
