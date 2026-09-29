@@ -341,6 +341,34 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_fit_ellipse_direct";
 
+   type C_Line_2D is record
+      Direction_X : Interfaces.C.C_float;
+      Direction_Y : Interfaces.C.C_float;
+      Point_X     : Interfaces.C.C_float;
+      Point_Y     : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
+   Line_Fit_L2     : constant Interfaces.Integer_32 := 0;
+   Line_Fit_L1     : constant Interfaces.Integer_32 := 1;
+   Line_Fit_L12    : constant Interfaces.Integer_32 := 2;
+   Line_Fit_Fair   : constant Interfaces.Integer_32 := 3;
+   Line_Fit_Welsch : constant Interfaces.Integer_32 := 4;
+   Line_Fit_Huber  : constant Interfaces.Integer_32 := 5;
+
+   function Fit_Line_2D
+     (Points          : access Point_I32;
+      Point_Count     : Interfaces.Integer_32;
+      Distance        : Interfaces.Integer_32;
+      Parameter       : Interfaces.C.double;
+      Radius_Accuracy : Interfaces.C.double;
+      Angle_Accuracy  : Interfaces.C.double;
+      Result          : access C_Line_2D) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_line_2d";
+
    function Box_Points
      (Box : access constant C_Rotated_Rect; Result : access C_Box_Vertices)
       return Status

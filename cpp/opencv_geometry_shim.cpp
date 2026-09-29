@@ -1419,6 +1419,103 @@ opencv_geometry_fit_ellipse_direct(
         cv::fitEllipseDirect, points, point_count, out_rect);
 }
 
+namespace {
+
+bool line_fit_distance(int32_t distance, int *native_distance) noexcept
+{
+    switch (distance) {
+    case OPENCV_GEOMETRY_LINE_FIT_L2:
+        *native_distance = cv::DIST_L2;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_L1:
+        *native_distance = cv::DIST_L1;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_L12:
+        *native_distance = cv::DIST_L12;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_FAIR:
+        *native_distance = cv::DIST_FAIR;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_WELSCH:
+        *native_distance = cv::DIST_WELSCH;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_HUBER:
+        *native_distance = cv::DIST_HUBER;
+        return true;
+    default:
+        return false;
+    }
+}
+
+// fitLine narrows param, reps, and aeps to float. With IEC 559 floating
+// point that narrowing is defined for every double, and OpenCV's reweighting
+// tolerates NaN and infinite values, so their range is public Ada policy
+// rather than an ABI-safety condition.
+static_assert(
+    std::numeric_limits<float>::is_iec559
+        && std::numeric_limits<double>::is_iec559,
+    "fit line parameter narrowing assumes IEC 559 floating point");
+
+}
+
+opencv_geometry_status
+opencv_geometry_fit_line_2d(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t distance,
+    double parameter,
+    double radius_accuracy,
+    double angle_accuracy,
+    opencv_geometry_line_2d_f32 *out_line)
+{
+    clear_error();
+    if (out_line == nullptr) {
+        return invalid_argument("null fit line output pointer");
+    }
+    *out_line = opencv_geometry_line_2d_f32{};
+    if (point_count < 0) {
+        return invalid_argument("fit line point count must not be negative");
+    }
+    // ABI safety: OpenCV 4.6, 4.10, and 5.0 compute count*2 in signed int
+    // for every distance (convertTo's continuous size of the CV_32S points)
+    // and again for the robust distances (fitLine2D's AutoBuffer<float>).
+    // Larger counts overflow that arithmetic, which is undefined behavior.
+    if (point_count > INT32_MAX / 2) {
+        return invalid_argument(
+            "fit line point count exceeds native allocation range");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    int native_distance = 0;
+    if (!line_fit_distance(distance, &native_distance)) {
+        return invalid_argument("fit line distance selector is invalid");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        cv::Vec4f line;
+        cv::fitLine(
+            contour,
+            line,
+            native_distance,
+            parameter,
+            radius_accuracy,
+            angle_accuracy);
+        opencv_geometry_line_2d_f32 result{};
+        result.direction_x = line[0];
+        result.direction_y = line[1];
+        result.point_x = line[2];
+        result.point_y = line[3];
+        *out_line = result;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_line = opencv_geometry_line_2d_f32{};
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_box_points(
     const opencv_geometry_rotated_rect_f32 *box,

@@ -19,6 +19,7 @@ with Minimum_Enclosing_Triangle_Tests;
 with Minimum_Area_Rectangle_Tests;
 with Fit_Ellipse_Tests;
 with Fit_Ellipse_Variants_Tests;
+with Fit_Line_2D_Tests;
 with Box_Points_Tests;
 with Convex_Polygon_Intersection_Tests;
 with Rotated_Rectangle_Intersection_Tests;
@@ -53,6 +54,7 @@ begin
    Suite.Add_Test (Minimum_Area_Rectangle_Tests.Suite);
    Suite.Add_Test (Fit_Ellipse_Tests.Suite);
    Suite.Add_Test (Fit_Ellipse_Variants_Tests.Suite);
+   Suite.Add_Test (Fit_Line_2D_Tests.Suite);
    Suite.Add_Test (Box_Points_Tests.Suite);
    Suite.Add_Test (Convex_Polygon_Intersection_Tests.Suite);
    Suite.Add_Test (Rotated_Rectangle_Intersection_Tests.Suite);

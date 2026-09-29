@@ -225,6 +225,54 @@ package OpenCV.Geometry is
    --  Points is unchanged.
    function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect;
 
+   --  Distance model of Fit_Line_2D (OpenCV DistanceTypes). L2 is orthogonal
+   --  (total) least squares, solved in closed form as the principal axis of
+   --  the points; L1, L12, Fair, Welsch, and Huber are robust M-estimators
+   --  that OpenCV solves by iteratively reweighted least squares.
+   type Line_Fit_Distance is (L2, L1, L12, Fair, Welsch, Huber);
+
+   --  A fitted 2D line in native binary32 values. Direction is OpenCV's unit
+   --  direction (vx, vy) and Point is OpenCV's point (x0, y0) on the line.
+   type Fitted_Line_2D is record
+      Direction : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+      Point     : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+   end record;
+
+   --  Fits a line to Points with the 2D form of cv::fitLine. Direction is a
+   --  unit vector whose sign is OpenCV's; the opposite direction describes
+   --  the same line, and no sign normalization is applied. Point is the
+   --  centroid of Points for L2 and a weighted centroid for the robust
+   --  distances. Parameter is the constant C of Fair, Welsch, and Huber;
+   --  0.0 selects OpenCV's defaults 1.3998, 2.9846, and 1.345, and the other
+   --  distances ignore it. A robust fit runs 20 restarts from subsets drawn
+   --  by OpenCV's fixed-seed internal generator, each reweighting at most 30
+   --  times, and returns the candidate with the smallest summed distance.
+   --  A restart's reweighting stops early once the direction changes by
+   --  less than Angle_Accuracy radians and each coordinate of Point by less
+   --  than Radius_Accuracy; 0.0 selects OpenCV's defaults 0.01 and 1.0, and
+   --  L2 ignores both. The Ada defaults of 0.01 follow OpenCV's documented
+   --  recommendation. The accuracies end reweighting early; they do not
+   --  bound the error of the result. Parameter, Radius_Accuracy, and
+   --  Angle_Accuracy must be finite, nonnegative, and at most
+   --  Float32_Value'Last; other values raise OpenCV_Error. OpenCV narrows
+   --  them to binary32, so positive values too small for binary32 become 0.0
+   --  and select the defaults. Robust results repeat for the same Points,
+   --  but subsets are drawn by position, so reordering Points can change
+   --  them slightly. OpenCV converts coordinates to binary32, exactly for
+   --  magnitudes up to 2**24, and L2 squares them in binary32, so it loses
+   --  accuracy for points far from the origin relative to their spread. At
+   --  least one point is required; with fewer than two distinct points the
+   --  direction is arbitrary. More than Integer_32'Last / 2 points raise
+   --  OpenCV_Error, because OpenCV computes 2 * n in signed 32-bit
+   --  arithmetic. Non-finite native results raise OpenCV_Error. Points is
+   --  unchanged.
+   function Fit_Line_2D
+     (Points          : Contour;
+      Distance        : Line_Fit_Distance := L2;
+      Parameter       : OpenCV.Float64_Value := 0.0;
+      Radius_Accuracy : OpenCV.Float64_Value := 0.01;
+      Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D;
+
    --  Converts Box to four native CV_32F rectangle vertices. Vertices are
    --  returned in the active OpenCV backend's native order without rounding,
    --  reordering, or normalization. OpenCV 4.x and 5.0 compute them with

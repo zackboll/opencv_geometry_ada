@@ -21,7 +21,7 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
-`Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Box_Points`,
+`Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Fit_Line_2D`, `Box_Points`,
 `Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`, and
 `Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
@@ -180,6 +180,32 @@ Y spans of `Points` must therefore satisfy
 `8_388_607 = Integer_32'Last / 256`. The bound also keeps OpenCV's signed
 32-bit coordinate subtraction from overflowing. Larger spans raise
 `OpenCV_Error` before native code runs.
+
+## Line fitting
+
+```ada
+type Line_Fit_Distance is (L2, L1, L12, Fair, Welsch, Huber);
+
+function Fit_Line_2D
+  (Points          : Contour;
+   Distance        : Line_Fit_Distance := L2;
+   Parameter       : OpenCV.Float64_Value := 0.0;
+   Radius_Accuracy : OpenCV.Float64_Value := 0.01;
+   Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D;
+```
+
+`Fit_Line_2D` binds the 2D form of `cv::fitLine`. The result holds OpenCV's
+unit `Direction` (vx, vy) and a `Point` (x0, y0) on the line in native binary32
+values. The direction's sign is OpenCV's and is not normalized; the opposite
+direction describes the same line. `L2` is orthogonal least squares; the other
+distances are robust M-estimators that OpenCV solves by reweighting from
+fixed-seed random subsets, so results repeat for the same input order.
+`Parameter` is the constant of `Fair`, `Welsch`, and `Huber` (0.0 selects
+OpenCV's defaults); the accuracies end each robust reweighting early (0.0
+selects OpenCV's defaults 1.0 and 0.01). All three must be finite,
+nonnegative, and at most `Float32_Value'Last`. At least one point is required,
+and more than `Integer_32'Last / 2` points are rejected because OpenCV computes
+`2 * n` in signed 32-bit arithmetic.
 
 ## Polygon and rotated-rectangle intersection
 

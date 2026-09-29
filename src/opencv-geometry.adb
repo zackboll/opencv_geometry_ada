@@ -1250,6 +1250,112 @@ package body OpenCV.Geometry is
       return Fit_Ellipse_With (Points, AMS_Variant, "Fit_Ellipse_AMS");
    end Fit_Ellipse_AMS;
 
+   function To_C_Line_Fit_Distance
+     (Distance : Line_Fit_Distance) return Interfaces.Integer_32 is
+   begin
+      case Distance is
+         when L2     =>
+            return Internal.C_API.Line_Fit_L2;
+
+         when L1     =>
+            return Internal.C_API.Line_Fit_L1;
+
+         when L12    =>
+            return Internal.C_API.Line_Fit_L12;
+
+         when Fair   =>
+            return Internal.C_API.Line_Fit_Fair;
+
+         when Welsch =>
+            return Internal.C_API.Line_Fit_Welsch;
+
+         when Huber  =>
+            return Internal.C_API.Line_Fit_Huber;
+      end case;
+   end To_C_Line_Fit_Distance;
+
+   --  Raises OpenCV_Error unless Value is finite, nonnegative, and at most
+   --  Float32_Value'Last, the range OpenCV's binary32 narrowing accepts.
+   procedure Validate_Line_Fit_Scalar
+     (Value : OpenCV.Float64_Value; Name : String)
+   is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float64_Value;
+   begin
+      if not (Value = Value
+              and then Value >= 0.0
+              and then Value
+                       <= OpenCV.Float64_Value (OpenCV.Float32_Value'Last))
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Line_2D requires "
+            & Name
+            & " to be finite, nonnegative, and at most Float32_Value'Last");
+      end if;
+   end Validate_Line_Fit_Scalar;
+
+   function Fit_Line_2D
+     (Points          : Contour;
+      Distance        : Line_Fit_Distance := L2;
+      Parameter       : OpenCV.Float64_Value := 0.0;
+      Radius_Accuracy : OpenCV.Float64_Value := 0.01;
+      Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D
+   is
+      pragma Suppress (Validity_Check);
+      Result : aliased Internal.C_API.C_Line_2D :=
+        (Direction_X => 0.0,
+         Direction_Y => 0.0,
+         Point_X     => 0.0,
+         Point_Y     => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      if Points'Length = 0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Line_2D requires at least one point");
+      end if;
+      --  Native fitLine computes count*2 in signed int for every distance.
+      if Points'Length > Natural (Interfaces.Integer_32'Last) / 2 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Line_2D point count exceeds native allocation range");
+      end if;
+      Validate_Line_Fit_Scalar (Parameter, "Parameter");
+      Validate_Line_Fit_Scalar (Radius_Accuracy, "Radius_Accuracy");
+      Validate_Line_Fit_Scalar (Angle_Accuracy, "Angle_Accuracy");
+
+      declare
+         Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      begin
+         Status :=
+           Internal.C_API.Fit_Line_2D
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              To_C_Line_Fit_Distance (Distance),
+              Interfaces.C.double (Parameter),
+              Interfaces.C.double (Radius_Accuracy),
+              Interfaces.C.double (Angle_Accuracy),
+              Result'Access);
+      end;
+      Raise_On_Error (Status, "fit line 2D");
+      return
+        (Direction =>
+           (X =>
+              To_Public_Float32
+                (Result.Direction_X, "fitted line direction X is not finite"),
+            Y =>
+              To_Public_Float32
+                (Result.Direction_Y, "fitted line direction Y is not finite")),
+         Point     =>
+           (X =>
+              To_Public_Float32
+                (Result.Point_X, "fitted line point X is not finite"),
+            Y =>
+              To_Public_Float32
+                (Result.Point_Y, "fitted line point Y is not finite")));
+   end Fit_Line_2D;
+
    function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect is
    begin
       return Fit_Ellipse_With (Points, Direct_Variant, "Fit_Ellipse_Direct");
