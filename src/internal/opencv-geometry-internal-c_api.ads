@@ -38,6 +38,15 @@ package OpenCV.Geometry.Internal.C_API is
      array (Natural range <>) of aliased C_Convexity_Defect
    with Convention => C;
 
+   type Point_F32 is record
+      X : Interfaces.C.C_float;
+      Y : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
+   type Point_F32_Array is array (Natural range <>) of aliased Point_F32
+   with Convention => C;
+
    type Rect_I32 is record
       X      : Interfaces.Integer_32;
       Y      : Interfaces.Integer_32;
@@ -329,6 +338,37 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_get_rotation_matrix_2d";
+
+   function Intersect_Convex_Convex
+     (Left_Points   : access Point_I32;
+      Left_Count    : Interfaces.Integer_32;
+      Right_Points  : access Point_I32;
+      Right_Count   : Interfaces.Integer_32;
+      Handle_Nested : Interfaces.Integer_32;
+      Out_Vertices  : access Point_F32;
+      Out_Capacity  : Interfaces.Integer_32;
+      Out_Count     : access Interfaces.Integer_32;
+      Out_Area      : access Interfaces.C.C_float) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_intersect_convex_convex";
+
+   Rectangles_Intersect_None    : constant Interfaces.Integer_32 := 0;
+   Rectangles_Intersect_Partial : constant Interfaces.Integer_32 := 1;
+   Rectangles_Intersect_Full    : constant Interfaces.Integer_32 := 2;
+
+   function Rotated_Rectangle_Intersection
+     (Left         : access constant C_Rotated_Rect;
+      Right        : access constant C_Rotated_Rect;
+      Out_Kind     : access Interfaces.Integer_32;
+      Out_Vertices : access Point_F32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_rotated_rectangle_intersection";
 
    function Last_Error_Message return String;
 

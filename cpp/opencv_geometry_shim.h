@@ -111,6 +111,12 @@ typedef struct {
     int32_t fixed_point_depth;
 } opencv_geometry_convexity_defect;
 
+/* One native binary32 point of a variable-length Geometry result. */
+typedef struct {
+    float x;
+    float y;
+} opencv_geometry_point_f32;
+
 typedef int32_t opencv_geometry_status;
 
 #define OPENCV_GEOMETRY_OK                     ((opencv_geometry_status)0)
@@ -260,6 +266,33 @@ opencv_geometry_get_rotation_matrix_2d(
     double angle_degrees,
     double scale,
     opencv_geometry_affine_2x3_f64 *out_transform);
+
+opencv_geometry_status
+opencv_geometry_intersect_convex_convex(
+    const opencv_geometry_point_i32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_i32 *right_points,
+    int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count,
+    float *out_area);
+
+/* Explicit rotated-rectangle intersection kinds; the shim maps OpenCV's
+   RectanglesIntersectTypes to these values. */
+#define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE    ((int32_t)0)
+#define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_PARTIAL ((int32_t)1)
+#define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_FULL    ((int32_t)2)
+
+opencv_geometry_status
+opencv_geometry_rotated_rectangle_intersection(
+    const opencv_geometry_rotated_rect_f32 *left,
+    const opencv_geometry_rotated_rect_f32 *right,
+    int32_t *out_kind,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count);
 
 #ifdef __cplusplus
 }

@@ -21,7 +21,8 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
-`Box_Points`, and `Get_Rotation_Matrix_2D`.
+`Box_Points`, `Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`,
+and `Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -167,6 +168,43 @@ Y spans of `Points` must therefore satisfy
 `8_388_607 = Integer_32'Last / 256`. The bound also keeps OpenCV's signed
 32-bit coordinate subtraction from overflowing. Larger spans raise
 `OpenCV_Error` before native code runs.
+
+## Polygon and rotated-rectangle intersection
+
+```ada
+function Intersect_Convex_Polygons
+  (Left, Right : Contour; Handle_Nested : Boolean := True)
+   return Convex_Polygon_Intersection;   --  Area and Vertices
+
+function Intersect_Rotated_Rectangles
+  (Left, Right : OpenCV.Rotated_Rect)
+   return Rotated_Rectangle_Intersection;  --  Kind and Vertices
+```
+
+Both return Ada-owned binary32 vertices (`Float32_Point_Array`, indexed from
+1) in native OpenCV order without normalization.
+
+`Intersect_Convex_Polygons` requires each polygon to be simple and strictly
+convex with at least three vertices, traversed once in either direction:
+every vertex must be a convex hull vertex, visited in hull order as
+`Convex_Hull_Indices` reports it. `Is_Convex` alone is not enough, because it
+also accepts self-intersecting stars and repeated traversals. OpenCV does not
+check convexity, and OpenCV 4.x releases before 4.11 (including 4.6 and 4.10)
+can overflow an internal buffer on such input (OpenCV issue #25259). Vertex
+coordinates must lie in `-2**24 .. 2**24`, where OpenCV's binary32 conversion
+is exact. `Handle_Nested` defaults to `True` as in OpenCV. OpenCV 4.6, 4.10,
+and 5.0 can emit an internal `(FLT_MAX, FLT_MAX)` sentinel as the first or last
+vertex of some disjoint and contact results; it is omitted. OpenCV 4.11+ and
+5.x report a non-converging intersection with a negative area, which raises
+`OpenCV_Error`.
+
+`Intersect_Rotated_Rectangles` returns `No_Intersection`,
+`Partial_Intersection`, or `Full_Intersection` (OpenCV `INTERSECT_NONE`,
+`INTERSECT_PARTIAL`, `INTERSECT_FULL`) with at most eight vertices. A rectangle
+with zero or negative width or height intersects nothing. Non-finite fields
+raise `OpenCV_Error`. Touching rectangles are reported as a partial
+intersection at the contact; OpenCV 4.6 uses different contact tolerances from
+4.10 and 5.0.
 
 ## Rotation matrix
 

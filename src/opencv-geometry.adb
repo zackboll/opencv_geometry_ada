@@ -5,6 +5,7 @@ with Interfaces.C;
 with OpenCV.Core.Float64_Access;
 with OpenCV.Geometry.Internal.C_API;
 with OpenCV.Geometry.Internal.Convexity;
+with OpenCV.Geometry.Internal.Intersection;
 
 package body OpenCV.Geometry is
 
@@ -1016,7 +1017,11 @@ package body OpenCV.Geometry is
         and then Value <= OpenCV.Float32_Value'Last;
    end Is_Finite_Public_Float32;
 
-   procedure Validate_Box (Box : OpenCV.Rotated_Rect) is
+   --  Raises OpenCV_Error with Message unless every Box field is finite.
+   procedure Validate_Finite_Rotated_Rect
+     (Box : OpenCV.Rotated_Rect; Message : String)
+   is
+      pragma Suppress (Validity_Check);
    begin
       if not Is_Finite_Public_Float32 (Box.Center.X)
         or else not Is_Finite_Public_Float32 (Box.Center.Y)
@@ -1025,9 +1030,14 @@ package body OpenCV.Geometry is
         or else not Is_Finite_Public_Float32 (Box.Angle_Degrees)
       then
          Ada.Exceptions.Raise_Exception
-           (OpenCV.OpenCV_Error'Identity,
-            "Box_Points requires finite rotated rectangle fields");
+           (OpenCV.OpenCV_Error'Identity, Message);
       end if;
+   end Validate_Finite_Rotated_Rect;
+
+   procedure Validate_Box (Box : OpenCV.Rotated_Rect) is
+   begin
+      Validate_Finite_Rotated_Rect
+        (Box, "Box_Points requires finite rotated rectangle fields");
    end Validate_Box;
 
    function To_Public_Box_Vertices
@@ -1288,4 +1298,223 @@ package body OpenCV.Geometry is
         (Matrix, 1, 2, To_Public_Float64 (Result.M12, "M12 is not finite"));
       return Matrix;
    end Get_Rotation_Matrix_2D;
+
+   --  Converts the first Count native binary32 points of Output. Callers
+   --  ensure Count <= Output'Length.
+   function To_Public_Float32_Points
+     (Output    : Internal.C_API.Point_F32_Array;
+      Count     : Natural;
+      Operation : String) return Float32_Point_Array
+   is
+      pragma Suppress (Validity_Check);
+      Result : Float32_Point_Array (1 .. Count);
+   begin
+      for Position in Result'Range loop
+         declare
+            Native : Internal.C_API.Point_F32 renames
+              Output (Output'First + Position - 1);
+         begin
+            Result (Position) :=
+              (X =>
+                 To_Public_Float32
+                   (Native.X, Operation & " vertex X is not finite"),
+               Y =>
+                 To_Public_Float32
+                   (Native.Y, Operation & " vertex Y is not finite"));
+         end;
+      end loop;
+      return Result;
+   end To_Public_Float32_Points;
+
+   --  Public policy for Intersect_Convex_Polygons inputs: at least three
+   --  binary32-exact vertices forming a simple, strictly convex polygon
+   --  traversed once. isContourConvex alone is insufficient: it accepts
+   --  self-intersecting stars and repeated traversals, which OpenCV 4.x
+   --  before 4.11 can turn into an intersection buffer overflow.
+   procedure Validate_Convex_Polygon (Polygon : Contour; Name : String) is
+   begin
+      if Polygon'Length < 3 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons requires "
+            & Name
+            & " to have at least three vertices");
+      end if;
+      if not Internal.Intersection.Is_Binary32_Exact (Polygon) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons requires "
+            & Name
+            & " coordinates in -2**24 .. 2**24");
+      end if;
+
+      declare
+         Hull : constant Point_Index_Array := Convex_Hull_Indices (Polygon);
+      begin
+         if not Internal.Intersection.Is_Contour_Order_Hull
+                  (Polygon'First, Polygon'Last, Hull)
+         then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Intersect_Convex_Polygons requires "
+               & Name
+               & " to be a simple strictly convex polygon: every vertex "
+               & "must be a convex hull vertex, visited in hull order");
+         end if;
+      end;
+   end Validate_Convex_Polygon;
+
+   function Intersect_Convex_Polygons
+     (Left, Right : Contour; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection
+   is
+      use type Interfaces.Integer_32;
+      use type OpenCV.Float32_Value;
+   begin
+      Validate_Convex_Polygon (Left, "Left");
+      Validate_Convex_Polygon (Right, "Right");
+      if not Internal.Intersection.Is_Safe_Input_Count
+               (Left'Length, Right'Length)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons point counts exceed the native "
+            & "allocation range");
+      end if;
+
+      declare
+         pragma Suppress (Validity_Check);
+         Packed_Left  : Internal.C_API.Point_I32_Array := Pack_Contour (Left);
+         Packed_Right : Internal.C_API.Point_I32_Array := Pack_Contour (Right);
+         --  At most Left'Length + Right'Length intersection vertices.
+         Capacity     : constant Natural :=
+           Internal.Intersection.Output_Capacity (Left'Length, Right'Length);
+         Output       : Internal.C_API.Point_F32_Array (0 .. Capacity - 1);
+         Count        : aliased Interfaces.Integer_32 := 0;
+         Area         : aliased Interfaces.C.C_float := 0.0;
+         Public_Area  : OpenCV.Float32_Value;
+         Status       : Internal.C_API.Status;
+      begin
+         Status :=
+           Internal.C_API.Intersect_Convex_Convex
+             (Packed_Left (Packed_Left'First)'Access,
+              Interfaces.Integer_32 (Packed_Left'Length),
+              Packed_Right (Packed_Right'First)'Access,
+              Interfaces.Integer_32 (Packed_Right'Length),
+              To_C_Boolean (Handle_Nested),
+              Output (Output'First)'Access,
+              Interfaces.Integer_32 (Output'Length),
+              Count'Access,
+              Area'Access);
+         Raise_On_Error (Status, "Intersect_Convex_Polygons");
+         if Count < 0 then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Intersect_Convex_Polygons failed: negative vertex count");
+         end if;
+         if Natural (Count) > Output'Length then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Intersect_Convex_Polygons failed: vertex count exceeds "
+               & "capacity");
+         end if;
+         Public_Area :=
+           To_Public_Float32
+             (Area, "Intersect_Convex_Polygons area is not finite");
+         if Public_Area < 0.0 then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Intersect_Convex_Polygons failed: OpenCV reported that the "
+               & "intersection did not converge");
+         end if;
+         return
+           (Vertex_Count => Natural (Count),
+            Area         => Public_Area,
+            Vertices     =>
+              To_Public_Float32_Points
+                (Output, Natural (Count), "Intersect_Convex_Polygons"));
+      end;
+   end Intersect_Convex_Polygons;
+
+   function To_C_Rotated_Rect
+     (Box : OpenCV.Rotated_Rect) return Internal.C_API.C_Rotated_Rect is
+   begin
+      return
+        (Center_X      => Interfaces.C.C_float (Box.Center.X),
+         Center_Y      => Interfaces.C.C_float (Box.Center.Y),
+         Width         => Interfaces.C.C_float (Box.Size.Width),
+         Height        => Interfaces.C.C_float (Box.Size.Height),
+         Angle_Degrees => Interfaces.C.C_float (Box.Angle_Degrees));
+   end To_C_Rotated_Rect;
+
+   function To_Public_Intersection_Kind
+     (Kind : Interfaces.Integer_32) return Rectangle_Intersection_Kind
+   is
+      use type Interfaces.Integer_32;
+   begin
+      if Kind = Internal.C_API.Rectangles_Intersect_None then
+         return No_Intersection;
+      elsif Kind = Internal.C_API.Rectangles_Intersect_Partial then
+         return Partial_Intersection;
+      elsif Kind = Internal.C_API.Rectangles_Intersect_Full then
+         return Full_Intersection;
+      else
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Rotated_Rectangles failed: invalid kind encoding");
+      end if;
+   end To_Public_Intersection_Kind;
+
+   function Intersect_Rotated_Rectangles
+     (Left, Right : OpenCV.Rotated_Rect) return Rotated_Rectangle_Intersection
+   is
+      pragma Suppress (Validity_Check);
+      use type Interfaces.Integer_32;
+   begin
+      Validate_Finite_Rotated_Rect
+        (Left, "Intersect_Rotated_Rectangles requires finite Left fields");
+      Validate_Finite_Rotated_Rect
+        (Right, "Intersect_Rotated_Rectangles requires finite Right fields");
+
+      declare
+         Packed_Left  : aliased constant Internal.C_API.C_Rotated_Rect :=
+           To_C_Rotated_Rect (Left);
+         Packed_Right : aliased constant Internal.C_API.C_Rotated_Rect :=
+           To_C_Rotated_Rect (Right);
+         --  OpenCV reduces the region to at most eight vertices.
+         Output       :
+           Internal.C_API.Point_F32_Array
+             (0 .. Rectangle_Intersection_Vertex_Count'Last - 1);
+         Kind         : aliased Interfaces.Integer_32 := 0;
+         Count        : aliased Interfaces.Integer_32 := 0;
+         Status       : Internal.C_API.Status;
+      begin
+         Status :=
+           Internal.C_API.Rotated_Rectangle_Intersection
+             (Packed_Left'Access,
+              Packed_Right'Access,
+              Kind'Access,
+              Output (Output'First)'Access,
+              Interfaces.Integer_32 (Output'Length),
+              Count'Access);
+         Raise_On_Error (Status, "Intersect_Rotated_Rectangles");
+         if Count < 0 then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Intersect_Rotated_Rectangles failed: negative vertex count");
+         end if;
+         if Natural (Count) > Output'Length then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Intersect_Rotated_Rectangles failed: vertex count exceeds "
+               & "capacity");
+         end if;
+         return
+           (Vertex_Count => Natural (Count),
+            Kind         => To_Public_Intersection_Kind (Kind),
+            Vertices     =>
+              To_Public_Float32_Points
+                (Output, Natural (Count), "Intersect_Rotated_Rectangles"));
+      end;
+   end Intersect_Rotated_Rectangles;
 end OpenCV.Geometry;

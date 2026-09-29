@@ -204,6 +204,78 @@ package OpenCV.Geometry is
 
    function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices;
 
+   --  Ada-owned sequence of binary32 points, such as an intersection region
+   --  returned by OpenCV.
+   type Float32_Point_Array is
+     array (Natural range <>) of OpenCV.Float32_Point;
+
+   --  Intersection of two convex polygons. Area is OpenCV's nonnegative
+   --  binary32 intersection area, and Vertices is the native binary32
+   --  intersection polygon in native order without normalization. Vertices
+   --  is indexed 1 .. Vertex_Count, because its bounds follow the
+   --  discriminant. An empty intersection has Vertex_Count = 0 and Area 0.0.
+   type Convex_Polygon_Intersection (Vertex_Count : Natural) is record
+      Area     : OpenCV.Float32_Value;
+      Vertices : Float32_Point_Array (1 .. Vertex_Count);
+   end record;
+
+   --  Intersects convex polygons Left and Right with
+   --  cv::intersectConvexConvex. Left and Right must each be a simple,
+   --  strictly convex polygon of at least three vertices, traversed once in
+   --  either direction: every vertex must be a vertex of its convex hull,
+   --  visited in hull order, as Convex_Hull_Indices reports it. Repeated or
+   --  collinear vertices, self-intersecting stars, and repeated traversals
+   --  raise OpenCV_Error; Is_Convex alone accepts the latter two. OpenCV
+   --  does not check any of this, and OpenCV 4.x releases before 4.11 can
+   --  overflow an internal buffer on such input. Every vertex coordinate
+   --  must also lie in -2**24 .. 2**24, where OpenCV's binary32 conversion
+   --  is exact; other coordinates raise OpenCV_Error. When the boundaries do
+   --  not cross and one polygon lies wholly inside or on the other,
+   --  Handle_Nested True returns that enclosed polygon and its area, and
+   --  Handle_Nested False returns an empty result. OpenCV documents that
+   --  polygons sharing an edge, or with a vertex on the other's edge, are not
+   --  treated as nested; such contacts return zero or near-zero Area with
+   --  the contact points, possibly repeated as OpenCV emits them. OpenCV
+   --  4.6, 4.10, and 5.0 also emit an internal (FLT_MAX, FLT_MAX) sentinel as
+   --  the first or last vertex of some disjoint and contact results; it is
+   --  not a vertex and is omitted. The result has at most Left'Length +
+   --  Right'Length vertices. OpenCV 4.11+ and 5.x report an intersection
+   --  that did not converge with a negative area; that raises OpenCV_Error.
+   --  Left and Right are unchanged.
+   function Intersect_Convex_Polygons
+     (Left, Right : Contour; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection;
+
+   --  OpenCV's rotated-rectangle intersection classification:
+   --  INTERSECT_NONE, INTERSECT_PARTIAL, and INTERSECT_FULL. OpenCV documents
+   --  INTERSECT_FULL as one rectangle lying wholly within the other.
+   type Rectangle_Intersection_Kind is
+     (No_Intersection, Partial_Intersection, Full_Intersection);
+
+   --  OpenCV 4.6, 4.10, and 5.0 reduce the region to at most eight vertices.
+   subtype Rectangle_Intersection_Vertex_Count is Natural range 0 .. 8;
+
+   --  Vertices is indexed 1 .. Vertex_Count.
+   type Rotated_Rectangle_Intersection
+     (Vertex_Count : Rectangle_Intersection_Vertex_Count := 0)
+   is record
+      Kind     : Rectangle_Intersection_Kind := No_Intersection;
+      Vertices : Float32_Point_Array (1 .. Vertex_Count);
+   end record;
+
+   --  Intersects Left and Right with cv::rotatedRectangleIntersection. Kind
+   --  is OpenCV's classification, and Vertices is the native binary32
+   --  intersection region, at most eight points in native order without
+   --  normalization. No_Intersection has no vertices. A rectangle whose
+   --  width or height is zero or negative intersects nothing. Rectangles
+   --  that only touch can be reported with one or two contact vertices, and
+   --  OpenCV 4.6 uses different numerical tolerances from 4.10 and 5.0 for
+   --  such near-degenerate contacts. Every Left and Right field must be
+   --  finite; non-finite fields, and non-finite native vertices, raise
+   --  OpenCV_Error. Left and Right are unchanged.
+   function Intersect_Rotated_Rectangles
+     (Left, Right : OpenCV.Rotated_Rect) return Rotated_Rectangle_Intersection;
+
    --  Approximates Points with Douglas-Peucker. Epsilon is the maximum
    --  distance between the original curve and the result and must be
    --  in the range 0.0 <= Epsilon < 1.0E30. Closed connects the last
