@@ -106,11 +106,13 @@ Ellipse : constant OpenCV.Rotated_Rect :=
 `Fit_Ellipse_AMS` (`cv::fitEllipseAMS`, Approximate Mean Square) and
 `Fit_Ellipse_Direct` (`cv::fitEllipseDirect`, Direct least squares) return the
 same representation. AMS returns the Direct fit when it finds a parabola or
-hyperbola; both fall back to OpenCV's classic `fitEllipseNoDirect` for
-numerically singular systems, such as points exactly on one conic (always the
-case for five points). OpenCV 4.12 and later, including 5.x, first perturb
-such systems with `cv::theRNG`, so those results need not repeat; earlier 4.x
-releases perturb deterministically. Both need at least five and at most
+hyperbola, and falls back to OpenCV's classic `fitEllipseNoDirect` when its
+system is numerically singular, as can happen for points exactly on one conic,
+such as any five points. Direct falls back to `fitEllipseNoDirect` when its own
+checks fail after one perturbed retry. OpenCV 4.12 and later, including 5.x,
+draw perturbations from `cv::theRNG`, so such results need not repeat; before
+4.12, AMS falls back without perturbing and Direct perturbs
+deterministically. Both need at least five and at most
 `Integer_32'Last / 13` points, because every native path can reach
 `fitEllipseNoDirect`'s signed 32-bit `13 * n` allocation.
 
@@ -225,8 +227,9 @@ Both return Ada-owned binary32 vertices (`Float32_Point_Array`, indexed from
 `Intersect_Convex_Polygons` requires each polygon to be simple and strictly
 convex with at least three vertices, traversed once in either direction:
 every vertex must be a convex hull vertex, visited in hull order as
-`Convex_Hull_Indices` reports it. `Is_Convex` alone is not enough, because it
-also accepts self-intersecting stars and repeated traversals. OpenCV does not
+`Convex_Hull_Indices` reports it. `Is_Convex` alone is not enough: OpenCV
+leaves its result for non-simple contours undefined, and it may accept
+self-intersecting stars and repeated traversals. OpenCV does not
 check convexity, and OpenCV 4.x releases before 4.11 (including 4.6 and 4.10)
 can overflow an internal buffer on such input (OpenCV issue #25259). Vertex
 coordinates must lie in `-2**24 .. 2**24`, where OpenCV's binary32 conversion
@@ -240,9 +243,9 @@ vertex of some disjoint and contact results; it is omitted. OpenCV 4.11+ and
 `Partial_Intersection`, or `Full_Intersection` (OpenCV `INTERSECT_NONE`,
 `INTERSECT_PARTIAL`, `INTERSECT_FULL`) with at most eight vertices. A rectangle
 with zero or negative width or height intersects nothing. Non-finite fields
-raise `OpenCV_Error`. Touching rectangles are reported as a partial
-intersection at the contact; OpenCV 4.6 uses different contact tolerances from
-4.10 and 5.0.
+raise `OpenCV_Error`. Touching rectangles can be reported as a partial
+intersection with one or two contact vertices; OpenCV 4.6 uses different
+contact tolerances from 4.10 and 5.0.
 
 ## Rotation matrix
 

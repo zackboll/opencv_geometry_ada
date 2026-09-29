@@ -569,8 +569,8 @@ package body Fit_Line_2D_Tests is
       Expect_Invalid ("distance", "an unknown selector must be rejected");
       Status := Call (Selector => -1);
       Expect_Invalid ("distance", "a negative selector must be rejected");
-      --  The value range of Parameter and the accuracies is Ada policy:
-      --  narrowing them to binary32 is defined under IEC 559, and OpenCV's
+      --  The value range of Parameter and the accuracies is Ada policy: the
+      --  IEC 559 toolchains define narrowing them to binary32, and OpenCV's
       --  reweighting tolerates NaN and infinite values, so the shim passes
       --  them through and OpenCV must still return a finite line.
       declare

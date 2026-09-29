@@ -1447,10 +1447,12 @@ bool line_fit_distance(int32_t distance, int *native_distance) noexcept
     }
 }
 
-// fitLine narrows param, reps, and aeps to float. With IEC 559 floating
-// point that narrowing is defined for every double, and OpenCV's reweighting
-// tolerates NaN and infinite values, so their range is public Ada policy
-// rather than an ABI-safety condition.
+// fitLine narrows param, reps, and aeps to float. ISO C++ leaves narrowing
+// an out-of-range double undefined, but GCC and Clang, conforming to IEC 559
+// as asserted here, define it: out-of-range values become infinities, and
+// NaN and infinities convert exactly. OpenCV's reweighting tolerates NaN and
+// infinite values, so their range is public Ada policy rather than an
+// ABI-safety condition on the supported toolchains.
 static_assert(
     std::numeric_limits<float>::is_iec559
         && std::numeric_limits<double>::is_iec559,

@@ -194,9 +194,9 @@ package OpenCV.Geometry is
    --  binary32 center, full-axis Size, and Angle_Degrees in degrees, preserved
    --  without normalization. When AMS yields a parabola or hyperbola rather
    --  than an ellipse, OpenCV returns Fit_Ellipse_Direct's result instead.
-   --  When its system is numerically singular, as for points lying exactly on
-   --  one conic (always the case for five points), OpenCV falls back to its
-   --  classic least-squares fitEllipseNoDirect. OpenCV 4.12 and later,
+   --  When its system is numerically singular, as can happen for points
+   --  lying exactly on one conic, such as any five points, OpenCV falls back
+   --  to its classic least-squares fitEllipseNoDirect. OpenCV 4.12 and later,
    --  including 5.x, first retry such a system with random perturbations
    --  from cv::theRNG, so results for such sets need not repeat, and on those
    --  releases every call advances that generator. Fewer than five points
@@ -244,9 +244,10 @@ package OpenCV.Geometry is
    --  centroid of Points for L2 and a weighted centroid for the robust
    --  distances. Parameter is the constant C of Fair, Welsch, and Huber;
    --  0.0 selects OpenCV's defaults 1.3998, 2.9846, and 1.345, and the other
-   --  distances ignore it. A robust fit runs 20 restarts from subsets drawn
-   --  by OpenCV's fixed-seed internal generator, each reweighting at most 30
-   --  times, and returns the candidate with the smallest summed distance.
+   --  distances ignore it. A robust fit runs up to 20 restarts from subsets
+   --  drawn by OpenCV's fixed-seed internal generator, each reweighting at
+   --  most 30 times, and returns the best candidate it found by summed
+   --  distance.
    --  A restart's reweighting stops early once the direction changes by
    --  less than Angle_Accuracy radians and each coordinate of Point by less
    --  than Radius_Accuracy; 0.0 selects OpenCV's defaults 0.01 and 1.0, and
@@ -310,17 +311,19 @@ package OpenCV.Geometry is
    --  either direction: every vertex must be a vertex of its convex hull,
    --  visited in hull order, as Convex_Hull_Indices reports it. Repeated or
    --  collinear vertices, self-intersecting stars, and repeated traversals
-   --  raise OpenCV_Error; Is_Convex alone accepts the latter two. OpenCV
-   --  does not check any of this, and OpenCV 4.x releases before 4.11 can
-   --  overflow an internal buffer on such input. Every vertex coordinate
-   --  must also lie in -2**24 .. 2**24, where OpenCV's binary32 conversion
-   --  is exact; other coordinates raise OpenCV_Error. When the boundaries do
-   --  not cross and one polygon lies wholly inside or on the other,
-   --  Handle_Nested True returns that enclosed polygon and its area, and
-   --  Handle_Nested False returns an empty result. OpenCV documents that
-   --  polygons sharing an edge, or with a vertex on the other's edge, are not
-   --  treated as nested; such contacts return zero or near-zero Area with
-   --  the contact points, possibly repeated as OpenCV emits them. OpenCV
+   --  raise OpenCV_Error; Is_Convex, whose result OpenCV leaves undefined
+   --  for non-simple contours, may accept the latter two. OpenCV does not
+   --  check any of this, and OpenCV 4.x releases before 4.11 can overflow an
+   --  internal buffer on such input. Every vertex coordinate must also lie in
+   --  -2**24 .. 2**24, where OpenCV's binary32 conversion is exact; other
+   --  coordinates raise OpenCV_Error. When one polygon lies strictly inside
+   --  the other, so that their boundaries do not touch, Handle_Nested True
+   --  returns the inner polygon and its area, and Handle_Nested False
+   --  returns an empty result. OpenCV documents that polygons sharing an
+   --  edge, or with a vertex on the other's edge, are not treated as nested
+   --  and are intersected regardless of Handle_Nested. Polygons that touch
+   --  only from outside return zero or near-zero Area with the contact
+   --  points, possibly repeated as OpenCV emits them. OpenCV
    --  4.6, 4.10, and 5.0 also emit an internal (FLT_MAX, FLT_MAX) sentinel as
    --  the first or last vertex of some disjoint and contact results; it is
    --  not a vertex and is omitted. The result has at most Left'Length +
