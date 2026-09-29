@@ -188,6 +188,43 @@ package OpenCV.Geometry is
    --  negative size components raise OpenCV.OpenCV_Error.
    function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect;
 
+   --  Ellipse fitted to Points by cv::fitEllipseAMS, the Approximate Mean
+   --  Square method of Taubin. The result has Fit_Ellipse's representation:
+   --  the rotated rectangle in which the ellipse is inscribed, with native
+   --  binary32 center, full-axis Size, and Angle_Degrees in degrees, preserved
+   --  without normalization. When AMS yields a parabola or hyperbola rather
+   --  than an ellipse, OpenCV returns Fit_Ellipse_Direct's result instead.
+   --  When its system is numerically singular, as for points lying exactly on
+   --  one conic (always the case for five points), OpenCV falls back to its
+   --  classic least-squares fitEllipseNoDirect. OpenCV 4.12 and later,
+   --  including 5.x, first retry such a system with random perturbations
+   --  from cv::theRNG, so results for such sets need not repeat, and on those
+   --  releases every call advances that generator. Fewer than five points
+   --  raise OpenCV_Error. Because every native path can reach
+   --  fitEllipseNoDirect, which sizes a buffer as 13 * n doubles in signed
+   --  32-bit arithmetic, more than Integer_32'Last / 13 points raise
+   --  OpenCV_Error. Repeated, collinear, and other degenerate sets may still
+   --  produce a finite native result, including a zero-sized rectangle.
+   --  Native failures and non-finite or negative size components raise
+   --  OpenCV_Error. Points is unchanged.
+   function Fit_Ellipse_AMS (Points : Contour) return OpenCV.Rotated_Rect;
+
+   --  Ellipse fitted to Points by cv::fitEllipseDirect, the Direct least
+   --  squares method of Fitzgibbon, Pilu, and Fisher, which constrains the
+   --  fit to an ellipse. The result has Fit_Ellipse's representation. When
+   --  the system is numerically singular, or in OpenCV 4.14 and later
+   --  (including 5.x) its solution is not meaningfully elliptical, OpenCV
+   --  retries once with perturbed points and then falls back to its classic
+   --  least-squares fitEllipseNoDirect. The perturbation is deterministic
+   --  before OpenCV 4.12 and drawn from cv::theRNG in 4.12 and later,
+   --  including 5.x, where every call also advances that generator. Fewer
+   --  than five, or more than Integer_32'Last / 13, points raise
+   --  OpenCV_Error, as for Fit_Ellipse_AMS. Degenerate sets may still produce
+   --  a finite native result, including a zero-sized rectangle. Native
+   --  failures and non-finite or negative size components raise OpenCV_Error.
+   --  Points is unchanged.
+   function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect;
+
    --  Converts Box to four native CV_32F rectangle vertices. Vertices are
    --  returned in the active OpenCV backend's native order without rounding,
    --  reordering, or normalization. OpenCV 4.x and 5.0 compute them with

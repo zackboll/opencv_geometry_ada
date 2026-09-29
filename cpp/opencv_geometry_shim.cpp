@@ -1346,6 +1346,79 @@ opencv_geometry_fit_ellipse(
     }
 }
 
+namespace {
+
+using ellipse_fit = cv::RotatedRect (*)(cv::InputArray);
+
+// Shared body of the AMS and Direct ellipse fits.
+opencv_geometry_status fit_ellipse_variant(
+    ellipse_fit fit,
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null ellipse fit output pointer");
+    }
+    zero_rotated_rect(out_rect);
+    if (point_count < 0) {
+        return invalid_argument(
+            "ellipse fit point count must not be negative");
+    }
+    // ABI safety: fitEllipseAMS and fitEllipseDirect can both fall back to
+    // fitEllipseNoDirect (OpenCV 4.6, 4.10, and 5.0), which allocates
+    // AutoBuffer<double>(n*12+n) with signed int arithmetic; overflowing
+    // n*13 truncates that allocation and can then write out of bounds. The
+    // same bound keeps the other signed int count arithmetic on every
+    // reachable path in range: n*2 (Direct; AMS from 4.12) and
+    // mulTransposed's n * sizeof(double) row buffer size.
+    if (point_count > INT32_MAX / 13) {
+        return invalid_argument(
+            "ellipse fit point count exceeds native allocation range");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        const cv::RotatedRect rect = fit(contour);
+        out_rect->center_x = rect.center.x;
+        out_rect->center_y = rect.center.y;
+        out_rect->width = rect.size.width;
+        out_rect->height = rect.size.height;
+        out_rect->angle_degrees = rect.angle;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_rotated_rect(out_rect);
+        return translate_current_exception();
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_ams(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    return fit_ellipse_variant(
+        cv::fitEllipseAMS, points, point_count, out_rect);
+}
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_direct(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    return fit_ellipse_variant(
+        cv::fitEllipseDirect, points, point_count, out_rect);
+}
+
 opencv_geometry_status
 opencv_geometry_box_points(
     const opencv_geometry_rotated_rect_f32 *box,

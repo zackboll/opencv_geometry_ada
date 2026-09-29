@@ -255,6 +255,18 @@ opencv_geometry_fit_ellipse(
     opencv_geometry_rotated_rect_f32 *out_rect);
 
 opencv_geometry_status
+opencv_geometry_fit_ellipse_ams(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_direct(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+opencv_geometry_status
 opencv_geometry_box_points(
     const opencv_geometry_rotated_rect_f32 *box,
     opencv_geometry_box_vertices_f32 *out_vertices);

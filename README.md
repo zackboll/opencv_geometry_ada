@@ -21,8 +21,9 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
-`Box_Points`, `Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`,
-and `Get_Rotation_Matrix_2D`.
+`Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Box_Points`,
+`Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`, and
+`Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -101,6 +102,17 @@ size components raise `OpenCV_Error`.
 Ellipse : constant OpenCV.Rotated_Rect :=
   OpenCV.Geometry.Fit_Ellipse (Points);
 ```
+
+`Fit_Ellipse_AMS` (`cv::fitEllipseAMS`, Approximate Mean Square) and
+`Fit_Ellipse_Direct` (`cv::fitEllipseDirect`, Direct least squares) return the
+same representation. AMS returns the Direct fit when it finds a parabola or
+hyperbola; both fall back to OpenCV's classic `fitEllipseNoDirect` for
+numerically singular systems, such as points exactly on one conic (always the
+case for five points). OpenCV 4.12 and later, including 5.x, first perturb
+such systems with `cv::theRNG`, so those results need not repeat; earlier 4.x
+releases perturb deterministically. Both need at least five and at most
+`Integer_32'Last / 13` points, because every native path can reach
+`fitEllipseNoDirect`'s signed 32-bit `13 * n` allocation.
 
 `Box_Points` converts an `OpenCV.Rotated_Rect` to exactly four Ada-owned
 binary32 (`OpenCV.Float32_Point`) vertices. It is directly useful with the

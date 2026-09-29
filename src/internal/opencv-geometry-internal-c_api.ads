@@ -323,6 +323,24 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_fit_ellipse";
 
+   function Fit_Ellipse_AMS
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse_ams";
+
+   function Fit_Ellipse_Direct
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse_direct";
+
    function Box_Points
      (Box : access constant C_Rotated_Rect; Result : access C_Box_Vertices)
       return Status

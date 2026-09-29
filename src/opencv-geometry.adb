@@ -1188,6 +1188,73 @@ package body OpenCV.Geometry is
       return To_Public_Rotated_Rect (Result);
    end Fit_Ellipse;
 
+   type Ellipse_Fit_Variant is (AMS_Variant, Direct_Variant);
+
+   --  Shared body of Fit_Ellipse_AMS and Fit_Ellipse_Direct. Both native
+   --  algorithms need at least five points and can fall back to
+   --  fitEllipseNoDirect, whose n*12+n signed int allocation bounds the
+   --  count.
+   function Fit_Ellipse_With
+     (Points : Contour; Variant : Ellipse_Fit_Variant; Operation : String)
+      return OpenCV.Rotated_Rect
+   is
+      pragma Suppress (Validity_Check);
+      Result : aliased Internal.C_API.C_Rotated_Rect :=
+        (Center_X      => 0.0,
+         Center_Y      => 0.0,
+         Width         => 0.0,
+         Height        => 0.0,
+         Angle_Degrees => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      if Points'Length < 5 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " requires at least five points");
+      end if;
+      if Points'Length > Natural (Interfaces.Integer_32'Last) / 13 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " point count exceeds native allocation range");
+      end if;
+
+      declare
+         Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      begin
+         case Variant is
+            when AMS_Variant    =>
+               Status :=
+                 Internal.C_API.Fit_Ellipse_AMS
+                   (Packed (Packed'First)'Access,
+                    Interfaces.Integer_32 (Packed'Length),
+                    Result'Access);
+
+            when Direct_Variant =>
+               Status :=
+                 Internal.C_API.Fit_Ellipse_Direct
+                   (Packed (Packed'First)'Access,
+                    Interfaces.Integer_32 (Packed'Length),
+                    Result'Access);
+         end case;
+      end;
+      Raise_On_Error
+        (Status,
+         (case Variant is
+            when AMS_Variant    => "fit ellipse AMS",
+            when Direct_Variant => "fit ellipse direct"));
+      return To_Public_Rotated_Rect (Result);
+   end Fit_Ellipse_With;
+
+   function Fit_Ellipse_AMS (Points : Contour) return OpenCV.Rotated_Rect is
+   begin
+      return Fit_Ellipse_With (Points, AMS_Variant, "Fit_Ellipse_AMS");
+   end Fit_Ellipse_AMS;
+
+   function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect is
+   begin
+      return Fit_Ellipse_With (Points, Direct_Variant, "Fit_Ellipse_Direct");
+   end Fit_Ellipse_Direct;
+
    procedure Validate_Get_Rotation_Matrix_2D
      (Center : OpenCV.Float32_Point;
       Angle  : OpenCV.Float64_Value;
