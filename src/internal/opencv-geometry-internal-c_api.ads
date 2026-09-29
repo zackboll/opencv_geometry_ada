@@ -21,6 +21,23 @@ package OpenCV.Geometry.Internal.C_API is
    type Point_I32_Array is array (Natural range <>) of aliased Point_I32
    with Convention => C;
 
+   type Int32_Array is
+     array (Natural range <>) of aliased Interfaces.Integer_32
+   with Convention => C;
+
+   --  Native zero-based offsets and OpenCV's eight-fractional-bit depth.
+   type C_Convexity_Defect is record
+      Start_Index       : Interfaces.Integer_32;
+      End_Index         : Interfaces.Integer_32;
+      Farthest_Index    : Interfaces.Integer_32;
+      Fixed_Point_Depth : Interfaces.Integer_32;
+   end record
+   with Convention => C;
+
+   type C_Convexity_Defect_Array is
+     array (Natural range <>) of aliased C_Convexity_Defect
+   with Convention => C;
+
    type Rect_I32 is record
       X      : Interfaces.Integer_32;
       Y      : Interfaces.Integer_32;
@@ -167,6 +184,31 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_convex_hull";
+
+   function Convex_Hull_Indices
+     (Points       : access Point_I32;
+      Point_Count  : Interfaces.Integer_32;
+      Clockwise    : Interfaces.Integer_32;
+      Out_Indices  : access Interfaces.Integer_32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_convex_hull_indices";
+
+   function Convexity_Defects
+     (Points       : access Point_I32;
+      Point_Count  : Interfaces.Integer_32;
+      Hull_Indices : access constant Interfaces.Integer_32;
+      Hull_Count   : Interfaces.Integer_32;
+      Out_Defects  : access C_Convexity_Defect;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_convexity_defects";
 
    function Approximate_Curve
      (Points       : access Point_I32;

@@ -8,6 +8,8 @@ with Bounding_Rect_Tests;
 with Contour_Geometry_Tests;
 with Contour_Moments_Tests;
 with Convex_Hull_Tests;
+with Convex_Hull_Indices_Tests;
+with Convexity_Defects_Tests;
 with Is_Convex_Tests;
 with Hu_Moments_Tests;
 with Match_Shapes_Tests;
@@ -35,6 +37,8 @@ procedure Tests is
 begin
    Suite.Add_Test (Contour_Moments_Tests.Suite);
    Suite.Add_Test (Convex_Hull_Tests.Suite);
+   Suite.Add_Test (Convex_Hull_Indices_Tests.Suite);
+   Suite.Add_Test (Convexity_Defects_Tests.Suite);
    Suite.Add_Test (Approximate_Curve_Tests.Suite);
    Suite.Add_Test (Bounding_Rect_Tests.Suite);
    Suite.Add_Test (Is_Convex_Tests.Suite);

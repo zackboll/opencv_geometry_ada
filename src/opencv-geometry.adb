@@ -4,6 +4,7 @@ with Interfaces;
 with Interfaces.C;
 with OpenCV.Core.Float64_Access;
 with OpenCV.Geometry.Internal.C_API;
+with OpenCV.Geometry.Internal.Convexity;
 
 package body OpenCV.Geometry is
 
@@ -358,6 +359,262 @@ package body OpenCV.Geometry is
          end;
       end if;
    end Convex_Hull;
+
+   function Empty_Point_Indices return Point_Index_Array is
+      Empty : Point_Index_Array (1 .. 0);
+   begin
+      return Empty;
+   end Empty_Point_Indices;
+
+   function Empty_Convexity_Defects return Convexity_Defect_Array is
+      Empty : Convexity_Defect_Array (1 .. 0);
+   begin
+      return Empty;
+   end Empty_Convexity_Defects;
+
+   --  Converts a native zero-based offset to its index in Points'Range.
+   --  Native results outside Points raise OpenCV_Error instead of producing
+   --  an invalid public index.
+   function To_Public_Point_Index
+     (Points : Contour; Offset : Interfaces.Integer_32; Operation : String)
+      return Natural is
+   begin
+      if Points'Length = 0
+        or else not Internal.Convexity.Is_Native_Offset
+                      (Points'First, Points'Last, Offset)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation
+            & " failed: native index"
+            & Interfaces.Integer_32'Image (Offset)
+            & " is outside the contour");
+      end if;
+      return
+        Internal.Convexity.To_Point_Index (Points'First, Points'Last, Offset);
+   end To_Public_Point_Index;
+
+   function Convex_Hull_Indices
+     (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
+      return Point_Index_Array
+   is
+      use type Interfaces.Integer_32;
+
+      Packed    : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Count     : aliased Interfaces.Integer_32 := 0;
+      Status    : Internal.C_API.Status;
+      Clockwise : constant Interfaces.Integer_32 :=
+        To_C_Clockwise (Orientation);
+   begin
+      if Packed'Length = 0 then
+         Status :=
+           Internal.C_API.Convex_Hull_Indices
+             (null, 0, Clockwise, null, 0, Count'Access);
+         Raise_On_Error (Status, "convex hull indices");
+         return Empty_Point_Indices;
+      end if;
+
+      declare
+         --  Hull vertices are distinct source points, so the hull count is
+         --  at most Points'Length.
+         Output : Internal.C_API.Int32_Array (0 .. Packed'Length - 1);
+      begin
+         Status :=
+           Internal.C_API.Convex_Hull_Indices
+             (Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Packed'Length),
+              Clockwise,
+              Output (Output'First)'Access,
+              Interfaces.Integer_32 (Output'Length),
+              Count'Access);
+         Raise_On_Error (Status, "convex hull indices");
+         if Count < 0 then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "convex hull indices failed: negative hull count");
+         end if;
+         if Natural (Count) > Output'Length then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "convex hull indices failed: hull count exceeds capacity");
+         end if;
+         if Count = 0 then
+            return Empty_Point_Indices;
+         end if;
+
+         declare
+            Result : Point_Index_Array (0 .. Natural (Count) - 1);
+         begin
+            for Position in Result'Range loop
+               Result (Position) :=
+                 To_Public_Point_Index
+                   (Points,
+                    Output (Output'First + Position),
+                    "convex hull indices");
+            end loop;
+            return Result;
+         end;
+      end;
+   end Convex_Hull_Indices;
+
+   --  Public semantic policy for a hull passed to convexity defects: every
+   --  index in Points'Range, and the strictly monotonic order that native
+   --  convexityDefects traverses. Native OpenCV 4.6, 4.10, and 5.0 accept
+   --  exactly the strictly monotonic distinct-index hulls, but also accept
+   --  some hulls with repeated indices, which this policy rejects.
+   procedure Validate_Defect_Hull
+     (Points : Contour; Hull : Point_Index_Array; Computed : Boolean) is
+   begin
+      for Index of Hull loop
+         if Index not in Points'Range then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "convexity defects hull index"
+               & Natural'Image (Index)
+               & " is outside Points'Range");
+         end if;
+      end loop;
+
+      if not Internal.Convexity.Is_Strictly_Monotonic (Hull) then
+         if Computed then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "convexity defects failed: convex hull indices are not "
+               & "monotonic; Points may be self-intersecting");
+         else
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "convexity defects hull indices must be strictly increasing "
+               & "or strictly decreasing");
+         end if;
+      end if;
+   end Validate_Defect_Hull;
+
+   function To_Public_Defects
+     (Points : Contour;
+      Output : Internal.C_API.C_Convexity_Defect_Array;
+      Count  : Natural) return Convexity_Defect_Array
+   is
+      use type OpenCV.Float64_Value;
+
+      Scale : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value (Internal.Convexity.Fixed_Point_Depth_Scale);
+   begin
+      if Count = 0 then
+         return Empty_Convexity_Defects;
+      end if;
+
+      declare
+         Result : Convexity_Defect_Array (0 .. Count - 1);
+      begin
+         for Position in Result'Range loop
+            declare
+               Native : Internal.C_API.C_Convexity_Defect renames
+                 Output (Output'First + Position);
+            begin
+               Result (Position) :=
+                 (Start_Index    =>
+                    To_Public_Point_Index
+                      (Points, Native.Start_Index, "convexity defects"),
+                  End_Index      =>
+                    To_Public_Point_Index
+                      (Points, Native.End_Index, "convexity defects"),
+                  Farthest_Index =>
+                    To_Public_Point_Index
+                      (Points, Native.Farthest_Index, "convexity defects"),
+                  Depth          =>
+                    OpenCV.Float64_Value (Native.Fixed_Point_Depth) / Scale);
+            end;
+         end loop;
+         return Result;
+      end;
+   end To_Public_Defects;
+
+   --  Calls native convexityDefects for a validated Hull when Points has
+   --  more than three points and Hull at least three indices.
+   function Native_Convexity_Defects
+     (Points : Contour; Hull : Point_Index_Array) return Convexity_Defect_Array
+   is
+      use type Interfaces.Integer_32;
+
+      Packed      : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Native_Hull : Internal.C_API.Int32_Array (0 .. Hull'Length - 1);
+      --  Native convexityDefects appends at most one defect per hull index,
+      --  and a validated Hull has at most Points'Length indices.
+      Output      :
+        Internal.C_API.C_Convexity_Defect_Array (0 .. Hull'Length - 1);
+      Count       : aliased Interfaces.Integer_32 := 0;
+      Status      : Internal.C_API.Status;
+   begin
+      if not Internal.Convexity.Defect_Extent_Is_Safe
+               (Internal.Convexity.Bounds_Of (Points))
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "convexity defects contour spans exceed the native fixed-point "
+            & "depth range: Width**2 + Height**2 must not exceed "
+            & "8388607**2");
+      end if;
+
+      for Position in Hull'Range loop
+         Native_Hull (Position - Hull'First) :=
+           Internal.Convexity.To_Native_Offset
+             (Points'First, Points'Last, Hull (Position));
+      end loop;
+
+      Status :=
+        Internal.C_API.Convexity_Defects
+          (Packed (Packed'First)'Access,
+           Interfaces.Integer_32 (Packed'Length),
+           Native_Hull (Native_Hull'First)'Access,
+           Interfaces.Integer_32 (Native_Hull'Length),
+           Output (Output'First)'Access,
+           Interfaces.Integer_32 (Output'Length),
+           Count'Access);
+      Raise_On_Error (Status, "convexity defects");
+      if Count < 0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "convexity defects failed: negative defect count");
+      end if;
+      if Natural (Count) > Output'Length then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "convexity defects failed: defect count exceeds capacity");
+      end if;
+      return To_Public_Defects (Points, Output, Natural (Count));
+   end Native_Convexity_Defects;
+
+   function Convexity_Defects_For_Hull
+     (Points : Contour; Hull : Point_Index_Array; Computed : Boolean)
+      return Convexity_Defect_Array is
+   begin
+      Validate_Defect_Hull (Points, Hull, Computed);
+      --  Native convexityDefects returns no defects for at most three
+      --  contour points or fewer than three hull indices.
+      if Points'Length <= 3 or else Hull'Length < 3 then
+         return Empty_Convexity_Defects;
+      end if;
+      return Native_Convexity_Defects (Points, Hull);
+   end Convexity_Defects_For_Hull;
+
+   function Convexity_Defects
+     (Points : Contour; Hull : Point_Index_Array) return Convexity_Defect_Array
+   is
+   begin
+      return Convexity_Defects_For_Hull (Points, Hull, Computed => False);
+   end Convexity_Defects;
+
+   function Convexity_Defects (Points : Contour) return Convexity_Defect_Array
+   is
+   begin
+      if Points'Length <= 3 then
+         return Empty_Convexity_Defects;
+      end if;
+      return
+        Convexity_Defects_For_Hull
+          (Points, Convex_Hull_Indices (Points), Computed => True);
+   end Convexity_Defects;
 
    function Approximate_Curve
      (Points : Contour; Epsilon : OpenCV.Float64_Value; Closed : Boolean)
