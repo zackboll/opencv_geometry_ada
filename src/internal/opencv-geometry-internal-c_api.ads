@@ -38,6 +38,15 @@ package OpenCV.Geometry.Internal.C_API is
      array (Natural range <>) of aliased C_Convexity_Defect
    with Convention => C;
 
+   type Point_F32 is record
+      X : Interfaces.C.C_float;
+      Y : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
+   type Point_F32_Array is array (Natural range <>) of aliased Point_F32
+   with Convention => C;
+
    type Rect_I32 is record
       X      : Interfaces.Integer_32;
       Y      : Interfaces.Integer_32;
@@ -314,6 +323,52 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_fit_ellipse";
 
+   function Fit_Ellipse_AMS
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse_ams";
+
+   function Fit_Ellipse_Direct
+     (Points      : access Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse_direct";
+
+   type C_Line_2D is record
+      Direction_X : Interfaces.C.C_float;
+      Direction_Y : Interfaces.C.C_float;
+      Point_X     : Interfaces.C.C_float;
+      Point_Y     : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
+   Line_Fit_L2     : constant Interfaces.Integer_32 := 0;
+   Line_Fit_L1     : constant Interfaces.Integer_32 := 1;
+   Line_Fit_L12    : constant Interfaces.Integer_32 := 2;
+   Line_Fit_Fair   : constant Interfaces.Integer_32 := 3;
+   Line_Fit_Welsch : constant Interfaces.Integer_32 := 4;
+   Line_Fit_Huber  : constant Interfaces.Integer_32 := 5;
+
+   function Fit_Line_2D
+     (Points          : access Point_I32;
+      Point_Count     : Interfaces.Integer_32;
+      Distance        : Interfaces.Integer_32;
+      Parameter       : Interfaces.C.double;
+      Radius_Accuracy : Interfaces.C.double;
+      Angle_Accuracy  : Interfaces.C.double;
+      Result          : access C_Line_2D) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_line_2d";
+
    function Box_Points
      (Box : access constant C_Rotated_Rect; Result : access C_Box_Vertices)
       return Status
@@ -329,6 +384,37 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_get_rotation_matrix_2d";
+
+   function Intersect_Convex_Convex
+     (Left_Points   : access Point_I32;
+      Left_Count    : Interfaces.Integer_32;
+      Right_Points  : access Point_I32;
+      Right_Count   : Interfaces.Integer_32;
+      Handle_Nested : Interfaces.Integer_32;
+      Out_Vertices  : access Point_F32;
+      Out_Capacity  : Interfaces.Integer_32;
+      Out_Count     : access Interfaces.Integer_32;
+      Out_Area      : access Interfaces.C.C_float) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_intersect_convex_convex";
+
+   Rectangles_Intersect_None    : constant Interfaces.Integer_32 := 0;
+   Rectangles_Intersect_Partial : constant Interfaces.Integer_32 := 1;
+   Rectangles_Intersect_Full    : constant Interfaces.Integer_32 := 2;
+
+   function Rotated_Rectangle_Intersection
+     (Left         : access constant C_Rotated_Rect;
+      Right        : access constant C_Rotated_Rect;
+      Out_Kind     : access Interfaces.Integer_32;
+      Out_Vertices : access Point_F32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_rotated_rectangle_intersection";
 
    function Last_Error_Message return String;
 

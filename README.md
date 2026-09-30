@@ -21,7 +21,9 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
-`Box_Points`, and `Get_Rotation_Matrix_2D`.
+`Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Fit_Line_2D`, `Box_Points`,
+`Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`, and
+`Get_Rotation_Matrix_2D`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -101,6 +103,19 @@ Ellipse : constant OpenCV.Rotated_Rect :=
   OpenCV.Geometry.Fit_Ellipse (Points);
 ```
 
+`Fit_Ellipse_AMS` (`cv::fitEllipseAMS`, Approximate Mean Square) and
+`Fit_Ellipse_Direct` (`cv::fitEllipseDirect`, Direct least squares) return the
+same representation. AMS returns the Direct fit when it finds a parabola or
+hyperbola, and falls back to OpenCV's classic `fitEllipseNoDirect` when its
+system is numerically singular, as can happen for points exactly on one conic,
+such as any five points. Direct falls back to `fitEllipseNoDirect` when its own
+checks fail after one perturbed retry. OpenCV 4.12 and later, including 5.x,
+draw perturbations from `cv::theRNG`, so such results need not repeat; before
+4.12, AMS falls back without perturbing and Direct perturbs
+deterministically. Both need at least five and at most
+`Integer_32'Last / 13` points, because every native path can reach
+`fitEllipseNoDirect`'s signed 32-bit `13 * n` allocation.
+
 `Box_Points` converts an `OpenCV.Rotated_Rect` to exactly four Ada-owned
 binary32 (`OpenCV.Float32_Point`) vertices. It is directly useful with the
 rotated rectangle returned by `Minimum_Area_Rectangle` and the rectangle in
@@ -167,6 +182,70 @@ Y spans of `Points` must therefore satisfy
 `8_388_607 = Integer_32'Last / 256`. The bound also keeps OpenCV's signed
 32-bit coordinate subtraction from overflowing. Larger spans raise
 `OpenCV_Error` before native code runs.
+
+## Line fitting
+
+```ada
+type Line_Fit_Distance is (L2, L1, L12, Fair, Welsch, Huber);
+
+function Fit_Line_2D
+  (Points          : Contour;
+   Distance        : Line_Fit_Distance := L2;
+   Parameter       : OpenCV.Float64_Value := 0.0;
+   Radius_Accuracy : OpenCV.Float64_Value := 0.01;
+   Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D;
+```
+
+`Fit_Line_2D` binds the 2D form of `cv::fitLine`. The result holds OpenCV's
+unit `Direction` (vx, vy) and a `Point` (x0, y0) on the line in native binary32
+values. The direction's sign is OpenCV's and is not normalized; the opposite
+direction describes the same line. `L2` is orthogonal least squares; the other
+distances are robust M-estimators that OpenCV solves by reweighting from
+fixed-seed random subsets, so results repeat for the same input order.
+`Parameter` is the constant of `Fair`, `Welsch`, and `Huber` (0.0 selects
+OpenCV's defaults); the accuracies end each robust reweighting early (0.0
+selects OpenCV's defaults 1.0 and 0.01). All three must be finite,
+nonnegative, and at most `Float32_Value'Last`. At least one point is required,
+and more than `Integer_32'Last / 2` points are rejected because OpenCV computes
+`2 * n` in signed 32-bit arithmetic.
+
+## Polygon and rotated-rectangle intersection
+
+```ada
+function Intersect_Convex_Polygons
+  (Left, Right : Contour; Handle_Nested : Boolean := True)
+   return Convex_Polygon_Intersection;   --  Area and Vertices
+
+function Intersect_Rotated_Rectangles
+  (Left, Right : OpenCV.Rotated_Rect)
+   return Rotated_Rectangle_Intersection;  --  Kind and Vertices
+```
+
+Both return Ada-owned binary32 vertices (`Float32_Point_Array`, indexed from
+1) in native OpenCV order without normalization.
+
+`Intersect_Convex_Polygons` requires each polygon to be simple and strictly
+convex with at least three vertices, traversed once in either direction:
+every vertex must be a convex hull vertex, visited in hull order as
+`Convex_Hull_Indices` reports it. `Is_Convex` alone is not enough: OpenCV
+leaves its result for non-simple contours undefined, and it may accept
+self-intersecting stars and repeated traversals. OpenCV does not
+check convexity, and OpenCV 4.x releases before 4.11 (including 4.6 and 4.10)
+can overflow an internal buffer on such input (OpenCV issue #25259). Vertex
+coordinates must lie in `-2**24 .. 2**24`, where OpenCV's binary32 conversion
+is exact. `Handle_Nested` defaults to `True` as in OpenCV. OpenCV 4.6, 4.10,
+and 5.0 can emit an internal `(FLT_MAX, FLT_MAX)` sentinel as the first or last
+vertex of some disjoint and contact results; it is omitted. OpenCV 4.11+ and
+5.x report a non-converging intersection with a negative area, which raises
+`OpenCV_Error`.
+
+`Intersect_Rotated_Rectangles` returns `No_Intersection`,
+`Partial_Intersection`, or `Full_Intersection` (OpenCV `INTERSECT_NONE`,
+`INTERSECT_PARTIAL`, `INTERSECT_FULL`) with at most eight vertices. A rectangle
+with zero or negative width or height intersects nothing. Non-finite fields
+raise `OpenCV_Error`. Touching rectangles can be reported as a partial
+intersection with one or two contact vertices; OpenCV 4.6 uses different
+contact tolerances from 4.10 and 5.0.
 
 ## Rotation matrix
 

@@ -1346,6 +1346,178 @@ opencv_geometry_fit_ellipse(
     }
 }
 
+namespace {
+
+using ellipse_fit = cv::RotatedRect (*)(cv::InputArray);
+
+// Shared body of the AMS and Direct ellipse fits.
+opencv_geometry_status fit_ellipse_variant(
+    ellipse_fit fit,
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null ellipse fit output pointer");
+    }
+    zero_rotated_rect(out_rect);
+    if (point_count < 0) {
+        return invalid_argument(
+            "ellipse fit point count must not be negative");
+    }
+    // ABI safety: fitEllipseAMS and fitEllipseDirect can both fall back to
+    // fitEllipseNoDirect (OpenCV 4.6, 4.10, and 5.0), which allocates
+    // AutoBuffer<double>(n*12+n) with signed int arithmetic; overflowing
+    // n*13 truncates that allocation and can then write out of bounds. The
+    // same bound keeps the other signed int count arithmetic on every
+    // reachable path in range: n*2 (Direct; AMS from 4.12) and
+    // mulTransposed's n * sizeof(double) row buffer size.
+    if (point_count > INT32_MAX / 13) {
+        return invalid_argument(
+            "ellipse fit point count exceeds native allocation range");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        const cv::RotatedRect rect = fit(contour);
+        out_rect->center_x = rect.center.x;
+        out_rect->center_y = rect.center.y;
+        out_rect->width = rect.size.width;
+        out_rect->height = rect.size.height;
+        out_rect->angle_degrees = rect.angle;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_rotated_rect(out_rect);
+        return translate_current_exception();
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_ams(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    return fit_ellipse_variant(
+        cv::fitEllipseAMS, points, point_count, out_rect);
+}
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_direct(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    return fit_ellipse_variant(
+        cv::fitEllipseDirect, points, point_count, out_rect);
+}
+
+namespace {
+
+bool line_fit_distance(int32_t distance, int *native_distance) noexcept
+{
+    switch (distance) {
+    case OPENCV_GEOMETRY_LINE_FIT_L2:
+        *native_distance = cv::DIST_L2;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_L1:
+        *native_distance = cv::DIST_L1;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_L12:
+        *native_distance = cv::DIST_L12;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_FAIR:
+        *native_distance = cv::DIST_FAIR;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_WELSCH:
+        *native_distance = cv::DIST_WELSCH;
+        return true;
+    case OPENCV_GEOMETRY_LINE_FIT_HUBER:
+        *native_distance = cv::DIST_HUBER;
+        return true;
+    default:
+        return false;
+    }
+}
+
+// fitLine narrows param, reps, and aeps to float. ISO C++ leaves narrowing
+// an out-of-range double undefined, but GCC and Clang, conforming to IEC 559
+// as asserted here, define it: out-of-range values become infinities, and
+// NaN and infinities convert exactly. OpenCV's reweighting tolerates NaN and
+// infinite values, so their range is public Ada policy rather than an
+// ABI-safety condition on the supported toolchains.
+static_assert(
+    std::numeric_limits<float>::is_iec559
+        && std::numeric_limits<double>::is_iec559,
+    "fit line parameter narrowing assumes IEC 559 floating point");
+
+}
+
+opencv_geometry_status
+opencv_geometry_fit_line_2d(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t distance,
+    double parameter,
+    double radius_accuracy,
+    double angle_accuracy,
+    opencv_geometry_line_2d_f32 *out_line)
+{
+    clear_error();
+    if (out_line == nullptr) {
+        return invalid_argument("null fit line output pointer");
+    }
+    *out_line = opencv_geometry_line_2d_f32{};
+    if (point_count < 0) {
+        return invalid_argument("fit line point count must not be negative");
+    }
+    // ABI safety: OpenCV 4.6, 4.10, and 5.0 compute count*2 in signed int
+    // for every distance (convertTo's continuous size of the CV_32S points)
+    // and again for the robust distances (fitLine2D's AutoBuffer<float>).
+    // Larger counts overflow that arithmetic, which is undefined behavior.
+    if (point_count > INT32_MAX / 2) {
+        return invalid_argument(
+            "fit line point count exceeds native allocation range");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    int native_distance = 0;
+    if (!line_fit_distance(distance, &native_distance)) {
+        return invalid_argument("fit line distance selector is invalid");
+    }
+
+    try {
+        const std::vector<cv::Point> contour =
+            contour_from_points(points, point_count);
+        cv::Vec4f line;
+        cv::fitLine(
+            contour,
+            line,
+            native_distance,
+            parameter,
+            radius_accuracy,
+            angle_accuracy);
+        opencv_geometry_line_2d_f32 result{};
+        result.direction_x = line[0];
+        result.direction_y = line[1];
+        result.point_x = line[2];
+        result.point_y = line[3];
+        *out_line = result;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_line = opencv_geometry_line_2d_f32{};
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_box_points(
     const opencv_geometry_rotated_rect_f32 *box,
@@ -1601,6 +1773,283 @@ opencv_geometry_approximate_curve(
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+namespace {
+
+// OpenCV 4.11.0 (upstream commit 6623c62f56, issue #25259) bounded the output
+// of intersectConvexConvex_: each loop iteration writes at most three points,
+// the loop stops once n + m + 1 result slots are exceeded inside a buffer with
+// three spare slots, and the function then returns -1. OpenCV 5.0 has the same
+// bound. OpenCV 4.x releases before 4.11, including 4.6 and 4.10, write without
+// that bound into an n + m + 1 slot region of their AutoBuffer (inline or
+// heap storage), so input that is not a simple convex polygon can overflow
+// OpenCV's own buffer.
+#if CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 11
+constexpr bool native_convex_intersection_output_is_bounded = false;
+#else
+constexpr bool native_convex_intersection_output_is_bounded = true;
+#endif
+
+// OpenCV converts integer polygon vertices to binary32 before intersecting
+// them. Every integer of magnitude at most 2^24 converts exactly.
+constexpr int64_t binary32_exact_integer_limit = 16777216;
+
+// Native intersectConvexConvex allocates 2 * (n + m) + 4 points (4.11+ and
+// 5.x) or 2 * (n + m) + 1 points (earlier 4.x) with signed int arithmetic.
+constexpr int64_t maximum_convex_intersection_input_count =
+    (static_cast<int64_t>(INT32_MAX) - 4) / 2;
+
+// True when polygon is a simple, strictly convex polygon traversed once, with
+// binary32-exact coordinates: its convex hull has every vertex, visited as one
+// cyclic run in contour order. isContourConvex alone accepts self-intersecting
+// stars and repeated traversals.
+bool polygon_is_simple_convex_in_binary32(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    const std::vector<cv::Point> &polygon)
+{
+    if (point_count < 3) {
+        return false;
+    }
+    for (int32_t index = 0; index < point_count; ++index) {
+        const int64_t x = points[index].x;
+        const int64_t y = points[index].y;
+        if (x < -binary32_exact_integer_limit
+            || x > binary32_exact_integer_limit
+            || y < -binary32_exact_integer_limit
+            || y > binary32_exact_integer_limit) {
+            return false;
+        }
+    }
+    if (!integer_convex_hull_arithmetic_is_safe(points, point_count)) {
+        return false;
+    }
+    std::vector<int> hull;
+    cv::convexHull(polygon, hull, false, false);
+    if (hull.size() != static_cast<std::size_t>(point_count)) {
+        return false;
+    }
+    bool forward = true;
+    bool backward = true;
+    for (std::size_t position = 0; position + 1 < hull.size(); ++position) {
+        const int index = hull[position];
+        const int next = index + 1 == point_count ? 0 : index + 1;
+        const int previous = index == 0 ? point_count - 1 : index - 1;
+        forward = forward && hull[position + 1] == next;
+        backward = backward && hull[position + 1] == previous;
+    }
+    return forward || backward;
+}
+
+// OpenCV compatibility: intersectConvexConvex_ (OpenCV 4.6, 4.10, and 5.0)
+// stores a (FLT_MAX, FLT_MAX) sentinel in its first result slot and drops it
+// only on its normal exit. Its early exits, for parallel separated edges and
+// for oppositely oriented overlapping edges, return that slot as a vertex:
+// first, or last after intersectConvexConvex reverses a result whose inputs
+// were both clockwise. Every genuine vertex is an input vertex or an edge
+// crossing, so integer input never yields FLT_MAX and the sentinel is
+// unambiguous.
+bool is_convex_intersection_sentinel(const cv::Point2f &point) noexcept
+{
+    const float sentinel = std::numeric_limits<float>::max();
+    return point.x == sentinel && point.y == sentinel;
+}
+
+void copy_points_f32(
+    const std::vector<cv::Point2f> &points,
+    opencv_geometry_point_f32 *out_points) noexcept
+{
+    for (std::size_t index = 0; index < points.size(); ++index) {
+        out_points[index].x = points[index].x;
+        out_points[index].y = points[index].y;
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_intersect_convex_convex(
+    const opencv_geometry_point_i32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_i32 *right_points,
+    int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count,
+    float *out_area)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null convex intersection output count pointer");
+    }
+    *out_count = 0;
+    if (out_area == nullptr) {
+        return invalid_argument(
+            "null convex intersection output area pointer");
+    }
+    *out_area = 0.0f;
+    if (left_count < 0 || right_count < 0) {
+        return invalid_argument(
+            "convex intersection point count must not be negative");
+    }
+    if (left_count > 0 && left_points == nullptr) {
+        return invalid_argument("null left polygon points with positive count");
+    }
+    if (right_count > 0 && right_points == nullptr) {
+        return invalid_argument(
+            "null right polygon points with positive count");
+    }
+    if (handle_nested != 0 && handle_nested != 1) {
+        return invalid_argument(
+            "convex intersection nested selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "convex intersection output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any intersection vertices.
+    if (out_capacity > 0 && out_vertices == nullptr) {
+        return invalid_argument(
+            "null convex intersection output vertices with positive capacity");
+    }
+    // ABI safety: native intersectConvexConvex sizes its scratch buffer as
+    // 2 * (n + m) + 4 (or + 1 before 4.11) in signed int before validating
+    // anything, so larger combined counts would overflow native arithmetic.
+    if (static_cast<int64_t>(left_count) + right_count
+        > maximum_convex_intersection_input_count) {
+        return invalid_argument(
+            "convex intersection point counts exceed native allocation range");
+    }
+
+    try {
+        const std::vector<cv::Point> left =
+            contour_from_points(left_points, left_count);
+        const std::vector<cv::Point> right =
+            contour_from_points(right_points, right_count);
+        // ABI safety: OpenCV 4.x before 4.11 can write past its own buffer
+        // for input that is not a simple convex polygon (see above). It runs
+        // that loop only when both polygons have at least two points, so on
+        // those versions require both to be simple, strictly convex, and
+        // binary32-exact exactly as OpenCV processes them.
+        if (!native_convex_intersection_output_is_bounded
+            && left_count >= 2 && right_count >= 2
+            && (!polygon_is_simple_convex_in_binary32(
+                    left_points, left_count, left)
+                || !polygon_is_simple_convex_in_binary32(
+                    right_points, right_count, right))) {
+            return invalid_argument(
+                "convex intersection version guard: polygons must be simple, "
+                "strictly convex, and binary32-exact before OpenCV 4.11");
+        }
+        std::vector<cv::Point2f> native;
+        const float area = cv::intersectConvexConvex(
+            left, right, native, handle_nested != 0);
+        std::vector<cv::Point2f> intersection;
+        intersection.reserve(native.size());
+        for (const cv::Point2f &point : native) {
+            if (!is_convex_intersection_sentinel(point)) {
+                intersection.push_back(point);
+            }
+        }
+        // ABI safety: copying more vertices than capacity would overflow the
+        // caller-provided buffer.
+        if (intersection.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "convex intersection output capacity is insufficient");
+        }
+        copy_points_f32(intersection, out_vertices);
+        *out_count = static_cast<int32_t>(intersection.size());
+        *out_area = area;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        *out_area = 0.0f;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_rotated_rectangle_intersection(
+    const opencv_geometry_rotated_rect_f32 *left,
+    const opencv_geometry_rotated_rect_f32 *right,
+    int32_t *out_kind,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null rectangle intersection output count pointer");
+    }
+    *out_count = 0;
+    if (out_kind == nullptr) {
+        return invalid_argument(
+            "null rectangle intersection output kind pointer");
+    }
+    *out_kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE;
+    if (left == nullptr || right == nullptr) {
+        return invalid_argument("null rotated rectangle pointer");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "rectangle intersection output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any intersection vertices.
+    if (out_capacity > 0 && out_vertices == nullptr) {
+        return invalid_argument(
+            "null rectangle intersection output vertices with positive "
+            "capacity");
+    }
+
+    try {
+        const cv::RotatedRect left_box(
+            cv::Point2f(left->center_x, left->center_y),
+            cv::Size2f(left->width, left->height),
+            left->angle_degrees);
+        const cv::RotatedRect right_box(
+            cv::Point2f(right->center_x, right->center_y),
+            cv::Size2f(right->width, right->height),
+            right->angle_degrees);
+        std::vector<cv::Point2f> region;
+        const int native_kind =
+            cv::rotatedRectangleIntersection(left_box, right_box, region);
+        int32_t kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE;
+        switch (native_kind) {
+        case cv::INTERSECT_NONE:
+            kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE;
+            break;
+        case cv::INTERSECT_PARTIAL:
+            kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_PARTIAL;
+            break;
+        case cv::INTERSECT_FULL:
+            kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_FULL;
+            break;
+        default:
+            set_error("rectangle intersection returned an unknown kind");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
+        }
+        // ABI safety: copying more vertices than capacity would overflow the
+        // caller-provided buffer. OpenCV 4.6, 4.10, and 5.0 reduce the region
+        // to at most eight vertices.
+        if (region.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "rectangle intersection output capacity is insufficient");
+        }
+        copy_points_f32(region, out_vertices);
+        *out_count = static_cast<int32_t>(region.size());
+        *out_kind = kind;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        *out_kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE;
         return translate_current_exception();
     }
 }

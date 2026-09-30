@@ -188,6 +188,92 @@ package OpenCV.Geometry is
    --  negative size components raise OpenCV.OpenCV_Error.
    function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect;
 
+   --  Ellipse fitted to Points by cv::fitEllipseAMS, the Approximate Mean
+   --  Square method of Taubin. The result has Fit_Ellipse's representation:
+   --  the rotated rectangle in which the ellipse is inscribed, with native
+   --  binary32 center, full-axis Size, and Angle_Degrees in degrees, preserved
+   --  without normalization. When AMS yields a parabola or hyperbola rather
+   --  than an ellipse, OpenCV returns Fit_Ellipse_Direct's result instead.
+   --  When its system is numerically singular, as can happen for points
+   --  lying exactly on one conic, such as any five points, OpenCV falls back
+   --  to its classic least-squares fitEllipseNoDirect. OpenCV 4.12 and later,
+   --  including 5.x, first retry such a system with random perturbations
+   --  from cv::theRNG, so results for such sets need not repeat, and on those
+   --  releases every call advances that generator. Fewer than five points
+   --  raise OpenCV_Error. Because every native path can reach
+   --  fitEllipseNoDirect, which sizes a buffer as 13 * n doubles in signed
+   --  32-bit arithmetic, more than Integer_32'Last / 13 points raise
+   --  OpenCV_Error. Repeated, collinear, and other degenerate sets may still
+   --  produce a finite native result, including a zero-sized rectangle.
+   --  Native failures and non-finite or negative size components raise
+   --  OpenCV_Error. Points is unchanged.
+   function Fit_Ellipse_AMS (Points : Contour) return OpenCV.Rotated_Rect;
+
+   --  Ellipse fitted to Points by cv::fitEllipseDirect, the Direct least
+   --  squares method of Fitzgibbon, Pilu, and Fisher, which constrains the
+   --  fit to an ellipse. The result has Fit_Ellipse's representation. When
+   --  the system is numerically singular, or in OpenCV 4.14 and later
+   --  (including 5.x) its solution is not meaningfully elliptical, OpenCV
+   --  retries once with perturbed points and then falls back to its classic
+   --  least-squares fitEllipseNoDirect. The perturbation is deterministic
+   --  before OpenCV 4.12 and drawn from cv::theRNG in 4.12 and later,
+   --  including 5.x, where every call also advances that generator. Fewer
+   --  than five, or more than Integer_32'Last / 13, points raise
+   --  OpenCV_Error, as for Fit_Ellipse_AMS. Degenerate sets may still produce
+   --  a finite native result, including a zero-sized rectangle. Native
+   --  failures and non-finite or negative size components raise OpenCV_Error.
+   --  Points is unchanged.
+   function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect;
+
+   --  Distance model of Fit_Line_2D (OpenCV DistanceTypes). L2 is orthogonal
+   --  (total) least squares, solved in closed form as the principal axis of
+   --  the points; L1, L12, Fair, Welsch, and Huber are robust M-estimators
+   --  that OpenCV solves by iteratively reweighted least squares.
+   type Line_Fit_Distance is (L2, L1, L12, Fair, Welsch, Huber);
+
+   --  A fitted 2D line in native binary32 values. Direction is OpenCV's unit
+   --  direction (vx, vy) and Point is OpenCV's point (x0, y0) on the line.
+   type Fitted_Line_2D is record
+      Direction : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+      Point     : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+   end record;
+
+   --  Fits a line to Points with the 2D form of cv::fitLine. Direction is a
+   --  unit vector whose sign is OpenCV's; the opposite direction describes
+   --  the same line, and no sign normalization is applied. Point is the
+   --  centroid of Points for L2 and a weighted centroid for the robust
+   --  distances. Parameter is the constant C of Fair, Welsch, and Huber;
+   --  0.0 selects OpenCV's defaults 1.3998, 2.9846, and 1.345, and the other
+   --  distances ignore it. A robust fit runs up to 20 restarts from subsets
+   --  drawn by OpenCV's fixed-seed internal generator, each reweighting at
+   --  most 30 times, and returns the best candidate it found by summed
+   --  distance.
+   --  A restart's reweighting stops early once the direction changes by
+   --  less than Angle_Accuracy radians and each coordinate of Point by less
+   --  than Radius_Accuracy; 0.0 selects OpenCV's defaults 0.01 and 1.0, and
+   --  L2 ignores both. The Ada defaults of 0.01 follow OpenCV's documented
+   --  recommendation. The accuracies end reweighting early; they do not
+   --  bound the error of the result. Parameter, Radius_Accuracy, and
+   --  Angle_Accuracy must be finite, nonnegative, and at most
+   --  Float32_Value'Last; other values raise OpenCV_Error. OpenCV narrows
+   --  them to binary32, so positive values too small for binary32 become 0.0
+   --  and select the defaults. Robust results repeat for the same Points,
+   --  but subsets are drawn by position, so reordering Points can change
+   --  them slightly. OpenCV converts coordinates to binary32, exactly for
+   --  magnitudes up to 2**24, and L2 squares them in binary32, so it loses
+   --  accuracy for points far from the origin relative to their spread. At
+   --  least one point is required; with fewer than two distinct points the
+   --  direction is arbitrary. More than Integer_32'Last / 2 points raise
+   --  OpenCV_Error, because OpenCV computes 2 * n in signed 32-bit
+   --  arithmetic. Non-finite native results raise OpenCV_Error. Points is
+   --  unchanged.
+   function Fit_Line_2D
+     (Points          : Contour;
+      Distance        : Line_Fit_Distance := L2;
+      Parameter       : OpenCV.Float64_Value := 0.0;
+      Radius_Accuracy : OpenCV.Float64_Value := 0.01;
+      Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D;
+
    --  Converts Box to four native CV_32F rectangle vertices. Vertices are
    --  returned in the active OpenCV backend's native order without rounding,
    --  reordering, or normalization. OpenCV 4.x and 5.0 compute them with
@@ -203,6 +289,80 @@ package OpenCV.Geometry is
    type Box_Vertices is array (Box_Vertex_Index) of OpenCV.Float32_Point;
 
    function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices;
+
+   --  Ada-owned sequence of binary32 points, such as an intersection region
+   --  returned by OpenCV.
+   type Float32_Point_Array is
+     array (Natural range <>) of OpenCV.Float32_Point;
+
+   --  Intersection of two convex polygons. Area is OpenCV's nonnegative
+   --  binary32 intersection area, and Vertices is the native binary32
+   --  intersection polygon in native order without normalization. Vertices
+   --  is indexed 1 .. Vertex_Count, because its bounds follow the
+   --  discriminant. An empty intersection has Vertex_Count = 0 and Area 0.0.
+   type Convex_Polygon_Intersection (Vertex_Count : Natural) is record
+      Area     : OpenCV.Float32_Value;
+      Vertices : Float32_Point_Array (1 .. Vertex_Count);
+   end record;
+
+   --  Intersects convex polygons Left and Right with
+   --  cv::intersectConvexConvex. Left and Right must each be a simple,
+   --  strictly convex polygon of at least three vertices, traversed once in
+   --  either direction: every vertex must be a vertex of its convex hull,
+   --  visited in hull order, as Convex_Hull_Indices reports it. Repeated or
+   --  collinear vertices, self-intersecting stars, and repeated traversals
+   --  raise OpenCV_Error; Is_Convex, whose result OpenCV leaves undefined
+   --  for non-simple contours, may accept the latter two. OpenCV does not
+   --  check any of this, and OpenCV 4.x releases before 4.11 can overflow an
+   --  internal buffer on such input. Every vertex coordinate must also lie in
+   --  -2**24 .. 2**24, where OpenCV's binary32 conversion is exact; other
+   --  coordinates raise OpenCV_Error. When one polygon lies strictly inside
+   --  the other, so that their boundaries do not touch, Handle_Nested True
+   --  returns the inner polygon and its area, and Handle_Nested False
+   --  returns an empty result. OpenCV documents that polygons sharing an
+   --  edge, or with a vertex on the other's edge, are not treated as nested
+   --  and are intersected regardless of Handle_Nested. Polygons that touch
+   --  only from outside return zero or near-zero Area with the contact
+   --  points, possibly repeated as OpenCV emits them. OpenCV
+   --  4.6, 4.10, and 5.0 also emit an internal (FLT_MAX, FLT_MAX) sentinel as
+   --  the first or last vertex of some disjoint and contact results; it is
+   --  not a vertex and is omitted. The result has at most Left'Length +
+   --  Right'Length vertices. OpenCV 4.11+ and 5.x report an intersection
+   --  that did not converge with a negative area; that raises OpenCV_Error.
+   --  Left and Right are unchanged.
+   function Intersect_Convex_Polygons
+     (Left, Right : Contour; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection;
+
+   --  OpenCV's rotated-rectangle intersection classification:
+   --  INTERSECT_NONE, INTERSECT_PARTIAL, and INTERSECT_FULL. OpenCV documents
+   --  INTERSECT_FULL as one rectangle lying wholly within the other.
+   type Rectangle_Intersection_Kind is
+     (No_Intersection, Partial_Intersection, Full_Intersection);
+
+   --  OpenCV 4.6, 4.10, and 5.0 reduce the region to at most eight vertices.
+   subtype Rectangle_Intersection_Vertex_Count is Natural range 0 .. 8;
+
+   --  Vertices is indexed 1 .. Vertex_Count.
+   type Rotated_Rectangle_Intersection
+     (Vertex_Count : Rectangle_Intersection_Vertex_Count := 0)
+   is record
+      Kind     : Rectangle_Intersection_Kind := No_Intersection;
+      Vertices : Float32_Point_Array (1 .. Vertex_Count);
+   end record;
+
+   --  Intersects Left and Right with cv::rotatedRectangleIntersection. Kind
+   --  is OpenCV's classification, and Vertices is the native binary32
+   --  intersection region, at most eight points in native order without
+   --  normalization. No_Intersection has no vertices. A rectangle whose
+   --  width or height is zero or negative intersects nothing. Rectangles
+   --  that only touch can be reported with one or two contact vertices, and
+   --  OpenCV 4.6 uses different numerical tolerances from 4.10 and 5.0 for
+   --  such near-degenerate contacts. Every Left and Right field must be
+   --  finite; non-finite fields, and non-finite native vertices, raise
+   --  OpenCV_Error. Left and Right are unchanged.
+   function Intersect_Rotated_Rectangles
+     (Left, Right : OpenCV.Rotated_Rect) return Rotated_Rectangle_Intersection;
 
    --  Approximates Points with Douglas-Peucker. Epsilon is the maximum
    --  distance between the original curve and the result and must be

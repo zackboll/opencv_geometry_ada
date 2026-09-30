@@ -111,6 +111,21 @@ typedef struct {
     int32_t fixed_point_depth;
 } opencv_geometry_convexity_defect;
 
+/* One native binary32 point of a variable-length Geometry result. */
+typedef struct {
+    float x;
+    float y;
+} opencv_geometry_point_f32;
+
+/* A fitted 2D line: OpenCV's unit direction (vx, vy) and a point (x0, y0)
+   on the line. */
+typedef struct {
+    float direction_x;
+    float direction_y;
+    float point_x;
+    float point_y;
+} opencv_geometry_line_2d_f32;
+
 typedef int32_t opencv_geometry_status;
 
 #define OPENCV_GEOMETRY_OK                     ((opencv_geometry_status)0)
@@ -249,6 +264,37 @@ opencv_geometry_fit_ellipse(
     opencv_geometry_rotated_rect_f32 *out_rect);
 
 opencv_geometry_status
+opencv_geometry_fit_ellipse_ams(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_direct(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+/* Explicit fitLine distance selectors; the shim maps them to OpenCV's
+   DistanceTypes. */
+#define OPENCV_GEOMETRY_LINE_FIT_L2     ((int32_t)0)
+#define OPENCV_GEOMETRY_LINE_FIT_L1     ((int32_t)1)
+#define OPENCV_GEOMETRY_LINE_FIT_L12    ((int32_t)2)
+#define OPENCV_GEOMETRY_LINE_FIT_FAIR   ((int32_t)3)
+#define OPENCV_GEOMETRY_LINE_FIT_WELSCH ((int32_t)4)
+#define OPENCV_GEOMETRY_LINE_FIT_HUBER  ((int32_t)5)
+
+opencv_geometry_status
+opencv_geometry_fit_line_2d(
+    const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t distance,
+    double parameter,
+    double radius_accuracy,
+    double angle_accuracy,
+    opencv_geometry_line_2d_f32 *out_line);
+
+opencv_geometry_status
 opencv_geometry_box_points(
     const opencv_geometry_rotated_rect_f32 *box,
     opencv_geometry_box_vertices_f32 *out_vertices);
@@ -260,6 +306,33 @@ opencv_geometry_get_rotation_matrix_2d(
     double angle_degrees,
     double scale,
     opencv_geometry_affine_2x3_f64 *out_transform);
+
+opencv_geometry_status
+opencv_geometry_intersect_convex_convex(
+    const opencv_geometry_point_i32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_i32 *right_points,
+    int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count,
+    float *out_area);
+
+/* Explicit rotated-rectangle intersection kinds; the shim maps OpenCV's
+   RectanglesIntersectTypes to these values. */
+#define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE    ((int32_t)0)
+#define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_PARTIAL ((int32_t)1)
+#define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_FULL    ((int32_t)2)
+
+opencv_geometry_status
+opencv_geometry_rotated_rectangle_intersection(
+    const opencv_geometry_rotated_rect_f32 *left,
+    const opencv_geometry_rotated_rect_f32 *right,
+    int32_t *out_kind,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count);
 
 #ifdef __cplusplus
 }
