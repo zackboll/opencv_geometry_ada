@@ -385,6 +385,68 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_get_rotation_matrix_2d";
 
+   --  Row-major 3x3 perspective coefficients; MRC is row R, column C.
+   type C_Perspective_3x3_F64 is record
+      M00 : Interfaces.C.double;
+      M01 : Interfaces.C.double;
+      M02 : Interfaces.C.double;
+      M10 : Interfaces.C.double;
+      M11 : Interfaces.C.double;
+      M12 : Interfaces.C.double;
+      M20 : Interfaces.C.double;
+      M21 : Interfaces.C.double;
+      M22 : Interfaces.C.double;
+   end record
+   with Convention => C;
+
+   type Triangle_Point_Array is array (0 .. 2) of Point_F32
+   with Convention => C;
+
+   --  Exactly three binary32 points of an affine correspondence.
+   type C_Triangle_Points is record
+      Points : Triangle_Point_Array;
+   end record
+   with Convention => C;
+
+   type Quad_Point_Array is array (0 .. 3) of Point_F32 with Convention => C;
+
+   --  Exactly four binary32 points of a perspective correspondence.
+   type C_Quad_Points is record
+      Points : Quad_Point_Array;
+   end record
+   with Convention => C;
+
+   function Get_Affine_Transform
+     (Source      : access constant C_Triangle_Points;
+      Destination : access constant C_Triangle_Points;
+      Result      : access C_Affine_2x3_F64) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_get_affine_transform";
+
+   function Invert_Affine_Transform
+     (Transform : access constant C_Affine_2x3_F64;
+      Result    : access C_Affine_2x3_F64) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_invert_affine_transform";
+
+   Perspective_Solve_LU  : constant Interfaces.Integer_32 := 0;
+   Perspective_Solve_SVD : constant Interfaces.Integer_32 := 1;
+   Perspective_Solve_QR  : constant Interfaces.Integer_32 := 2;
+
+   function Get_Perspective_Transform
+     (Source       : access constant C_Quad_Points;
+      Destination  : access constant C_Quad_Points;
+      Solve_Method : Interfaces.Integer_32;
+      Result       : access C_Perspective_3x3_F64) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_get_perspective_transform";
+
    function Intersect_Convex_Convex
      (Left_Points   : access Point_I32;
       Left_Count    : Interfaces.Integer_32;

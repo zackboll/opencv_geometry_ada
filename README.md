@@ -22,8 +22,9 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
 `Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Fit_Line_2D`, `Box_Points`,
-`Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`, and
-`Get_Rotation_Matrix_2D`.
+`Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`,
+`Get_Rotation_Matrix_2D`, `Get_Affine_Transform`, `Invert_Affine_Transform`,
+`Get_Perspective_Transform`, and `Transform_Point`.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -315,6 +316,69 @@ Linux uses GNU g++, libstdc++ and a static-PIC shim. macOS and Windows build
 the C++ shim outside GPRbuild so it cannot inherit Core's Ada C++ shim:
 macOS uses Apple clang++, libc++ and a dylib; Windows uses a MinGW
 DLL/import library from the same prefix as OpenCV, not GNAT's g++.
+
+## Affine and perspective transforms
+
+```ada
+type Affine_Transform_2D is
+  array (Affine_Row_Index, Transform_Column_Index) of OpenCV.Float64_Value;
+type Perspective_Transform_2D is
+  array (Perspective_Row_Index, Transform_Column_Index)
+  of OpenCV.Float64_Value;
+
+function Get_Affine_Transform
+  (Source, Destination : Float32_Point_Array) return Affine_Transform_2D;
+function Invert_Affine_Transform
+  (Transform : Affine_Transform_2D) return Affine_Transform_2D;
+function Get_Perspective_Transform
+  (Source, Destination : Float32_Point_Array;
+   Method              : Perspective_Solve_Method := LU_Decomposition)
+   return Perspective_Transform_2D;
+function Transform_Point
+  (Transform : Affine_Transform_2D; Point : OpenCV.Float32_Point)
+   return OpenCV.Float32_Point;
+function Transform_Point
+  (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point)
+   return OpenCV.Float32_Point;
+```
+
+Transforms are Geometry-owned value matrices with 1-based indices:
+`T (R, C)` is OpenCV's `M(R-1, C-1)`. No Mat crosses the C ABI; the shim
+exchanges fixed plain C point and coefficient records.
+`Get_Rotation_Matrix_2D` keeps returning a Core Mat.
+
+`Get_Affine_Transform` takes exactly three and `Get_Perspective_Transform`
+exactly four finite corresponding points; array bounds may differ and points
+pair in iteration order. OpenCV ignores a singular solve: when its absolute
+pivot test (about `2.2E-14`) finds the affine system singular, as for
+collinear or repeated source points, the result is the all-zero transform,
+while a degenerate triangle that passes the test can give very large finite
+coefficients. `Invert_Affine_Transform` returns the all-zero transform when
+its binary64 determinant is exactly zero (including underflow) or overflows
+to infinity. None of these cases raises an exception.
+
+`Perspective_Solve_Method` offers `LU_Decomposition` (default),
+`Singular_Value_Decomposition`, and `QR_Decomposition`. OpenCV's EIG and
+Cholesky decompositions assume a symmetric system and the NORMAL flag has no
+effect here, so they are not offered. Results are native coefficients without
+normalization. OpenCV before 4.12 always returns `T (3, 3) = 1.0` and, when
+LU or QR finds the system singular, the matrix whose only nonzero coefficient
+is `T (3, 3)`. OpenCV 4.12+ and 5.x accept the `T (3, 3) = 1.0` solution only
+when the absolute residual of the 8x8 linear system is below `1.0E-8`, and
+otherwise return a unit-norm least-squares homogeneous solution with
+arbitrary sign whose `T (3, 3)` need not be `1.0`. Non-finite native
+coefficients raise `OpenCV_Error`.
+
+`Transform_Point` is Ada arithmetic, not an OpenCV call. It evaluates in
+binary64 and rounds to binary32, rejecting non-finite input, coefficients
+above `1.0E+269` in magnitude, results outside binary32 range, and
+perspective points that map to infinity; unlike `cv::perspectiveTransform`,
+it divides by every nonzero W. Those requirements are checked at run time,
+and within them GNATprove proves that the evaluation cannot overflow
+binary64.
+
+Image warping (`warpAffine`, `warpPerspective`) is image processing and is
+not part of this binding.
 
 ## Development
 

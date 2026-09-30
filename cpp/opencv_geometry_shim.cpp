@@ -1622,6 +1622,189 @@ opencv_geometry_get_rotation_matrix_2d(
     }
 }
 
+namespace {
+
+void zero_perspective_3x3(
+    opencv_geometry_perspective_3x3_f64 *out_transform) noexcept
+{
+    *out_transform = opencv_geometry_perspective_3x3_f64{};
+}
+
+// ABI safety: the fixed coefficient records can copy native storage only
+// after verifying that OpenCV produced a CV_64FC1 matrix of this shape.
+bool is_float64_matrix(const cv::Mat &matrix, int rows, int columns) noexcept
+{
+    return matrix.rows == rows
+        && matrix.cols == columns
+        && matrix.type() == CV_64FC1;
+}
+
+void copy_affine_2x3(
+    const cv::Mat &matrix,
+    opencv_geometry_affine_2x3_f64 *out_transform) noexcept
+{
+    opencv_geometry_affine_2x3_f64 result{};
+    result.m00 = matrix.at<double>(0, 0);
+    result.m01 = matrix.at<double>(0, 1);
+    result.m02 = matrix.at<double>(0, 2);
+    result.m10 = matrix.at<double>(1, 0);
+    result.m11 = matrix.at<double>(1, 1);
+    result.m12 = matrix.at<double>(1, 2);
+    *out_transform = result;
+}
+
+template <std::size_t Count, typename Points>
+void copy_native_points(const Points &points, cv::Point2f (&native)[Count])
+{
+    for (std::size_t index = 0; index < Count; ++index) {
+        native[index] = cv::Point2f(points.points[index].x, points.points[index].y);
+    }
+}
+
+bool perspective_solve_method(int32_t solve_method, int *native_method) noexcept
+{
+    // DECOMP_EIG and DECOMP_CHOLESKY assume a symmetric matrix, and
+    // DECOMP_NORMAL has no effect on this square system, so only LU, SVD,
+    // and QR are meaningful for getPerspectiveTransform's 8x8 system.
+    switch (solve_method) {
+    case OPENCV_GEOMETRY_PERSPECTIVE_SOLVE_LU:
+        *native_method = cv::DECOMP_LU;
+        return true;
+    case OPENCV_GEOMETRY_PERSPECTIVE_SOLVE_SVD:
+        *native_method = cv::DECOMP_SVD;
+        return true;
+    case OPENCV_GEOMETRY_PERSPECTIVE_SOLVE_QR:
+        *native_method = cv::DECOMP_QR;
+        return true;
+    default:
+        return false;
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_get_affine_transform(
+    const opencv_geometry_triangle_points_f32 *source,
+    const opencv_geometry_triangle_points_f32 *destination,
+    opencv_geometry_affine_2x3_f64 *out_transform)
+{
+    clear_error();
+    if (out_transform == nullptr) {
+        return invalid_argument("null affine transform output pointer");
+    }
+    zero_affine_2x3(out_transform);
+    if (source == nullptr || destination == nullptr) {
+        return invalid_argument("null affine transform point pointer");
+    }
+
+    try {
+        cv::Point2f native_source[3];
+        cv::Point2f native_destination[3];
+        copy_native_points(*source, native_source);
+        copy_native_points(*destination, native_destination);
+        const cv::Mat matrix =
+            cv::getAffineTransform(native_source, native_destination);
+        if (!is_float64_matrix(matrix, 2, 3)) {
+            set_error("getAffineTransform did not return a 2x3 CV_64F matrix");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
+        }
+        copy_affine_2x3(matrix, out_transform);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_affine_2x3(out_transform);
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_invert_affine_transform(
+    const opencv_geometry_affine_2x3_f64 *transform,
+    opencv_geometry_affine_2x3_f64 *out_inverse)
+{
+    clear_error();
+    if (out_inverse == nullptr) {
+        return invalid_argument("null inverse affine transform output pointer");
+    }
+    if (transform == nullptr) {
+        zero_affine_2x3(out_inverse);
+        return invalid_argument("null affine transform pointer");
+    }
+
+    // transform may alias out_inverse, so copy it before zeroing the output.
+    double coefficients[6] = {
+        transform->m00, transform->m01, transform->m02,
+        transform->m10, transform->m11, transform->m12};
+    zero_affine_2x3(out_inverse);
+
+    try {
+        const cv::Mat matrix(2, 3, CV_64F, coefficients);
+        cv::Mat inverse;
+        cv::invertAffineTransform(matrix, inverse);
+        if (!is_float64_matrix(inverse, 2, 3)) {
+            set_error(
+                "invertAffineTransform did not return a 2x3 CV_64F matrix");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
+        }
+        copy_affine_2x3(inverse, out_inverse);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_affine_2x3(out_inverse);
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_get_perspective_transform(
+    const opencv_geometry_quad_points_f32 *source,
+    const opencv_geometry_quad_points_f32 *destination,
+    int32_t solve_method,
+    opencv_geometry_perspective_3x3_f64 *out_transform)
+{
+    clear_error();
+    if (out_transform == nullptr) {
+        return invalid_argument("null perspective transform output pointer");
+    }
+    zero_perspective_3x3(out_transform);
+    if (source == nullptr || destination == nullptr) {
+        return invalid_argument("null perspective transform point pointer");
+    }
+    int native_method = cv::DECOMP_LU;
+    if (!perspective_solve_method(solve_method, &native_method)) {
+        return invalid_argument(
+            "perspective transform solve method selector is invalid");
+    }
+
+    try {
+        cv::Point2f native_source[4];
+        cv::Point2f native_destination[4];
+        copy_native_points(*source, native_source);
+        copy_native_points(*destination, native_destination);
+        const cv::Mat matrix = cv::getPerspectiveTransform(
+            native_source, native_destination, native_method);
+        if (!is_float64_matrix(matrix, 3, 3)) {
+            set_error(
+                "getPerspectiveTransform did not return a 3x3 CV_64F matrix");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
+        }
+        opencv_geometry_perspective_3x3_f64 result{};
+        result.m00 = matrix.at<double>(0, 0);
+        result.m01 = matrix.at<double>(0, 1);
+        result.m02 = matrix.at<double>(0, 2);
+        result.m10 = matrix.at<double>(1, 0);
+        result.m11 = matrix.at<double>(1, 1);
+        result.m12 = matrix.at<double>(1, 2);
+        result.m20 = matrix.at<double>(2, 0);
+        result.m21 = matrix.at<double>(2, 1);
+        result.m22 = matrix.at<double>(2, 2);
+        *out_transform = result;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_perspective_3x3(out_transform);
+        return translate_current_exception();
+    }
+}
+
 opencv_geometry_status
 opencv_geometry_bounding_rect(
     const opencv_geometry_point_i32 *points,

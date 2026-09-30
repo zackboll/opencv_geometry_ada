@@ -24,6 +24,8 @@ with Box_Points_Tests;
 with Convex_Polygon_Intersection_Tests;
 with Rotated_Rectangle_Intersection_Tests;
 with Rotation_Matrix_Tests;
+with Affine_Transform_Tests;
+with Perspective_Transform_Tests;
 
 procedure Tests is
 
@@ -59,6 +61,8 @@ begin
    Suite.Add_Test (Convex_Polygon_Intersection_Tests.Suite);
    Suite.Add_Test (Rotated_Rectangle_Intersection_Tests.Suite);
    Suite.Add_Test (Rotation_Matrix_Tests.Suite);
+   Suite.Add_Test (Affine_Transform_Tests.Suite);
+   Suite.Add_Test (Perspective_Transform_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;
