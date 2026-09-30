@@ -26,3 +26,10 @@ Run `alr -n build`, `alr -n -C tests run`, and `git diff --check`.
 Report the actual registered AUnit test count and native OpenCV
 version/backend. Keep compiler warnings as errors and Ada lines within
 79 columns.
+
+`tests/native` holds C++ tests for shim behavior that Ada cannot reach,
+currently allocation-failure injection for the Subdiv2D handle's unusable
+state. They include the shim source and replace the global allocation
+functions. Run them with `sh scripts/run_native_tests.sh` on Linux after
+`alr -n build` whenever the Subdiv2D shim changes; Linux CI runs them
+under AddressSanitizer and UndefinedBehaviorSanitizer.

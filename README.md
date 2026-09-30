@@ -24,7 +24,8 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Fit_Line_2D`, `Box_Points`,
 `Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`,
 `Get_Rotation_Matrix_2D`, `Get_Affine_Transform`, `Invert_Affine_Transform`,
-`Get_Perspective_Transform`, and `Transform_Point`.
+`Get_Perspective_Transform`, and `Transform_Point`. The child package
+`OpenCV.Geometry.Subdiv2D` provides planar subdivisions.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
@@ -379,6 +380,70 @@ binary64.
 
 Image warping (`warpAffine`, `warpPerspective`) is image processing and is
 not part of this binding.
+
+## Planar subdivision (Subdiv2D)
+
+`OpenCV.Geometry.Subdiv2D` binds `cv::Subdiv2D`, an incremental Delaunay
+triangulation of points inside an integer bounding rectangle:
+
+```ada
+declare
+   Mesh : Subdivision :=
+     Create ((X => 0, Y => 0, Width => 100, Height => 100));
+   Near : Nearest_Result;
+begin
+   Insert (Mesh, Points);
+   case Locate (Mesh, (X => 50.0, Y => 20.0)).Kind is
+      when Inside_Facet | On_Edge | On_Vertex => null;
+   end case;
+   Near := Find_Nearest (Mesh, (X => 52.0, Y => 43.0));
+end;
+```
+
+`Subdivision` is the only Geometry type that owns a native object. It is
+limited, so assignment cannot duplicate ownership, and finalization releases
+the native object. The opaque C handle stays private. A declared but never
+initialized `Subdivision` is not ready; `Create` or `Reset` initializes it,
+and `Reset` also discards every point. If a modification fails in a way that
+may have left the native triangulation inconsistent, such as an allocation
+failure during insertion, the object stops being ready, and `Insert`,
+`Locate`, and `Find_Nearest` raise `OpenCV_Error` until `Reset`. Ordinary
+OpenCV rejections, such as a point outside the bounds, leave it ready. A
+native fault-injection test (`sh scripts/run_native_tests.sh`) checks this
+state by failing individual allocations inside OpenCV.
+
+Bounds are half-open: OpenCV accepts `X` from `Bounds.X` up to but excluding
+`Bounds.X + Bounds.Width`, and likewise for `Y`. A point outside raises
+`OpenCV_Error`; OpenCV reports it by raising an error rather than returning
+its `PTLOC_OUTSIDE_RECT` classification. Duplicate insertions return the
+existing vertex. Vertex and edge identifiers are native OpenCV identifiers,
+meaningful only for their subdivision and not dense. An inserted point's
+vertex identifier lasts until the next `Reset`; an edge identifier lasts only
+until the next `Insert` or `Reset`, because insertion flips edges and reuses
+edge slots.
+
+A `Subdivision` must not be used by more than one task at a time. OpenCV
+mutates internal state in `Locate` and `Find_Nearest`, which computes Voronoi
+data. Distinct subdivisions are independent. The binary32 `Rect2f`
+initialization that only OpenCV 4.13+ and 5.x provide is not bound.
+
+OpenCV's `Subdiv2D` predicates use absolute tolerances near `FLT_EPSILON`,
+whatever the coordinate magnitude, so results depend on the spacing of the
+inserted points: the smallest distance between two of them. The
+triangulation is reliably Delaunay only when that spacing is at least about
+0.03 units. Probes on OpenCV 4.10 and 5.0, whose rates depend on how the
+points are distributed, found:
+
+| Spacing (units) | Behavior |
+| --- | --- |
+| 0.03 or more | `Find_Nearest` always answered a nearest vertex |
+| 0.01 or less | a few percent of `Find_Nearest` answers are not a nearest vertex, and some raise `OpenCV_Error` because OpenCV reports no vertex |
+| 0.003 or less | up to about 30% of `Find_Nearest` answers are wrong |
+| about 0.0001 | `Insert` and `Locate` can fail to locate points, and `Find_Nearest` can fail to return |
+
+The last row includes a hang: OpenCV's facet walk is unbounded, and the
+binding cannot interrupt a native call. Scale coordinates so that distinct
+points lie well apart.
 
 ## Development
 
