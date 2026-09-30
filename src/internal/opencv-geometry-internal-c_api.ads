@@ -564,6 +564,144 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_subdiv2d_find_nearest";
 
+   function Subdiv2D_Quad_Edge_Count
+     (Handle : Subdiv2D_Handle; Out_Count : access Interfaces.Integer_32)
+      return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_quad_edge_count";
+
+   type C_Edge_Segment is record
+      Origin_X      : Interfaces.C.C_float;
+      Origin_Y      : Interfaces.C.C_float;
+      Destination_X : Interfaces.C.C_float;
+      Destination_Y : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
+   type C_Edge_Segment_Array is
+     array (Natural range <>) of aliased C_Edge_Segment
+   with Convention => C;
+
+   type C_Triangle_Array is array (Natural range <>) of aliased C_Triangle
+   with Convention => C;
+
+   function Subdiv2D_Get_Edge_List
+     (Handle       : Subdiv2D_Handle;
+      Out_Edges    : access C_Edge_Segment;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_get_edge_list";
+
+   function Subdiv2D_Get_Leading_Edge_List
+     (Handle       : Subdiv2D_Handle;
+      Out_Edges    : access Interfaces.Integer_32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_get_leading_edge_list";
+
+   function Subdiv2D_Get_Triangle_List
+     (Handle        : Subdiv2D_Handle;
+      Out_Triangles : access C_Triangle;
+      Out_Capacity  : Interfaces.Integer_32;
+      Out_Count     : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_get_triangle_list";
+
+   Subdiv2D_Vertex_Free     : constant Interfaces.Integer_32 := 0;
+   Subdiv2D_Vertex_Delaunay : constant Interfaces.Integer_32 := 1;
+   Subdiv2D_Vertex_Voronoi  : constant Interfaces.Integer_32 := 2;
+
+   function Subdiv2D_Get_Vertex
+     (Handle         : Subdiv2D_Handle;
+      Vertex         : Interfaces.Integer_32;
+      Out_Point      : access Point_F32;
+      Out_First_Edge : access Interfaces.Integer_32;
+      Out_Kind       : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_get_vertex";
+
+   function Subdiv2D_Edge_Org
+     (Handle     : Subdiv2D_Handle;
+      Edge       : Interfaces.Integer_32;
+      Out_Vertex : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_edge_org";
+
+   function Subdiv2D_Edge_Dst
+     (Handle     : Subdiv2D_Handle;
+      Edge       : Interfaces.Integer_32;
+      Out_Vertex : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_edge_dst";
+
+   function Subdiv2D_Next_Edge
+     (Handle   : Subdiv2D_Handle;
+      Edge     : Interfaces.Integer_32;
+      Out_Edge : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_next_edge";
+
+   Subdiv2D_Next_Around_Org   : constant Interfaces.Integer_32 := 0;
+   Subdiv2D_Next_Around_Dst   : constant Interfaces.Integer_32 := 1;
+   Subdiv2D_Prev_Around_Org   : constant Interfaces.Integer_32 := 2;
+   Subdiv2D_Prev_Around_Dst   : constant Interfaces.Integer_32 := 3;
+   Subdiv2D_Next_Around_Left  : constant Interfaces.Integer_32 := 4;
+   Subdiv2D_Next_Around_Right : constant Interfaces.Integer_32 := 5;
+   Subdiv2D_Prev_Around_Left  : constant Interfaces.Integer_32 := 6;
+   Subdiv2D_Prev_Around_Right : constant Interfaces.Integer_32 := 7;
+
+   function Subdiv2D_Get_Edge
+     (Handle     : Subdiv2D_Handle;
+      Edge       : Interfaces.Integer_32;
+      Navigation : Interfaces.Integer_32;
+      Out_Edge   : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_get_edge";
+
+   Subdiv2D_Rotate_Same             : constant Interfaces.Integer_32 := 0;
+   Subdiv2D_Rotate_Rotated          : constant Interfaces.Integer_32 := 1;
+   Subdiv2D_Rotate_Reversed         : constant Interfaces.Integer_32 := 2;
+   Subdiv2D_Rotate_Reversed_Rotated : constant Interfaces.Integer_32 := 3;
+
+   function Subdiv2D_Rotate_Edge
+     (Handle   : Subdiv2D_Handle;
+      Edge     : Interfaces.Integer_32;
+      Rotation : Interfaces.Integer_32;
+      Out_Edge : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_rotate_edge";
+
+   function Subdiv2D_Sym_Edge
+     (Handle   : Subdiv2D_Handle;
+      Edge     : Interfaces.Integer_32;
+      Out_Edge : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_sym_edge";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;

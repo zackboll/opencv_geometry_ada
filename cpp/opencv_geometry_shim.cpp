@@ -2244,7 +2244,8 @@ namespace opencv_geometry_shim_detail {
 
 // cv::Subdiv2D keeps its vertex and quad-edge storage in protected members
 // that OpenCV 4.6, 4.10, and 5.0 declare identically. This derived class
-// only reads their sizes so the shim can bound native int arithmetic.
+// only reads their sizes and vertex kinds so the shim can bound native int
+// arithmetic and identifiers.
 class GeometrySubdiv2D : public cv::Subdiv2D {
 public:
     std::size_t quad_edge_count() const noexcept
@@ -2255,6 +2256,19 @@ public:
     std::size_t vertex_slot_count() const noexcept
     {
         return vtx.size();
+    }
+
+    // The caller ensures vertex < vertex_slot_count().
+    int32_t vertex_kind(std::size_t vertex) const noexcept
+    {
+        const Vertex &slot = vtx[vertex];
+        if (slot.isfree()) {
+            return OPENCV_GEOMETRY_SUBDIV2D_VERTEX_FREE;
+        }
+        if (slot.isvirtual()) {
+            return OPENCV_GEOMETRY_SUBDIV2D_VERTEX_VORONOI;
+        }
+        return OPENCV_GEOMETRY_SUBDIV2D_VERTEX_DELAUNAY;
     }
 };
 
@@ -2596,5 +2610,413 @@ opencv_geometry_subdiv2d_find_nearest(
         // does not change the Delaunay triangulation.
         return translate_current_exception();
     }
+}
+
+namespace {
+
+opencv_geometry_status subdiv2d_query_ready(
+    const opencv_geometry_subdiv2d *handle) noexcept
+{
+    if (handle == nullptr) {
+        return invalid_argument("null subdivision handle");
+    }
+    if (!handle->usable) {
+        return unusable_subdivision();
+    }
+    return OPENCV_GEOMETRY_OK;
+}
+
+// ABI safety: Subdiv2D's identifier accessors index its protected vertex and
+// quad-edge vectors with only CV_DbgAssert checks, which release builds
+// remove, and rotateEdge and getEdge add small offsets to an edge in signed
+// int, so the shim bounds every identifier before OpenCV uses it. symEdge
+// neither indexes nor overflows; it is bounded too so that every edge
+// function accepts the same identifiers.
+bool subdiv2d_edge_in_range(
+    const GeometrySubdiv2D &native, int32_t edge) noexcept
+{
+    return edge >= 0
+        && static_cast<std::size_t>(edge) / 4 < native.quad_edge_count();
+}
+
+bool subdiv2d_vertex_in_range(
+    const GeometrySubdiv2D &native, int32_t vertex) noexcept
+{
+    return vertex >= 0
+        && static_cast<std::size_t>(vertex) < native.vertex_slot_count();
+}
+
+// Checks the arguments shared by the list functions after zeroing the count.
+opencv_geometry_status subdiv2d_list_arguments(
+    const opencv_geometry_subdiv2d *handle,
+    const void *buffer,
+    int32_t capacity,
+    int32_t *out_count) noexcept
+{
+    if (out_count == nullptr) {
+        return invalid_argument("null subdivision list count output pointer");
+    }
+    *out_count = 0;
+    if (capacity < 0) {
+        return invalid_argument("subdivision list capacity must not be negative");
+    }
+    if (buffer == nullptr && capacity > 0) {
+        return invalid_argument(
+            "null subdivision list buffer with positive capacity");
+    }
+    return subdiv2d_query_ready(handle);
+}
+
+bool subdiv2d_navigation(int32_t navigation, int *native_navigation) noexcept
+{
+    switch (navigation) {
+    case OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_ORG:
+        *native_navigation = cv::Subdiv2D::NEXT_AROUND_ORG;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_DST:
+        *native_navigation = cv::Subdiv2D::NEXT_AROUND_DST;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_ORG:
+        *native_navigation = cv::Subdiv2D::PREV_AROUND_ORG;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_DST:
+        *native_navigation = cv::Subdiv2D::PREV_AROUND_DST;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_LEFT:
+        *native_navigation = cv::Subdiv2D::NEXT_AROUND_LEFT;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_RIGHT:
+        *native_navigation = cv::Subdiv2D::NEXT_AROUND_RIGHT;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_LEFT:
+        *native_navigation = cv::Subdiv2D::PREV_AROUND_LEFT;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_RIGHT:
+        *native_navigation = cv::Subdiv2D::PREV_AROUND_RIGHT;
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool subdiv2d_rotation(int32_t rotation, int *native_rotation) noexcept
+{
+    switch (rotation) {
+    case OPENCV_GEOMETRY_SUBDIV2D_ROTATE_SAME:
+        *native_rotation = 0;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_ROTATE_ROTATED:
+        *native_rotation = 1;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_ROTATE_REVERSED:
+        *native_rotation = 2;
+        return true;
+    case OPENCV_GEOMETRY_SUBDIV2D_ROTATE_REVERSED_ROTATED:
+        *native_rotation = 3;
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Shared shape of the single-edge queries: validates the handle, output, and
+// edge, then publishes Query's result only on success.
+template <typename Query>
+opencv_geometry_status subdiv2d_edge_query(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_value,
+    Query query)
+{
+    clear_error();
+    if (out_value == nullptr) {
+        return invalid_argument("null subdivision edge query output pointer");
+    }
+    *out_value = 0;
+    const opencv_geometry_status ready = subdiv2d_query_ready(handle);
+    if (ready != OPENCV_GEOMETRY_OK) {
+        return ready;
+    }
+    if (!subdiv2d_edge_in_range(handle->native, edge)) {
+        return invalid_argument("subdivision edge identifier is out of range");
+    }
+    try {
+        *out_value = query(handle->native);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_value = 0;
+        return translate_current_exception();
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_quad_edge_count(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument("null subdivision quad-edge count pointer");
+    }
+    *out_count = 0;
+    const opencv_geometry_status ready = subdiv2d_query_ready(handle);
+    if (ready != OPENCV_GEOMETRY_OK) {
+        return ready;
+    }
+    // The insertion guard keeps the count below INT32_MAX / 4.
+    *out_count = static_cast<int32_t>(handle->native.quad_edge_count());
+    return OPENCV_GEOMETRY_OK;
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_edge_list(
+    const opencv_geometry_subdiv2d *handle,
+    opencv_geometry_edge_segment_f32 *out_edges,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    const opencv_geometry_status arguments =
+        subdiv2d_list_arguments(handle, out_edges, out_capacity, out_count);
+    if (arguments != OPENCV_GEOMETRY_OK) {
+        return arguments;
+    }
+
+    try {
+        std::vector<cv::Vec4f> edges;
+        handle->native.getEdgeList(edges);
+        if (edges.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument("subdivision edge list capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < edges.size(); ++index) {
+            opencv_geometry_edge_segment_f32 segment{};
+            segment.origin_x = edges[index][0];
+            segment.origin_y = edges[index][1];
+            segment.destination_x = edges[index][2];
+            segment.destination_y = edges[index][3];
+            out_edges[index] = segment;
+        }
+        *out_count = static_cast<int32_t>(edges.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_leading_edge_list(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t *out_edges,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    const opencv_geometry_status arguments =
+        subdiv2d_list_arguments(handle, out_edges, out_capacity, out_count);
+    if (arguments != OPENCV_GEOMETRY_OK) {
+        return arguments;
+    }
+
+    try {
+        std::vector<int> edges;
+        handle->native.getLeadingEdgeList(edges);
+        if (edges.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "subdivision leading edge list capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < edges.size(); ++index) {
+            out_edges[index] = edges[index];
+        }
+        *out_count = static_cast<int32_t>(edges.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_triangle_list(
+    const opencv_geometry_subdiv2d *handle,
+    opencv_geometry_triangle_f32 *out_triangles,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    const opencv_geometry_status arguments = subdiv2d_list_arguments(
+        handle, out_triangles, out_capacity, out_count);
+    if (arguments != OPENCV_GEOMETRY_OK) {
+        return arguments;
+    }
+
+    try {
+        std::vector<cv::Vec6f> triangles;
+        handle->native.getTriangleList(triangles);
+        if (triangles.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "subdivision triangle list capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < triangles.size(); ++index) {
+            opencv_geometry_triangle_f32 triangle{};
+            triangle.v0_x = triangles[index][0];
+            triangle.v0_y = triangles[index][1];
+            triangle.v1_x = triangles[index][2];
+            triangle.v1_y = triangles[index][3];
+            triangle.v2_x = triangles[index][4];
+            triangle.v2_y = triangles[index][5];
+            out_triangles[index] = triangle;
+        }
+        *out_count = static_cast<int32_t>(triangles.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_vertex(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t vertex,
+    opencv_geometry_point_f32 *out_point,
+    int32_t *out_first_edge,
+    int32_t *out_kind)
+{
+    clear_error();
+    if (out_point != nullptr) {
+        *out_point = opencv_geometry_point_f32{};
+    }
+    if (out_first_edge != nullptr) {
+        *out_first_edge = 0;
+    }
+    if (out_kind != nullptr) {
+        *out_kind = OPENCV_GEOMETRY_SUBDIV2D_VERTEX_FREE;
+    }
+    if (out_point == nullptr || out_first_edge == nullptr || out_kind == nullptr) {
+        return invalid_argument("null subdivision vertex output pointer");
+    }
+    const opencv_geometry_status ready = subdiv2d_query_ready(handle);
+    if (ready != OPENCV_GEOMETRY_OK) {
+        return ready;
+    }
+    if (!subdiv2d_vertex_in_range(handle->native, vertex)) {
+        return invalid_argument("subdivision vertex identifier is out of range");
+    }
+
+    try {
+        int first_edge = 0;
+        const cv::Point2f point = handle->native.getVertex(vertex, &first_edge);
+        opencv_geometry_point_f32 position{};
+        position.x = point.x;
+        position.y = point.y;
+        *out_point = position;
+        *out_first_edge = first_edge;
+        *out_kind = handle->native.vertex_kind(static_cast<std::size_t>(vertex));
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_point = opencv_geometry_point_f32{};
+        *out_first_edge = 0;
+        *out_kind = OPENCV_GEOMETRY_SUBDIV2D_VERTEX_FREE;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_edge_org(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_vertex)
+{
+    return subdiv2d_edge_query(
+        handle, edge, out_vertex, [edge](const GeometrySubdiv2D &native) {
+            return native.edgeOrg(edge);
+        });
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_edge_dst(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_vertex)
+{
+    return subdiv2d_edge_query(
+        handle, edge, out_vertex, [edge](const GeometrySubdiv2D &native) {
+            return native.edgeDst(edge);
+        });
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_next_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_edge)
+{
+    return subdiv2d_edge_query(
+        handle, edge, out_edge, [edge](const GeometrySubdiv2D &native) {
+            return native.nextEdge(edge);
+        });
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t navigation,
+    int32_t *out_edge)
+{
+    int native_navigation = cv::Subdiv2D::NEXT_AROUND_ORG;
+    if (!subdiv2d_navigation(navigation, &native_navigation)) {
+        clear_error();
+        if (out_edge != nullptr) {
+            *out_edge = 0;
+        }
+        return invalid_argument("subdivision edge navigation selector is invalid");
+    }
+    return subdiv2d_edge_query(
+        handle,
+        edge,
+        out_edge,
+        [edge, native_navigation](const GeometrySubdiv2D &native) {
+            return native.getEdge(edge, native_navigation);
+        });
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_rotate_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t rotation,
+    int32_t *out_edge)
+{
+    int native_rotation = 0;
+    if (!subdiv2d_rotation(rotation, &native_rotation)) {
+        clear_error();
+        if (out_edge != nullptr) {
+            *out_edge = 0;
+        }
+        return invalid_argument("subdivision edge rotation selector is invalid");
+    }
+    return subdiv2d_edge_query(
+        handle,
+        edge,
+        out_edge,
+        [edge, native_rotation](const GeometrySubdiv2D &native) {
+            return native.rotateEdge(edge, native_rotation);
+        });
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_sym_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_edge)
+{
+    return subdiv2d_edge_query(
+        handle, edge, out_edge, [edge](const GeometrySubdiv2D &native) {
+            return native.symEdge(edge);
+        });
 }
 

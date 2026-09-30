@@ -9,6 +9,7 @@
 //
 // - a handle marked unusable rejects every operation until init_delaunay;
 // - a handle left usable still holds a working triangulation;
+// - a failed list query publishes a zero count and keeps the handle usable;
 // - failed creation publishes a null handle, and failed initialization marks
 //   the handle unusable until a later successful initialization.
 //
@@ -101,8 +102,18 @@ bool rejects_everything(opencv_geometry_subdiv2d *handle)
     int32_t count = 0;
     int32_t location = 0;
     int32_t edge = 0;
+    int32_t kind = 0;
     opencv_geometry_point_f32 nearest{};
+    opencv_geometry_edge_segment_f32 segments[64]{};
     return opencv_geometry_subdiv2d_is_usable(handle) == 0
+        && opencv_geometry_subdiv2d_quad_edge_count(handle, &count)
+            == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+        && opencv_geometry_subdiv2d_get_edge_list(handle, segments, 64, &count)
+            == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+        && opencv_geometry_subdiv2d_get_vertex(handle, 4, &nearest, &edge, &kind)
+            == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+        && opencv_geometry_subdiv2d_edge_org(handle, 16, &vertex)
+            == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
         && opencv_geometry_subdiv2d_insert(handle, 20.0f, 20.0f, &vertex)
             == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
         && opencv_geometry_subdiv2d_insert_points(handle, fixture, 4, &count)
@@ -180,6 +191,47 @@ void exercise_find_nearest()
         opencv_geometry_subdiv2d_destroy(handle);
         if (status == OPENCV_GEOMETRY_OK) {
             break;
+        }
+    }
+}
+
+// Fails each allocation of the three list queries in turn.
+void exercise_lists()
+{
+    opencv_geometry_edge_segment_f32 segments[64]{};
+    int32_t leading[128]{};
+    opencv_geometry_triangle_f32 triangles[128]{};
+    for (int list = 0; list < 3; ++list) {
+        for (long step = 0;; ++step) {
+            opencv_geometry_subdiv2d *handle = make_fixture();
+            int32_t count = 99;
+            allocation_countdown = step;
+            opencv_geometry_status status = OPENCV_GEOMETRY_OK;
+            switch (list) {
+            case 0:
+                status = opencv_geometry_subdiv2d_get_edge_list(
+                    handle, segments, 64, &count);
+                break;
+            case 1:
+                status = opencv_geometry_subdiv2d_get_leading_edge_list(
+                    handle, leading, 128, &count);
+                break;
+            default:
+                status = opencv_geometry_subdiv2d_get_triangle_list(
+                    handle, triangles, 128, &count);
+                break;
+            }
+            allocation_countdown = -1;
+            if (status == OPENCV_GEOMETRY_OK) {
+                check(count > 0, "a successful list is not empty", step);
+                opencv_geometry_subdiv2d_destroy(handle);
+                break;
+            }
+            check(count == 0, "a failed list publishes a zero count", step);
+            check(opencv_geometry_subdiv2d_is_usable(handle) == 1
+                      && triangulation_works(handle),
+                  "a failed list keeps a working triangulation", step);
+            opencv_geometry_subdiv2d_destroy(handle);
         }
     }
 }
@@ -266,6 +318,7 @@ int main()
     check(on_edge_unusable > 0,
           "some on-edge insertion failure marks the handle unusable", -1);
     exercise_find_nearest();
+    exercise_lists();
     exercise_create_and_initialize();
     std::printf("on-edge failures marking unusable: %d\n", on_edge_unusable);
     std::printf("inside failures marking unusable: %d\n", inside_unusable);

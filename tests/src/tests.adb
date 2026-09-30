@@ -27,6 +27,7 @@ with Rotation_Matrix_Tests;
 with Affine_Transform_Tests;
 with Perspective_Transform_Tests;
 with Subdiv2D_Foundation_Tests;
+with Subdiv2D_Navigation_Tests;
 
 procedure Tests is
 
@@ -65,6 +66,7 @@ begin
    Suite.Add_Test (Affine_Transform_Tests.Suite);
    Suite.Add_Test (Perspective_Transform_Tests.Suite);
    Suite.Add_Test (Subdiv2D_Foundation_Tests.Suite);
+   Suite.Add_Test (Subdiv2D_Navigation_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;

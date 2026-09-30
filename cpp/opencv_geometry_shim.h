@@ -466,6 +466,123 @@ opencv_geometry_subdiv2d_find_nearest(
     int32_t *out_vertex,
     opencv_geometry_point_f32 *out_point);
 
+/* Number of native quad-edge slots. Every edge identifier is below four
+   times this count, and it bounds the list sizes: at most count - 4 edges,
+   and at most 2 * count - 2 leading edges or triangles. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_quad_edge_count(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t *out_count);
+
+/* One Delaunay edge as its origin and destination positions. */
+typedef struct {
+    float origin_x;
+    float origin_y;
+    float destination_x;
+    float destination_y;
+} opencv_geometry_edge_segment_f32;
+
+/* List functions write at most out_capacity elements. When the native list
+   is longer, they fail with OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT and
+   publish nothing; *out_count is 0 unless the result is OPENCV_GEOMETRY_OK.
+   A null buffer is accepted only with capacity 0. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_edge_list(
+    const opencv_geometry_subdiv2d *handle,
+    opencv_geometry_edge_segment_f32 *out_edges,
+    int32_t out_capacity,
+    int32_t *out_count);
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_leading_edge_list(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t *out_edges,
+    int32_t out_capacity,
+    int32_t *out_count);
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_triangle_list(
+    const opencv_geometry_subdiv2d *handle,
+    opencv_geometry_triangle_f32 *out_triangles,
+    int32_t out_capacity,
+    int32_t *out_count);
+
+/* Explicit vertex-slot kinds reported by get_vertex. VERTEX_FREE includes
+   slot 0, OpenCV's reserved null vertex; VERTEX_DELAUNAY includes the
+   super-triangle vertices 1 .. 3; VERTEX_VORONOI is OpenCV's virtual
+   (Voronoi) vertex. */
+#define OPENCV_GEOMETRY_SUBDIV2D_VERTEX_FREE     ((int32_t)0)
+#define OPENCV_GEOMETRY_SUBDIV2D_VERTEX_DELAUNAY ((int32_t)1)
+#define OPENCV_GEOMETRY_SUBDIV2D_VERTEX_VORONOI  ((int32_t)2)
+
+/* Every function taking an identifier fails with
+   OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT, with zeroed outputs, unless the
+   identifier indexes native storage: 0 <= vertex < vertex slots and
+   0 <= edge < 4 * quad-edge slots. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_vertex(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t vertex,
+    opencv_geometry_point_f32 *out_point,
+    int32_t *out_first_edge,
+    int32_t *out_kind);
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_edge_org(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_vertex);
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_edge_dst(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_vertex);
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_next_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_edge);
+
+/* Explicit getEdge navigation selectors; the shim maps them to OpenCV's
+   NEXT_AROUND_* and PREV_AROUND_* bit encodings. */
+#define OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_ORG   ((int32_t)0)
+#define OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_DST   ((int32_t)1)
+#define OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_ORG   ((int32_t)2)
+#define OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_DST   ((int32_t)3)
+#define OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_LEFT  ((int32_t)4)
+#define OPENCV_GEOMETRY_SUBDIV2D_NEXT_AROUND_RIGHT ((int32_t)5)
+#define OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_LEFT  ((int32_t)6)
+#define OPENCV_GEOMETRY_SUBDIV2D_PREV_AROUND_RIGHT ((int32_t)7)
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t navigation,
+    int32_t *out_edge);
+
+/* Explicit rotateEdge selectors; the shim maps them to OpenCV's rotate
+   argument. */
+#define OPENCV_GEOMETRY_SUBDIV2D_ROTATE_SAME             ((int32_t)0)
+#define OPENCV_GEOMETRY_SUBDIV2D_ROTATE_ROTATED          ((int32_t)1)
+#define OPENCV_GEOMETRY_SUBDIV2D_ROTATE_REVERSED         ((int32_t)2)
+#define OPENCV_GEOMETRY_SUBDIV2D_ROTATE_REVERSED_ROTATED ((int32_t)3)
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_rotate_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t rotation,
+    int32_t *out_edge);
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_sym_edge(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t edge,
+    int32_t *out_edge);
+
 #ifdef __cplusplus
 }
 #endif

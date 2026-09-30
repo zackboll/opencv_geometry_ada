@@ -445,6 +445,38 @@ The last row includes a hang: OpenCV's facet walk is unbounded, and the
 binding cannot interrupt a native call. Scale coordinates so that distinct
 points lie well apart.
 
+### Extraction and navigation
+
+`Edge_List`, `Leading_Edge_List`, and `Triangle_List` return Ada-owned arrays
+in native order, indexed from 1, that stay valid whatever later happens to the
+subdivision. Their buffer capacities come from the native quad-edge count,
+using bounds read from the loops of the OpenCV list functions; GNATprove shows
+only that the capacity arithmetic cannot overflow, and the shim enforces the
+capacity at run time, failing rather than writing past it. `Edge_List`
+includes edges to the super-triangle vertices, which lie outside the bounds,
+and `Triangle_List` keeps only triangles whose three vertices lie in the
+bounds. Near the convex hull the reported triangles can differ between
+releases, because OpenCV 4.12+ and 5.x use a super-triangle twice as large,
+so tests check invariants rather than exact lists.
+
+`Navigate` takes a strongly typed `Edge_Navigation`, one of the eight
+`getEdge` choices from `Next_Around_Origin` to `Previous_Around_Right`.
+`Rotate` takes an `Edge_Rotation` (`Same_Edge`, `Rotated_Edge`,
+`Reversed_Edge`, `Reversed_Rotated_Edge`). Both are mapped explicitly to
+OpenCV's encodings; neither depends on Ada enumeration positions. `Next_Edge`,
+`Symmetric_Edge`, `Origin`, `Destination`, `Vertex_Point`, and `First_Edge`
+complete the quad-edge queries.
+
+Release builds of OpenCV check vertex and edge identifiers only with debug
+assertions, so an invalid identifier would read outside native storage. The
+shim therefore bounds every identifier against the native storage sizes before
+OpenCV sees it, and thick Ada also rejects `No_Vertex`, free vertex slots, and
+OpenCV's reserved null edge. A dual Voronoi edge runs from the facet on its
+primal edge's right to the facet on its left, and its endpoints are those
+facets' Voronoi vertices once `Find_Nearest` has computed Voronoi data. An
+endpoint is `No_Vertex` before that, and for a facet OpenCV gives no Voronoi
+vertex: the facet outside the super-triangle, and a degenerate facet.
+
 ## Development
 
 Place Core at `/home/zboll/git/opencv/core` alongside this repository at
