@@ -583,6 +583,66 @@ opencv_geometry_subdiv2d_sym_edge(
     int32_t edge,
     int32_t *out_edge);
 
+/* One Voronoi facet: the Delaunay vertex it surrounds, that vertex's
+   position (OpenCV's facet center), and the facet polygon as point_count
+   points starting at zero-based index first_point of the shared point
+   list. Facets' points are contiguous and in facet order. complete is 1
+   when OpenCV computed every Voronoi vertex of the facet, and 0 when some
+   point is only OpenCV's placeholder, the null vertex's position (0, 0),
+   for a Voronoi vertex it never computed: that of the facet outside the
+   super-triangle, or of a degenerate (collinear) triangle, which OpenCV's
+   absolute tolerances can leave among closely spaced points. */
+typedef struct {
+    int32_t site;
+    float center_x;
+    float center_y;
+    int32_t first_point;
+    int32_t point_count;
+    int32_t complete;
+} opencv_geometry_voronoi_facet_f32;
+
+/* Voronoi facet selection. SELECT_ALL takes every Delaunay vertex slot from
+   identifier 4, the inserted points, in increasing identifier order, and
+   requires a null vertex list with count 0. SELECT_LISTED takes
+   vertices[0 .. vertex_count - 1] in order, each of which must index native
+   storage; unlike OpenCV, an empty list selects nothing. */
+#define OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_LISTED ((int32_t)0)
+#define OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_ALL    ((int32_t)1)
+
+/* Unless the selection is empty, both functions run
+   cv::Subdiv2D::getVoronoiFacetList, which first computes Voronoi data
+   inside handle unless it is current. As in OpenCV, a listed free slot or
+   Voronoi vertex produces no facet, a listed vertex produces one facet each
+   time it is listed, and a listed super-triangle vertex (1 .. 3) produces an
+   incomplete facet. Without an intervening modification of handle, the two
+   functions report the same facets, so a caller can size the buffers from
+   voronoi_facet_counts. A failure leaves the triangulation usable. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_voronoi_facet_counts(
+    opencv_geometry_subdiv2d *handle,
+    int32_t selection,
+    const int32_t *vertices,
+    int32_t vertex_count,
+    int32_t *out_facet_count,
+    int32_t *out_point_count);
+
+/* Writes the facets and their points. When either list exceeds its
+   capacity the function fails with OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+   and publishes nothing; both counts are 0 unless the result is
+   OPENCV_GEOMETRY_OK. A null buffer is accepted only with capacity 0. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_voronoi_facets(
+    opencv_geometry_subdiv2d *handle,
+    int32_t selection,
+    const int32_t *vertices,
+    int32_t vertex_count,
+    opencv_geometry_voronoi_facet_f32 *out_facets,
+    int32_t facet_capacity,
+    opencv_geometry_point_f32 *out_points,
+    int32_t point_capacity,
+    int32_t *out_facet_count,
+    int32_t *out_point_count);
+
 #ifdef __cplusplus
 }
 #endif

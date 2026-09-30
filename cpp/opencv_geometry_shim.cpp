@@ -2245,7 +2245,8 @@ namespace opencv_geometry_shim_detail {
 // cv::Subdiv2D keeps its vertex and quad-edge storage in protected members
 // that OpenCV 4.6, 4.10, and 5.0 declare identically. This derived class
 // only reads their sizes and vertex kinds so the shim can bound native int
-// arithmetic and identifiers.
+// arithmetic and identifiers, and reads a facet's Voronoi vertices so it can
+// tell computed ones from OpenCV's placeholder.
 class GeometrySubdiv2D : public cv::Subdiv2D {
 public:
     std::size_t quad_edge_count() const noexcept
@@ -2269,6 +2270,24 @@ public:
             return OPENCV_GEOMETRY_SUBDIV2D_VERTEX_VORONOI;
         }
         return OPENCV_GEOMETRY_SUBDIV2D_VERTEX_DELAUNAY;
+    }
+
+    // Whether calcVoronoi gave every point of vertex's facet a Voronoi
+    // vertex. getVoronoiFacetList reads an uncomputed one, whose dual edge
+    // origin is still 0, as the null vertex's position. This walk repeats
+    // getVoronoiFacetList's own, so the caller ensures that vertex is a
+    // Delaunay slot whose facet that function has just walked.
+    bool voronoi_facet_complete(std::size_t vertex) const
+    {
+        const int start = rotateEdge(vtx[vertex].firstEdge, 1);
+        int edge = start;
+        do {
+            if (edgeOrg(edge) == 0) {
+                return false;
+            }
+            edge = getEdge(edge, NEXT_AROUND_LEFT);
+        } while (edge != start);
+        return true;
     }
 };
 
@@ -3018,5 +3037,251 @@ opencv_geometry_subdiv2d_sym_edge(
         handle, edge, out_edge, [edge](const GeometrySubdiv2D &native) {
             return native.symEdge(edge);
         });
+}
+
+namespace {
+
+// getVoronoiFacetList's output and the vertex each facet surrounds.
+struct VoronoiFacets {
+    std::vector<std::vector<cv::Point2f>> polygons;
+    std::vector<cv::Point2f> centers;
+    std::vector<int32_t> sites;
+    std::size_t point_count = 0;
+};
+
+// Checks the arguments shared by the Voronoi functions after zeroing both
+// counts.
+opencv_geometry_status subdiv2d_voronoi_arguments(
+    const opencv_geometry_subdiv2d *handle,
+    int32_t selection,
+    const int32_t *vertices,
+    int32_t vertex_count,
+    int32_t *out_facet_count,
+    int32_t *out_point_count) noexcept
+{
+    if (out_facet_count != nullptr) {
+        *out_facet_count = 0;
+    }
+    if (out_point_count != nullptr) {
+        *out_point_count = 0;
+    }
+    if (out_facet_count == nullptr || out_point_count == nullptr) {
+        return invalid_argument("null Voronoi facet count output pointer");
+    }
+    const opencv_geometry_status ready = subdiv2d_query_ready(handle);
+    if (ready != OPENCV_GEOMETRY_OK) {
+        return ready;
+    }
+    if (selection == OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_ALL) {
+        if (vertices != nullptr || vertex_count != 0) {
+            return invalid_argument(
+                "Voronoi selection of every vertex takes no vertex list");
+        }
+        return OPENCV_GEOMETRY_OK;
+    }
+    if (selection != OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_LISTED) {
+        return invalid_argument("Voronoi facet selection is invalid");
+    }
+    if (vertex_count < 0) {
+        return invalid_argument("Voronoi vertex count must not be negative");
+    }
+    if (vertices == nullptr && vertex_count > 0) {
+        return invalid_argument("null Voronoi vertex list with positive count");
+    }
+    // ABI safety: getVoronoiFacetList indexes its vertex vector with listed
+    // identifiers unchecked.
+    for (int32_t index = 0; index < vertex_count; ++index) {
+        if (!subdiv2d_vertex_in_range(handle->native, vertices[index])) {
+            return invalid_argument(
+                "Voronoi facet vertex identifier is out of range");
+        }
+    }
+    return OPENCV_GEOMETRY_OK;
+}
+
+// Runs getVoronoiFacetList for validated arguments and records each facet's
+// vertex.
+opencv_geometry_status subdiv2d_read_voronoi(
+    opencv_geometry_subdiv2d *handle,
+    int32_t selection,
+    const int32_t *vertices,
+    int32_t vertex_count,
+    VoronoiFacets &facets)
+{
+    GeometrySubdiv2D &native = handle->native;
+    std::vector<int> listed;
+    if (selection == OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_ALL) {
+        // The inserted points, which OpenCV's own every-vertex loop also
+        // selects; listing them makes each facet's site explicit.
+        const std::size_t slots = native.vertex_slot_count();
+        for (std::size_t vertex = 4; vertex < slots; ++vertex) {
+            if (native.vertex_kind(vertex)
+                == OPENCV_GEOMETRY_SUBDIV2D_VERTEX_DELAUNAY) {
+                listed.push_back(static_cast<int>(vertex));
+            }
+        }
+    } else {
+        listed.assign(vertices, vertices + vertex_count);
+    }
+    if (listed.empty()) {
+        // OpenCV would treat an empty list as every vertex.
+        return OPENCV_GEOMETRY_OK;
+    }
+    native.getVoronoiFacetList(listed, facets.polygons, facets.centers);
+
+    // OpenCV skips listed free and Voronoi slots as they are after its
+    // Voronoi computation, which never changes a Delaunay vertex.
+    for (const int vertex : listed) {
+        if (native.vertex_kind(static_cast<std::size_t>(vertex))
+            == OPENCV_GEOMETRY_SUBDIV2D_VERTEX_DELAUNAY) {
+            facets.sites.push_back(vertex);
+        }
+    }
+    // ABI safety: the shim indexes sites and centers by facet, so they must
+    // pair one to one with OpenCV's facets. Each facet center must also be
+    // its site's position: the sites mirror OpenCV's skip rule, and a
+    // changed rule would otherwise publish facets under the wrong site.
+    bool paired = facets.sites.size() == facets.polygons.size()
+        && facets.centers.size() == facets.polygons.size();
+    for (std::size_t index = 0; paired && index < facets.sites.size();
+         ++index) {
+        paired = facets.centers[index]
+            == native.getVertex(facets.sites[index]);
+    }
+    if (!paired) {
+        set_error("Subdiv2D::getVoronoiFacetList returned unexpected facets");
+        return OPENCV_GEOMETRY_ERROR_UNKNOWN;
+    }
+
+    for (const std::vector<cv::Point2f> &polygon : facets.polygons) {
+        facets.point_count += polygon.size();
+    }
+    if (facets.polygons.size() > static_cast<std::size_t>(INT32_MAX)
+        || facets.point_count > static_cast<std::size_t>(INT32_MAX)) {
+        return invalid_argument("Voronoi facets exceed the ABI's int32 counts");
+    }
+    return OPENCV_GEOMETRY_OK;
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_voronoi_facet_counts(
+    opencv_geometry_subdiv2d *handle,
+    int32_t selection,
+    const int32_t *vertices,
+    int32_t vertex_count,
+    int32_t *out_facet_count,
+    int32_t *out_point_count)
+{
+    clear_error();
+    const opencv_geometry_status arguments = subdiv2d_voronoi_arguments(
+        handle,
+        selection,
+        vertices,
+        vertex_count,
+        out_facet_count,
+        out_point_count);
+    if (arguments != OPENCV_GEOMETRY_OK) {
+        return arguments;
+    }
+
+    try {
+        VoronoiFacets facets;
+        const opencv_geometry_status status = subdiv2d_read_voronoi(
+            handle, selection, vertices, vertex_count, facets);
+        if (status != OPENCV_GEOMETRY_OK) {
+            return status;
+        }
+        *out_facet_count = static_cast<int32_t>(facets.polygons.size());
+        *out_point_count = static_cast<int32_t>(facets.point_count);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        // OpenCV marks Voronoi data current only after computing all of it
+        // and recomputes it from scratch after a failure; the Delaunay
+        // triangulation is unchanged.
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_get_voronoi_facets(
+    opencv_geometry_subdiv2d *handle,
+    int32_t selection,
+    const int32_t *vertices,
+    int32_t vertex_count,
+    opencv_geometry_voronoi_facet_f32 *out_facets,
+    int32_t facet_capacity,
+    opencv_geometry_point_f32 *out_points,
+    int32_t point_capacity,
+    int32_t *out_facet_count,
+    int32_t *out_point_count)
+{
+    clear_error();
+    const opencv_geometry_status arguments = subdiv2d_voronoi_arguments(
+        handle,
+        selection,
+        vertices,
+        vertex_count,
+        out_facet_count,
+        out_point_count);
+    if (arguments != OPENCV_GEOMETRY_OK) {
+        return arguments;
+    }
+    if (facet_capacity < 0 || point_capacity < 0) {
+        return invalid_argument("Voronoi facet capacities must not be negative");
+    }
+    if ((out_facets == nullptr && facet_capacity > 0)
+        || (out_points == nullptr && point_capacity > 0)) {
+        return invalid_argument("null Voronoi facet buffer with positive capacity");
+    }
+
+    try {
+        VoronoiFacets facets;
+        const opencv_geometry_status status = subdiv2d_read_voronoi(
+            handle, selection, vertices, vertex_count, facets);
+        if (status != OPENCV_GEOMETRY_OK) {
+            return status;
+        }
+        if (facets.polygons.size() > static_cast<std::size_t>(facet_capacity)
+            || facets.point_count > static_cast<std::size_t>(point_capacity)) {
+            return invalid_argument("Voronoi facet capacity is insufficient");
+        }
+        std::vector<int32_t> complete;
+        complete.reserve(facets.sites.size());
+        for (const int32_t site : facets.sites) {
+            complete.push_back(
+                handle->native.voronoi_facet_complete(
+                    static_cast<std::size_t>(site))
+                    ? 1
+                    : 0);
+        }
+
+        std::size_t first_point = 0;
+        for (std::size_t index = 0; index < facets.polygons.size(); ++index) {
+            const std::vector<cv::Point2f> &polygon = facets.polygons[index];
+            opencv_geometry_voronoi_facet_f32 facet{};
+            facet.site = facets.sites[index];
+            facet.center_x = facets.centers[index].x;
+            facet.center_y = facets.centers[index].y;
+            facet.first_point = static_cast<int32_t>(first_point);
+            facet.point_count = static_cast<int32_t>(polygon.size());
+            facet.complete = complete[index];
+            out_facets[index] = facet;
+            for (const cv::Point2f &native_point : polygon) {
+                opencv_geometry_point_f32 point{};
+                point.x = native_point.x;
+                point.y = native_point.y;
+                out_points[first_point] = point;
+                ++first_point;
+            }
+        }
+        *out_facet_count = static_cast<int32_t>(facets.polygons.size());
+        *out_point_count = static_cast<int32_t>(facets.point_count);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        // See opencv_geometry_subdiv2d_voronoi_facet_counts.
+        return translate_current_exception();
+    }
 }
 
