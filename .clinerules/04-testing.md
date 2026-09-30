@@ -27,9 +27,20 @@ Report the actual registered AUnit test count and native OpenCV
 version/backend. Keep compiler warnings as errors and Ada lines within
 79 columns.
 
+Linux CI also runs the suite against the library built with
+`alr -n -C tests build --profiles=opencv_geometry=validation`, which
+enables every validity check and assertion. Code that passes, copies,
+converts, or inspects values that may be Inf or NaN, whether caller input
+or native results, must suppress validity checks locally
+(`pragma Suppress (Validity_Check)`) so non-finite values raise
+`OpenCV_Error` rather than `Constraint_Error`. The build profile persists
+in the tests crate's Alire settings, and `alr -n -C tests run` reuses the
+last one; rebuild with `--profiles=opencv_geometry=release` afterwards.
+
 `tests/native` holds C++ tests for shim behavior that Ada cannot reach,
-currently allocation-failure injection for the Subdiv2D handle's unusable
-state. They include the shim source and replace the global allocation
+currently allocation-failure injection for the Subdiv2D handle: its
+unusable state, and the failure behavior of its list and Voronoi queries.
+They include the shim source and replace the global allocation
 functions. Run them with `sh scripts/run_native_tests.sh` on Linux after
 `alr -n build` whenever the Subdiv2D shim changes; Linux CI runs them
 under AddressSanitizer and UndefinedBehaviorSanitizer.

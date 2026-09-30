@@ -176,7 +176,11 @@ package body OpenCV.Geometry is
    end To_Public_Moments;
 
    function To_C_Moments
-     (Value : Moments_Result) return Internal.C_API.C_Moments is
+     (Value : Moments_Result) return Internal.C_API.C_Moments
+   is
+      --  A caller's Value may hold Inf/NaN; Hu_Moments rejects them after
+      --  packing.
+      pragma Suppress (Validity_Check);
    begin
       return
         (M00  => Interfaces.C.double (Value.M_00),
@@ -252,7 +256,10 @@ package body OpenCV.Geometry is
 
    function To_Public_Hu_Value
      (Value : Interfaces.C.double; Index : Hu_Moment_Index)
-      return OpenCV.Float64_Value is
+      return OpenCV.Float64_Value
+   is
+      --  Value may be Inf/NaN; To_Public_Float64 inspects it.
+      pragma Suppress (Validity_Check);
    begin
       return
         To_Public_Float64
@@ -262,9 +269,41 @@ package body OpenCV.Geometry is
            & " result is not finite");
    end To_Public_Hu_Value;
 
+   --  True when every field of Packed is finite.
+   function All_Finite (Packed : Internal.C_API.C_Moments) return Boolean is
+      pragma Suppress (Validity_Check);
+   begin
+      return
+        Is_Finite_C_Double (Packed.M00)
+        and then Is_Finite_C_Double (Packed.M10)
+        and then Is_Finite_C_Double (Packed.M01)
+        and then Is_Finite_C_Double (Packed.M20)
+        and then Is_Finite_C_Double (Packed.M11)
+        and then Is_Finite_C_Double (Packed.M02)
+        and then Is_Finite_C_Double (Packed.M30)
+        and then Is_Finite_C_Double (Packed.M21)
+        and then Is_Finite_C_Double (Packed.M12)
+        and then Is_Finite_C_Double (Packed.M03)
+        and then Is_Finite_C_Double (Packed.Mu20)
+        and then Is_Finite_C_Double (Packed.Mu11)
+        and then Is_Finite_C_Double (Packed.Mu02)
+        and then Is_Finite_C_Double (Packed.Mu30)
+        and then Is_Finite_C_Double (Packed.Mu21)
+        and then Is_Finite_C_Double (Packed.Mu12)
+        and then Is_Finite_C_Double (Packed.Mu03)
+        and then Is_Finite_C_Double (Packed.Nu20)
+        and then Is_Finite_C_Double (Packed.Nu11)
+        and then Is_Finite_C_Double (Packed.Nu02)
+        and then Is_Finite_C_Double (Packed.Nu30)
+        and then Is_Finite_C_Double (Packed.Nu21)
+        and then Is_Finite_C_Double (Packed.Nu12)
+        and then Is_Finite_C_Double (Packed.Nu03);
+   end All_Finite;
+
    function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result is
-      --  Native Hu results may be Inf/NaN. Suppress Ada validity checks
-      --  until To_Public_Hu_Value inspects the raw C doubles.
+      --  Moments and the native Hu results may be Inf/NaN. Suppress Ada
+      --  validity checks until All_Finite and To_Public_Hu_Value inspect
+      --  the raw C doubles.
       pragma Suppress (Validity_Check);
       Packed : aliased Internal.C_API.C_Moments := To_C_Moments (Moments);
       Result : aliased Internal.C_API.C_Hu_Result :=
@@ -277,6 +316,11 @@ package body OpenCV.Geometry is
          Hu_7 => 0.0);
       Status : Internal.C_API.Status;
    begin
+      if not All_Finite (Packed) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Hu_Moments requires finite Moments fields");
+      end if;
       Status := Internal.C_API.Hu_Moments (Packed'Access, Result'Access);
       Raise_On_Error (Status, "Hu moments");
       return
@@ -1368,6 +1412,8 @@ package body OpenCV.Geometry is
       Angle  : OpenCV.Float64_Value;
       Scale  : OpenCV.Float64_Value)
    is
+      --  The arguments may be Inf/NaN; this procedure rejects them.
+      pragma Suppress (Validity_Check);
       use type OpenCV.Float32_Value;
       use type OpenCV.Float64_Value;
    begin
@@ -1436,6 +1482,10 @@ package body OpenCV.Geometry is
       Scale  : OpenCV.Float64_Value := 1.0;
       Units  : OpenCV.Angle_Unit := OpenCV.Degrees) return OpenCV.Core.Mat
    is
+      --  Passes possibly Inf/NaN arguments to their validation, and native
+      --  coefficients that finite inputs can overflow to Inf/NaN to
+      --  To_Public_Float64.
+      pragma Suppress (Validity_Check);
       Degrees : OpenCV.Float64_Value;
       Result  : aliased Internal.C_API.C_Affine_2x3_F64 :=
         (M00 => 0.0,

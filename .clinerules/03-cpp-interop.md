@@ -32,12 +32,16 @@ Use C-compatible types:
 Do not expose C++ `bool`, C++ enums, references, STL types, bitfields,
 or overloaded C++ signatures.
 
-Geometry currently uses:
+Geometry uses, for example:
 
-- `opencv_geometry_point_i32` for packed contour points
-- `opencv_geometry_moments` for the 24 moment fields
-- `int32_t` point counts and 0/1 selectors
-- `double` scalar outputs
+- `opencv_geometry_point_i32` for packed contour points and
+  `opencv_geometry_point_f32` for binary32 points
+- plain value structs such as `opencv_geometry_moments` (the 24 moment
+  fields), `opencv_geometry_rotated_rect_f32`,
+  `opencv_geometry_affine_2x3_f64`, and `opencv_geometry_perspective_3x3_f64`
+- `int32_t` counts, explicit `int32_t` selector constants, and 0/1
+  selectors
+- `float` and `double` scalar outputs
 
 Do not assume Ada `Integer` or `Natural` match C integer width. All
 representation conversions belong in the thin Ada interoperability

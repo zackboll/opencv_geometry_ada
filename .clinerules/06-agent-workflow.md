@@ -273,6 +273,7 @@ Prefer this sequence:
 8. run the affected tests
 9. run GNATprove or coverage when appropriate
 10. if `cpp/opencv_geometry_shim.cpp` changed, complete the validation-boundary review from `.clinerules/05-quality.md`
+11. if the public API changed, update the hand-maintained coverage table in `docs/coverage.md`
 
 When that review applies, the feature summary must state either that no public semantic validation is duplicated in the C++ shim, or list every retained duplicate and its ABI-safety reason.
 

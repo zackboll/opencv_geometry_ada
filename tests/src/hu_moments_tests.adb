@@ -1,8 +1,10 @@
 with Ada.Exceptions;
 with Ada.Strings.Fixed;
+with Ada.Unchecked_Conversion;
 with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
+with Interfaces;
 with Interfaces.C;
 with OpenCV;
 with OpenCV.Geometry;
@@ -503,6 +505,53 @@ package body Hu_Moments_Tests is
         (Raised, "finite input producing native NaN must raise OpenCV_Error");
    end Finite_NaN_Raises_OpenCV_Error;
 
+   --  A non-finite input field, which only invalid data can hold, raises
+   --  OpenCV_Error in every build profile.
+   procedure Non_Finite_Input_Raises_OpenCV_Error (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+
+      function Bits_To_Float64 is new
+        Ada.Unchecked_Conversion
+          (Source => Interfaces.Unsigned_64,
+           Target => OpenCV.Float64_Value);
+
+      procedure Check (Bits : Interfaces.Unsigned_64; Label : String) is
+         pragma Suppress (Validity_Check);
+         Value   : OpenCV.Float64_Value;
+         Raised  : Boolean := False;
+         Moments : OpenCV.Geometry.Moments_Result;
+      begin
+         Value := Bits_To_Float64 (Bits);
+         for Field in 1 .. 2 loop
+            Moments := (others => <>);
+            if Field = 1 then
+               Moments.M_00 := Value;
+            else
+               Moments.Nu_20 := Value;
+            end if;
+            Raised := False;
+            begin
+               declare
+                  Unused : constant OpenCV.Geometry.Hu_Moments_Result :=
+                    OpenCV.Geometry.Hu_Moments (Moments);
+                  pragma Unreferenced (Unused);
+               begin
+                  null;
+               end;
+            exception
+               when OpenCV.OpenCV_Error =>
+                  Raised := True;
+            end;
+            AUnit.Assertions.Assert
+              (Raised, Label & " input field must raise OpenCV_Error");
+         end loop;
+      end Check;
+   begin
+      Check (16#7FF8_0000_0000_0000#, "a NaN");
+      Check (16#7FF0_0000_0000_0000#, "a +Inf");
+      Check (16#FFF0_0000_0000_0000#, "a -Inf");
+   end Non_Finite_Input_Raises_OpenCV_Error;
+
    procedure Large_Finite_Result (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Half    : constant OpenCV.Float64_Value :=
@@ -569,6 +618,10 @@ package body Hu_Moments_Tests is
         (Caller.Create
            ("Hu moments finite NaN raises OpenCV_Error",
             Finite_NaN_Raises_OpenCV_Error'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Hu moments non-finite input raises OpenCV_Error",
+            Non_Finite_Input_Raises_OpenCV_Error'Access));
       Result.Add_Test
         (Caller.Create
            ("Hu moments large finite result", Large_Finite_Result'Access));
