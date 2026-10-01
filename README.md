@@ -514,17 +514,20 @@ three super-triangle vertices. A facet whose true Voronoi region reaches
 beyond the super-triangle, as the region of every point on the convex hull
 and of some points near it does, is therefore closed by circumcenters of
 triangles with a super-triangle vertex. Those lie far outside the bounds and
-differ between releases. For points at least about 0.03 units apart, each
-Voronoi vertex of a facet is still nearest to its site among the inserted
-points.
+differ between releases. In the tested well-spaced fixtures, each Voronoi
+facet point was nearest to its site among the inserted points (up to
+rounding). Spacing of about 0.03 units was an empirical observation in
+those fixtures, not a guaranteed safe threshold: conditioning, including
+near-collinear and nearly cocircular configurations, also matters.
 
-OpenCV computes no Voronoi vertex for a degenerate (collinear) triangle, which
-its absolute tolerances can leave among points closer than the scale limit
-above (probes found them between about 0.0001 and 0.003 units apart,
-depending on the point distribution), and reports the origin in its place. The
-shim detects this for each facet, and `Voronoi_Facet.Complete` is `False` for
-a facet whose polygon contains such placeholder points; the other facets are
-unaffected.
+OpenCV can fail to create a Voronoi vertex for a facet, for example when
+degenerate or ill-conditioned geometry makes a circumcenter impossible to
+compute or represent within its accepted finite binary32 range. Probes
+observed missing vertices among closely spaced points about 0.0001 to 0.003
+units apart, depending on the distribution; these are not universal
+thresholds. OpenCV reports the origin in place of a missing vertex. The shim
+detects this for each facet, and `Voronoi_Facet.Complete` is `False` when its
+polygon contains such placeholder points; the other facets are unaffected.
 
 The C ABI adds a count query that sizes both buffers. Repeated sites make the
 point count unbounded by anything Ada knows beforehand, and one query serves
@@ -535,8 +538,8 @@ owns for the call, publishing nothing if the native result would not fit.
 Validation boundary: thick Ada checks listed sites and every returned count,
 offset, and site at run time; the shim bounds identifiers and verifies the
 site pairing at run time; the facet contents themselves are OpenCV's and are
-covered by tests, including the nearest-site property; nothing here is proved
-by GNATprove.
+covered by tests, including nearest-site checks in well-spaced fixtures;
+nothing here is proved by GNATprove.
 
 ## Development
 

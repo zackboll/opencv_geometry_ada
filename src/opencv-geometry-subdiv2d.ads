@@ -274,10 +274,12 @@ package OpenCV.Geometry.Subdiv2D is
    --  Voronoi diagram. OpenCV computes the Voronoi diagram of the inserted
    --  points together with the three super-triangle vertices. The facet of
    --  an inserted point, its site, is the region nearer to that point than
-   --  to any other of those vertices. So for points spaced as the package's
-   --  Scale note requires, each Voronoi vertex of a facet is nearest to its
-   --  site among the inserted points, up to rounding. A facet whose true
-   --  Voronoi region reaches beyond the super-triangle, as the region of
+   --  to any other of those vertices. In tested well-spaced fixtures, each
+   --  facet point was nearest to its site among inserted points, up to
+   --  rounding. This is not guaranteed by a minimum spacing: conditioning,
+   --  including near-collinear and nearly cocircular sets, also matters.
+   --  A facet whose true Voronoi region reaches beyond the super-triangle,
+   --  as the region of
    --  every point on the convex hull and of some points near it does, is
    --  closed by circumcenters of triangles with a super-triangle vertex.
    --  Those lie far outside the bounds and differ between releases, because
@@ -293,14 +295,15 @@ package OpenCV.Geometry.Subdiv2D is
    --  facet center), and the facet polygon, which is the diagram's
    --  Points (First .. Last) in the order of OpenCV's walk around Site.
    --
-   --  Complete is False when OpenCV computed no Voronoi vertex for part of
-   --  the facet. That happens next to a degenerate (collinear) triangle,
-   --  which OpenCV's absolute tolerances can leave among points closer than
-   --  the Scale note requires; probes found such triangles among points
-   --  between about 0.0001 and 0.003 units apart, depending on how the
-   --  points are distributed. OpenCV then reports the origin (0.0, 0.0) in
-   --  place of each missing Voronoi vertex, and the polygon keeps those
-   --  placeholder points, so an incomplete polygon is not the true facet.
+   --  Complete is False when OpenCV failed to create at least one Voronoi
+   --  vertex for the facet, for example because degenerate or ill-conditioned
+   --  geometry makes a circumcenter impossible to compute or represent in
+   --  OpenCV's accepted finite binary32 range. Probes found missing vertices
+   --  among points about 0.0001 to 0.003 units apart, depending on their
+   --  distribution; these spacings are observations, not hard thresholds.
+   --  OpenCV then reports the origin (0.0, 0.0) in place of each missing
+   --  vertex, and the polygon keeps those placeholder points, so an
+   --  incomplete polygon is not the true facet.
    type Voronoi_Facet is record
       Site       : Vertex_Id := No_Vertex;
       Site_Point : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
