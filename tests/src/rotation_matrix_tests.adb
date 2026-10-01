@@ -399,6 +399,14 @@ package body Rotation_Matrix_Tests is
            OpenCV.Geometry.Get_Rotation_Matrix_2D
              ((X => 0.0, Y => 0.0), 0.0, Value);
       end Inf_Scale;
+
+      --  Finite inputs whose native coefficients overflow binary64.
+      procedure Overflowing_Coefficients is
+      begin
+         Discard :=
+           OpenCV.Geometry.Get_Rotation_Matrix_2D
+             ((X => 3.0E38, Y => 3.0E38), 45.0, 1.0E300);
+      end Overflowing_Coefficients;
    begin
       Assert_Raises_OpenCV_Error
         (Nan_Center_X'Access,
@@ -416,6 +424,9 @@ package body Rotation_Matrix_Tests is
       Assert_Raises_OpenCV_Error
         (Inf_Scale'Access,
          "Get_Rotation_Matrix_2D must reject an infinite Scale");
+      Assert_Raises_OpenCV_Error
+        (Overflowing_Coefficients'Access,
+         "overflowing native coefficients must raise OpenCV_Error");
    end Rejects_Invalid_Public_Inputs;
 
    procedure C_ABI_Rejects_Malformed_Inputs (Test : in out Fixture) is

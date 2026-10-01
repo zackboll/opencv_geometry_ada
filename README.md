@@ -15,7 +15,7 @@ Both link native OpenCV Core. There is no Ada Imgproc dependency.
 Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
-Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
+Operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Convex_Hull`, `Convex_Hull_Indices`, `Convexity_Defects`,
 `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`,
 `Hu_Moments`, `Match_Shapes`, `Locate_Point`,
@@ -25,7 +25,11 @@ Initial operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Intersect_Convex_Polygons`, `Intersect_Rotated_Rectangles`,
 `Get_Rotation_Matrix_2D`, `Get_Affine_Transform`, `Invert_Affine_Transform`,
 `Get_Perspective_Transform`, and `Transform_Point`. The child package
-`OpenCV.Geometry.Subdiv2D` provides planar subdivisions.
+`OpenCV.Geometry.Subdiv2D` provides planar subdivisions. Every Geometry
+operation common to OpenCV 4.6, 4.10, and 5.0 has a thick binding, some for
+only a subset of the native modes; `docs/coverage.md` maps each native
+operation to its Ada binding and records the unbound modes, the operations
+missing from OpenCV 4.6 and 4.10, and the exclusions.
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to

@@ -61,9 +61,11 @@ package OpenCV.Geometry is
    --  rotation, and reflection except the seventh, whose sign changes
    --  under reflection. Rasterized-image transforms can differ slightly.
    --  Compose with Compute_Moments as Hu_Moments (Compute_Moments (Points)).
-   --  Moments is unchanged.
-   --  If native Hu computation produces a non-finite value that cannot
-   --  be represented by Float64_Value, Hu_Moments raises OpenCV_Error.
+   --  Moments is unchanged. Every field of Moments must be finite: a
+   --  non-finite field, which only invalid data can hold, raises
+   --  OpenCV_Error. If native Hu computation produces a non-finite value
+   --  that cannot be represented by Float64_Value, Hu_Moments raises
+   --  OpenCV_Error.
    type Hu_Moment_Index is range 1 .. 7;
 
    type Hu_Moments_Result is array (Hu_Moment_Index) of OpenCV.Float64_Value;
@@ -185,7 +187,12 @@ package OpenCV.Geometry is
    --  uniquely ordered, or enclose nonzero area. Repeated, collinear, and
    --  other degenerate sets may still produce a finite native result,
    --  including a zero-sized rectangle. Native failures and non-finite or
-   --  negative size components raise OpenCV.OpenCV_Error.
+   --  negative size components raise OpenCV.OpenCV_Error. OpenCV fits
+   --  exactly five points with fitEllipseDirect, and more with its classic
+   --  method, which perturbs the points and retries when its system is
+   --  singular, as for points exactly on one conic. OpenCV 4.12 and later,
+   --  including 5.x, draw that perturbation from cv::theRNG, so such
+   --  results need not repeat; earlier releases perturb deterministically.
    function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect;
 
    --  Ellipse fitted to Points by cv::fitEllipseAMS, the Approximate Mean

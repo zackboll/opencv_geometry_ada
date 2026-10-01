@@ -41,9 +41,14 @@ root `OpenCV` package. Core owns `OpenCV` and `OpenCV.Core`.
 Reuse public OpenCV value types where they already exist: `Point`,
 `Point_Array`, `Size`, `Rect`, `Scalar`, and `Float64_Value`.
 
-Reusing a root OpenCV value type is not permission to use `OpenCV.Core.Mat`,
-borrow Mat handles, or introduce a Core module bridge. Geometry
-currently has no Mat API. Do not add one for convenience.
+Reusing a root OpenCV value type is not permission to use
+`OpenCV.Core.Mat`, borrow Mat handles, or introduce a Core module bridge.
+The one exception is `Get_Rotation_Matrix_2D`, which returns an
+`OpenCV.Core.Mat`: Geometry's C ABI carries only six doubles, and the Mat
+is created through, and owned by, Core's public Ada API. No other Geometry
+code uses `OpenCV.Core.Mat`. Do not add Mat parameters, results, or
+temporaries for convenience. New matrix-valued results use Geometry value
+types, as `Affine_Transform_2D` and `Perspective_Transform_2D` do.
 
 `OpenCV.Geometry` may define a public type only when Geometry requires
 it and OpenCV/OpenCV.Core does not already supply it. `Contour` is a subtype of
