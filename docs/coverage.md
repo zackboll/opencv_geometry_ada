@@ -73,11 +73,17 @@ Two notes apply to the whole family:
   instead of 3 times the larger bounds dimension). That changes the positions
   of vertices 1 .. 3, edges to them, hull triangles, and the far vertices of
   hull Voronoi facets.
-- OpenCV's predicates use absolute tolerances. The triangulation is reliably
-  Delaunay only for points at least about 0.03 units apart. Below that,
-  `findNearest` can answer a wrong vertex or report none, `insert` and
-  `locate` can fail to locate points, and at about 0.0001 units `findNearest`
-  can fail to return. The package documentation gives the measured details.
+- OpenCV's predicates use absolute binary32-scale tolerances. Behavior
+  depends on coordinate scale and geometric conditioning, not just pairwise
+  spacing (the smallest distance between inserted points). In the specific
+  random-point and jittered-grid fixtures tested on OpenCV 4.10 and 5.0, no
+  `Find_Nearest` failures were observed at spacings around 0.03 units or
+  greater. This is empirical guidance, not a guaranteed safe minimum:
+  near-collinear, nearly cocircular, and other ill-conditioned sets may behave
+  differently at any pairwise spacing. At smaller tested spacings,
+  `Find_Nearest` could return the wrong vertex or no vertex, `Insert` and
+  `Locate` could fail, and at pathological scales native `findNearest` could
+  fail to return. The package documentation gives the measured details.
 
 | Native member | Public Ada operation | Status | Version notes |
 | --- | --- | --- | --- |
