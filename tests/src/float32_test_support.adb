@@ -29,6 +29,22 @@ package body Float32_Test_Support is
       return Bits_To_Float32 (16#FF80_0000#);
    end Negative_Infinity_32;
 
+   function Negative_Zero_32 return OpenCV.Float32_Value is
+   begin
+      return Bits_To_Float32 (16#8000_0000#);
+   end Negative_Zero_32;
+
+   function Float32_To_Bits is new
+     Ada.Unchecked_Conversion
+       (Source => OpenCV.Float32_Value,
+        Target => Interfaces.Unsigned_32);
+
+   function Is_Negative_Zero (Value : OpenCV.Float32_Value) return Boolean is
+      use type Interfaces.Unsigned_32;
+   begin
+      return Float32_To_Bits (Value) = 16#8000_0000#;
+   end Is_Negative_Zero;
+
    function Bits_To_C_Float is new
      Ada.Unchecked_Conversion
        (Source => Interfaces.Unsigned_32,
@@ -50,6 +66,76 @@ package body Float32_Test_Support is
       end loop;
       return Result;
    end Rounded;
+
+   function To_Float32 (Source : OpenCV.Geometry.Contour) return Points is
+      Result : Points (Source'Range);
+   begin
+      for Index in Source'Range loop
+         Result (Index) :=
+           (X => OpenCV.Float32_Value (Source (Index).X),
+            Y => OpenCV.Float32_Value (Source (Index).Y));
+      end loop;
+      return Result;
+   end To_Float32;
+
+   function Contains_Point
+     (Source : Points; Item : OpenCV.Float32_Point) return Boolean is
+   begin
+      for Point of Source loop
+         if Point.X = Item.X and then Point.Y = Item.Y then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Contains_Point;
+
+   function Same_Vertex_Set (Left, Right : Points) return Boolean is
+   begin
+      if Left'Length /= Right'Length then
+         return False;
+      end if;
+      for Point of Left loop
+         if not Contains_Point (Right, Point) then
+            return False;
+         end if;
+      end loop;
+      for Point of Right loop
+         if not Contains_Point (Left, Point) then
+            return False;
+         end if;
+      end loop;
+      return True;
+   end Same_Vertex_Set;
+
+   function Same_Cyclic_Order (Left, Right : Points) return Boolean is
+      Count : constant Natural := Left'Length;
+   begin
+      if Right'Length /= Count then
+         return False;
+      end if;
+      for Shift in 0 .. Count - 1 loop
+         declare
+            Matches : Boolean := True;
+         begin
+            for Offset in 0 .. Count - 1 loop
+               declare
+                  L : OpenCV.Float32_Point renames Left (Left'First + Offset);
+                  R : OpenCV.Float32_Point renames
+                    Right (Right'First + (Offset + Shift) mod Count);
+               begin
+                  if L.X /= R.X or else L.Y /= R.Y then
+                     Matches := False;
+                     exit;
+                  end if;
+               end;
+            end loop;
+            if Matches then
+               return True;
+            end if;
+         end;
+      end loop;
+      return Count = 0;
+   end Same_Cyclic_Order;
 
    function Pack
      (Source : Points) return OpenCV.Geometry.Internal.C_API.Point_F32_Array

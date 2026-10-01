@@ -111,4 +111,37 @@ is
      Global => null,
      Pre    => Is_Ordered (Bounds) and then Spans_Are_Binary32 (Bounds);
 
+   --  minEnclosingCircle's circle through three points forms binary32
+   --  products of a coordinate sum and two coordinate differences, at most
+   --  16 * M**3 for coordinates of magnitude at most M; M = 2.0**41 keeps
+   --  them below 2.0**127.
+   Circle_Coordinate_Limit : constant := 2.0**41;
+
+   --  fitLine forms binary32 products of two raw coordinates; M = 2.0**63
+   --  keeps them at most 2.0**126.
+   Line_Coordinate_Limit : constant := 2.0**63;
+
+   --  True when every coordinate of Points has magnitude at most Limit.
+   function Magnitudes_Are_At_Most
+     (Points : Float32_Point_Array; Limit : Float32) return Boolean
+   is (for all Point of Points =>
+         abs Point.X <= Limit and then abs Point.Y <= Limit)
+   with Global => null;
+
+   --  Bound on the binary64 sums of absolute coordinates for which a
+   --  binary32 running sum of the coordinates cannot overflow. Each
+   --  binary32 addition grows a partial sum by at most a factor
+   --  1 + 2.0**(-24) beyond the exact sum of absolute values, and the
+   --  binary64 sums here differ from exact by less than 2.0**(-22)
+   --  relatively. For fewer than 2**28 points the growth is below e**16,
+   --  less than 2.0**23.1, so every binary32 partial sum stays below
+   --  2.0**126.2, and so do coordinate differences from their mean.
+   Coordinate_Sum_Limit : constant := 2.0**103;
+
+   --  True when the absolute X coordinates and the absolute Y coordinates
+   --  of Points each sum, in binary64, to at most Coordinate_Sum_Limit.
+   function Coordinate_Sums_Are_Bounded
+     (Points : Float32_Point_Array) return Boolean
+   with Global => null;
+
 end OpenCV.Geometry.Internal.Float32_Points;

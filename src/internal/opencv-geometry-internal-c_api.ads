@@ -232,6 +232,43 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_is_convex_f32";
 
+   function Convex_Hull_F32
+     (Points       : access constant Point_F32;
+      Point_Count  : Interfaces.Integer_32;
+      Clockwise    : Interfaces.Integer_32;
+      Out_Points   : access Point_F32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_convex_hull_f32";
+
+   function Convex_Hull_Indices_F32
+     (Points       : access constant Point_F32;
+      Point_Count  : Interfaces.Integer_32;
+      Clockwise    : Interfaces.Integer_32;
+      Out_Indices  : access Interfaces.Integer_32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_convex_hull_indices_f32";
+
+   function Approximate_Curve_F32
+     (Points       : access constant Point_F32;
+      Point_Count  : Interfaces.Integer_32;
+      Epsilon      : Interfaces.C.double;
+      Closed       : Interfaces.Integer_32;
+      Out_Points   : access Point_F32;
+      Out_Capacity : Interfaces.Integer_32;
+      Out_Count    : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_approximate_curve_f32";
+
    function Convex_Hull
      (Points       : access Point_I32;
       Point_Count  : Interfaces.Integer_32;
@@ -415,6 +452,51 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_fit_ellipse_direct";
 
+   function Min_Enclosing_Circle_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Enclosing_Circle) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_min_enclosing_circle_f32";
+
+   function Min_Area_Rect_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_min_area_rect_f32";
+
+   function Fit_Ellipse_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse_f32";
+
+   function Fit_Ellipse_AMS_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse_ams_f32";
+
+   function Fit_Ellipse_Direct_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Rotated_Rect) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_ellipse_direct_f32";
+
    type C_Line_2D is record
       Direction_X : Interfaces.C.C_float;
       Direction_Y : Interfaces.C.C_float;
@@ -442,6 +524,19 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_fit_line_2d";
+
+   function Fit_Line_2D_F32
+     (Points          : access constant Point_F32;
+      Point_Count     : Interfaces.Integer_32;
+      Distance        : Interfaces.Integer_32;
+      Parameter       : Interfaces.C.double;
+      Radius_Accuracy : Interfaces.C.double;
+      Angle_Accuracy  : Interfaces.C.double;
+      Result          : access C_Line_2D) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_fit_line_2d_f32";
 
    function Box_Points
      (Box : access constant C_Rotated_Rect; Result : access C_Box_Vertices)

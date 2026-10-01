@@ -119,6 +119,21 @@ std::vector<cv::Point2f> points_from_f32(
     return result;
 }
 
+// True when a coordinate is NaN. OpenCV convexHull sorts point pointers with
+// a coordinate comparator, and NaN breaks the strict weak ordering that
+// std::sort requires.
+bool points_f32_have_nan(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count) noexcept
+{
+    for (int32_t index = 0; index < point_count; ++index) {
+        if (std::isnan(points[index].x) || std::isnan(points[index].y)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }
 
 const char *opencv_geometry_last_error_message(void)
@@ -547,6 +562,142 @@ opencv_geometry_convex_hull_indices(
         // zero-based source indices rather than hull points.
         std::vector<int> hull;
         cv::convexHull(contour, hull, clockwise != 0, false);
+        // ABI safety: copying more indices than capacity would overflow the
+        // caller-provided buffer. Hull cardinality is at most point_count.
+        if (hull.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "convex hull indices output capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < hull.size(); ++index) {
+            out_indices[index] = hull[index];
+        }
+        *out_count = static_cast<int32_t>(hull.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_convex_hull_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t clockwise,
+    opencv_geometry_point_f32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument("null convex hull output count pointer");
+    }
+    *out_count = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "convex hull point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (clockwise != 0 && clockwise != 1) {
+        return invalid_argument(
+            "convex hull clockwise selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "convex hull output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any hull points.
+    if (out_capacity > 0 && out_points == nullptr) {
+        return invalid_argument(
+            "null convex hull output points with positive capacity");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Geometry defines an empty set to produce an empty hull.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    // ABI safety: NaN breaks the comparator of convexHull's std::sort.
+    if (points_f32_have_nan(points, point_count)) {
+        return invalid_argument("convex hull points must not be NaN");
+    }
+
+    try {
+        // A std::vector<cv::Point2f> output has fixed type CV_32FC2, so
+        // OpenCV returns bitwise copies of the hull points.
+        std::vector<cv::Point2f> hull;
+        cv::convexHull(
+            points_from_f32(points, point_count), hull, clockwise != 0, true);
+        // ABI safety: copying more points than capacity would overflow the
+        // caller-provided buffer. Hull cardinality is at most point_count.
+        if (hull.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "convex hull output capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < hull.size(); ++index) {
+            out_points[index].x = hull[index].x;
+            out_points[index].y = hull[index].y;
+        }
+        *out_count = static_cast<int32_t>(hull.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_convex_hull_indices_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t clockwise,
+    int32_t *out_indices,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null convex hull indices output count pointer");
+    }
+    *out_count = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "convex hull indices point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (clockwise != 0 && clockwise != 1) {
+        return invalid_argument(
+            "convex hull indices clockwise selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "convex hull indices output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any hull indices.
+    if (out_capacity > 0 && out_indices == nullptr) {
+        return invalid_argument(
+            "null convex hull output indices with positive capacity");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Geometry defines an empty set to produce an empty hull.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    // ABI safety: NaN breaks the comparator of convexHull's std::sort.
+    if (points_f32_have_nan(points, point_count)) {
+        return invalid_argument("convex hull indices points must not be NaN");
+    }
+
+    try {
+        std::vector<int> hull;
+        cv::convexHull(
+            points_from_f32(points, point_count), hull, clockwise != 0, false);
         // ABI safety: copying more indices than capacity would overflow the
         // caller-provided buffer. Hull cardinality is at most point_count.
         if (hull.size() > static_cast<std::size_t>(out_capacity)) {
@@ -1439,6 +1590,47 @@ opencv_geometry_min_enclosing_circle(
     }
 }
 
+opencv_geometry_status
+opencv_geometry_min_enclosing_circle_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_enclosing_circle_f32 *out_circle)
+{
+    clear_error();
+    if (out_circle == nullptr) {
+        return invalid_argument("null enclosing circle output pointer");
+    }
+    zero_enclosing_circle(out_circle);
+    if (point_count < 0) {
+        return invalid_argument(
+            "enclosing circle point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Native minEnclosingCircle returns center (0,0) and
+    // radius 0 for count == 0. The CV_32F path is binary32 arithmetic
+    // only, so no arithmetic guard is needed.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+
+    try {
+        cv::Point2f center;
+        float radius = 0.0f;
+        cv::minEnclosingCircle(
+            points_from_f32(points, point_count), center, radius);
+        out_circle->center_x = center.x;
+        out_circle->center_y = center.y;
+        out_circle->radius = radius;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_enclosing_circle(out_circle);
+        return translate_current_exception();
+    }
+}
+
 namespace {
 
 void zero_triangle(opencv_geometry_triangle_f32 *out_triangle) noexcept
@@ -1549,6 +1741,62 @@ opencv_geometry_min_area_rect(
         const std::vector<cv::Point> contour =
             contour_from_points(points, point_count);
         const cv::RotatedRect rect = cv::minAreaRect(contour);
+        out_rect->center_x = rect.center.x;
+        out_rect->center_y = rect.center.y;
+        out_rect->width = rect.size.width;
+        out_rect->height = rect.size.height;
+        out_rect->angle_degrees = rect.angle;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_rotated_rect(out_rect);
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_min_area_rect_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null minimum area rectangle output pointer");
+    }
+    zero_rotated_rect(out_rect);
+    if (point_count < 0) {
+        return invalid_argument(
+            "minimum area rectangle point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: as for integer contours, an empty point vector
+    // has no depth for checkVector; native typed empty behavior is a zero
+    // rectangle with 0 degrees in OpenCV 4 and -90 degrees in OpenCV 5.
+    if (point_count == 0) {
+#if CV_VERSION_MAJOR >= 5
+        out_rect->angle_degrees = -90.0f;
+#endif
+        return OPENCV_GEOMETRY_OK;
+    }
+    // ABI safety: rotatingCalipers allocates AutoBuffer<float>(n*3) in signed
+    // int for a hull of n vertices, and every binary32 point can be a hull
+    // vertex.
+    if (point_count > INT32_MAX / 3) {
+        return invalid_argument(
+            "minimum area rectangle point count exceeds native allocation "
+            "range");
+    }
+    // ABI safety: NaN breaks the comparator of convexHull's std::sort.
+    if (points_f32_have_nan(points, point_count)) {
+        return invalid_argument(
+            "minimum area rectangle points must not be NaN");
+    }
+
+    try {
+        const cv::RotatedRect rect =
+            cv::minAreaRect(points_from_f32(points, point_count));
         out_rect->center_x = rect.center.x;
         out_rect->center_y = rect.center.y;
         out_rect->width = rect.size.width;
@@ -1679,6 +1927,81 @@ opencv_geometry_fit_ellipse_direct(
 
 namespace {
 
+// Shared body of the three binary32 ellipse fits.
+opencv_geometry_status fit_ellipse_f32_with(
+    ellipse_fit fit,
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null ellipse fit output pointer");
+    }
+    zero_rotated_rect(out_rect);
+    if (point_count < 0) {
+        return invalid_argument(
+            "ellipse fit point count must not be negative");
+    }
+    // ABI safety: the CV_32F paths share the integer paths' count
+    // arithmetic, including fitEllipseNoDirect's AutoBuffer<double>(n*12+n)
+    // in signed int, which every fit can reach.
+    if (point_count > INT32_MAX / 13) {
+        return invalid_argument(
+            "ellipse fit point count exceeds native allocation range");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+
+    try {
+        const cv::RotatedRect rect =
+            fit(points_from_f32(points, point_count));
+        out_rect->center_x = rect.center.x;
+        out_rect->center_y = rect.center.y;
+        out_rect->width = rect.size.width;
+        out_rect->height = rect.size.height;
+        out_rect->angle_degrees = rect.angle;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_rotated_rect(out_rect);
+        return translate_current_exception();
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    return fit_ellipse_f32_with(cv::fitEllipse, points, point_count, out_rect);
+}
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_ams_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    return fit_ellipse_f32_with(
+        cv::fitEllipseAMS, points, point_count, out_rect);
+}
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_direct_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect)
+{
+    return fit_ellipse_f32_with(
+        cv::fitEllipseDirect, points, point_count, out_rect);
+}
+
+namespace {
+
 bool line_fit_distance(int32_t distance, int *native_distance) noexcept
 {
     switch (distance) {
@@ -1758,6 +2081,61 @@ opencv_geometry_fit_line_2d(
         cv::Vec4f line;
         cv::fitLine(
             contour,
+            line,
+            native_distance,
+            parameter,
+            radius_accuracy,
+            angle_accuracy);
+        opencv_geometry_line_2d_f32 result{};
+        result.direction_x = line[0];
+        result.direction_y = line[1];
+        result.point_x = line[2];
+        result.point_y = line[3];
+        *out_line = result;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_line = opencv_geometry_line_2d_f32{};
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_fit_line_2d_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t distance,
+    double parameter,
+    double radius_accuracy,
+    double angle_accuracy,
+    opencv_geometry_line_2d_f32 *out_line)
+{
+    clear_error();
+    if (out_line == nullptr) {
+        return invalid_argument("null fit line output pointer");
+    }
+    *out_line = opencv_geometry_line_2d_f32{};
+    if (point_count < 0) {
+        return invalid_argument("fit line point count must not be negative");
+    }
+    // ABI safety: the robust distances allocate AutoBuffer<float>(count*2)
+    // in signed int (OpenCV 4.6, 4.10, and 5.0). A continuous CV_32F input
+    // skips the integer path's convertTo, but not that allocation.
+    if (point_count > INT32_MAX / 2) {
+        return invalid_argument(
+            "fit line point count exceeds native allocation range");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    int native_distance = 0;
+    if (!line_fit_distance(distance, &native_distance)) {
+        return invalid_argument("fit line distance selector is invalid");
+    }
+
+    try {
+        cv::Vec4f line;
+        cv::fitLine(
+            points_from_f32(points, point_count),
             line,
             native_distance,
             parameter,
@@ -2282,6 +2660,118 @@ opencv_geometry_approximate_curve(
         }
         std::vector<cv::Point> approx;
         cv::approxPolyDP(contour, approx, epsilon, closed != 0);
+        // ABI safety: copying more points than capacity would overflow the
+        // caller-provided buffer. Approximation cardinality is at most
+        // point_count.
+        if (approx.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "approximate curve output capacity is insufficient");
+        }
+        for (std::size_t index = 0; index < approx.size(); ++index) {
+            out_points[index].x = approx[index].x;
+            out_points[index].y = approx[index].y;
+        }
+        *out_count = static_cast<int32_t>(approx.size());
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        return translate_current_exception();
+    }
+}
+
+namespace {
+
+// True when no coordinate is NaN and the X and Y spans, evaluated in
+// binary64, are at most FLT_MAX. Then every binary32 difference of two
+// coordinates is finite: the binary64 span exceeds the exact span by less
+// than 2^74, while an exact difference must exceed FLT_MAX by 2^103 before
+// binary32 rounding overflows.
+bool points_f32_spans_are_binary32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count) noexcept
+{
+    double min_x = points[0].x;
+    double max_x = min_x;
+    double min_y = points[0].y;
+    double max_y = min_y;
+    for (int32_t index = 0; index < point_count; ++index) {
+        const double x = points[index].x;
+        const double y = points[index].y;
+        if (std::isnan(x) || std::isnan(y)) {
+            return false;
+        }
+        min_x = x < min_x ? x : min_x;
+        max_x = x > max_x ? x : max_x;
+        min_y = y < min_y ? y : min_y;
+        max_y = y > max_y ? y : max_y;
+    }
+    const double limit = std::numeric_limits<float>::max();
+    return max_x - min_x <= limit && max_y - min_y <= limit;
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_approximate_curve_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    double epsilon,
+    int32_t closed,
+    opencv_geometry_point_f32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null approximate curve output count pointer");
+    }
+    *out_count = 0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "approximate curve point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (closed != 0 && closed != 1) {
+        return invalid_argument(
+            "approximate curve closed selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "approximate curve output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any approximation points.
+    if (out_capacity > 0 && out_points == nullptr) {
+        return invalid_argument(
+            "null approximate curve output points with positive capacity");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Geometry defines an empty set to produce an empty
+    // approximation.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    // ABI safety: approxPolyDP (OpenCV 4.6, 4.10, and 5.0) takes binary32
+    // coordinate differences. A NaN or overflowing difference makes every
+    // distance in its slice NaN; with epsilon 0 OpenCV then splits the slice
+    // at a stale index, initially point_count, reads past the curve, and
+    // need not terminate.
+    if (!points_f32_spans_are_binary32(points, point_count)) {
+        return invalid_argument(
+            "approximate curve points must not be NaN, and their X and Y "
+            "spans must not exceed FLT_MAX");
+    }
+
+    try {
+        std::vector<cv::Point2f> approx;
+        cv::approxPolyDP(
+            points_from_f32(points, point_count),
+            approx,
+            epsilon,
+            closed != 0);
         // ABI safety: copying more points than capacity would overflow the
         // caller-provided buffer. Approximation cardinality is at most
         // point_count.

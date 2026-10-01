@@ -35,20 +35,20 @@ sets are Ada-owned integer `Contour` values (`OpenCV.Point_Array`, native
 | `moments` | `Compute_Moments` | Partial: integer and Float32 point sets | Raster-image mode unbound |
 | `HuMoments` (2 overloads) | `Hu_Moments` | Bound | Both overloads compute the same seven values |
 | `matchShapes` | `Match_Shapes` | Partial: integer and Float32 point sets, I1/I2/I3 | 5.x declares `CONTOURS_MATCH_*` in `imgproc.hpp`, not `geometry.hpp`; OpenCV ignores its `parameter` |
-| `convexHull` | `Convex_Hull`, `Convex_Hull_Indices` | Bound: points and indices, both orientations | Among duplicate hull points, 4.x and 5.x may return different indices |
+| `convexHull` | `Convex_Hull`, `Convex_Hull_Indices` | Bound: points and indices, both orientations, integer and Float32 | Among duplicate hull points, 4.x and 5.x may return different indices |
 | `convexityDefects` | `Convexity_Defects` (2 overloads) | Bound | OpenCV accepts only `CV_32S` contours |
 | `isContourConvex` | `Is_Convex` | Bound, integer and Float32 | |
-| `approxPolyDP` | `Approximate_Curve` | Bound, open and closed | 5.0 measures distance to the segment, 4.x to its line |
+| `approxPolyDP` | `Approximate_Curve` | Bound, open and closed, integer and Float32 | 5.0 measures distance to the segment, 4.x to its line |
 | `boundingRect` | `Bounding_Rect` | Partial: integer and Float32 point sets | Grayscale-image mode unbound |
 | `pointPolygonTest` | `Locate_Point`, `Signed_Distance_To_Contour` | Bound, both `measureDist` modes, integer and Float32 | |
-| `minAreaRect` | `Minimum_Area_Rectangle` | Bound | 4.x and 5.x may represent the same rectangle differently |
+| `minAreaRect` | `Minimum_Area_Rectangle` | Bound, integer and Float32 | 4.x and 5.x may represent the same rectangle differently |
 | `boxPoints` | `Box_Points` | Bound | Native vertex order is preserved; the 4.12+ and 5.0 documentation's start vertex is not guaranteed |
-| `minEnclosingCircle` | `Minimum_Enclosing_Circle` | Bound | |
-| `minEnclosingTriangle` | `Minimum_Enclosing_Triangle` | Bound | |
-| `fitEllipse` | `Fit_Ellipse` | Bound | Exactly five points use `fitEllipseDirect`. From 4.12, the singular-system fallback for more points perturbs with `cv::theRNG`, so results need not repeat |
-| `fitEllipseAMS` | `Fit_Ellipse_AMS` | Bound | From 4.12, fallback perturbation uses `cv::theRNG` |
-| `fitEllipseDirect` | `Fit_Ellipse_Direct` | Bound | From 4.12, fallback perturbation uses `cv::theRNG` |
-| `fitLine` | `Fit_Line_2D` | Partial: 2D, all six supported distances | 3D mode unbound |
+| `minEnclosingCircle` | `Minimum_Enclosing_Circle` | Bound, integer and Float32 | 5.x shuffles more than ten points first. Binary32 arithmetic on absolute coordinates can miss a point far from the origin, even for integer input |
+| `minEnclosingTriangle` | `Minimum_Enclosing_Triangle` | Bound, integer only | OpenCV's search loops have no iteration bound and fail to return for some nearly degenerate hulls in 4.6, 4.10, and 5.0; see [Float32 point sets](#float32-cv_32f-point-sets) |
+| `fitEllipse` | `Fit_Ellipse` | Bound, integer and Float32 | Exactly five points use `fitEllipseDirect`. From 4.12, the singular-system fallback for more points perturbs with `cv::theRNG`, so results need not repeat |
+| `fitEllipseAMS` | `Fit_Ellipse_AMS` | Bound, integer and Float32 | From 4.12, fallback perturbation uses `cv::theRNG` |
+| `fitEllipseDirect` | `Fit_Ellipse_Direct` | Bound, integer and Float32 | From 4.12, fallback perturbation uses `cv::theRNG` |
+| `fitLine` | `Fit_Line_2D` | Partial: 2D, integer and Float32, all six supported distances | 3D mode unbound |
 | `intersectConvexConvex` | `Intersect_Convex_Polygons` | Bound, both `handleNested` modes | Before 4.11 non-convex input can overflow a native buffer, so Ada validates it; 4.11+ and 5.x report non-convergence as a negative area |
 | `rotatedRectangleIntersection` | `Intersect_Rotated_Rectangles` | Bound | 4.6 uses different contact tolerances |
 | `getRotationMatrix2D`, `getRotationMatrix2D_` | `Get_Rotation_Matrix_2D` | Bound | Returns an `OpenCV.Core.Mat` built through Core's public Ada API; Geometry's C ABI carries only six doubles |
@@ -81,13 +81,13 @@ native `CV_32F` path, so coordinates are never rounded to integers.
 | `isContourConvex` | `Is_Convex` | Bound | Binary32 differences and cross products, kept finite by span limits |
 | `pointPolygonTest` | `Locate_Point`, `Signed_Distance_To_Contour` | Bound | Spans of at most `FLT_MAX`; query in `cvRound` range; a distance of at least `sqrt(FLT_MAX)` raises instead of being clamped |
 | `boundingRect` | `Bounding_Rect` | Bound | Coordinates in `[-2**31, 2**31)` and extents within `Integer_32`, as `cvFloor` and the native extent arithmetic require |
-| `convexHull` | none | Deferred | Not yet bound |
-| `approxPolyDP` | none | Deferred | Not yet bound |
-| `minAreaRect` | none | Deferred | Not yet bound |
-| `minEnclosingCircle` | none | Deferred | Not yet bound |
-| `minEnclosingTriangle` | none | Deferred | Not yet bound |
-| `fitEllipse`, `fitEllipseAMS`, `fitEllipseDirect` | none | Deferred | Not yet bound |
-| `fitLine` (2D) | none | Deferred | Not yet bound |
+| `convexHull` | `Convex_Hull`, `Convex_Hull_Indices` | Bound | Hull points are input copies; `-0.0` is passed as `+0.0`; spans of at most `FLT_MAX`; 5.x normalizes edge vectors, so nearly collinear points can differ from 4.x |
+| `approxPolyDP` | `Approximate_Curve` | Bound | Spans of at most `FLT_MAX`: an overflowing difference makes OpenCV drop points or, at epsilon 0, read past the curve without terminating |
+| `minAreaRect` | `Minimum_Area_Rectangle` | Bound | Hull rules as above; at most `Integer_32'Last / 3` points (binary32 calipers buffer); areas above `FLT_MAX` give a non-finite native rectangle, which raises |
+| `minEnclosingCircle` | `Minimum_Enclosing_Circle` | Bound | Coordinates of magnitude at most `2**41`, above which OpenCV's binary32 products overflow and 4.x silently misses points. Absolute binary32 tolerances: small sets, such as triangles with sides of 0.01, can get a circle that misses a point, in 4.6, 4.10, and 5.0; so can points far from the origin, as for integer input |
+| `minEnclosingTriangle` | none | Deferred | OpenCV's unbounded search loops already fail to return for some integer hulls; binary32 input adds hulls below its absolute tolerance, overflowing spans, and signed zeros that make it divide by zero. No input validation excludes them all |
+| `fitEllipse`, `fitEllipseAMS`, `fitEllipseDirect` | `Fit_Ellipse`, `Fit_Ellipse_AMS`, `Fit_Ellipse_Direct` | Bound | Absolute X and Y coordinates must each sum to at most `2**103`, so OpenCV's binary32 mean cannot overflow into NaN, which its LAPACK-free SVD processes in quadratic time |
+| `fitLine` (2D) | `Fit_Line_2D` | Bound | Binary32 products without centering; coordinates of magnitude at most `2**63`, above which one overflowing axis gives a finite wrong direction; non-finite results and the robust fits' all-zero line raise |
 | `intersectConvexConvex` | none | Deferred | Not yet bound |
 | `convexityDefects` | none | Not applicable | OpenCV 4.6, 4.10, and 5.0 call `checkVector(2, CV_32S)` and reject `CV_32F` contours |
 
@@ -158,7 +158,7 @@ for the releases that lack them.
 | `moments` of a raster image (`binaryImage`) | Excluded | Needs image input. Geometry takes Ada point collections and has no image or Mat input API. |
 | `boundingRect` of a grayscale image | Excluded | Needs image input, as above. |
 | `matchShapes` of grayscale images | Excluded | Needs image input, as above. |
-| Point sets of `Point2f` (`CV_32F`) in `convexHull`, `approxPolyDP`, `minAreaRect`, `minEnclosingCircle`, `minEnclosingTriangle`, the ellipse fits, `fitLine`, and `intersectConvexConvex` | Deferred | See [Float32 point sets](#float32-cv_32f-point-sets). |
+| Point sets of `Point2f` (`CV_32F`) in `minEnclosingTriangle` and `intersectConvexConvex` | Deferred | See [Float32 point sets](#float32-cv_32f-point-sets). |
 | `fitLine` on 3D point sets | Deferred | Needs a new public 3D point type, a design decision for this 2D crate. |
 | `fitLine` with `DIST_C` or `DIST_USER` | Not applicable | OpenCV's `fitLine` rejects both as unknown distance types. |
 | `getPerspectiveTransform` with `DECOMP_EIG` or `DECOMP_CHOLESKY`, or the `DECOMP_NORMAL` flag | Not applicable | EIG and Cholesky assume a symmetric matrix, which the perspective system is not; `DECOMP_NORMAL` has no effect on a square system. |
