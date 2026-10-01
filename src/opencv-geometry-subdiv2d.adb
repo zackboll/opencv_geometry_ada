@@ -1,6 +1,8 @@
 with Ada.Exceptions;
+with Ada.Unchecked_Deallocation;
 with Interfaces;
 with Interfaces.C;
+with OpenCV.Geometry.Internal.Subdivision;
 
 package body OpenCV.Geometry.Subdiv2D is
 
@@ -292,6 +294,410 @@ package body OpenCV.Geometry.Subdiv2D is
            (X => OpenCV.Float32_Value (Position.X),
             Y => OpenCV.Float32_Value (Position.Y)));
    end Find_Nearest;
+
+   function Quad_Edge_Count
+     (Object : Subdivision; Operation : String)
+      return Internal.Subdivision.Quad_Edge_Count
+   is
+      Count  : aliased Interfaces.Integer_32 := 0;
+      Status : C_API.Status;
+   begin
+      Status :=
+        C_API.Subdiv2D_Quad_Edge_Count
+          (Native_Handle (Object, Operation), Count'Access);
+      Raise_On_Error (Status, Operation);
+      if Count < 0 or else Count > Internal.Subdivision.Maximum_Quad_Edges then
+         Raise_Error (Operation & " failed: invalid native quad-edge count");
+      end if;
+      return Natural (Count);
+   end Quad_Edge_Count;
+
+   --  Reads one native list into an Ada-owned array indexed 1 .. N. The C
+   --  buffer has Capacity elements, which the caller derives from the native
+   --  quad-edge count, and lives on the heap so large triangulations need no
+   --  proportional stack storage; the result is built in place.
+   generic
+      type Native_Element is private;
+      type Native_Array is array (Natural range <>) of aliased Native_Element;
+      type Public_Element is private;
+      type Public_Array is array (Natural range <>) of Public_Element;
+      with
+        function Fill
+          (Handle       : C_API.Subdiv2D_Handle;
+           Out_Items    : access Native_Element;
+           Out_Capacity : Interfaces.Integer_32;
+           Out_Count    : access Interfaces.Integer_32) return C_API.Status;
+      with
+        function Convert
+          (Item : Native_Element; Operation : String) return Public_Element;
+   function Read_List
+     (Object : Subdivision; Capacity : Natural; Operation : String)
+      return Public_Array;
+
+   function Read_List
+     (Object : Subdivision; Capacity : Natural; Operation : String)
+      return Public_Array
+   is
+      type Buffer_Access is access Native_Array;
+
+      procedure Free is new
+        Ada.Unchecked_Deallocation (Native_Array, Buffer_Access);
+
+      Handle : constant C_API.Subdiv2D_Handle :=
+        Native_Handle (Object, Operation);
+      Count  : aliased Interfaces.Integer_32 := 0;
+      Status : C_API.Status;
+   begin
+      if Capacity = 0 then
+         Status := Fill (Handle, null, 0, Count'Access);
+         Raise_On_Error (Status, Operation);
+         if Count /= 0 then
+            Raise_Error (Operation & " failed: invalid native count");
+         end if;
+         return Empty : Public_Array (1 .. 0);
+      end if;
+
+      declare
+         Buffer : Buffer_Access := new Native_Array (0 .. Capacity - 1);
+      begin
+         Status :=
+           Fill
+             (Handle,
+              Buffer (Buffer'First)'Access,
+              Interfaces.Integer_32 (Capacity),
+              Count'Access);
+         Raise_On_Error (Status, Operation);
+         if Count < 0 or else Natural (Count) > Capacity then
+            Raise_Error (Operation & " failed: invalid native count");
+         end if;
+
+         return Result : Public_Array (1 .. Natural (Count)) do
+            for Index in Result'Range loop
+               Result (Index) := Convert (Buffer (Index - 1), Operation);
+            end loop;
+            Free (Buffer);
+         end return;
+      exception
+         when others =>
+            Free (Buffer);
+            raise;
+      end;
+   end Read_List;
+
+   function To_Public_Point
+     (X, Y : Interfaces.C.C_float) return OpenCV.Float32_Point is
+   begin
+      return (X => OpenCV.Float32_Value (X), Y => OpenCV.Float32_Value (Y));
+   end To_Public_Point;
+
+   function To_Edge_Segment
+     (Item : C_API.C_Edge_Segment; Operation : String) return Edge_Segment
+   is
+      pragma Unreferenced (Operation);
+   begin
+      return
+        (Origin      => To_Public_Point (Item.Origin_X, Item.Origin_Y),
+         Destination =>
+           To_Public_Point (Item.Destination_X, Item.Destination_Y));
+   end To_Edge_Segment;
+
+   function To_Leading_Edge
+     (Item : Interfaces.Integer_32; Operation : String) return Edge_Id is
+   begin
+      return To_Edge_Id (Item, Operation);
+   end To_Leading_Edge;
+
+   function To_Triangle
+     (Item : C_API.C_Triangle; Operation : String)
+      return OpenCV.Geometry.Triangle_Vertices
+   is
+      pragma Unreferenced (Operation);
+   begin
+      return
+        (1 => To_Public_Point (Item.V0_X, Item.V0_Y),
+         2 => To_Public_Point (Item.V1_X, Item.V1_Y),
+         3 => To_Public_Point (Item.V2_X, Item.V2_Y));
+   end To_Triangle;
+
+   function Read_Edge_List is new
+     Read_List
+       (Native_Element => C_API.C_Edge_Segment,
+        Native_Array   => C_API.C_Edge_Segment_Array,
+        Public_Element => Edge_Segment,
+        Public_Array   => Edge_Segment_Array,
+        Fill           => C_API.Subdiv2D_Get_Edge_List,
+        Convert        => To_Edge_Segment);
+
+   function Read_Leading_Edge_List is new
+     Read_List
+       (Native_Element => Interfaces.Integer_32,
+        Native_Array   => C_API.Int32_Array,
+        Public_Element => Edge_Id,
+        Public_Array   => Edge_Id_Array,
+        Fill           => C_API.Subdiv2D_Get_Leading_Edge_List,
+        Convert        => To_Leading_Edge);
+
+   function Read_Triangle_List is new
+     Read_List
+       (Native_Element => C_API.C_Triangle,
+        Native_Array   => C_API.C_Triangle_Array,
+        Public_Element => OpenCV.Geometry.Triangle_Vertices,
+        Public_Array   => Triangle_Array,
+        Fill           => C_API.Subdiv2D_Get_Triangle_List,
+        Convert        => To_Triangle);
+
+   function Edge_List (Object : Subdivision) return Edge_Segment_Array is
+      Operation : constant String := "Subdiv2D.Edge_List";
+   begin
+      return
+        Read_Edge_List
+          (Object,
+           Internal.Subdivision.Edge_List_Capacity
+             (Quad_Edge_Count (Object, Operation)),
+           Operation);
+   end Edge_List;
+
+   function Leading_Edge_List (Object : Subdivision) return Edge_Id_Array is
+      Operation : constant String := "Subdiv2D.Leading_Edge_List";
+   begin
+      return
+        Read_Leading_Edge_List
+          (Object,
+           Internal.Subdivision.Facet_List_Capacity
+             (Quad_Edge_Count (Object, Operation)),
+           Operation);
+   end Leading_Edge_List;
+
+   function Triangle_List (Object : Subdivision) return Triangle_Array is
+      Operation : constant String := "Subdiv2D.Triangle_List";
+   begin
+      return
+        Read_Triangle_List
+          (Object,
+           Internal.Subdivision.Facet_List_Capacity
+             (Quad_Edge_Count (Object, Operation)),
+           Operation);
+   end Triangle_List;
+
+   --  Rejects No_Edge and the other identifiers 1 .. 3 of OpenCV's reserved
+   --  null edge. The shim rejects identifiers beyond native storage.
+   function Checked_Edge
+     (Edge : Edge_Id; Operation : String) return Interfaces.Integer_32 is
+   begin
+      if Edge < 4 then
+         Raise_Error
+           (Operation & " requires an edge identifier, not the null edge");
+      end if;
+      return Interfaces.Integer_32 (Edge);
+   end Checked_Edge;
+
+   function To_C_Navigation
+     (Direction : Edge_Navigation) return Interfaces.Integer_32 is
+   begin
+      case Direction is
+         when Next_Around_Origin          =>
+            return C_API.Subdiv2D_Next_Around_Org;
+
+         when Next_Around_Destination     =>
+            return C_API.Subdiv2D_Next_Around_Dst;
+
+         when Previous_Around_Origin      =>
+            return C_API.Subdiv2D_Prev_Around_Org;
+
+         when Previous_Around_Destination =>
+            return C_API.Subdiv2D_Prev_Around_Dst;
+
+         when Next_Around_Left            =>
+            return C_API.Subdiv2D_Next_Around_Left;
+
+         when Next_Around_Right           =>
+            return C_API.Subdiv2D_Next_Around_Right;
+
+         when Previous_Around_Left        =>
+            return C_API.Subdiv2D_Prev_Around_Left;
+
+         when Previous_Around_Right       =>
+            return C_API.Subdiv2D_Prev_Around_Right;
+      end case;
+   end To_C_Navigation;
+
+   function To_C_Rotation
+     (Rotation : Edge_Rotation) return Interfaces.Integer_32 is
+   begin
+      case Rotation is
+         when Same_Edge             =>
+            return C_API.Subdiv2D_Rotate_Same;
+
+         when Rotated_Edge          =>
+            return C_API.Subdiv2D_Rotate_Rotated;
+
+         when Reversed_Edge         =>
+            return C_API.Subdiv2D_Rotate_Reversed;
+
+         when Reversed_Rotated_Edge =>
+            return C_API.Subdiv2D_Rotate_Reversed_Rotated;
+      end case;
+   end To_C_Rotation;
+
+   function Navigate
+     (Object : Subdivision; Edge : Edge_Id; Direction : Edge_Navigation)
+      return Edge_Id
+   is
+      Operation : constant String := "Subdiv2D.Navigate";
+      Result    : aliased Interfaces.Integer_32 := 0;
+      Status    : C_API.Status;
+   begin
+      Status :=
+        C_API.Subdiv2D_Get_Edge
+          (Native_Handle (Object, Operation),
+           Checked_Edge (Edge, Operation),
+           To_C_Navigation (Direction),
+           Result'Access);
+      Raise_On_Error (Status, Operation);
+      return To_Edge_Id (Result, Operation);
+   end Navigate;
+
+   function Next_Edge (Object : Subdivision; Edge : Edge_Id) return Edge_Id is
+      Operation : constant String := "Subdiv2D.Next_Edge";
+      Result    : aliased Interfaces.Integer_32 := 0;
+      Status    : C_API.Status;
+   begin
+      Status :=
+        C_API.Subdiv2D_Next_Edge
+          (Native_Handle (Object, Operation),
+           Checked_Edge (Edge, Operation),
+           Result'Access);
+      Raise_On_Error (Status, Operation);
+      return To_Edge_Id (Result, Operation);
+   end Next_Edge;
+
+   function Rotate
+     (Object : Subdivision; Edge : Edge_Id; Rotation : Edge_Rotation)
+      return Edge_Id
+   is
+      Operation : constant String := "Subdiv2D.Rotate";
+      Result    : aliased Interfaces.Integer_32 := 0;
+      Status    : C_API.Status;
+   begin
+      Status :=
+        C_API.Subdiv2D_Rotate_Edge
+          (Native_Handle (Object, Operation),
+           Checked_Edge (Edge, Operation),
+           To_C_Rotation (Rotation),
+           Result'Access);
+      Raise_On_Error (Status, Operation);
+      return To_Edge_Id (Result, Operation);
+   end Rotate;
+
+   function Symmetric_Edge
+     (Object : Subdivision; Edge : Edge_Id) return Edge_Id
+   is
+      Operation : constant String := "Subdiv2D.Symmetric_Edge";
+      Result    : aliased Interfaces.Integer_32 := 0;
+      Status    : C_API.Status;
+   begin
+      Status :=
+        C_API.Subdiv2D_Sym_Edge
+          (Native_Handle (Object, Operation),
+           Checked_Edge (Edge, Operation),
+           Result'Access);
+      Raise_On_Error (Status, Operation);
+      return To_Edge_Id (Result, Operation);
+   end Symmetric_Edge;
+
+   --  Converts an edge endpoint, which is No_Vertex for a dual edge whose
+   --  Voronoi vertex has not been computed.
+   function To_Endpoint
+     (Value : Interfaces.Integer_32; Operation : String) return Vertex_Id is
+   begin
+      if Value < 0 then
+         Raise_Error
+           (Operation & " failed: OpenCV returned an invalid vertex");
+      end if;
+      return Vertex_Id (Value);
+   end To_Endpoint;
+
+   function Origin (Object : Subdivision; Edge : Edge_Id) return Vertex_Id is
+      Operation : constant String := "Subdiv2D.Origin";
+      Result    : aliased Interfaces.Integer_32 := 0;
+      Status    : C_API.Status;
+   begin
+      Status :=
+        C_API.Subdiv2D_Edge_Org
+          (Native_Handle (Object, Operation),
+           Checked_Edge (Edge, Operation),
+           Result'Access);
+      Raise_On_Error (Status, Operation);
+      return To_Endpoint (Result, Operation);
+   end Origin;
+
+   function Destination (Object : Subdivision; Edge : Edge_Id) return Vertex_Id
+   is
+      Operation : constant String := "Subdiv2D.Destination";
+      Result    : aliased Interfaces.Integer_32 := 0;
+      Status    : C_API.Status;
+   begin
+      Status :=
+        C_API.Subdiv2D_Edge_Dst
+          (Native_Handle (Object, Operation),
+           Checked_Edge (Edge, Operation),
+           Result'Access);
+      Raise_On_Error (Status, Operation);
+      return To_Endpoint (Result, Operation);
+   end Destination;
+
+   type Vertex_Slot is record
+      Point      : OpenCV.Float32_Point;
+      First_Edge : Interfaces.Integer_32;
+   end record;
+
+   --  Reads the native vertex slot of Vertex, which must be an occupied slot.
+   function Read_Vertex
+     (Object : Subdivision; Vertex : Vertex_Id; Operation : String)
+      return Vertex_Slot
+   is
+      Position : aliased C_API.Point_F32 := (X => 0.0, Y => 0.0);
+      First    : aliased Interfaces.Integer_32 := 0;
+      Kind     : aliased Interfaces.Integer_32 := 0;
+      Status   : C_API.Status;
+   begin
+      if Vertex = No_Vertex then
+         Raise_Error (Operation & " requires a vertex, not No_Vertex");
+      end if;
+      Status :=
+        C_API.Subdiv2D_Get_Vertex
+          (Native_Handle (Object, Operation),
+           Interfaces.Integer_32 (Vertex),
+           Position'Access,
+           First'Access,
+           Kind'Access);
+      Raise_On_Error (Status, Operation);
+      if Kind /= C_API.Subdiv2D_Vertex_Delaunay
+        and then Kind /= C_API.Subdiv2D_Vertex_Voronoi
+      then
+         Raise_Error (Operation & " failed: Vertex denotes a free slot");
+      end if;
+      if First < 0 then
+         Raise_Error (Operation & " failed: OpenCV returned an invalid edge");
+      end if;
+      return
+        (Point      => To_Public_Point (Position.X, Position.Y),
+         First_Edge => First);
+   end Read_Vertex;
+
+   function Vertex_Point
+     (Object : Subdivision; Vertex : Vertex_Id) return OpenCV.Float32_Point is
+   begin
+      return Read_Vertex (Object, Vertex, "Subdiv2D.Vertex_Point").Point;
+   end Vertex_Point;
+
+   function First_Edge
+     (Object : Subdivision; Vertex : Vertex_Id) return Edge_Id is
+   begin
+      return
+        Edge_Id
+          (Read_Vertex (Object, Vertex, "Subdiv2D.First_Edge").First_Edge);
+   end First_Edge;
 
    overriding
    procedure Finalize (Object : in out Subdivision) is

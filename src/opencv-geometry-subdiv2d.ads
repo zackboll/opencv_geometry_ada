@@ -150,6 +150,125 @@ package OpenCV.Geometry.Subdiv2D is
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
       return Nearest_Result;
 
+   --  Extraction. Results are Ada-owned arrays indexed 1 .. N, in native
+   --  order. Edge_List and Triangle_List contain copied values that remain
+   --  valid independently of later changes to Object. Leading_Edge_List
+   --  storage remains safely allocated, but its Edge_Id elements are valid
+   --  only until the next Insert or Reset of Object. Each call raises
+   --  OpenCV.OpenCV_Error when Object is not ready.
+
+   --  A Delaunay edge as the positions of its origin and destination.
+   type Edge_Segment is record
+      Origin      : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+      Destination : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+   end record;
+
+   type Edge_Segment_Array is array (Natural range <>) of Edge_Segment;
+
+   type Edge_Id_Array is array (Natural range <>) of Edge_Id;
+
+   type Triangle_Array is
+     array (Natural range <>) of OpenCV.Geometry.Triangle_Vertices;
+
+   --  Every Delaunay edge once, as by cv::Subdiv2D::getEdgeList. The list
+   --  includes edges to the super-triangle vertices, whose positions lie
+   --  outside the bounds, but not the super-triangle's own three edges.
+   function Edge_List (Object : Subdivision) return Edge_Segment_Array;
+
+   --  One edge of every triangular facet, as by getLeadingEdgeList, with the
+   --  facet on its left, so three Next_Around_Left steps return to it. The
+   --  facets include those with super-triangle vertices and the facet outside
+   --  the super-triangle.
+   function Leading_Edge_List (Object : Subdivision) return Edge_Id_Array;
+
+   --  Every triangle whose three vertices all lie in the half-open bounds, as
+   --  by getTriangleList, so triangles with a super-triangle vertex are
+   --  excluded. Near the convex hull the reported triangles can differ
+   --  between OpenCV releases: 4.12 and later, including 5.x, use a
+   --  super-triangle twice as large as earlier releases.
+   function Triangle_List (Object : Subdivision) return Triangle_Array;
+
+   --  Navigation. Each operation takes identifiers produced by Object and
+   --  raises OpenCV.OpenCV_Error for No_Vertex or a free vertex slot, for
+   --  No_Edge or the other identifiers 1 .. 3 of OpenCV's reserved null
+   --  edge, for an identifier beyond native storage, and when Object is not
+   --  ready. Edges are directed. An Edge_Id names a Delaunay edge, or, after
+   --  a Rotated_Edge or Reversed_Rotated_Edge rotation, its dual Voronoi edge.
+
+   --  The eight related edges of cv::Subdiv2D::getEdge. For a Delaunay edge
+   --  E the quad-edge structure gives these identities, which the binding's
+   --  tests check on every supported release:
+   --  - Next_Around_Origin (NEXT_AROUND_ORG, OpenCV's eOnext) and
+   --    Previous_Around_Origin (PREV_AROUND_ORG) share E's origin;
+   --  - Next_Around_Destination (NEXT_AROUND_DST, eDnext) and
+   --    Previous_Around_Destination (PREV_AROUND_DST) share E's destination;
+   --  - Next_Around_Left (NEXT_AROUND_LEFT, eLnext) and Previous_Around_Right
+   --    (PREV_AROUND_RIGHT) start at E's destination;
+   --  - Next_Around_Right (NEXT_AROUND_RIGHT, eRnext) and
+   --    Previous_Around_Left (PREV_AROUND_LEFT) end at E's origin;
+   --  - each Next choice and the matching Previous choice undo each other.
+   type Edge_Navigation is
+     (Next_Around_Origin,
+      Next_Around_Destination,
+      Previous_Around_Origin,
+      Previous_Around_Destination,
+      Next_Around_Left,
+      Next_Around_Right,
+      Previous_Around_Left,
+      Previous_Around_Right);
+
+   --  The four edges of one quad-edge, as by cv::Subdiv2D::rotateEdge:
+   --  Same_Edge is E itself, Rotated_Edge its dual (OpenCV's eRot), directed
+   --  from the facet on E's right to the facet on its left, Reversed_Edge E
+   --  with origin and destination swapped, and Reversed_Rotated_Edge the
+   --  reversed dual. Four Rotated_Edge rotations return E.
+   type Edge_Rotation is
+     (Same_Edge, Rotated_Edge, Reversed_Edge, Reversed_Rotated_Edge);
+
+   --  The edge related to Edge by Direction, as by getEdge.
+   function Navigate
+     (Object : Subdivision; Edge : Edge_Id; Direction : Edge_Navigation)
+      return Edge_Id;
+
+   --  The next edge around Edge's origin, as by nextEdge; the same as
+   --  Navigate (Object, Edge, Next_Around_Origin).
+   function Next_Edge (Object : Subdivision; Edge : Edge_Id) return Edge_Id;
+
+   --  The edge of Edge's quad-edge selected by Rotation, as by rotateEdge.
+   function Rotate
+     (Object : Subdivision; Edge : Edge_Id; Rotation : Edge_Rotation)
+      return Edge_Id;
+
+   --  Edge with origin and destination swapped, as by symEdge; the same as
+   --  Rotate (Object, Edge, Reversed_Edge).
+   function Symmetric_Edge
+     (Object : Subdivision; Edge : Edge_Id) return Edge_Id;
+
+   --  The origin and destination vertices of Edge, as by edgeOrg and edgeDst.
+   --  For a dual Voronoi edge they are the Voronoi vertices (circumcenters)
+   --  of the facets it joins, which Find_Nearest computes and which are
+   --  meaningful only until the next Insert. The result is No_Vertex before
+   --  any Voronoi computation, and for a facet that OpenCV gives no Voronoi
+   --  vertex: the facet outside the super-triangle, so one end of the dual of
+   --  each super-triangle edge, and a degenerate facet whose circumcenter
+   --  OpenCV cannot represent.
+   function Origin (Object : Subdivision; Edge : Edge_Id) return Vertex_Id;
+
+   function Destination
+     (Object : Subdivision; Edge : Edge_Id) return Vertex_Id;
+
+   --  The position of Vertex, as by getVertex: an inserted point, one of the
+   --  super-triangle vertices (identifiers 1 .. 3, outside the bounds), or a
+   --  Voronoi vertex. Voronoi vertex positions are meaningful only until
+   --  the next Insert.
+   function Vertex_Point
+     (Object : Subdivision; Vertex : Vertex_Id) return OpenCV.Float32_Point;
+
+   --  An edge whose origin is Vertex, as recorded by OpenCV (getVertex's
+   --  firstEdge), or No_Edge for a Voronoi vertex.
+   function First_Edge
+     (Object : Subdivision; Vertex : Vertex_Id) return Edge_Id;
+
 private
 
    type Subdivision is new Ada.Finalization.Limited_Controlled with record
