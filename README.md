@@ -457,10 +457,13 @@ Callers requiring a hard liveness or deadline guarantee should not rely on
 ### Extraction and navigation
 
 `Edge_List`, `Leading_Edge_List`, and `Triangle_List` return Ada-owned arrays
-in native order, indexed from 1, that stay valid whatever later happens to the
-subdivision. Their buffer capacities come from the native quad-edge count,
-using bounds read from the loops of the OpenCV list functions; GNATprove shows
-only that the capacity arithmetic cannot overflow, and the shim enforces the
+in native order, indexed from 1. `Edge_List` contains copied edge segments and
+`Triangle_List` contains copied triangles; both remain valid independently of
+later changes to the subdivision. `Leading_Edge_List` storage remains safely
+allocated, but its `Edge_Id` elements are valid only until the next `Insert`
+or `Reset` of that subdivision. Buffer capacities come from the native
+quad-edge count, using bounds read from the OpenCV list functions. GNATprove
+shows only that the capacity arithmetic cannot overflow; the shim enforces the
 capacity at run time, failing rather than writing past it. `Edge_List`
 includes edges to the super-triangle vertices, which lie outside the bounds,
 and `Triangle_List` keeps only triangles whose three vertices lie in the

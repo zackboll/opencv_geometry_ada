@@ -150,9 +150,12 @@ package OpenCV.Geometry.Subdiv2D is
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
       return Nearest_Result;
 
-   --  Extraction. Results are Ada-owned values indexed 1 .. N, in native
-   --  order, and stay valid whatever later happens to Object. Each call
-   --  raises OpenCV.OpenCV_Error when Object is not ready.
+   --  Extraction. Results are Ada-owned arrays indexed 1 .. N, in native
+   --  order. Edge_List and Triangle_List contain copied values that remain
+   --  valid independently of later changes to Object. Leading_Edge_List
+   --  storage remains safely allocated, but its Edge_Id elements are valid
+   --  only until the next Insert or Reset of Object. Each call raises
+   --  OpenCV.OpenCV_Error when Object is not ready.
 
    --  A Delaunay edge as the positions of its origin and destination.
    type Edge_Segment is record
