@@ -102,6 +102,23 @@ void zero_box_vertices(opencv_geometry_box_vertices_f32 *out_vertices) noexcept
     *out_vertices = opencv_geometry_box_vertices_f32{};
 }
 
+// A std::vector<cv::Point2f> is a CV_32FC2 input, which selects OpenCV's
+// native binary32 path. Callers have checked the pointer and count.
+std::vector<cv::Point2f> points_from_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count)
+{
+    std::vector<cv::Point2f> result;
+    if (point_count <= 0) {
+        return result;
+    }
+    result.reserve(static_cast<std::size_t>(point_count));
+    for (int32_t index = 0; index < point_count; ++index) {
+        result.emplace_back(points[index].x, points[index].y);
+    }
+    return result;
+}
+
 }
 
 const char *opencv_geometry_last_error_message(void)
@@ -152,6 +169,41 @@ opencv_geometry_contour_area(
 }
 
 opencv_geometry_status
+opencv_geometry_contour_area_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t oriented,
+    double *out_area)
+{
+    clear_error();
+    if (out_area == nullptr) {
+        return invalid_argument("null contour area output pointer");
+    }
+    *out_area = 0.0;
+    if (point_count < 0) {
+        return invalid_argument("contour point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (oriented != 0 && oriented != 1) {
+        return invalid_argument("contour oriented selector must be zero or one");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Native contourArea returns 0 for an empty CV_32F set.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    try {
+        *out_area = cv::contourArea(
+            points_from_f32(points, point_count), oriented != 0);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
 opencv_geometry_arc_length(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,
@@ -183,6 +235,41 @@ opencv_geometry_arc_length(
             contour.emplace_back(points[index].x, points[index].y);
         }
         *out_length = cv::arcLength(contour, closed != 0);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_arc_length_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t closed,
+    double *out_length)
+{
+    clear_error();
+    if (out_length == nullptr) {
+        return invalid_argument("null arc length output pointer");
+    }
+    *out_length = 0.0;
+    if (point_count < 0) {
+        return invalid_argument("arc length point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (closed != 0 && closed != 1) {
+        return invalid_argument("arc length closed selector must be zero or one");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Native arcLength returns 0 for an empty CV_32F set.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    try {
+        *out_length = cv::arcLength(
+            points_from_f32(points, point_count), closed != 0);
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         return translate_current_exception();
@@ -294,6 +381,36 @@ opencv_geometry_contour_moments(
             contour.emplace_back(points[index].x, points[index].y);
         }
         copy_moments(cv::moments(contour), out_moments);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        zero_moments(out_moments);
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_contour_moments_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_moments *out_moments)
+{
+    clear_error();
+    if (out_moments == nullptr) {
+        return invalid_argument("null contour moments output pointer");
+    }
+    zero_moments(out_moments);
+    if (point_count < 0) {
+        return invalid_argument("contour point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    try {
+        copy_moments(
+            cv::moments(points_from_f32(points, point_count)), out_moments);
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         zero_moments(out_moments);
@@ -699,6 +816,40 @@ opencv_geometry_is_convex(
 }
 
 opencv_geometry_status
+opencv_geometry_is_convex_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t *out_is_convex)
+{
+    clear_error();
+    if (out_is_convex == nullptr) {
+        return invalid_argument("null is-convex output pointer");
+    }
+    *out_is_convex = 0;
+    if (point_count < 0) {
+        return invalid_argument("is-convex point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Native isContourConvex returns false for total == 0.
+    // The CV_32F path uses binary32 arithmetic, which cannot overflow into
+    // undefined behavior, so no arithmetic guard is needed.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+    try {
+        *out_is_convex =
+            cv::isContourConvex(points_from_f32(points, point_count)) ? 1 : 0;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_is_convex = 0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
 opencv_geometry_hu_moments(
     const opencv_geometry_moments *moments,
     opencv_geometry_hu_result *out_hu)
@@ -823,6 +974,56 @@ opencv_geometry_match_shapes(
         const std::vector<cv::Point> right =
             contour_from_points(right_points, right_count);
         // Supported OpenCV 4.x/5.x ignore the unused native parameter.
+        *out_score = cv::matchShapes(left, right, native_method, 0.0);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_score = 0.0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_match_shapes_f32(
+    const opencv_geometry_point_f32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_f32 *right_points,
+    int32_t right_count,
+    int32_t method,
+    double *out_score)
+{
+    clear_error();
+    if (out_score == nullptr) {
+        return invalid_argument("null match shapes output pointer");
+    }
+    *out_score = 0.0;
+    if (left_count < 0) {
+        return invalid_argument(
+            "left contour point count must not be negative");
+    }
+    if (right_count < 0) {
+        return invalid_argument(
+            "right contour point count must not be negative");
+    }
+    if (left_count > 0 && left_points == nullptr) {
+        return invalid_argument(
+            "null left contour points with positive count");
+    }
+    if (right_count > 0 && right_points == nullptr) {
+        return invalid_argument(
+            "null right contour points with positive count");
+    }
+    int native_method = 0;
+    if (!match_shapes_method(method, &native_method)) {
+        return invalid_argument("match shapes method selector is invalid");
+    }
+
+    try {
+        // cv::moments returns zero moments for an empty input before it
+        // inspects the element depth.
+        const std::vector<cv::Point2f> left =
+            points_from_f32(left_points, left_count);
+        const std::vector<cv::Point2f> right =
+            points_from_f32(right_points, right_count);
         *out_score = cv::matchShapes(left, right, native_method, 0.0);
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
@@ -998,6 +1199,62 @@ opencv_geometry_point_polygon_test(
         const cv::Point2f query(query_x, query_y);
         *out_result =
             cv::pointPolygonTest(contour, query, measure_distance != 0);
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_result = 0.0;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_point_polygon_test_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    float query_x,
+    float query_y,
+    int32_t measure_distance,
+    double *out_result)
+{
+    clear_error();
+    if (out_result == nullptr) {
+        return invalid_argument("null point polygon test output pointer");
+    }
+    *out_result = 0.0;
+    if (point_count < 0) {
+        return invalid_argument(
+            "point polygon test point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    if (measure_distance != 0 && measure_distance != 1) {
+        return invalid_argument(
+            "point polygon test mode selector must be zero or one");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. Native pointPolygonTest returns -1 / -DBL_MAX for
+    // total == 0, so Geometry preserves those empty-input results.
+    if (point_count == 0) {
+        *out_result =
+            measure_distance != 0
+                ? -std::numeric_limits<double>::max()
+                : -1.0;
+        return OPENCV_GEOMETRY_OK;
+    }
+    // ABI safety: pointPolygonTest (OpenCV 4.6, 4.10, and 5.0) evaluates
+    // cvRound(pt.x) and cvRound(pt.y) before it tests the contour depth, so
+    // the CV_32F path converts the query to int too. Its contour arithmetic
+    // is binary32 and binary64 only and needs no guard.
+    if (!query_is_cvround_safe(query_x, query_y)) {
+        return invalid_argument(
+            "point polygon query is outside the cvRound range");
+    }
+
+    try {
+        *out_result = cv::pointPolygonTest(
+            points_from_f32(points, point_count),
+            cv::Point2f(query_x, query_y),
+            measure_distance != 0);
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         *out_result = 0.0;
@@ -1886,6 +2143,89 @@ opencv_geometry_bounding_rect(
         out_rect->y = 0;
         out_rect->width = 0;
         out_rect->height = 0;
+        return translate_current_exception();
+    }
+}
+
+namespace {
+
+// cvFloor converts a binary32 value to int, which is defined only for
+// values in [-2^31, 2^31); both bounds are exact binary32 values. NaN fails
+// both comparisons.
+bool float_floor_is_int32(float value) noexcept
+{
+    return value >= -2147483648.0f && value < 2147483648.0f;
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_bounding_rect_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rect_i32 *out_rect)
+{
+    clear_error();
+    if (out_rect == nullptr) {
+        return invalid_argument("null bounding rect output pointer");
+    }
+    *out_rect = opencv_geometry_rect_i32{};
+    if (point_count < 0) {
+        return invalid_argument(
+            "bounding rect point count must not be negative");
+    }
+    if (point_count > 0 && points == nullptr) {
+        return invalid_argument("null contour points with positive count");
+    }
+    // OpenCV compatibility: an empty point vector has no element depth for
+    // checkVector. pointSetBoundingRect returns Rect() for npoints == 0.
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+
+    // ABI safety: CV_32F point-set boundingRect applies cvFloor to the
+    // extreme coordinates (OpenCV 4.6 and 4.10) or to every coordinate
+    // (5.0), converting each to int, and then computes the inclusive
+    // extents floor(max) - floor(min) + 1 in signed int. Reject coordinates
+    // whose conversion is undefined and extents that overflow.
+    float xmin = points[0].x;
+    float xmax = points[0].x;
+    float ymin = points[0].y;
+    float ymax = points[0].y;
+    for (int32_t index = 0; index < point_count; ++index) {
+        const float x = points[index].x;
+        const float y = points[index].y;
+        if (!float_floor_is_int32(x) || !float_floor_is_int32(y)) {
+            return invalid_argument(
+                "bounding rect coordinate is outside the cvFloor range");
+        }
+        xmin = x < xmin ? x : xmin;
+        xmax = x > xmax ? x : xmax;
+        ymin = y < ymin ? y : ymin;
+        ymax = y > ymax ? y : ymax;
+    }
+    const int64_t width =
+        static_cast<int64_t>(std::floor(xmax))
+        - static_cast<int64_t>(std::floor(xmin)) + 1;
+    const int64_t height =
+        static_cast<int64_t>(std::floor(ymax))
+        - static_cast<int64_t>(std::floor(ymin)) + 1;
+    if (width > static_cast<int64_t>(INT32_MAX)
+        || height > static_cast<int64_t>(INT32_MAX)) {
+        return invalid_argument(
+            "bounding rect extent exceeds signed 32-bit range");
+    }
+
+    try {
+        const cv::Rect box =
+            cv::boundingRect(points_from_f32(points, point_count));
+        out_rect->x = box.x;
+        out_rect->y = box.y;
+        out_rect->width = box.width;
+        out_rect->height = box.height;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_rect = opencv_geometry_rect_i32{};
         return translate_current_exception();
     }
 }

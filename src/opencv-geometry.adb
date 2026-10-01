@@ -5,6 +5,7 @@ with Interfaces.C;
 with OpenCV.Core.Float64_Access;
 with OpenCV.Geometry.Internal.C_API;
 with OpenCV.Geometry.Internal.Convexity;
+with OpenCV.Geometry.Internal.Float32_Points;
 with OpenCV.Geometry.Internal.Intersection;
 with OpenCV.Geometry.Internal.Transforms;
 
@@ -2113,4 +2114,414 @@ package body OpenCV.Geometry is
             Y => Transforms.To_Binary32 (Mapped_Y));
       end;
    end Transform_Point;
+
+   --  Float32 point sets. Every overload rejects non-finite coordinates
+   --  before packing, so packed points are finite.
+
+   package Float32_Points renames Internal.Float32_Points;
+
+   --  Raises OpenCV_Error unless every coordinate of Points is finite.
+   procedure Validate_Finite_Points
+     (Points : Float32_Point_Array; Operation : String)
+   is
+      --  Points may hold NaN or infinities; inspect them without an Ada
+      --  validity failure.
+      pragma Suppress (Validity_Check);
+   begin
+      for Point of Points loop
+         if not Is_Finite_Public_Float32 (Point.X)
+           or else not Is_Finite_Public_Float32 (Point.Y)
+         then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               Operation & " requires finite point coordinates");
+         end if;
+      end loop;
+   end Validate_Finite_Points;
+
+   --  Packs Points in iteration order into a zero-based C ABI buffer, which
+   --  is empty for empty Points.
+   function Pack_Float32_Points
+     (Points : Float32_Point_Array) return Internal.C_API.Point_F32_Array is
+   begin
+      if Points'Length > Natural (Interfaces.Integer_32'Last) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity, "point count exceeds C ABI range");
+      end if;
+
+      declare
+         Result : Internal.C_API.Point_F32_Array (0 .. Points'Length - 1);
+      begin
+         for Offset in Result'Range loop
+            Result (Offset) := To_C_Point_F32 (Points (Points'First + Offset));
+         end loop;
+         return Result;
+      end;
+   end Pack_Float32_Points;
+
+   --  The C ABI view of a packed point buffer: its first point, or null
+   --  when it is empty, and its count.
+   function First_Point
+     (Packed : aliased Internal.C_API.Point_F32_Array)
+      return access constant Internal.C_API.Point_F32
+   is (if Packed'Length = 0 then null else Packed (Packed'First)'Access);
+
+   function Point_Count
+     (Packed : Internal.C_API.Point_F32_Array) return Interfaces.Integer_32
+   is (Interfaces.Integer_32 (Packed'Length));
+
+   function To_Public_Boolean
+     (Value : Interfaces.Integer_32; Operation : String) return Boolean is
+   begin
+      case Value is
+         when 0      =>
+            return False;
+
+         when 1      =>
+            return True;
+
+         when others =>
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               Operation & " failed: invalid Boolean encoding");
+      end case;
+   end To_Public_Boolean;
+
+   function Contour_Area
+     (Points : Float32_Point_Array; Oriented : Boolean := False)
+      return OpenCV.Float64_Value
+   is
+      --  To_Public_Float64 inspects the raw native result.
+      pragma Suppress (Validity_Check);
+      Area   : aliased Interfaces.C.double := 0.0;
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, "Contour_Area");
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Contour_Area_F32
+             (First_Point (Packed),
+              Point_Count (Packed),
+              To_C_Boolean (Oriented),
+              Area'Access);
+      end;
+      Raise_On_Error (Status, "contour area");
+      return To_Public_Float64 (Area, "Contour_Area result is not finite");
+   end Contour_Area;
+
+   function Arc_Length
+     (Points : Float32_Point_Array; Closed : Boolean)
+      return OpenCV.Float64_Value
+   is
+      --  The native length overflows to infinity for very long segments;
+      --  To_Public_Float64 inspects it.
+      pragma Suppress (Validity_Check);
+      Length : aliased Interfaces.C.double := 0.0;
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, "Arc_Length");
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Arc_Length_F32
+             (First_Point (Packed),
+              Point_Count (Packed),
+              To_C_Boolean (Closed),
+              Length'Access);
+      end;
+      Raise_On_Error (Status, "arc length");
+      return
+        To_Public_Float64
+          (Length,
+           "Arc_Length result is not finite: a segment overflows binary32");
+   end Arc_Length;
+
+   function Compute_Moments
+     (Points : Float32_Point_Array) return Moments_Result
+   is
+      --  Native moments may be Inf/NaN; All_Finite inspects them before
+      --  they are converted.
+      pragma Suppress (Validity_Check);
+      Result : aliased Internal.C_API.C_Moments;
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, "Compute_Moments");
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Contour_Moments_F32
+             (First_Point (Packed), Point_Count (Packed), Result'Access);
+      end;
+      Raise_On_Error (Status, "contour moments");
+      if not All_Finite (Result) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Compute_Moments result is not finite");
+      end if;
+      return To_Public_Moments (Result);
+   end Compute_Moments;
+
+   --  Public policy for Float32 Bounding_Rect: OpenCV floors the extreme
+   --  coordinates to signed 32-bit integers and forms inclusive extents in
+   --  signed 32-bit arithmetic.
+   procedure Validate_Bounding_Extent
+     (Bounds : Float32_Points.Coordinate_Bounds)
+   is
+      Limit : constant Long_Long_Integer :=
+        Long_Long_Integer (Interfaces.Integer_32'Last);
+   begin
+      if not (Float32_Points.Is_Int32_Convertible (Bounds.Min_X)
+              and then Float32_Points.Is_Int32_Convertible (Bounds.Max_X)
+              and then Float32_Points.Is_Int32_Convertible (Bounds.Min_Y)
+              and then Float32_Points.Is_Int32_Convertible (Bounds.Max_Y))
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Bounding_Rect requires coordinates of at least -2.0**31 and "
+            & "less than 2.0**31");
+      end if;
+      if Float32_Points.Inclusive_Extent (Bounds.Min_X, Bounds.Max_X) > Limit
+        or else Float32_Points.Inclusive_Extent (Bounds.Min_Y, Bounds.Max_Y)
+                > Limit
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "bounding rect cannot be represented as OpenCV.Rect");
+      end if;
+   end Validate_Bounding_Extent;
+
+   function Bounding_Rect (Points : Float32_Point_Array) return OpenCV.Rect is
+      Result : aliased Internal.C_API.Rect_I32 :=
+        (X => 0, Y => 0, Width => 0, Height => 0);
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, "Bounding_Rect");
+      if Points'Length > 0 then
+         Validate_Bounding_Extent (Float32_Points.Bounds_Of (Points));
+      end if;
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Bounding_Rect_F32
+             (First_Point (Packed), Point_Count (Packed), Result'Access);
+      end;
+      Raise_On_Error (Status, "bounding rect");
+      return To_Public_Rect (Result);
+   end Bounding_Rect;
+
+   --  Raises OpenCV_Error unless no binary32 difference of two coordinates
+   --  of Points overflows.
+   procedure Validate_Binary32_Spans
+     (Points : Float32_Point_Array; Operation : String) is
+   begin
+      if Points'Length > 0
+        and then not Float32_Points.Spans_Are_Binary32
+                       (Float32_Points.Bounds_Of (Points))
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation
+            & " requires X and Y spans of at most Float32_Value'Last");
+      end if;
+   end Validate_Binary32_Spans;
+
+   function Is_Convex (Points : Float32_Point_Array) return Boolean is
+      Result : aliased Interfaces.Integer_32 := 0;
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, "Is_Convex");
+      --  OpenCV forms binary32 coordinate differences and binary32
+      --  products of an X and a Y difference.
+      Validate_Binary32_Spans (Points, "Is_Convex");
+      if Points'Length > 0
+        and then not Float32_Points.Span_Product_Is_Binary32
+                       (Float32_Points.Bounds_Of (Points))
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Is_Convex requires the product of the X and Y spans to be at "
+            & "most Float32_Value'Last / 2");
+      end if;
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Is_Convex_F32
+             (First_Point (Packed), Point_Count (Packed), Result'Access);
+      end;
+      Raise_On_Error (Status, "is convex");
+      return To_Public_Boolean (Result, "is convex");
+   end Is_Convex;
+
+   --  Raises OpenCV_Error unless the moments and Hu moments of Points are
+   --  finite. OpenCV's matching silently skips non-finite Hu moments, so a
+   --  finite score alone does not show that they were finite.
+   procedure Validate_Shape_Moments
+     (Points : Float32_Point_Array; Name : String) is
+   begin
+      declare
+         Unused : constant Hu_Moments_Result :=
+           Hu_Moments (Compute_Moments (Points));
+         pragma Unreferenced (Unused);
+      begin
+         null;
+      end;
+   exception
+      when OpenCV.OpenCV_Error =>
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Match_Shapes requires finite moments and Hu moments of " & Name);
+   end Validate_Shape_Moments;
+
+   function Match_Shapes
+     (Left, Right : Float32_Point_Array; Method : Shape_Match_Method)
+      return OpenCV.Float64_Value
+   is
+      --  Native scores may be Inf/NaN; To_Public_Float64 inspects them.
+      pragma Suppress (Validity_Check);
+      Score  : aliased Interfaces.C.double := 0.0;
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Left, "Match_Shapes");
+      Validate_Finite_Points (Right, "Match_Shapes");
+      Validate_Shape_Moments (Left, "Left");
+      Validate_Shape_Moments (Right, "Right");
+      declare
+         Packed_Left  : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Left);
+         Packed_Right : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Right);
+      begin
+         Status :=
+           Internal.C_API.Match_Shapes_F32
+             (First_Point (Packed_Left),
+              Point_Count (Packed_Left),
+              First_Point (Packed_Right),
+              Point_Count (Packed_Right),
+              To_C_Match_Method (Method),
+              Score'Access);
+      end;
+      Raise_On_Error (Status, "match shapes");
+      return To_Public_Float64 (Score, "Match_Shapes result is not finite");
+   end Match_Shapes;
+
+   --  Validates a query of a Float32 polygon and calls native
+   --  pointPolygonTest in the Measure_Distance mode.
+   function Call_Point_Polygon_Test
+     (Points           : Float32_Point_Array;
+      Query            : OpenCV.Float32_Point;
+      Measure_Distance : Interfaces.Integer_32;
+      Operation        : String) return Interfaces.C.double
+   is
+      --  Query may be Inf/NaN, and the native result is inspected by the
+      --  callers.
+      pragma Suppress (Validity_Check);
+      Result : aliased Interfaces.C.double := 0.0;
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, Operation);
+      --  OpenCV forms binary32 differences of contour coordinates. A
+      --  difference between Query, within the cvRound range, and a contour
+      --  coordinate cannot overflow.
+      Validate_Binary32_Spans (Points, Operation);
+      if not Is_Finite_Public_Float32 (Query.X)
+        or else not Is_Finite_Public_Float32 (Query.Y)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " requires a finite Query");
+      end if;
+      if Points'Length > 0
+        and then not (Float32_Points.Is_Int32_Convertible (Query.X)
+                      and then Float32_Points.Is_Int32_Convertible (Query.Y))
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation
+            & " requires Query coordinates of at least -2.0**31 and less "
+            & "than 2.0**31");
+      end if;
+
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Point_Polygon_Test_F32
+             (First_Point (Packed),
+              Point_Count (Packed),
+              Interfaces.C.C_float (Query.X),
+              Interfaces.C.C_float (Query.Y),
+              Measure_Distance,
+              Result'Access);
+      end;
+      Raise_On_Error (Status, "point polygon test");
+      return Result;
+   end Call_Point_Polygon_Test;
+
+   function Locate_Point
+     (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)
+      return Contour_Point_Location
+   is
+      pragma Suppress (Validity_Check);
+      use type Interfaces.C.double;
+      Result : constant Interfaces.C.double :=
+        Call_Point_Polygon_Test
+          (Points,
+           Query,
+           Internal.C_API.Point_Polygon_Classify,
+           "Locate_Point");
+   begin
+      if Result = -1.0 then
+         return Outside_Contour;
+      elsif Result = 0.0 then
+         return On_Contour_Boundary;
+      elsif Result = 1.0 then
+         return Inside_Contour;
+      else
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "point polygon classification result is invalid");
+      end if;
+   end Locate_Point;
+
+   --  Binary64 Sqrt (FLT_MAX): native pointPolygonTest starts its
+   --  nearest-edge search at squared distance FLT_MAX, so it reports this
+   --  magnitude, and never a larger one, when no edge is nearer.
+   Distance_Search_Limit : constant OpenCV.Float64_Value :=
+     1.844674352395373E+19;
+
+   function Signed_Distance_To_Contour
+     (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)
+      return OpenCV.Float64_Value
+   is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float64_Value;
+      Distance : constant OpenCV.Float64_Value :=
+        To_Public_Float64
+          (Call_Point_Polygon_Test
+             (Points,
+              Query,
+              Internal.C_API.Point_Polygon_Distance,
+              "Signed_Distance_To_Contour"),
+           "Signed_Distance_To_Contour result is not finite");
+   begin
+      if Points'Length > 0 and then abs Distance >= Distance_Search_Limit then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Signed_Distance_To_Contour distance reaches OpenCV's "
+            & "Sqrt (FLT_MAX) search limit");
+      end if;
+      return Distance;
+   end Signed_Distance_To_Contour;
 end OpenCV.Geometry;

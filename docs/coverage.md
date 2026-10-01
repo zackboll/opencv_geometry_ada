@@ -18,26 +18,29 @@ Status values:
   [Unbound modes](#unbound-modes-of-bound-operations) with the reason.
 - **Deferred**: not bound yet, for the stated reason.
 - **Excluded**: deliberately outside this crate.
+- **Not applicable**: OpenCV itself provides no such mode.
 
 ## Free functions common to 4.6, 4.10, and 5.0
 
 Every one of these 26 native names has a thick binding. For each row the
 OpenCV 4 backend is `imgproc` and the OpenCV 5 backend is `geometry`. Point
-sets are Ada-owned `Contour` values (`OpenCV.Point_Array`) unless noted.
+sets are Ada-owned integer `Contour` values (`OpenCV.Point_Array`, native
+`CV_32S`); where noted they are also `Float32_Point_Array` values (native
+`CV_32F`), as detailed in [Float32 point sets](#float32-cv_32f-point-sets).
 
 | Native operation | Public Ada operation | Status | Version notes |
 | --- | --- | --- | --- |
-| `contourArea` | `Contour_Area` | Bound, both `oriented` modes | |
-| `arcLength` | `Arc_Length` | Bound, open and closed | |
-| `moments` | `Compute_Moments` | Partial: point sets | Raster-image mode unbound |
+| `contourArea` | `Contour_Area` | Bound, both `oriented` modes, integer and Float32 | |
+| `arcLength` | `Arc_Length` | Bound, open and closed, integer and Float32 | |
+| `moments` | `Compute_Moments` | Partial: integer and Float32 point sets | Raster-image mode unbound |
 | `HuMoments` (2 overloads) | `Hu_Moments` | Bound | Both overloads compute the same seven values |
-| `matchShapes` | `Match_Shapes` | Partial: contours, I1/I2/I3 | 5.x declares `CONTOURS_MATCH_*` in `imgproc.hpp`, not `geometry.hpp`; OpenCV ignores its `parameter` |
+| `matchShapes` | `Match_Shapes` | Partial: integer and Float32 point sets, I1/I2/I3 | 5.x declares `CONTOURS_MATCH_*` in `imgproc.hpp`, not `geometry.hpp`; OpenCV ignores its `parameter` |
 | `convexHull` | `Convex_Hull`, `Convex_Hull_Indices` | Bound: points and indices, both orientations | Among duplicate hull points, 4.x and 5.x may return different indices |
-| `convexityDefects` | `Convexity_Defects` (2 overloads) | Bound | |
-| `isContourConvex` | `Is_Convex` | Bound | |
-| `approxPolyDP` | `Approximate_Curve` | Bound, open and closed | |
-| `boundingRect` | `Bounding_Rect` | Partial: point sets | Grayscale-image mode unbound |
-| `pointPolygonTest` | `Locate_Point`, `Signed_Distance_To_Contour` | Bound, both `measureDist` modes | |
+| `convexityDefects` | `Convexity_Defects` (2 overloads) | Bound | OpenCV accepts only `CV_32S` contours |
+| `isContourConvex` | `Is_Convex` | Bound, integer and Float32 | |
+| `approxPolyDP` | `Approximate_Curve` | Bound, open and closed | 5.0 measures distance to the segment, 4.x to its line |
+| `boundingRect` | `Bounding_Rect` | Partial: integer and Float32 point sets | Grayscale-image mode unbound |
+| `pointPolygonTest` | `Locate_Point`, `Signed_Distance_To_Contour` | Bound, both `measureDist` modes, integer and Float32 | |
 | `minAreaRect` | `Minimum_Area_Rectangle` | Bound | 4.x and 5.x may represent the same rectangle differently |
 | `boxPoints` | `Box_Points` | Bound | Native vertex order is preserved; the 4.12+ and 5.0 documentation's start vertex is not guaranteed |
 | `minEnclosingCircle` | `Minimum_Enclosing_Circle` | Bound | |
@@ -58,6 +61,35 @@ with no native call. It applies a transform to one point in binary64
 arithmetic, and SPARK proves that no intermediate overflows. It divides by
 every nonzero W, unlike `cv::perspectiveTransform`, which maps
 |W| <= `FLT_EPSILON` to the origin.
+
+## Float32 (CV_32F) point sets
+
+Integer `Contour` values suit exact integer geometry. Many point-set
+operations also have a native `CV_32F` (`Point2f`) mode for subpixel geometry,
+bound as overloads that take `Float32_Point_Array`. Each mode was checked in
+the 4.6, 4.10, and 5.0 sources rather than inferred from an `InputArray`
+parameter; `docs/float32-research.md` records the evidence. Every Float32
+overload rejects NaN and infinite coordinates with `OpenCV_Error` and calls the
+native `CV_32F` path, so coordinates are never rounded to integers.
+
+| Native operation | Float32 binding | Status | Notes |
+| --- | --- | --- | --- |
+| `contourArea` | `Contour_Area` | Bound | Binary64 accumulation; always finite |
+| `arcLength` | `Arc_Length` | Bound | Binary32 segment lengths; a segment above about 1.8E+19 overflows and raises |
+| `moments` | `Compute_Moments` | Bound | All-zero moments when the doubled area is at most `FLT_EPSILON`; non-finite native moments raise |
+| `matchShapes` | `Match_Shapes` | Bound | Through the Float32 moments; non-finite moments or Hu moments raise, since OpenCV would skip them |
+| `isContourConvex` | `Is_Convex` | Bound | Binary32 differences and cross products, kept finite by span limits |
+| `pointPolygonTest` | `Locate_Point`, `Signed_Distance_To_Contour` | Bound | Spans of at most `FLT_MAX`; query in `cvRound` range; a distance of at least `sqrt(FLT_MAX)` raises instead of being clamped |
+| `boundingRect` | `Bounding_Rect` | Bound | Coordinates in `[-2**31, 2**31)` and extents within `Integer_32`, as `cvFloor` and the native extent arithmetic require |
+| `convexHull` | none | Deferred | Not yet bound |
+| `approxPolyDP` | none | Deferred | Not yet bound |
+| `minAreaRect` | none | Deferred | Not yet bound |
+| `minEnclosingCircle` | none | Deferred | Not yet bound |
+| `minEnclosingTriangle` | none | Deferred | Not yet bound |
+| `fitEllipse`, `fitEllipseAMS`, `fitEllipseDirect` | none | Deferred | Not yet bound |
+| `fitLine` (2D) | none | Deferred | Not yet bound |
+| `intersectConvexConvex` | none | Deferred | Not yet bound |
+| `convexityDefects` | none | Not applicable | OpenCV 4.6, 4.10, and 5.0 call `checkVector(2, CV_32S)` and reject `CV_32F` contours |
 
 ## Stateful family: `cv::Subdiv2D`
 
@@ -126,7 +158,7 @@ for the releases that lack them.
 | `moments` of a raster image (`binaryImage`) | Excluded | Needs image input. Geometry takes Ada point collections and has no image or Mat input API. |
 | `boundingRect` of a grayscale image | Excluded | Needs image input, as above. |
 | `matchShapes` of grayscale images | Excluded | Needs image input, as above. |
-| Point sets of `Point2f` (`CV_32F`) in the contour operations | Deferred | Contours are integer `OpenCV.Point_Array` values. A float point-set family would need per-operation decisions on validation and semantics. |
+| Point sets of `Point2f` (`CV_32F`) in `convexHull`, `approxPolyDP`, `minAreaRect`, `minEnclosingCircle`, `minEnclosingTriangle`, the ellipse fits, `fitLine`, and `intersectConvexConvex` | Deferred | See [Float32 point sets](#float32-cv_32f-point-sets). |
 | `fitLine` on 3D point sets | Deferred | Needs a new public 3D point type, a design decision for this 2D crate. |
 | `fitLine` with `DIST_C` or `DIST_USER` | Not applicable | OpenCV's `fitLine` rejects both as unknown distance types. |
 | `getPerspectiveTransform` with `DECOMP_EIG` or `DECOMP_CHOLESKY`, or the `DECOMP_NORMAL` flag | Not applicable | EIG and Cholesky assume a symmetric matrix, which the perspective system is not; `DECOMP_NORMAL` has no effect on a square system. |
