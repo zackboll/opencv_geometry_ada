@@ -21,29 +21,27 @@ private with OpenCV.Geometry.Internal.C_API;
 --  identifier stays valid only until the next Insert or Reset: insertion
 --  flips edges and reuses edge slots, so an older identifier can name a
 --  different edge. Vertex identifiers are not dense: OpenCV reserves 0 for
---  "no vertex" and 1 .. 3 for the vertices of a bounding super-triangle,
---  and Voronoi computation in Find_Nearest also occupies
---  identifiers, so inserted points need not receive consecutive ids.
+--  "no vertex" and 1 .. 3 for the initial bounding super-triangle vertices.
+--  Voronoi computation in Find_Nearest also creates virtual vertices, so
+--  inserted points need not receive consecutive ids.
 --
 --  Bounds are an integer OpenCV.Rect, which every supported OpenCV release
 --  accepts; the binary32 Rect2f initialization that only OpenCV 4.13+ and
 --  5.x provide is not offered.
 --
 --  Scale: OpenCV's geometric predicates use absolute tolerances near
---  FLT_EPSILON, whatever the coordinate magnitude, so results depend on the
---  spacing of the inserted points (the smallest distance between two of
---  them). The triangulation is reliably Delaunay only when that spacing is
---  at least about 0.03 units. Below it, measured on OpenCV 4.10 and 5.0,
---  with rates that depend on how the points are distributed:
---  - Find_Nearest can return a vertex that is not nearest (a few percent
---    at a spacing of 0.01 units or less, and up to about 30% at 0.003
---    units or less), or raise OpenCV.OpenCV_Error because OpenCV reports
---    no vertex;
---  - Insert and Locate can raise OpenCV.OpenCV_Error because OpenCV cannot
---    locate a point;
---  - at about 0.0001 units, Find_Nearest can fail to return, because
---    OpenCV's facet walk is unbounded and the binding cannot interrupt it.
---  Scale coordinates so that distinct points lie well apart.
+--  FLT_EPSILON. Numerical behavior depends on coordinate scale and geometric
+--  conditioning, not just the smallest distance between inserted points.
+--  In specific random-point and jittered-grid probes on OpenCV 4.10 and 5.0,
+--  no Find_Nearest failures were observed at spacings of about 0.03 units
+--  or more. At 0.01 units or less, a few percent of answers were not nearest
+--  or OpenCV reported no vertex; at 0.003 or less, up to about 30% were
+--  wrong. At about 0.0001 units, Insert and Locate could fail to locate
+--  points and Find_Nearest could fail to return. These are observations for
+--  those distributions, not a guaranteed safe minimum: near-collinear or
+--  nearly cocircular sets may behave differently at any pairwise spacing.
+--  Scale geometry so distinct features are comfortably separated relative
+--  to OpenCV's binary32 predicates.
 
 package OpenCV.Geometry.Subdiv2D is
 
@@ -104,8 +102,8 @@ package OpenCV.Geometry.Subdiv2D is
 
    --  Where a point lies in the triangulation:
    --  - Inside_Facet: inside the facet on the left of Edge. That facet can
-   --    include super-triangle vertices, as it does in a subdivision without
-   --    points.
+   --    include reserved super-triangle vertices, as it does in a
+   --    subdivision without points.
    --  - On_Edge: on Edge.
    --  - On_Vertex: at Vertex.
    type Locate_Result (Kind : Point_Location_Kind := Inside_Facet) is record
@@ -134,15 +132,20 @@ package OpenCV.Geometry.Subdiv2D is
       Point  : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
    end record;
 
-   --  The inserted vertex whose Voronoi facet contains Point, which is a
-   --  nearest inserted vertex up to rounding for points spaced as the
-   --  package's Scale note requires, and its position. Point must be finite
+   --  The inserted vertex whose Voronoi facet contains Point, normally the
+   --  nearest inserted vertex up to rounding, and its position. Numerical
+   --  conditioning can affect this result (see Scale). Point must be finite
    --  and inside the bounds. Raises OpenCV.OpenCV_Error when no point has
-   --  been inserted, and when OpenCV reports no vertex, which can happen for
-   --  points closer than the package's Scale note requires; Object stays
-   --  ready. Find_Nearest computes Voronoi data inside Object when earlier
-   --  insertions invalidated it. For points about 0.0001 units apart it can
-   --  fail to return (see Scale).
+   --  been inserted or when OpenCV reports no vertex; Object stays ready.
+   --  Find_Nearest computes Voronoi data inside Object when earlier
+   --  insertions invalidated it. It enters native OpenCV synchronously:
+   --  cv::Subdiv2D::findNearest has an unbounded facet walk, and some
+   --  numerically pathological triangulations can cause it not to return.
+   --  The Ada binding cannot interrupt or recover from a native call that
+   --  does not return. Reset can recover after a returned failure, but not
+   --  while execution is stuck inside OpenCV. Callers requiring a hard
+   --  liveness or deadline guarantee must not rely on Find_Nearest for
+   --  untrusted or poorly conditioned geometry.
    function Find_Nearest
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
       return Nearest_Result;
