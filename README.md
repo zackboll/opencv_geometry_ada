@@ -420,7 +420,9 @@ existing vertex. Vertex and edge identifiers are native OpenCV identifiers,
 meaningful only for their subdivision and not dense. An inserted point's
 vertex identifier lasts until the next `Reset`; an edge identifier lasts only
 until the next `Insert` or `Reset`, because insertion flips edges and reuses
-edge slots.
+edge slots. OpenCV reserves vertex identifiers 1..3 for the initial bounding
+super-triangle vertices (not Voronoi virtual vertices); Voronoi computation
+can create virtual vertices in other slots.
 
 A `Subdivision` must not be used by more than one task at a time. OpenCV
 mutates internal state in `Locate`, and in `Find_Nearest` and
@@ -428,23 +430,30 @@ mutates internal state in `Locate`, and in `Find_Nearest` and
 independent. The binary32 `Rect2f`
 initialization that only OpenCV 4.13+ and 5.x provide is not bound.
 
-OpenCV's `Subdiv2D` predicates use absolute tolerances near `FLT_EPSILON`,
-whatever the coordinate magnitude, so results depend on the spacing of the
-inserted points: the smallest distance between two of them. The
-triangulation is reliably Delaunay only when that spacing is at least about
-0.03 units. Probes on OpenCV 4.10 and 5.0, whose rates depend on how the
-points are distributed, found:
+OpenCV's `Subdiv2D` predicates use absolute tolerances near `FLT_EPSILON`.
+Numerical behavior depends on coordinate scale and geometric conditioning,
+not just pairwise spacing (the smallest distance between inserted points).
+In specific random-point and jittered-grid probe/stress fixtures on OpenCV
+4.10 and 5.0, the following behavior was observed:
 
 | Spacing (units) | Behavior |
 | --- | --- |
-| 0.03 or more | `Find_Nearest` always answered a nearest vertex |
-| 0.01 or less | a few percent of `Find_Nearest` answers are not a nearest vertex, and some raise `OpenCV_Error` because OpenCV reports no vertex |
-| 0.003 or less | up to about 30% of `Find_Nearest` answers are wrong |
-| about 0.0001 | `Insert` and `Locate` can fail to locate points, and `Find_Nearest` can fail to return |
+| about 0.03 or more | No `Find_Nearest` failures observed in these fixtures |
+| 0.01 or less | A few percent of `Find_Nearest` answers were not nearest; some reported no vertex and raised `OpenCV_Error` |
+| 0.003 or less | Up to about 30% of `Find_Nearest` answers were wrong |
+| about 0.0001 | `Insert` and `Locate` sometimes failed to locate points; `Find_Nearest` sometimes failed to return |
 
-The last row includes a hang: OpenCV's facet walk is unbounded, and the
-binding cannot interrupt a native call. Scale coordinates so that distinct
-points lie well apart.
+These measurements are empirical guidance for the tested distributions, not
+a guaranteed safe minimum spacing: near-collinear, nearly cocircular, and
+other ill-conditioned sets can behave differently. Scale geometry so distinct
+features are comfortably separated relative to OpenCV's binary32 predicates.
+`Find_Nearest` enters native OpenCV synchronously. Some numerically
+pathological triangulations can cause `cv::Subdiv2D::findNearest`'s unbounded
+facet walk not to return; the Ada binding cannot interrupt or recover from a
+native call that does not return. `Reset` can recover an unusable object after
+a returned failure, but cannot help while execution is stuck inside OpenCV.
+Callers requiring a hard liveness or deadline guarantee should not rely on
+`Find_Nearest` for untrusted or poorly conditioned geometry.
 
 ### Extraction and navigation
 
@@ -534,5 +543,7 @@ alr -n build
 alr -n -C tests run
 ```
 
-Cross-platform CI validates Ubuntu OpenCV 4 and Homebrew/MSYS2 OpenCV 5,
-including native shim dependencies. Licensed under Apache-2.0.
+Cross-platform CI validates Ubuntu OpenCV 4 and Homebrew OpenCV 5 on pull
+requests and pushes. MSYS2 OpenCV 5 runs after a push/merge to `main` or
+on manual dispatch, not as a PR gate. CI checks native shim dependencies.
+Licensed under Apache-2.0.
