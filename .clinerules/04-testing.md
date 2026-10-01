@@ -26,3 +26,17 @@ Run `alr -n build`, `alr -n -C tests run`, and `git diff --check`.
 Report the actual registered AUnit test count and native OpenCV
 version/backend. Keep compiler warnings as errors and Ada lines within
 79 columns.
+
+`tests/native` holds C++ tests for shim behavior that Ada cannot reach,
+currently allocation-failure injection for the Subdiv2D handle's unusable
+state. They include the shim source and replace the global allocation
+functions. Run them with `sh scripts/run_native_tests.sh` on Linux after
+`alr -n build` whenever the Subdiv2D shim changes; Linux CI runs them
+under AddressSanitizer and UndefinedBehaviorSanitizer.
+
+Cross-platform CI runs Linux OpenCV 4 and macOS OpenCV 5 on pull requests
+and pushes. Windows MSYS2 OpenCV 5 is intentionally a post-merge portability
+check: its job runs only on pushes to `main` or manual `workflow_dispatch`,
+not on pull requests or feature-branch pushes. Do not require a Windows PR
+job to pass; confirm it is skipped by policy and retain its full build/tests
+for main pushes and manual runs.

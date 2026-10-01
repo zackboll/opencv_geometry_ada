@@ -55,6 +55,14 @@ architectural decision introduces genuine object identity. Do not
 manufacture tagged-type hierarchies, Mat subclasses, or Core-style
 controlled wrappers.
 
+One such decision exists: `OpenCV.Geometry.Subdiv2D.Subdivision` is a
+limited private type, completed as `Ada.Finalization.Limited_Controlled`,
+that exclusively owns one native `cv::Subdiv2D`. It is the only Geometry
+type with object identity. Keep it limited so assignment cannot duplicate
+ownership, keep its handle private, and keep finalization idempotent. Do
+not grow it into a generic native-object framework, and do not add other
+controlled wrappers without a new architectural decision.
+
 Do not add `Find_Contours`, `CvtColor`, filtering, drawing, or other
 image-processing operations to this crate. Those belong in Imgproc.
 

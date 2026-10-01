@@ -2,7 +2,10 @@
 
 This crate implements only `OpenCV.Geometry`. Geometry is deliberately
 smaller than Core or Imgproc: Ada-owned point collections and value
-records, no Mat module bridge, and no Core C++ shim.
+records, no Mat module bridge, and no Core C++ shim. The single stateful
+exception is `OpenCV.Geometry.Subdiv2D`, whose limited controlled type
+owns one native `cv::Subdiv2D` through an opaque handle; see
+`.clinerules/02-ada-design.md` and `.clinerules/03-cpp-interop.md`.
 
 ## Production dependencies
 

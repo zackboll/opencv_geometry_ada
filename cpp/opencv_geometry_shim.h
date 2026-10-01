@@ -384,6 +384,88 @@ opencv_geometry_rotated_rectangle_intersection(
     int32_t out_capacity,
     int32_t *out_count);
 
+/* Opaque owner of exactly one native cv::Subdiv2D. It is the only native
+   object this ABI exposes. Create it with opencv_geometry_subdiv2d_create
+   and release it with opencv_geometry_subdiv2d_destroy; the caller owns
+   the handle in between. A handle must not be used after it is destroyed,
+   and must not be used concurrently: OpenCV mutates internal state even in
+   point location and nearest-vertex queries. Distinct handles are
+   independent.
+
+   A failed modification that may have left the native triangulation
+   inconsistent, such as an allocation failure during insertion, marks the
+   handle unusable. Every operation except init_delaunay, is_usable, and
+   destroy then fails with OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT until
+   init_delaunay succeeds. */
+typedef struct opencv_geometry_subdiv2d opencv_geometry_subdiv2d;
+
+/* Creates a subdivision initialised to an empty Delaunay triangulation of
+   bounds. *out_handle is null unless the result is OPENCV_GEOMETRY_OK. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_create(
+    const opencv_geometry_rect_i32 *bounds,
+    opencv_geometry_subdiv2d **out_handle);
+
+/* Destroys handle. A null handle is ignored. Never fails. */
+void
+opencv_geometry_subdiv2d_destroy(opencv_geometry_subdiv2d *handle);
+
+/* Discards every point and reinitialises handle to an empty Delaunay
+   triangulation of bounds. Success makes an unusable handle usable again. A
+   failure of the native reinitialisation leaves the handle unusable; a null
+   handle or bounds pointer is rejected without changing the handle. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_init_delaunay(
+    opencv_geometry_subdiv2d *handle,
+    const opencv_geometry_rect_i32 *bounds);
+
+/* 1 when handle is non-null and usable, otherwise 0. */
+int32_t
+opencv_geometry_subdiv2d_is_usable(const opencv_geometry_subdiv2d *handle);
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_insert(
+    opencv_geometry_subdiv2d *handle,
+    float x,
+    float y,
+    int32_t *out_vertex);
+
+/* Inserts points in order. On failure, *out_inserted_count reports how
+   many leading points were inserted before the failing one. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_insert_points(
+    opencv_geometry_subdiv2d *handle,
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t *out_inserted_count);
+
+/* Explicit point-location kinds; the shim maps OpenCV's PTLOC_* values to
+   these. */
+#define OPENCV_GEOMETRY_SUBDIV2D_LOCATION_INSIDE       ((int32_t)0)
+#define OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ON_EDGE      ((int32_t)1)
+#define OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ON_VERTEX    ((int32_t)2)
+#define OPENCV_GEOMETRY_SUBDIV2D_LOCATION_OUTSIDE_RECT ((int32_t)3)
+#define OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ERROR        ((int32_t)4)
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_locate(
+    opencv_geometry_subdiv2d *handle,
+    float x,
+    float y,
+    int32_t *out_location,
+    int32_t *out_edge,
+    int32_t *out_vertex);
+
+/* Nearest inserted vertex and its position. *out_vertex is 0 when OpenCV
+   reports no vertex. */
+opencv_geometry_status
+opencv_geometry_subdiv2d_find_nearest(
+    opencv_geometry_subdiv2d *handle,
+    float x,
+    float y,
+    int32_t *out_vertex,
+    opencv_geometry_point_f32 *out_point);
+
 #ifdef __cplusplus
 }
 #endif

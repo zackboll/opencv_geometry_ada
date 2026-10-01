@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <vector>
 
 namespace {
@@ -2233,6 +2234,366 @@ opencv_geometry_rotated_rectangle_intersection(
     } catch (...) {
         *out_count = 0;
         *out_kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE;
+        return translate_current_exception();
+    }
+}
+
+// A named namespace, not an anonymous one, because the externally named
+// opencv_geometry_subdiv2d struct below holds this type as a member.
+namespace opencv_geometry_shim_detail {
+
+// cv::Subdiv2D keeps its vertex and quad-edge storage in protected members
+// that OpenCV 4.6, 4.10, and 5.0 declare identically. This derived class
+// only reads their sizes so the shim can bound native int arithmetic.
+class GeometrySubdiv2D : public cv::Subdiv2D {
+public:
+    std::size_t quad_edge_count() const noexcept
+    {
+        return qedges.size();
+    }
+
+    std::size_t vertex_slot_count() const noexcept
+    {
+        return vtx.size();
+    }
+};
+
+}
+
+namespace {
+
+using opencv_geometry_shim_detail::GeometrySubdiv2D;
+
+// ABI safety: OpenCV computes (int)(qedges.size() * 4) and freeQEdge * 4 in
+// signed int while inserting and locating points, and getEdge adds a
+// navigation code of at most 0x33 to an edge id. One insertion adds at most
+// four quad-edges (three net), so an insertion is refused unless every such
+// value stays within INT32_MAX afterwards.
+constexpr std::size_t maximum_subdiv2d_quad_edges =
+    static_cast<std::size_t>(INT32_MAX) / 4 - 16;
+
+bool subdiv2d_has_room_to_insert(const GeometrySubdiv2D &native) noexcept
+{
+    return native.quad_edge_count() + 4 <= maximum_subdiv2d_quad_edges;
+}
+
+// OpenCV raises these codes before Subdiv2D::insert changes the
+// triangulation: StsError when the subdivision is empty or locate returns an
+// invalid location, StsBadSize when point location fails, and StsOutOfRange
+// for a point outside the bounds.
+bool subdiv2d_insert_error_is_before_mutation(int code) noexcept
+{
+    return code == cv::Error::StsError
+        || code == cv::Error::StsBadSize
+        || code == cv::Error::StsOutOfRange;
+}
+
+cv::Rect subdiv2d_bounds(const opencv_geometry_rect_i32 &bounds)
+{
+    return cv::Rect(bounds.x, bounds.y, bounds.width, bounds.height);
+}
+
+}
+
+struct opencv_geometry_subdiv2d {
+    opencv_geometry_subdiv2d() = default;
+    opencv_geometry_subdiv2d(const opencv_geometry_subdiv2d &) = delete;
+    opencv_geometry_subdiv2d &operator=(const opencv_geometry_subdiv2d &) =
+        delete;
+
+    GeometrySubdiv2D native;
+    bool usable = false;
+};
+
+namespace {
+
+opencv_geometry_status unusable_subdivision() noexcept
+{
+    return invalid_argument(
+        "subdivision is unusable after a failed modification; "
+        "reinitialize it");
+}
+
+// Inserts one point, marking the handle unusable when a failure may have
+// left the triangulation partially modified.
+opencv_geometry_status subdiv2d_insert_one(
+    opencv_geometry_subdiv2d *handle,
+    float x,
+    float y,
+    int32_t *out_vertex)
+{
+    if (!subdiv2d_has_room_to_insert(handle->native)) {
+        return invalid_argument(
+            "subdivision is too large for OpenCV's signed int edge "
+            "arithmetic");
+    }
+    try {
+        *out_vertex = handle->native.insert(cv::Point2f(x, y));
+        return OPENCV_GEOMETRY_OK;
+    } catch (const cv::Exception &error) {
+        if (!subdiv2d_insert_error_is_before_mutation(error.code)) {
+            handle->usable = false;
+        }
+        return translate_current_exception();
+    } catch (...) {
+        // An allocation failure after insert starts splicing edges leaves
+        // the quad-edge structure inconsistent.
+        handle->usable = false;
+        return translate_current_exception();
+    }
+}
+
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_create(
+    const opencv_geometry_rect_i32 *bounds,
+    opencv_geometry_subdiv2d **out_handle)
+{
+    clear_error();
+    if (out_handle == nullptr) {
+        return invalid_argument("null subdivision output handle pointer");
+    }
+    *out_handle = nullptr;
+    if (bounds == nullptr) {
+        return invalid_argument("null subdivision bounds pointer");
+    }
+
+    try {
+        std::unique_ptr<opencv_geometry_subdiv2d> handle(
+            new opencv_geometry_subdiv2d());
+        handle->native.initDelaunay(subdiv2d_bounds(*bounds));
+        handle->usable = true;
+        *out_handle = handle.release();
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        return translate_current_exception();
+    }
+}
+
+void
+opencv_geometry_subdiv2d_destroy(opencv_geometry_subdiv2d *handle)
+{
+    // cv::Subdiv2D's implicit destructor only releases std::vector storage
+    // and cannot throw.
+    delete handle;
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_init_delaunay(
+    opencv_geometry_subdiv2d *handle,
+    const opencv_geometry_rect_i32 *bounds)
+{
+    clear_error();
+    if (handle == nullptr) {
+        return invalid_argument("null subdivision handle");
+    }
+    if (bounds == nullptr) {
+        return invalid_argument("null subdivision bounds pointer");
+    }
+
+    // initDelaunay clears the triangulation before rebuilding it, so the
+    // handle is usable only after it completes.
+    handle->usable = false;
+    try {
+        handle->native.initDelaunay(subdiv2d_bounds(*bounds));
+        handle->usable = true;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        return translate_current_exception();
+    }
+}
+
+int32_t
+opencv_geometry_subdiv2d_is_usable(const opencv_geometry_subdiv2d *handle)
+{
+    return handle != nullptr && handle->usable ? 1 : 0;
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_insert(
+    opencv_geometry_subdiv2d *handle,
+    float x,
+    float y,
+    int32_t *out_vertex)
+{
+    clear_error();
+    if (out_vertex == nullptr) {
+        return invalid_argument("null subdivision vertex output pointer");
+    }
+    *out_vertex = 0;
+    if (handle == nullptr) {
+        return invalid_argument("null subdivision handle");
+    }
+    if (!handle->usable) {
+        return unusable_subdivision();
+    }
+
+    int32_t vertex = 0;
+    const opencv_geometry_status status =
+        subdiv2d_insert_one(handle, x, y, &vertex);
+    if (status == OPENCV_GEOMETRY_OK) {
+        *out_vertex = vertex;
+    }
+    return status;
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_insert_points(
+    opencv_geometry_subdiv2d *handle,
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t *out_inserted_count)
+{
+    clear_error();
+    if (out_inserted_count == nullptr) {
+        return invalid_argument("null subdivision inserted-count pointer");
+    }
+    *out_inserted_count = 0;
+    if (handle == nullptr) {
+        return invalid_argument("null subdivision handle");
+    }
+    if (point_count < 0) {
+        return invalid_argument("subdivision point count must not be negative");
+    }
+    if (points == nullptr && point_count > 0) {
+        return invalid_argument("null subdivision points with positive count");
+    }
+    if (!handle->usable) {
+        return unusable_subdivision();
+    }
+
+    for (int32_t index = 0; index < point_count; ++index) {
+        int32_t vertex = 0;
+        const opencv_geometry_status status = subdiv2d_insert_one(
+            handle, points[index].x, points[index].y, &vertex);
+        if (status != OPENCV_GEOMETRY_OK) {
+            return status;
+        }
+        *out_inserted_count = index + 1;
+    }
+    return OPENCV_GEOMETRY_OK;
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_locate(
+    opencv_geometry_subdiv2d *handle,
+    float x,
+    float y,
+    int32_t *out_location,
+    int32_t *out_edge,
+    int32_t *out_vertex)
+{
+    clear_error();
+    if (out_location != nullptr) {
+        *out_location = OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ERROR;
+    }
+    if (out_edge != nullptr) {
+        *out_edge = 0;
+    }
+    if (out_vertex != nullptr) {
+        *out_vertex = 0;
+    }
+    if (out_location == nullptr || out_edge == nullptr || out_vertex == nullptr) {
+        return invalid_argument("null subdivision location output pointer");
+    }
+    if (handle == nullptr) {
+        return invalid_argument("null subdivision handle");
+    }
+    if (!handle->usable) {
+        return unusable_subdivision();
+    }
+
+    try {
+        int edge = 0;
+        int vertex = 0;
+        const int native_location =
+            handle->native.locate(cv::Point2f(x, y), edge, vertex);
+        int32_t location = OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ERROR;
+        switch (native_location) {
+        case cv::Subdiv2D::PTLOC_INSIDE:
+            location = OPENCV_GEOMETRY_SUBDIV2D_LOCATION_INSIDE;
+            break;
+        case cv::Subdiv2D::PTLOC_ON_EDGE:
+            location = OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ON_EDGE;
+            break;
+        case cv::Subdiv2D::PTLOC_VERTEX:
+            location = OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ON_VERTEX;
+            break;
+        case cv::Subdiv2D::PTLOC_OUTSIDE_RECT:
+            location = OPENCV_GEOMETRY_SUBDIV2D_LOCATION_OUTSIDE_RECT;
+            break;
+        case cv::Subdiv2D::PTLOC_ERROR:
+            location = OPENCV_GEOMETRY_SUBDIV2D_LOCATION_ERROR;
+            break;
+        default:
+            // Only a corrupt triangulation could produce this.
+            handle->usable = false;
+            set_error("Subdiv2D::locate returned an unknown location");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
+        }
+        *out_edge = edge;
+        *out_vertex = vertex;
+        *out_location = location;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        // locate changes only its cached starting edge, so the triangulation
+        // remains usable.
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_subdiv2d_find_nearest(
+    opencv_geometry_subdiv2d *handle,
+    float x,
+    float y,
+    int32_t *out_vertex,
+    opencv_geometry_point_f32 *out_point)
+{
+    clear_error();
+    if (out_vertex != nullptr) {
+        *out_vertex = 0;
+    }
+    if (out_point != nullptr) {
+        *out_point = opencv_geometry_point_f32{};
+    }
+    if (out_vertex == nullptr || out_point == nullptr) {
+        return invalid_argument("null subdivision nearest-vertex output pointer");
+    }
+    if (handle == nullptr) {
+        return invalid_argument("null subdivision handle");
+    }
+    if (!handle->usable) {
+        return unusable_subdivision();
+    }
+
+    try {
+        // findNearest leaves its point output unwritten when the query hits a
+        // vertex exactly, so the shim reads the vertex position itself.
+        const int vertex = handle->native.findNearest(cv::Point2f(x, y), nullptr);
+        if (vertex <= 0) {
+            return OPENCV_GEOMETRY_OK;
+        }
+        // ABI safety: getVertex checks its index only with CV_DbgAssert, so
+        // the shim bounds the native result before reading the vertex.
+        if (static_cast<std::size_t>(vertex)
+            >= handle->native.vertex_slot_count()) {
+            // Only a corrupt triangulation could produce this.
+            handle->usable = false;
+            set_error("Subdiv2D::findNearest returned an invalid vertex");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
+        }
+        const cv::Point2f native_point = handle->native.getVertex(vertex);
+        opencv_geometry_point_f32 point{};
+        point.x = native_point.x;
+        point.y = native_point.y;
+        *out_point = point;
+        *out_vertex = vertex;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        // findNearest recomputes Voronoi data from scratch after a failure and
+        // does not change the Delaunay triangulation.
         return translate_current_exception();
     }
 }

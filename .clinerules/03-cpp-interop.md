@@ -43,10 +43,21 @@ Do not assume Ada `Integer` or `Natural` match C integer width. All
 representation conversions belong in the thin Ada interoperability
 layer.
 
-This crate does not currently use opaque C++ object handles. Do not add
-Mat handles, Core module-bridge includes, or a destroy/finalization
-protocol unless an architectural decision introduces a Geometry-owned
-C++ object.
+The only opaque C++ object handle is `opencv_geometry_subdiv2d`, a
+deliberate and narrowly scoped exception for `OpenCV.Geometry.Subdiv2D`:
+
+- the shim allocates it in `opencv_geometry_subdiv2d_create`, which
+  publishes a null handle on failure;
+- `opencv_geometry_subdiv2d_destroy` releases it, ignores null, and never
+  throws;
+- every other function rejects a null handle, and a handle whose native
+  triangulation a failed modification may have left inconsistent is
+  marked unusable until it is reinitialized;
+- no STL object, C++ reference, or borrowed native pointer escapes it.
+
+Do not add Mat handles, Core module-bridge includes, other native object
+handles, or a generic destroy/finalization protocol unless a further
+architectural decision introduces another Geometry-owned C++ object.
 
 ## C ABI naming
 

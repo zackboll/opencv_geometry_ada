@@ -83,6 +83,9 @@ jobs:
             exit "$status"
           fi
 
+      - name: Run native fault-injection tests
+        run: sh scripts/run_native_tests.sh
+
   macos-arm64:
     name: macOS ARM64
     runs-on: macos-latest
@@ -254,6 +257,9 @@ jobs:
 
   windows-x86_64-msys2:
     name: Windows x86_64 (MSYS2)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: windows-latest
     defaults:
       run:

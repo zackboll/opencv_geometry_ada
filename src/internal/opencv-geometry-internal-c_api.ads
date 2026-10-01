@@ -478,6 +478,92 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_rotated_rectangle_intersection";
 
+   --  Opaque native cv::Subdiv2D owner. Ada never allocates, copies, or
+   --  dereferences it; only OpenCV.Geometry.Subdiv2D holds a handle. The
+   --  zero storage size makes an Ada allocator for the handle type illegal.
+   type Subdiv2D_Record is null record with Convention => C;
+
+   type Subdiv2D_Handle is access all Subdiv2D_Record
+   with Convention => C, Storage_Size => 0;
+
+   function Subdiv2D_Create
+     (Bounds : access constant Rect_I32; Out_Handle : access Subdiv2D_Handle)
+      return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_create";
+
+   procedure Subdiv2D_Destroy (Handle : Subdiv2D_Handle)
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_destroy";
+
+   function Subdiv2D_Init_Delaunay
+     (Handle : Subdiv2D_Handle; Bounds : access constant Rect_I32)
+      return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_init_delaunay";
+
+   function Subdiv2D_Is_Usable
+     (Handle : Subdiv2D_Handle) return Interfaces.Integer_32
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_is_usable";
+
+   function Subdiv2D_Insert
+     (Handle     : Subdiv2D_Handle;
+      X          : Interfaces.C.C_float;
+      Y          : Interfaces.C.C_float;
+      Out_Vertex : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_insert";
+
+   function Subdiv2D_Insert_Points
+     (Handle             : Subdiv2D_Handle;
+      Points             : access constant Point_F32;
+      Point_Count        : Interfaces.Integer_32;
+      Out_Inserted_Count : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_insert_points";
+
+   Subdiv2D_Location_Inside       : constant Interfaces.Integer_32 := 0;
+   Subdiv2D_Location_On_Edge      : constant Interfaces.Integer_32 := 1;
+   Subdiv2D_Location_On_Vertex    : constant Interfaces.Integer_32 := 2;
+   Subdiv2D_Location_Outside_Rect : constant Interfaces.Integer_32 := 3;
+   Subdiv2D_Location_Error        : constant Interfaces.Integer_32 := 4;
+
+   function Subdiv2D_Locate
+     (Handle       : Subdiv2D_Handle;
+      X            : Interfaces.C.C_float;
+      Y            : Interfaces.C.C_float;
+      Out_Location : access Interfaces.Integer_32;
+      Out_Edge     : access Interfaces.Integer_32;
+      Out_Vertex   : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_locate";
+
+   function Subdiv2D_Find_Nearest
+     (Handle     : Subdiv2D_Handle;
+      X          : Interfaces.C.C_float;
+      Y          : Interfaces.C.C_float;
+      Out_Vertex : access Interfaces.Integer_32;
+      Out_Point  : access Point_F32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_find_nearest";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;
