@@ -119,9 +119,8 @@ package body Subdiv2D_Voronoi_Tests is
         (Next = Diagram.Point_Count + 1, "facet polygons cover Points");
    end Assert_Partition;
 
-   --  Every point of a complete facet is nearest to its own site among
-   --  Sites, up to binary32 rounding. The contract promises this only for
-   --  points spaced as the package's Scale note requires.
+   --  Check the nearest-site property for the tested well-spaced fixtures,
+   --  up to binary32 rounding; the Scale note gives no guaranteed spacing.
    procedure Assert_Nearest_Site
      (Diagram : Subdiv.Voronoi_Diagram; Sites : Points) is
    begin
@@ -512,8 +511,8 @@ package body Subdiv2D_Voronoi_Tests is
    --  including each facet's completeness. OpenCV is deterministic, so a
    --  raw handle given the same points holds the same triangulation. An
    --  incomplete facet must contain OpenCV's (0, 0) placeholder. When
-   --  Well_Spaced, the points satisfy the package's Scale note and the
-   --  complete facets are also held to the nearest-site property.
+   --  Well_Spaced, the fixture also checks the nearest-site property for
+   --  complete facets; this is empirical, not a spacing guarantee.
    procedure Assert_Preserves_Native_Facets
      (Area : OpenCV.Rect; Sources : Points; Well_Spaced : Boolean)
    is
@@ -629,9 +628,8 @@ package body Subdiv2D_Voronoi_Tests is
          Well_Spaced => True);
    end Preserves_C_ABI_Facets;
 
-   --  Points about 1E-4 to 4E-4 apart, far closer than the Scale note
-   --  allows. OpenCV's absolute tolerances can leave degenerate triangles
-   --  among them, whose Voronoi vertices it never computes. Each facet's
+   --  Points about 1E-4 to 4E-4 apart, much closer than in the well-spaced
+   --  fixtures. OpenCV can leave Voronoi vertices uncomputed. Each facet's
    --  completeness must still match the native report, and the diagram must
    --  still be returned rather than rejected as a whole.
    procedure Closely_Spaced_Points (Test : in out Fixture) is
