@@ -257,6 +257,9 @@ jobs:
 
   windows-x86_64-msys2:
     name: Windows x86_64 (MSYS2)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: windows-latest
     defaults:
       run:
