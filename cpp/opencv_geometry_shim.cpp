@@ -2872,14 +2872,108 @@ bool polygon_is_simple_convex_in_binary32(
     return forward || backward;
 }
 
+// True when the X and Y spans of both binary32-exact integer polygons
+// together are at most 2^24, or at most 2^25 when every coordinate is even.
+// Every binary32 coordinate difference is then exact, every binary64
+// product and sum in OpenCV's orientation and segment tests is exact, and
+// its 1e-5 tolerance never hides a nonzero orientation. Rounded differences
+// can make the tests inconsistent and, before OpenCV 4.11, overflow the
+// native result buffer even for valid convex polygons.
+bool polygon_spans_are_exact(
+    const opencv_geometry_point_i32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_i32 *right_points,
+    int32_t right_count) noexcept
+{
+    int64_t min_x = left_points[0].x;
+    int64_t max_x = min_x;
+    int64_t min_y = left_points[0].y;
+    int64_t max_y = min_y;
+    bool all_even = true;
+    const auto include = [&](const opencv_geometry_point_i32 &point) {
+        min_x = point.x < min_x ? point.x : min_x;
+        max_x = point.x > max_x ? point.x : max_x;
+        min_y = point.y < min_y ? point.y : min_y;
+        max_y = point.y > max_y ? point.y : max_y;
+        all_even = all_even && point.x % 2 == 0 && point.y % 2 == 0;
+    };
+    for (int32_t index = 0; index < left_count; ++index) {
+        include(left_points[index]);
+    }
+    for (int32_t index = 0; index < right_count; ++index) {
+        include(right_points[index]);
+    }
+    const int64_t limit =
+        all_even ? 2 * binary32_exact_integer_limit
+                 : binary32_exact_integer_limit;
+    return max_x - min_x <= limit && max_y - min_y <= limit;
+}
+
+// Binary32 polygons are intersected exactly as consistently as integer ones
+// when they are an exact power-of-two scaling of acceptable integer
+// polygons. Finds the largest exponent k in [-8, 6] at which every
+// coordinate of both polygons is an integer multiple of 2^k of magnitude at
+// most 2^24, and writes the scaled integer polygons. k >= -8 keeps every
+// nonzero orientation, at least 2^(2k), above OpenCV's 1e-5 tolerance, and
+// k <= 6 keeps coordinate magnitudes at most 2^30, below the 2^31 at which
+// the nested-polygon test's rounding to int overflows. Larger exponents give smaller integers, so no other exponent can
+// succeed when this one fails. NaN and infinities never qualify.
+bool polygons_on_binary_grid(
+    const opencv_geometry_point_f32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_f32 *right_points,
+    int32_t right_count,
+    std::vector<opencv_geometry_point_i32> &left_grid,
+    std::vector<opencv_geometry_point_i32> &right_grid)
+{
+    const auto on_grid = [](float value, int exponent) {
+        const double scaled = std::ldexp(static_cast<double>(value), -exponent);
+        return std::trunc(scaled) == scaled
+            && std::fabs(scaled)
+                   <= static_cast<double>(binary32_exact_integer_limit);
+    };
+    const auto all_on_grid =
+        [&](const opencv_geometry_point_f32 *points, int32_t count, int k) {
+            for (int32_t index = 0; index < count; ++index) {
+                if (!on_grid(points[index].x, k)
+                    || !on_grid(points[index].y, k)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+    const auto scale =
+        [](const opencv_geometry_point_f32 *points, int32_t count, int k,
+           std::vector<opencv_geometry_point_i32> &grid) {
+            grid.clear();
+            grid.reserve(static_cast<std::size_t>(count));
+            for (int32_t index = 0; index < count; ++index) {
+                grid.push_back(
+                    {static_cast<int32_t>(std::ldexp(
+                         static_cast<double>(points[index].x), -k)),
+                     static_cast<int32_t>(std::ldexp(
+                         static_cast<double>(points[index].y), -k))});
+            }
+        };
+    for (int exponent = 6; exponent >= -8; --exponent) {
+        if (all_on_grid(left_points, left_count, exponent)
+            && all_on_grid(right_points, right_count, exponent)) {
+            scale(left_points, left_count, exponent, left_grid);
+            scale(right_points, right_count, exponent, right_grid);
+            return true;
+        }
+    }
+    return false;
+}
+
 // OpenCV compatibility: intersectConvexConvex_ (OpenCV 4.6, 4.10, and 5.0)
 // stores a (FLT_MAX, FLT_MAX) sentinel in its first result slot and drops it
 // only on its normal exit. Its early exits, for parallel separated edges and
 // for oppositely oriented overlapping edges, return that slot as a vertex:
 // first, or last after intersectConvexConvex reverses a result whose inputs
 // were both clockwise. Every genuine vertex is an input vertex or an edge
-// crossing, so integer input never yields FLT_MAX and the sentinel is
-// unambiguous.
+// crossing, so integer input, and binary32 input below 2^31 in magnitude,
+// never yields FLT_MAX and the sentinel is unambiguous.
 bool is_convex_intersection_sentinel(const cv::Point2f &point) noexcept
 {
     const float sentinel = std::numeric_limits<float>::max();
@@ -2961,23 +3055,144 @@ opencv_geometry_intersect_convex_convex(
         const std::vector<cv::Point> right =
             contour_from_points(right_points, right_count);
         // ABI safety: OpenCV 4.x before 4.11 can write past its own buffer
-        // for input that is not a simple convex polygon (see above). It runs
-        // that loop only when both polygons have at least two points, so on
-        // those versions require both to be simple, strictly convex, and
-        // binary32-exact exactly as OpenCV processes them.
+        // for input that is not a simple convex polygon, or whose binary32
+        // coordinate differences round (see above). It runs that loop only
+        // when both polygons have at least two points, so on those versions
+        // require both to be simple, strictly convex, and binary32-exact,
+        // with exact differences, exactly as OpenCV processes them.
         if (!native_convex_intersection_output_is_bounded
             && left_count >= 2 && right_count >= 2
             && (!polygon_is_simple_convex_in_binary32(
                     left_points, left_count, left)
                 || !polygon_is_simple_convex_in_binary32(
-                    right_points, right_count, right))) {
+                    right_points, right_count, right)
+                || !polygon_spans_are_exact(
+                    left_points, left_count, right_points, right_count))) {
             return invalid_argument(
                 "convex intersection version guard: polygons must be simple, "
-                "strictly convex, and binary32-exact before OpenCV 4.11");
+                "strictly convex, and binary32-exact, with exact binary32 "
+                "coordinate differences, before OpenCV 4.11");
         }
         std::vector<cv::Point2f> native;
         const float area = cv::intersectConvexConvex(
             left, right, native, handle_nested != 0);
+        std::vector<cv::Point2f> intersection;
+        intersection.reserve(native.size());
+        for (const cv::Point2f &point : native) {
+            if (!is_convex_intersection_sentinel(point)) {
+                intersection.push_back(point);
+            }
+        }
+        // ABI safety: copying more vertices than capacity would overflow the
+        // caller-provided buffer.
+        if (intersection.size() > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "convex intersection output capacity is insufficient");
+        }
+        copy_points_f32(intersection, out_vertices);
+        *out_count = static_cast<int32_t>(intersection.size());
+        *out_area = area;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        *out_area = 0.0f;
+        return translate_current_exception();
+    }
+}
+
+opencv_geometry_status
+opencv_geometry_intersect_convex_convex_f32(
+    const opencv_geometry_point_f32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_f32 *right_points,
+    int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count,
+    float *out_area)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null convex intersection output count pointer");
+    }
+    *out_count = 0;
+    if (out_area == nullptr) {
+        return invalid_argument(
+            "null convex intersection output area pointer");
+    }
+    *out_area = 0.0f;
+    if (left_count < 0 || right_count < 0) {
+        return invalid_argument(
+            "convex intersection point count must not be negative");
+    }
+    if (left_count > 0 && left_points == nullptr) {
+        return invalid_argument("null left polygon points with positive count");
+    }
+    if (right_count > 0 && right_points == nullptr) {
+        return invalid_argument(
+            "null right polygon points with positive count");
+    }
+    if (handle_nested != 0 && handle_nested != 1) {
+        return invalid_argument(
+            "convex intersection nested selector must be zero or one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "convex intersection output capacity must not be negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if OpenCV returned any intersection vertices.
+    if (out_capacity > 0 && out_vertices == nullptr) {
+        return invalid_argument(
+            "null convex intersection output vertices with positive capacity");
+    }
+    // ABI safety: native intersectConvexConvex sizes its scratch buffer as
+    // 2 * (n + m) + 4 (or + 1 before 4.11) in signed int before validating
+    // anything, so larger combined counts would overflow native arithmetic.
+    if (static_cast<int64_t>(left_count) + right_count
+        > maximum_convex_intersection_input_count) {
+        return invalid_argument(
+            "convex intersection point counts exceed native allocation range");
+    }
+
+    try {
+        // ABI safety: OpenCV 4.x before 4.11 can write past its own buffer
+        // for valid convex binary32 polygons whose orientation tests round
+        // (probed: heap corruption on 4.6 and 4.10). On those versions,
+        // whenever both polygons have at least two points, require them to
+        // be an exact power-of-two scaling of integer polygons that the
+        // integer guard accepts, so that every native test is exact.
+        if (!native_convex_intersection_output_is_bounded
+            && left_count >= 2 && right_count >= 2) {
+            std::vector<opencv_geometry_point_i32> left_grid;
+            std::vector<opencv_geometry_point_i32> right_grid;
+            if (!polygons_on_binary_grid(
+                    left_points, left_count, right_points, right_count,
+                    left_grid, right_grid)
+                || !polygon_is_simple_convex_in_binary32(
+                    left_grid.data(), left_count,
+                    contour_from_points(left_grid.data(), left_count))
+                || !polygon_is_simple_convex_in_binary32(
+                    right_grid.data(), right_count,
+                    contour_from_points(right_grid.data(), right_count))
+                || !polygon_spans_are_exact(
+                    left_grid.data(), left_count,
+                    right_grid.data(), right_count)) {
+                return invalid_argument(
+                    "convex intersection version guard: polygons must be an "
+                    "exact power-of-two scaling of simple, strictly convex "
+                    "integer polygons with exact binary32 coordinate "
+                    "differences, before OpenCV 4.11");
+            }
+        }
+        std::vector<cv::Point2f> native;
+        const float area = cv::intersectConvexConvex(
+            points_from_f32(left_points, left_count),
+            points_from_f32(right_points, right_count),
+            native,
+            handle_nested != 0);
         std::vector<cv::Point2f> intersection;
         intersection.reserve(native.size());
         for (const cv::Point2f &point : native) {

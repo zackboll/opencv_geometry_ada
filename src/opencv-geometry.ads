@@ -461,8 +461,15 @@ package OpenCV.Geometry is
    --  for non-simple contours, may accept the latter two. OpenCV does not
    --  check any of this, and OpenCV 4.x releases before 4.11 can overflow an
    --  internal buffer on such input. Every vertex coordinate must also lie in
-   --  -2**24 .. 2**24, where OpenCV's binary32 conversion is exact; other
-   --  coordinates raise OpenCV_Error. When one polygon lies strictly inside
+   --  -2**24 .. 2**24, where OpenCV's binary32 conversion is exact, and the X
+   --  span and the Y span of Left and Right together must each be at most
+   --  2**24, or 2**25 when every coordinate is even, so that every binary32
+   --  coordinate difference is exact too; other polygons raise OpenCV_Error.
+   --  With rounded differences OpenCV's orientation tests can disagree, and
+   --  OpenCV 4.6 and 4.10 can then write past their result buffer even for
+   --  valid convex polygons, such as two hexagons spanning about 3.1E+7. The
+   --  rule applies on every release, so that the accepted inputs do not
+   --  depend on the OpenCV version. When one polygon lies strictly inside
    --  the other, so that their boundaries do not touch, Handle_Nested True
    --  returns the inner polygon and its area, and Handle_Nested False
    --  returns an empty result. OpenCV documents that polygons sharing an
@@ -478,6 +485,34 @@ package OpenCV.Geometry is
    --  Left and Right are unchanged.
    function Intersect_Convex_Polygons
      (Left, Right : Contour; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection;
+
+   --  Intersect_Convex_Polygons of Float32 polygons, with the same rules for
+   --  convexity, nesting, contact, the sentinel, and the result, computed by
+   --  OpenCV's CV_32F path. On valid convex binary32 polygons whose
+   --  coordinate differences round, OpenCV 4.6 and 4.10 can corrupt their
+   --  heap (probed with two polygons of about 60 vertices), and 4.11 and
+   --  later can report non-convergence. Accepted input therefore keeps every
+   --  native test exact: for some K in -8 .. 6, every coordinate of Left and
+   --  Right must be an integer multiple of 2.0**K, and Left and Right divided
+   --  by 2.0**K must be integer polygons that the integer overload accepts,
+   --  so of magnitude at most 2.0**(24 + K) and of joint X and Y spans at
+   --  most 2.0**(24 + K), or twice that when every coordinate is a multiple
+   --  of 2.0**(K + 1). Examples are integer polygons within those limits and
+   --  polygons whose coordinates are multiples of 0.25 with magnitude and
+   --  joint spans at most 4194304.0. Other finite polygons, including most
+   --  with decimal fractions such as 0.1, raise OpenCV_Error, as do
+   --  non-finite coordinates. K >= -8 keeps every nonzero native orientation
+   --  above OpenCV's absolute 1.0E-5 tolerance, and K <= 6 keeps coordinate
+   --  magnitudes at most 2.0**30, below the 2.0**31 at which the cvRound in
+   --  OpenCV's nested-polygon test overflows.
+   --  On accepted input OpenCV returns the result it computes for the
+   --  integer polygons, scaled by 2.0**K: both run the same binary32 and
+   --  binary64 operations, which commute with power-of-two scaling in this
+   --  range. The rule applies on every release, so that the accepted inputs
+   --  do not depend on the OpenCV version. Left and Right are unchanged.
+   function Intersect_Convex_Polygons
+     (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection;
 
    --  OpenCV's rotated-rectangle intersection classification:

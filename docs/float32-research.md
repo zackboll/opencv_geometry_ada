@@ -365,23 +365,63 @@ overload stays bound, and its documentation now names the hang.
 5. `areaSign` uses binary32 differences, binary64 products, and an absolute
    tolerance `1e-5`.
 6. 4.6 and 4.10 write their result without a bound into an `n + m + 1` slot
-   region. Rounded differences or the absolute tolerance can make the
-   predicates inconsistent for **valid** strictly convex polygons, so the
-   output can exceed that region (reported by the research probes for
-   fractional Float32 polygons and for integer polygons near `2**24`, whose
-   coordinate differences are not exact in binary32). The `(FLT_MAX,
-   FLT_MAX)` early-exit sentinel is unambiguous only while no input or
-   computed vertex can equal it.
+   region of an `AutoBuffer` of `2 * (n + m) + 1` points (inline up to 136
+   points, then heap). Rounded differences or the absolute tolerance can make
+   the predicates inconsistent for **valid** strictly convex polygons, so
+   the output can exceed that region. Probed:
+   - integer hexagons within `2**24` whose coordinate differences round
+     (spans of about `3.1e7`): 4.6 writes 14 points into its 13-slot result
+     region (absorbed by inline storage there); the 0.1 shim then rejects
+     the oversized result, but only after OpenCV has written it;
+   - two valid convex binary32 polygons of 62 and 61 vertices: 4.6.0 and
+     4.10 abort with `malloc(): corrupted top size`, and 5.0 returns `-1`;
+   - two binary32 triangles near `0.1`: 4.x emits 7 points (`n + m + 1`),
+     5.0 returns `-1`.
+
+   The upstream 4.11 fix (issue #25259, a non-convex reproducer) bounds the
+   writes but does not make the tests exact. The `(FLT_MAX, FLT_MAX)`
+   early-exit sentinel is unambiguous only while no input or computed vertex
+   can equal it.
+7. Exactness argument. When every coordinate is a binary32-exact integer and
+   the joint X and Y spans are at most `2**24`, every binary32 difference is
+   an exact integer of magnitude at most `2**24`, every binary64 product and
+   sum in `areaSign` and in all three `intersectLineSegments` formulas (4.6
+   multiplies absolute coordinates by binary32 differences, 4.10 multiplies
+   binary32 differences, and 4.11 and 5.0 multiply binary64 differences)
+   stays below `2**53` and is exact, the segment parameters compare exactly
+   with 0 and 1 (a nonzero distance from either is at least `2**-50`, while
+   binary64 rounding near 1 is below `2**-53`), and every nonzero
+   orientation is at least 1, far above the `1e-5` tolerance. A binary32
+   polygon pair that is an exact power-of-two scaling of such integers,
+   `2**K` with `-8 <= K <= 6`, runs the same computation scaled exactly (no
+   overflow, underflow, or subnormal arises), with orientations of at least
+   `2**(2K) >= 2**-16`, and coordinates of magnitude at most `2**30`, below
+   the `2**31` at which the nested test's `cvRound` overflows `int`. Even
+   integer coordinates in `-2**24 .. 2**24` with joint spans of at most
+   `2**25` are twice such integers, so the same argument accepts them, and
+   on the `2**K` grid accepts joint spans of `2**(25 + K)` when every
+   coordinate is a multiple of `2**(K + 1)`. That every intersection with exact tests stays within
+   `n + m + 1` points is the algorithm's design; the research probes found
+   no overflow in millions of exact integer and grid cases, but it is not a
+   machine-checked proof.
+8. Binding: the integer overload now also requires joint spans of at most
+   `2**24`, or `2**25` when every coordinate is even (a 0.1 contract fix). The Float32 overload accepts exactly the
+   power-of-two scalings above, validates convexity on the scaled integer
+   polygons with the integer hull, and calls the native `CV_32F` path. The
+   shim applies the same rules as its ABI-safety guard before 4.11. The
+   Float32 result equals the integer result on the scaled polygons, scaled
+   back, bit for bit (tested on 4.6, 4.10, and 5.0).
 
 ## Pre-existing integer findings
 
 The research also found native hazards reachable through the 0.1 integer
 overloads:
 
-- `Minimum_Enclosing_Triangle` can fail to return (examples above).
-- `Intersect_Convex_Polygons` on OpenCV 4.6 and 4.10 relies on exact
-  binary32 predicates, which the `-2**24 .. 2**24` coordinate limit does not
-  guarantee for coordinate differences.
+- `Minimum_Enclosing_Triangle` can fail to return (examples above); now
+  documented.
+- `Intersect_Convex_Polygons` on OpenCV 4.6 and 4.10 relied on exact
+  binary32 predicates, which the `-2**24 .. 2**24` coordinate limit did not
+  guarantee for coordinate differences; now required.
 
 They are recorded here because the Float32 decisions depend on them; their
 handling is described with the operations concerned.

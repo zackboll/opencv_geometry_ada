@@ -508,6 +508,67 @@ package body Convex_Polygon_Intersection_Tests is
          "a coordinate below -2**24 must be rejected");
    end Binary32_Exact_Coordinate_Limit;
 
+   procedure Exact_Difference_Spans (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      --  Two valid strictly convex hexagons within 2**24 whose binary32
+      --  coordinate differences round; OpenCV 4.6 writes 14 result points
+      --  into its 13-slot result region for them.
+      Left         : constant OpenCV.Geometry.Contour :=
+        ((X => -15767146, Y => -1608888),
+         (X => -2320318, Y => -15678251),
+         (X => 15750659, Y => 1762998),
+         (X => 15604050, Y => 2775796),
+         (X => 13860112, Y => 7686919),
+         (X => -4538847, Y => 15185200));
+      Right        : constant OpenCV.Geometry.Contour :=
+        ((X => -15767147, Y => -1608887),
+         (X => -2320318, Y => -15678249),
+         (X => 15750662, Y => 1762996),
+         (X => 15604050, Y => 2775793),
+         (X => 13860114, Y => 7686922),
+         (X => -4538847, Y => 15185197));
+      Half         : constant OpenCV.Point_Coordinate := 2**23;
+      --  Joint X span exactly 2**24.
+      Widest_Left  : constant OpenCV.Geometry.Contour :=
+        Translated (Square_A, -Half, 0);
+      Widest_Right : constant OpenCV.Geometry.Contour :=
+        Translated (Square_A, Half - 10, 0);
+      Too_Wide     : constant OpenCV.Geometry.Contour :=
+        Translated (Square_A, Half - 9, 0);
+      Full         : constant OpenCV.Point_Coordinate := 2**24;
+      --  Even coordinates with a joint X span of 2**25: every difference is
+      --  even and still exact.
+      Even_Left    : constant OpenCV.Geometry.Contour :=
+        ((X => -Full, Y => 0),
+         (X => -Full + 2, Y => 0),
+         (X => -Full + 2, Y => 2),
+         (X => -Full, Y => 2));
+      Even_Right   : constant OpenCV.Geometry.Contour :=
+        Translated (Even_Left, 2 * Full - 2, 0);
+      Odd_Right    : constant OpenCV.Geometry.Contour :=
+        Translated (Even_Left, 2 * Full - 3, 1);
+   begin
+      AUnit.Assertions.Assert
+        (Raises_OpenCV_Error (Left, Right, "spans"),
+         "polygons whose binary32 differences round must be rejected");
+      AUnit.Assertions.Assert
+        (OpenCV.Geometry.Intersect_Convex_Polygons (Widest_Left, Widest_Right)
+           .Vertex_Count
+         = 0,
+         "a joint span of exactly 2**24 must be accepted");
+      AUnit.Assertions.Assert
+        (Raises_OpenCV_Error (Widest_Left, Too_Wide, "spans"),
+         "a joint span above 2**24 must be rejected");
+      AUnit.Assertions.Assert
+        (OpenCV.Geometry.Intersect_Convex_Polygons (Even_Left, Even_Right)
+           .Vertex_Count
+         = 0,
+         "even coordinates with a joint span of 2**25 must be accepted");
+      AUnit.Assertions.Assert
+        (Raises_OpenCV_Error (Even_Left, Odd_Right, "spans"),
+         "odd coordinates with a joint span above 2**24 must be rejected");
+   end Exact_Difference_Spans;
+
    procedure C_ABI_Validation (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Left     : aliased C_API.Point_I32_Array (0 .. 3) :=
@@ -786,6 +847,61 @@ package body Convex_Polygon_Intersection_Tests is
       end loop;
    end C_ABI_Native_Edge_Cases;
 
+   procedure C_ABI_Span_Guard (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      --  The hexagons of Exact_Difference_Spans, whose binary32 coordinate
+      --  differences round.
+      Left     : aliased C_API.Point_I32_Array (0 .. 5) :=
+        ((X => -15767146, Y => -1608888),
+         (X => -2320318, Y => -15678251),
+         (X => 15750659, Y => 1762998),
+         (X => 15604050, Y => 2775796),
+         (X => 13860112, Y => 7686919),
+         (X => -4538847, Y => 15185200));
+      Right    : aliased C_API.Point_I32_Array (0 .. 5) :=
+        ((X => -15767147, Y => -1608887),
+         (X => -2320318, Y => -15678249),
+         (X => 15750662, Y => 1762996),
+         (X => 15604050, Y => 2775793),
+         (X => 13860114, Y => 7686922),
+         (X => -4538847, Y => 15185197));
+      Sentinel : constant C_API.Point_F32_Array (0 .. 15) :=
+        (others => (X => -7.0, Y => -9.0));
+      Output   : aliased C_API.Point_F32_Array (0 .. 15) := Sentinel;
+      Count    : aliased Interfaces.Integer_32 := -1;
+      Area     : aliased Interfaces.C.C_float := -1.0;
+      Status   : C_API.Status;
+   begin
+      --  Before OpenCV 4.11 the shim rejects them, whichever caller
+      --  validated them; later versions bound the native output.
+      Status :=
+        C_API.Intersect_Convex_Convex
+          (Left (0)'Access,
+           6,
+           Right (0)'Access,
+           6,
+           1,
+           Output (0)'Access,
+           16,
+           Count'Access,
+           Area'Access);
+      if Status = C_API.Error_Invalid_Argument then
+         AUnit.Assertions.Assert
+           (Ada.Strings.Fixed.Index (C_API.Last_Error_Message, "differences")
+            /= 0
+            and then Count = 0
+            and then C_API."=" (Output, Sentinel),
+            "polygons with rounded differences must be guarded unpublished");
+      else
+         AUnit.Assertions.Assert
+           (Status = C_API.Success
+            and then Count >= 0
+            and then Count <= 16
+            and then (if Area < 0.0 then Count = 0),
+            "a bounded native result must fit the capacity");
+      end if;
+   end C_ABI_Span_Guard;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       Result.Add_Test
@@ -845,12 +961,20 @@ package body Convex_Polygon_Intersection_Tests is
             Binary32_Exact_Coordinate_Limit'Access));
       Result.Add_Test
         (Caller.Create
+           ("Convex polygon intersection exact difference spans",
+            Exact_Difference_Spans'Access));
+      Result.Add_Test
+        (Caller.Create
            ("Convex polygon intersection C ABI validation",
             C_ABI_Validation'Access));
       Result.Add_Test
         (Caller.Create
            ("Convex polygon intersection C ABI native edge cases",
             C_ABI_Native_Edge_Cases'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Convex polygon intersection C ABI span guard",
+            C_ABI_Span_Guard'Access));
       return Result'Access;
    end Suite;
 

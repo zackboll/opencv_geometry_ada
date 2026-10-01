@@ -8,4 +8,11 @@ is
       return Left_Length + Right_Length;
    end Output_Capacity;
 
+   function Grid_Coordinate
+     (Value : OpenCV.Float32_Value; Exponent : Grid_Exponent)
+      return OpenCV.Point_Coordinate is
+   begin
+      return OpenCV.Point_Coordinate (Grid_Scaled (Value, Exponent));
+   end Grid_Coordinate;
+
 end OpenCV.Geometry.Internal.Intersection;

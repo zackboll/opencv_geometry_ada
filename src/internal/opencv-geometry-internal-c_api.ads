@@ -631,6 +631,21 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_intersect_convex_convex";
 
+   function Intersect_Convex_Convex_F32
+     (Left_Points   : access constant Point_F32;
+      Left_Count    : Interfaces.Integer_32;
+      Right_Points  : access constant Point_F32;
+      Right_Count   : Interfaces.Integer_32;
+      Handle_Nested : Interfaces.Integer_32;
+      Out_Vertices  : access Point_F32;
+      Out_Capacity  : Interfaces.Integer_32;
+      Out_Count     : access Interfaces.Integer_32;
+      Out_Area      : access Interfaces.C.C_float) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_intersect_convex_convex_f32";
+
    Rectangles_Intersect_None    : constant Interfaces.Integer_32 := 0;
    Rectangles_Intersect_Partial : constant Interfaces.Integer_32 := 1;
    Rectangles_Intersect_Full    : constant Interfaces.Integer_32 := 2;

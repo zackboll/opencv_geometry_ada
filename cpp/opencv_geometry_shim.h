@@ -502,6 +502,23 @@ opencv_geometry_intersect_convex_convex(
     int32_t *out_count,
     float *out_area);
 
+/* Binary32 polygons. Before OpenCV 4.11 both polygons must be an exact
+   power-of-two scaling, by 2^k with k in [-8, 6], of integer polygons that
+   opencv_geometry_intersect_convex_convex accepts there; otherwise OpenCV's
+   rounded tests can overflow its own buffer. A vertex equal to
+   (FLT_MAX, FLT_MAX) is taken to be OpenCV's sentinel and dropped. */
+opencv_geometry_status
+opencv_geometry_intersect_convex_convex_f32(
+    const opencv_geometry_point_f32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_f32 *right_points,
+    int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count,
+    float *out_area);
+
 /* Explicit rotated-rectangle intersection kinds; the shim maps OpenCV's
    RectanglesIntersectTypes to these values. */
 #define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE    ((int32_t)0)
