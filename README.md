@@ -406,8 +406,8 @@ the native object. The opaque C handle stays private. A declared but never
 initialized `Subdivision` is not ready; `Create` or `Reset` initializes it,
 and `Reset` also discards every point. If a modification fails in a way that
 may have left the native triangulation inconsistent, such as an allocation
-failure during insertion, the object stops being ready, and `Insert`,
-`Locate`, and `Find_Nearest` raise `OpenCV_Error` until `Reset`. Ordinary
+failure during insertion, the object stops being ready, and every operation
+except `Bounds` raises `OpenCV_Error` until `Reset`. Ordinary
 OpenCV rejections, such as a point outside the bounds, leave it ready. A
 native fault-injection test (`sh scripts/run_native_tests.sh`) checks this
 state by failing individual allocations inside OpenCV.
@@ -425,8 +425,9 @@ super-triangle vertices (not Voronoi virtual vertices); Voronoi computation
 can create virtual vertices in other slots.
 
 A `Subdivision` must not be used by more than one task at a time. OpenCV
-mutates internal state in `Locate` and `Find_Nearest`, which computes Voronoi
-data. Distinct subdivisions are independent. The binary32 `Rect2f`
+mutates internal state in `Locate`, and in `Find_Nearest` and
+`Voronoi_Facets`, which compute Voronoi data. Distinct subdivisions are
+independent. The binary32 `Rect2f`
 initialization that only OpenCV 4.13+ and 5.x provide is not bound.
 
 OpenCV's `Subdiv2D` predicates use absolute tolerances near `FLT_EPSILON`.
@@ -485,9 +486,56 @@ shim therefore bounds every identifier against the native storage sizes before
 OpenCV sees it, and thick Ada also rejects `No_Vertex`, free vertex slots, and
 OpenCV's reserved null edge. A dual Voronoi edge runs from the facet on its
 primal edge's right to the facet on its left, and its endpoints are those
-facets' Voronoi vertices once `Find_Nearest` has computed Voronoi data. An
+facets' Voronoi vertices once `Find_Nearest` or `Voronoi_Facets` has computed
+Voronoi data. An
 endpoint is `No_Vertex` before that, and for a facet OpenCV gives no Voronoi
 vertex: the facet outside the super-triangle, and a degenerate facet.
+
+### Voronoi facets
+
+`Voronoi_Facets (Mesh)` returns the Voronoi facet of every inserted point, in
+increasing vertex order, and `Voronoi_Facets (Mesh, Sites)` returns the facets
+of the listed vertices, in order and once per occurrence. A `Voronoi_Diagram`
+holds `Facets`, each with its `Site`, `Site_Point`, and a `First .. Last`
+slice of the shared `Points`; `Facet_Points` returns one facet's polygon
+indexed from 1. Unlike OpenCV's `getVoronoiFacetList`, which treats an empty
+index list as every vertex, empty `Sites` give an empty diagram. Listed sites
+must be inserted points: OpenCV reads its index list without bounds checks
+and silently skips free and Voronoi slots, so `No_Vertex`, the super-triangle
+vertices, free slots, Voronoi vertices, and identifiers beyond native storage
+raise `OpenCV_Error`.
+
+OpenCV computes the Voronoi diagram of the inserted points together with the
+three super-triangle vertices. A facet whose true Voronoi region reaches
+beyond the super-triangle, as the region of every point on the convex hull
+and of some points near it does, is therefore closed by circumcenters of
+triangles with a super-triangle vertex. Those lie far outside the bounds and
+differ between releases. In the tested well-spaced fixtures, each Voronoi
+facet point was nearest to its site among the inserted points (up to
+rounding). Spacing of about 0.03 units was an empirical observation in
+those fixtures, not a guaranteed safe threshold: conditioning, including
+near-collinear and nearly cocircular configurations, also matters.
+
+OpenCV can fail to create a Voronoi vertex for a facet, for example when
+degenerate or ill-conditioned geometry makes a circumcenter impossible to
+compute or represent within its accepted finite binary32 range. Probes
+observed missing vertices among closely spaced points about 0.0001 to 0.003
+units apart, depending on the distribution; these are not universal
+thresholds. OpenCV reports the origin in place of a missing vertex. The shim
+detects this for each facet, and `Voronoi_Facet.Complete` is `False` when its
+polygon contains such placeholder points; the other facets are unaffected.
+
+The C ABI adds a count query that sizes both buffers. Repeated sites make the
+point count unbounded by anything Ada knows beforehand, and one query serves
+both overloads, although a quad-edge bound would suffice for every-vertex
+diagrams. Ada allocates the buffers, and the shim fills them from vectors it
+owns for the call, publishing nothing if the native result would not fit.
+
+Validation boundary: thick Ada checks listed sites and every returned count,
+offset, and site at run time; the shim bounds identifiers and verifies the
+site pairing at run time; the facet contents themselves are OpenCV's and are
+covered by tests, including nearest-site checks in well-spaced fixtures;
+nothing here is proved by GNATprove.
 
 ## Development
 

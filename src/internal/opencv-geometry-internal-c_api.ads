@@ -702,6 +702,51 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_subdiv2d_sym_edge";
 
+   type C_Voronoi_Facet is record
+      Site        : Interfaces.Integer_32;
+      Center_X    : Interfaces.C.C_float;
+      Center_Y    : Interfaces.C.C_float;
+      First_Point : Interfaces.Integer_32;
+      Point_Count : Interfaces.Integer_32;
+      Complete    : Interfaces.Integer_32;
+   end record
+   with Convention => C;
+
+   type C_Voronoi_Facet_Array is
+     array (Natural range <>) of aliased C_Voronoi_Facet
+   with Convention => C;
+
+   Subdiv2D_Voronoi_Select_Listed : constant Interfaces.Integer_32 := 0;
+   Subdiv2D_Voronoi_Select_All    : constant Interfaces.Integer_32 := 1;
+
+   function Subdiv2D_Voronoi_Facet_Counts
+     (Handle          : Subdiv2D_Handle;
+      Selection       : Interfaces.Integer_32;
+      Vertices        : access constant Interfaces.Integer_32;
+      Vertex_Count    : Interfaces.Integer_32;
+      Out_Facet_Count : access Interfaces.Integer_32;
+      Out_Point_Count : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_voronoi_facet_counts";
+
+   function Subdiv2D_Get_Voronoi_Facets
+     (Handle          : Subdiv2D_Handle;
+      Selection       : Interfaces.Integer_32;
+      Vertices        : access constant Interfaces.Integer_32;
+      Vertex_Count    : Interfaces.Integer_32;
+      Out_Facets      : access C_Voronoi_Facet;
+      Facet_Capacity  : Interfaces.Integer_32;
+      Out_Points      : access Point_F32;
+      Point_Capacity  : Interfaces.Integer_32;
+      Out_Facet_Count : access Interfaces.Integer_32;
+      Out_Point_Count : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_get_voronoi_facets";
+
    function Last_Error_Message return String;
 
 end OpenCV.Geometry.Internal.C_API;

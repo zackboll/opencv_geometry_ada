@@ -10,6 +10,8 @@
 // - a handle marked unusable rejects every operation until init_delaunay;
 // - a handle left usable still holds a working triangulation;
 // - a failed list query publishes a zero count and keeps the handle usable;
+// - a failed Voronoi facet query publishes no counts, keeps the handle
+//   usable, and a later query returns the complete facets;
 // - failed creation publishes a null handle, and failed initialization marks
 //   the handle unusable until a later successful initialization.
 //
@@ -105,8 +107,30 @@ bool rejects_everything(opencv_geometry_subdiv2d *handle)
     int32_t kind = 0;
     opencv_geometry_point_f32 nearest{};
     opencv_geometry_edge_segment_f32 segments[64]{};
+    opencv_geometry_voronoi_facet_f32 facets[8]{};
+    opencv_geometry_point_f32 points[64]{};
     return opencv_geometry_subdiv2d_is_usable(handle) == 0
         && opencv_geometry_subdiv2d_quad_edge_count(handle, &count)
+            == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+        && opencv_geometry_subdiv2d_voronoi_facet_counts(
+               handle,
+               OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_ALL,
+               nullptr,
+               0,
+               &count,
+               &vertex)
+            == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+        && opencv_geometry_subdiv2d_get_voronoi_facets(
+               handle,
+               OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_ALL,
+               nullptr,
+               0,
+               facets,
+               8,
+               points,
+               64,
+               &count,
+               &vertex)
             == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
         && opencv_geometry_subdiv2d_get_edge_list(handle, segments, 64, &count)
             == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
@@ -236,6 +260,124 @@ void exercise_lists()
     }
 }
 
+struct VoronoiResult {
+    int32_t facet_count = 0;
+    int32_t point_count = 0;
+    opencv_geometry_voronoi_facet_f32 facets[8]{};
+    opencv_geometry_point_f32 points[64]{};
+};
+
+opencv_geometry_status read_voronoi(
+    opencv_geometry_subdiv2d *handle, VoronoiResult &result)
+{
+    return opencv_geometry_subdiv2d_get_voronoi_facets(
+        handle,
+        OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_ALL,
+        nullptr,
+        0,
+        result.facets,
+        8,
+        result.points,
+        64,
+        &result.facet_count,
+        &result.point_count);
+}
+
+bool same_voronoi(const VoronoiResult &left, const VoronoiResult &right)
+{
+    if (left.facet_count != right.facet_count
+        || left.point_count != right.point_count) {
+        return false;
+    }
+    for (int32_t index = 0; index < left.facet_count; ++index) {
+        const opencv_geometry_voronoi_facet_f32 &a = left.facets[index];
+        const opencv_geometry_voronoi_facet_f32 &b = right.facets[index];
+        if (a.site != b.site || a.center_x != b.center_x
+            || a.center_y != b.center_y || a.first_point != b.first_point
+            || a.point_count != b.point_count || a.complete != b.complete) {
+            return false;
+        }
+    }
+    for (int32_t index = 0; index < left.point_count; ++index) {
+        if (left.points[index].x != right.points[index].x
+            || left.points[index].y != right.points[index].y) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Fails each allocation of the Voronoi facet functions in turn, on a fixture
+// whose Voronoi data the failing call computes first.
+void exercise_voronoi_facets()
+{
+    VoronoiResult reference;
+    {
+        opencv_geometry_subdiv2d *handle = make_fixture();
+        check(read_voronoi(handle, reference) == OPENCV_GEOMETRY_OK
+                  && reference.facet_count == 4,
+              "reference Voronoi facets", -1);
+        opencv_geometry_subdiv2d_destroy(handle);
+    }
+
+    for (long step = 0;; ++step) {
+        opencv_geometry_subdiv2d *handle = make_fixture();
+        int32_t facet_count = 99;
+        int32_t point_count = 99;
+        allocation_countdown = step;
+        const opencv_geometry_status status =
+            opencv_geometry_subdiv2d_voronoi_facet_counts(
+                handle,
+                OPENCV_GEOMETRY_SUBDIV2D_VORONOI_SELECT_ALL,
+                nullptr,
+                0,
+                &facet_count,
+                &point_count);
+        allocation_countdown = -1;
+        const bool counted = status == OPENCV_GEOMETRY_OK;
+        check(counted ? facet_count == reference.facet_count
+                            && point_count == reference.point_count
+                      : facet_count == 0 && point_count == 0,
+              "Voronoi counting publishes counts only on success", step);
+        check(opencv_geometry_subdiv2d_is_usable(handle) == 1,
+              "Voronoi counting failures keep the handle usable", step);
+        VoronoiResult after;
+        check(read_voronoi(handle, after) == OPENCV_GEOMETRY_OK
+                  && same_voronoi(after, reference),
+              "Voronoi facets are complete after a counting failure", step);
+        opencv_geometry_subdiv2d_destroy(handle);
+        if (counted) {
+            break;
+        }
+    }
+
+    for (long step = 0;; ++step) {
+        opencv_geometry_subdiv2d *handle = make_fixture();
+        VoronoiResult failed;
+        failed.facet_count = 99;
+        failed.point_count = 99;
+        allocation_countdown = step;
+        const opencv_geometry_status status = read_voronoi(handle, failed);
+        allocation_countdown = -1;
+        if (status == OPENCV_GEOMETRY_OK) {
+            check(same_voronoi(failed, reference),
+                  "unfailed Voronoi facets match the reference", step);
+            opencv_geometry_subdiv2d_destroy(handle);
+            break;
+        }
+        check(failed.facet_count == 0 && failed.point_count == 0,
+              "failed Voronoi facets publish zero counts", step);
+        check(opencv_geometry_subdiv2d_is_usable(handle) == 1
+                  && triangulation_works(handle),
+              "Voronoi facet failures keep a working triangulation", step);
+        VoronoiResult after;
+        check(read_voronoi(handle, after) == OPENCV_GEOMETRY_OK
+                  && same_voronoi(after, reference),
+              "Voronoi facets are complete after a failure", step);
+        opencv_geometry_subdiv2d_destroy(handle);
+    }
+}
+
 void exercise_create_and_initialize()
 {
     for (long step = 0;; ++step) {
@@ -319,6 +461,7 @@ int main()
           "some on-edge insertion failure marks the handle unusable", -1);
     exercise_find_nearest();
     exercise_lists();
+    exercise_voronoi_facets();
     exercise_create_and_initialize();
     std::printf("on-edge failures marking unusable: %d\n", on_edge_unusable);
     std::printf("inside failures marking unusable: %d\n", inside_unusable);

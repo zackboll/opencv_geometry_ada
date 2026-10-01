@@ -11,9 +11,10 @@ private with OpenCV.Geometry.Internal.C_API;
 --
 --  Thread safety: a Subdivision must not be used by more than one task at a
 --  time, including for query-only calls. OpenCV mutates internal state in
---  Locate (a cached search start) and Find_Nearest (Voronoi data whose
---  computation can reallocate storage), so concurrent calls on one object
---  can corrupt it or read freed memory. Distinct objects are independent.
+--  Locate (a cached search start), and in Find_Nearest and Voronoi_Facets
+--  (Voronoi data whose computation can reallocate storage), so concurrent
+--  calls on one object can corrupt it or read freed memory. Distinct
+--  objects are independent.
 --
 --  Identifiers: Vertex_Id and Edge_Id are native OpenCV identifiers, and
 --  they are meaningful only for the Subdivision that produced them. A vertex
@@ -22,8 +23,8 @@ private with OpenCV.Geometry.Internal.C_API;
 --  flips edges and reuses edge slots, so an older identifier can name a
 --  different edge. Vertex identifiers are not dense: OpenCV reserves 0 for
 --  "no vertex" and 1 .. 3 for the initial bounding super-triangle vertices.
---  Voronoi computation in Find_Nearest also creates virtual vertices, so
---  inserted points need not receive consecutive ids.
+--  Voronoi computation in Find_Nearest and Voronoi_Facets also creates
+--  virtual vertices, so inserted points need not receive consecutive ids.
 --
 --  Bounds are an integer OpenCV.Rect, which every supported OpenCV release
 --  accepts; the binary32 Rect2f initialization that only OpenCV 4.13+ and
@@ -72,8 +73,9 @@ package OpenCV.Geometry.Subdiv2D is
    --  False for an object that has never been Reset or Created, and after an
    --  operation that failed while modifying the triangulation, such as an
    --  insertion that exhausted memory, left it possibly inconsistent. Only
-   --  Reset makes such an object ready again. Insert, Locate, and
-   --  Find_Nearest on an object that is not ready raise OpenCV.OpenCV_Error.
+   --  Reset makes such an object ready again. Every other operation on a
+   --  Subdivision except Bounds raises OpenCV.OpenCV_Error when the object
+   --  is not ready.
    function Is_Ready (Object : Subdivision) return Boolean;
 
    --  Bounds of the last successful Reset or Create. Raises
@@ -246,12 +248,12 @@ package OpenCV.Geometry.Subdiv2D is
 
    --  The origin and destination vertices of Edge, as by edgeOrg and edgeDst.
    --  For a dual Voronoi edge they are the Voronoi vertices (circumcenters)
-   --  of the facets it joins, which Find_Nearest computes and which are
-   --  meaningful only until the next Insert. The result is No_Vertex before
-   --  any Voronoi computation, and for a facet that OpenCV gives no Voronoi
-   --  vertex: the facet outside the super-triangle, so one end of the dual of
-   --  each super-triangle edge, and a degenerate facet whose circumcenter
-   --  OpenCV cannot represent.
+   --  of the facets it joins, which Find_Nearest and Voronoi_Facets compute
+   --  and which are meaningful only until the next Insert. The result is
+   --  No_Vertex before any Voronoi computation, and for a facet that OpenCV
+   --  gives no Voronoi vertex: the facet outside the super-triangle, so one
+   --  end of the dual of each super-triangle edge, and a degenerate facet
+   --  whose circumcenter OpenCV cannot represent.
    function Origin (Object : Subdivision; Edge : Edge_Id) return Vertex_Id;
 
    function Destination
@@ -268,6 +270,79 @@ package OpenCV.Geometry.Subdiv2D is
    --  firstEdge), or No_Edge for a Voronoi vertex.
    function First_Edge
      (Object : Subdivision; Vertex : Vertex_Id) return Edge_Id;
+
+   --  Voronoi diagram. OpenCV computes the Voronoi diagram of the inserted
+   --  points together with the three super-triangle vertices. The facet of
+   --  an inserted point, its site, is the region nearer to that point than
+   --  to any other of those vertices. In tested well-spaced fixtures, each
+   --  facet point was nearest to its site among inserted points, up to
+   --  rounding. This is not guaranteed by a minimum spacing: conditioning,
+   --  including near-collinear and nearly cocircular sets, also matters.
+   --  A facet whose true Voronoi region reaches beyond the super-triangle,
+   --  as the region of
+   --  every point on the convex hull and of some points near it does, is
+   --  closed by circumcenters of triangles with a super-triangle vertex.
+   --  Those lie far outside the bounds and differ between releases, because
+   --  4.12 and later, including 5.x, use a larger super-triangle.
+   --
+   --  Like Find_Nearest, these functions compute Voronoi data inside Object
+   --  when earlier insertions invalidated it. Each raises OpenCV.OpenCV_Error
+   --  when Object is not ready; a native failure leaves Object ready.
+
+   type Vertex_Id_Array is array (Natural range <>) of Vertex_Id;
+
+   --  One facet of a Voronoi_Diagram: Site, its position Site_Point (OpenCV's
+   --  facet center), and the facet polygon, which is the diagram's
+   --  Points (First .. Last) in the order of OpenCV's walk around Site.
+   --
+   --  Complete is False when OpenCV failed to create at least one Voronoi
+   --  vertex for the facet, for example because degenerate or ill-conditioned
+   --  geometry makes a circumcenter impossible to compute or represent in
+   --  OpenCV's accepted finite binary32 range. Probes found missing vertices
+   --  among points about 0.0001 to 0.003 units apart, depending on their
+   --  distribution; these spacings are observations, not hard thresholds.
+   --  OpenCV then reports the origin (0.0, 0.0) in place of each missing
+   --  vertex, and the polygon keeps those placeholder points, so an
+   --  incomplete polygon is not the true facet.
+   type Voronoi_Facet is record
+      Site       : Vertex_Id := No_Vertex;
+      Site_Point : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+      First      : Positive := 1;
+      Last       : Natural := 0;
+      Complete   : Boolean := True;
+   end record;
+
+   type Voronoi_Facet_Array is array (Natural range <>) of Voronoi_Facet;
+
+   --  Facets indexed 1 .. Facet_Count and their points indexed
+   --  1 .. Point_Count. The facet polygons are consecutive, nonempty slices
+   --  of Points that follow facet order and together cover Points.
+   type Voronoi_Diagram (Facet_Count, Point_Count : Natural) is record
+      Facets : Voronoi_Facet_Array (1 .. Facet_Count);
+      Points : Float32_Point_Array (1 .. Point_Count);
+   end record;
+
+   --  The polygon of Diagram.Facets (Index), indexed 1 .. N. Raises
+   --  Constraint_Error when Index or that facet's slice lies outside Diagram.
+   function Facet_Points
+     (Diagram : Voronoi_Diagram; Index : Positive) return Float32_Point_Array;
+
+   --  The facet of every inserted point, once each and in increasing Site
+   --  order, as by cv::Subdiv2D::getVoronoiFacetList for every vertex. An
+   --  object without inserted points gives an empty diagram.
+   function Voronoi_Facets
+     (Object : in out Subdivision) return Voronoi_Diagram;
+
+   --  The facets of Sites, in order and once per occurrence, as by
+   --  getVoronoiFacetList with Sites as its index list. Each element must be
+   --  the vertex of an inserted point. No_Vertex, the super-triangle
+   --  vertices 1 .. 3, free slots, Voronoi vertices, and identifiers beyond
+   --  native storage raise OpenCV.OpenCV_Error. Unlike OpenCV, which treats
+   --  an empty index list as every vertex, empty Sites give an empty
+   --  diagram.
+   function Voronoi_Facets
+     (Object : in out Subdivision; Sites : Vertex_Id_Array)
+      return Voronoi_Diagram;
 
 private
 

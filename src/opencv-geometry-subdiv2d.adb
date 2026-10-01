@@ -699,6 +699,258 @@ package body OpenCV.Geometry.Subdiv2D is
           (Read_Vertex (Object, Vertex, "Subdiv2D.First_Edge").First_Edge);
    end First_Edge;
 
+   function Facet_Points
+     (Diagram : Voronoi_Diagram; Index : Positive) return Float32_Point_Array
+   is
+      Facet : constant Voronoi_Facet := Diagram.Facets (Index);
+      Slice : Float32_Point_Array renames
+        Diagram.Points (Facet.First .. Facet.Last);
+   begin
+      return
+         Result : constant Float32_Point_Array (1 .. Slice'Length) := Slice;
+   end Facet_Points;
+
+   --  Rejects a listed site that is not an inserted point's vertex. The shim
+   --  rejects identifiers beyond native storage.
+   procedure Check_Site
+     (Object : Subdivision; Site : Vertex_Id; Operation : String)
+   is
+      Position : aliased C_API.Point_F32 := (X => 0.0, Y => 0.0);
+      First    : aliased Interfaces.Integer_32 := 0;
+      Kind     : aliased Interfaces.Integer_32 := 0;
+      Status   : C_API.Status;
+   begin
+      if Site < 4 then
+         Raise_Error
+           (Operation
+            & " requires inserted-point vertices, not No_Vertex or a"
+            & " super-triangle vertex");
+      end if;
+      Status :=
+        C_API.Subdiv2D_Get_Vertex
+          (Native_Handle (Object, Operation),
+           Interfaces.Integer_32 (Site),
+           Position'Access,
+           First'Access,
+           Kind'Access);
+      Raise_On_Error (Status, Operation);
+      if Kind /= C_API.Subdiv2D_Vertex_Delaunay then
+         Raise_Error
+           (Operation
+            & " requires inserted-point vertices, not a free slot or a"
+            & " Voronoi vertex");
+      end if;
+   end Check_Site;
+
+   --  Reads the Voronoi facets of every inserted point, when Every, or else
+   --  of Sites, which the caller has checked. A first native call sizes the
+   --  C buffers, which live on the heap; the result is built in place.
+   function Read_Voronoi
+     (Object    : Subdivision;
+      Every     : Boolean;
+      Sites     : Vertex_Id_Array;
+      Operation : String) return Voronoi_Diagram
+   is
+      type Vertex_List_Access is access C_API.Int32_Array;
+      type Facet_Buffer_Access is access C_API.C_Voronoi_Facet_Array;
+      type Point_Buffer_Access is access C_API.Point_F32_Array;
+
+      procedure Free is new
+        Ada.Unchecked_Deallocation (C_API.Int32_Array, Vertex_List_Access);
+      procedure Free is new
+        Ada.Unchecked_Deallocation
+          (C_API.C_Voronoi_Facet_Array,
+           Facet_Buffer_Access);
+      procedure Free is new
+        Ada.Unchecked_Deallocation
+          (C_API.Point_F32_Array,
+           Point_Buffer_Access);
+
+      Handle    : constant C_API.Subdiv2D_Handle :=
+        Native_Handle (Object, Operation);
+      Selection : constant Interfaces.Integer_32 :=
+        (if Every
+         then C_API.Subdiv2D_Voronoi_Select_All
+         else C_API.Subdiv2D_Voronoi_Select_Listed);
+      Vertices  : Vertex_List_Access;
+      Facets    : Facet_Buffer_Access;
+      Points    : Point_Buffer_Access;
+
+      procedure Invalid_Result
+      with No_Return;
+
+      procedure Invalid_Result is
+      begin
+         Raise_Error (Operation & " failed: invalid native Voronoi facets");
+      end Invalid_Result;
+
+      function Read
+        (List : access constant Interfaces.Integer_32; Count : Natural)
+         return Voronoi_Diagram
+      is
+         Facet_Count : aliased Interfaces.Integer_32 := 0;
+         Point_Count : aliased Interfaces.Integer_32 := 0;
+         Status      : C_API.Status;
+      begin
+         Status :=
+           C_API.Subdiv2D_Voronoi_Facet_Counts
+             (Handle,
+              Selection,
+              List,
+              Interfaces.Integer_32 (Count),
+              Facet_Count'Access,
+              Point_Count'Access);
+         Raise_On_Error (Status, Operation);
+         --  Every facet has at least one point, and every checked site
+         --  produces exactly one facet.
+         if Facet_Count < 0
+           or else Point_Count < Facet_Count
+           or else (not Every and then Natural (Facet_Count) /= Count)
+         then
+            Invalid_Result;
+         end if;
+         if Facet_Count = 0 then
+            if Point_Count /= 0 then
+               Invalid_Result;
+            end if;
+            return Empty : Voronoi_Diagram (0, 0);
+         end if;
+
+         Facets :=
+           new C_API.C_Voronoi_Facet_Array (0 .. Natural (Facet_Count) - 1);
+         Points := new C_API.Point_F32_Array (0 .. Natural (Point_Count) - 1);
+         declare
+            Expected_Facets : constant Interfaces.Integer_32 := Facet_Count;
+            Expected_Points : constant Interfaces.Integer_32 := Point_Count;
+         begin
+            Status :=
+              C_API.Subdiv2D_Get_Voronoi_Facets
+                (Handle,
+                 Selection,
+                 List,
+                 Interfaces.Integer_32 (Count),
+                 Facets (Facets'First)'Access,
+                 Expected_Facets,
+                 Points (Points'First)'Access,
+                 Expected_Points,
+                 Facet_Count'Access,
+                 Point_Count'Access);
+            Raise_On_Error (Status, Operation);
+            --  Nothing modified Object between the two calls, so OpenCV
+            --  reports the same facets.
+            if Facet_Count /= Expected_Facets
+              or else Point_Count /= Expected_Points
+            then
+               Invalid_Result;
+            end if;
+         end;
+
+         return
+            Result :
+              Voronoi_Diagram (Natural (Facet_Count), Natural (Point_Count))
+         do
+            declare
+               Next_Point : Interfaces.Integer_32 := 0;
+               Last_Site  : Interfaces.Integer_32 := 3;
+            begin
+               for Index in Result.Facets'Range loop
+                  declare
+                     Native : C_API.C_Voronoi_Facet renames Facets (Index - 1);
+                  begin
+                     if Native.First_Point /= Next_Point
+                       or else Native.Point_Count < 1
+                       or else Native.Point_Count > Point_Count - Next_Point
+                     then
+                        Invalid_Result;
+                     end if;
+                     --  Every inserted point once, in increasing order, or
+                     --  exactly the checked sites.
+                     if Every then
+                        if Native.Site <= Last_Site then
+                           Invalid_Result;
+                        end if;
+                        Last_Site := Native.Site;
+                     elsif Native.Site
+                       /= Interfaces.Integer_32
+                            (Sites (Sites'First + (Index - 1)))
+                     then
+                        Invalid_Result;
+                     end if;
+                     if Native.Complete /= 0 and then Native.Complete /= 1 then
+                        Invalid_Result;
+                     end if;
+                     Result.Facets (Index) :=
+                       (Site       => Vertex_Id (Native.Site),
+                        Site_Point =>
+                          To_Public_Point (Native.Center_X, Native.Center_Y),
+                        First      => Natural (Native.First_Point) + 1,
+                        Last       =>
+                          Natural (Native.First_Point + Native.Point_Count),
+                        Complete   => Native.Complete = 1);
+                     Next_Point := Next_Point + Native.Point_Count;
+                  end;
+               end loop;
+               if Next_Point /= Point_Count then
+                  Invalid_Result;
+               end if;
+            end;
+            for Index in Result.Points'Range loop
+               Result.Points (Index) :=
+                 To_Public_Point (Points (Index - 1).X, Points (Index - 1).Y);
+            end loop;
+            Free (Facets);
+            Free (Points);
+         end return;
+      end Read;
+   begin
+      if Every or else Sites'Length = 0 then
+         return Read (null, 0);
+      end if;
+
+      Vertices := new C_API.Int32_Array (0 .. Sites'Length - 1);
+      for Offset in Vertices'Range loop
+         Vertices (Offset) :=
+           Interfaces.Integer_32 (Sites (Sites'First + Offset));
+      end loop;
+      return
+         Result : constant Voronoi_Diagram :=
+           Read (Vertices (Vertices'First)'Access, Sites'Length)
+      do
+         Free (Vertices);
+      end return;
+   exception
+      when others =>
+         Free (Vertices);
+         Free (Facets);
+         Free (Points);
+         raise;
+   end Read_Voronoi;
+
+   function Voronoi_Facets (Object : in out Subdivision) return Voronoi_Diagram
+   is
+   begin
+      return
+        Read_Voronoi
+          (Object,
+           Every     => True,
+           Sites     => (1 .. 0 => No_Vertex),
+           Operation => "Subdiv2D.Voronoi_Facets");
+   end Voronoi_Facets;
+
+   function Voronoi_Facets
+     (Object : in out Subdivision; Sites : Vertex_Id_Array)
+      return Voronoi_Diagram
+   is
+      Operation : constant String := "Subdiv2D.Voronoi_Facets";
+   begin
+      for Site of Sites loop
+         Check_Site (Object, Site, Operation);
+      end loop;
+      return
+        Read_Voronoi
+          (Object, Every => False, Sites => Sites, Operation => Operation);
+   end Voronoi_Facets;
+
    overriding
    procedure Finalize (Object : in out Subdivision) is
    begin
