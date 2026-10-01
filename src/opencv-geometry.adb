@@ -6,6 +6,7 @@ with OpenCV.Core.Float64_Access;
 with OpenCV.Geometry.Internal.C_API;
 with OpenCV.Geometry.Internal.Convexity;
 with OpenCV.Geometry.Internal.Intersection;
+with OpenCV.Geometry.Internal.Transforms;
 
 package body OpenCV.Geometry is
 
@@ -1009,6 +1010,7 @@ package body OpenCV.Geometry is
    function Is_Finite_Public_Float32
      (Value : OpenCV.Float32_Value) return Boolean
    is
+      pragma Suppress (Validity_Check);
       use type OpenCV.Float32_Value;
    begin
       return
@@ -1690,4 +1692,375 @@ package body OpenCV.Geometry is
                 (Output, Natural (Count), "Intersect_Rotated_Rectangles"));
       end;
    end Intersect_Rotated_Rectangles;
+
+   function Is_Finite_Public_Float64
+     (Value : OpenCV.Float64_Value) return Boolean
+   is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float64_Value;
+   begin
+      return
+        Value = Value
+        and then Value >= OpenCV.Float64_Value'First
+        and then Value <= OpenCV.Float64_Value'Last;
+   end Is_Finite_Public_Float64;
+
+   --  Raises OpenCV_Error with Count_Message unless Points has exactly Count
+   --  points, and with Finite_Message unless every coordinate is finite.
+   procedure Validate_Correspondence
+     (Points         : Float32_Point_Array;
+      Count          : Positive;
+      Count_Message  : String;
+      Finite_Message : String)
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      if Points'Length /= Count then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity, Count_Message);
+      end if;
+
+      for Point of Points loop
+         if not Is_Finite_Public_Float32 (Point.X)
+           or else not Is_Finite_Public_Float32 (Point.Y)
+         then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity, Finite_Message);
+         end if;
+      end loop;
+   end Validate_Correspondence;
+
+   function To_C_Point_F32
+     (Point : OpenCV.Float32_Point) return Internal.C_API.Point_F32 is
+   begin
+      return
+        (X => Interfaces.C.C_float (Point.X),
+         Y => Interfaces.C.C_float (Point.Y));
+   end To_C_Point_F32;
+
+   --  Callers ensure Points'Length = 3.
+   function To_C_Triangle_Points
+     (Points : Float32_Point_Array) return Internal.C_API.C_Triangle_Points
+   is
+      Result : Internal.C_API.C_Triangle_Points :=
+        (Points => (others => (X => 0.0, Y => 0.0)));
+   begin
+      for Offset in Result.Points'Range loop
+         Result.Points (Offset) :=
+           To_C_Point_F32 (Points (Points'First + Offset));
+      end loop;
+      return Result;
+   end To_C_Triangle_Points;
+
+   --  Callers ensure Points'Length = 4.
+   function To_C_Quad_Points
+     (Points : Float32_Point_Array) return Internal.C_API.C_Quad_Points
+   is
+      Result : Internal.C_API.C_Quad_Points :=
+        (Points => (others => (X => 0.0, Y => 0.0)));
+   begin
+      for Offset in Result.Points'Range loop
+         Result.Points (Offset) :=
+           To_C_Point_F32 (Points (Points'First + Offset));
+      end loop;
+      return Result;
+   end To_C_Quad_Points;
+
+   function To_C_Affine
+     (Transform : Affine_Transform_2D) return Internal.C_API.C_Affine_2x3_F64
+   is
+   begin
+      return
+        (M00 => Interfaces.C.double (Transform (1, 1)),
+         M01 => Interfaces.C.double (Transform (1, 2)),
+         M02 => Interfaces.C.double (Transform (1, 3)),
+         M10 => Interfaces.C.double (Transform (2, 1)),
+         M11 => Interfaces.C.double (Transform (2, 2)),
+         M12 => Interfaces.C.double (Transform (2, 3)));
+   end To_C_Affine;
+
+   function To_Public_Affine
+     (Value : Internal.C_API.C_Affine_2x3_F64; Operation : String)
+      return Affine_Transform_2D
+   is
+      --  Pass possibly non-finite native doubles to To_Public_Float64, which
+      --  raises OpenCV_Error, without an Ada validity failure.
+      pragma Suppress (Validity_Check);
+      Message : constant String :=
+        Operation & " failed: OpenCV returned a non-finite coefficient";
+   begin
+      return
+        ((To_Public_Float64 (Value.M00, Message),
+          To_Public_Float64 (Value.M01, Message),
+          To_Public_Float64 (Value.M02, Message)),
+         (To_Public_Float64 (Value.M10, Message),
+          To_Public_Float64 (Value.M11, Message),
+          To_Public_Float64 (Value.M12, Message)));
+   end To_Public_Affine;
+
+   function To_Public_Perspective
+     (Value : Internal.C_API.C_Perspective_3x3_F64)
+      return Perspective_Transform_2D
+   is
+      --  Pass possibly non-finite native doubles to To_Public_Float64, which
+      --  raises OpenCV_Error, without an Ada validity failure.
+      pragma Suppress (Validity_Check);
+      Message : constant String :=
+        "Get_Perspective_Transform failed: OpenCV returned a non-finite "
+        & "coefficient";
+   begin
+      return
+        ((To_Public_Float64 (Value.M00, Message),
+          To_Public_Float64 (Value.M01, Message),
+          To_Public_Float64 (Value.M02, Message)),
+         (To_Public_Float64 (Value.M10, Message),
+          To_Public_Float64 (Value.M11, Message),
+          To_Public_Float64 (Value.M12, Message)),
+         (To_Public_Float64 (Value.M20, Message),
+          To_Public_Float64 (Value.M21, Message),
+          To_Public_Float64 (Value.M22, Message)));
+   end To_Public_Perspective;
+
+   function Get_Affine_Transform
+     (Source, Destination : Float32_Point_Array) return Affine_Transform_2D is
+   begin
+      Validate_Correspondence
+        (Source,
+         3,
+         "Get_Affine_Transform requires exactly three Source points",
+         "Get_Affine_Transform requires finite Source coordinates");
+      Validate_Correspondence
+        (Destination,
+         3,
+         "Get_Affine_Transform requires exactly three Destination points",
+         "Get_Affine_Transform requires finite Destination coordinates");
+
+      declare
+         Packed_Source      :
+           aliased constant Internal.C_API.C_Triangle_Points :=
+             To_C_Triangle_Points (Source);
+         Packed_Destination :
+           aliased constant Internal.C_API.C_Triangle_Points :=
+             To_C_Triangle_Points (Destination);
+         Result             : aliased Internal.C_API.C_Affine_2x3_F64 :=
+           (others => 0.0);
+         Status             : Internal.C_API.Status;
+      begin
+         Status :=
+           Internal.C_API.Get_Affine_Transform
+             (Packed_Source'Access, Packed_Destination'Access, Result'Access);
+         Raise_On_Error (Status, "Get_Affine_Transform");
+         return To_Public_Affine (Result, "Get_Affine_Transform");
+      end;
+   end Get_Affine_Transform;
+
+   function Invert_Affine_Transform
+     (Transform : Affine_Transform_2D) return Affine_Transform_2D
+   is
+      --  Inspect possibly non-finite coefficients without an Ada validity
+      --  failure, so they raise OpenCV_Error.
+      pragma Suppress (Validity_Check);
+   begin
+      for Coefficient of Transform loop
+         if not Is_Finite_Public_Float64 (Coefficient) then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Invert_Affine_Transform requires finite coefficients");
+         end if;
+      end loop;
+
+      declare
+         Packed : aliased constant Internal.C_API.C_Affine_2x3_F64 :=
+           To_C_Affine (Transform);
+         Result : aliased Internal.C_API.C_Affine_2x3_F64 := (others => 0.0);
+         Status : Internal.C_API.Status;
+      begin
+         Status :=
+           Internal.C_API.Invert_Affine_Transform
+             (Packed'Access, Result'Access);
+         Raise_On_Error (Status, "Invert_Affine_Transform");
+         return To_Public_Affine (Result, "Invert_Affine_Transform");
+      end;
+   end Invert_Affine_Transform;
+
+   function To_C_Perspective_Solve_Method
+     (Method : Perspective_Solve_Method) return Interfaces.Integer_32 is
+   begin
+      case Method is
+         when LU_Decomposition             =>
+            return Internal.C_API.Perspective_Solve_LU;
+
+         when Singular_Value_Decomposition =>
+            return Internal.C_API.Perspective_Solve_SVD;
+
+         when QR_Decomposition             =>
+            return Internal.C_API.Perspective_Solve_QR;
+      end case;
+   end To_C_Perspective_Solve_Method;
+
+   function Get_Perspective_Transform
+     (Source, Destination : Float32_Point_Array;
+      Method              : Perspective_Solve_Method := LU_Decomposition)
+      return Perspective_Transform_2D is
+   begin
+      Validate_Correspondence
+        (Source,
+         4,
+         "Get_Perspective_Transform requires exactly four Source points",
+         "Get_Perspective_Transform requires finite Source coordinates");
+      Validate_Correspondence
+        (Destination,
+         4,
+         "Get_Perspective_Transform requires exactly four Destination points",
+         "Get_Perspective_Transform requires finite Destination coordinates");
+
+      declare
+         Packed_Source      : aliased constant Internal.C_API.C_Quad_Points :=
+           To_C_Quad_Points (Source);
+         Packed_Destination : aliased constant Internal.C_API.C_Quad_Points :=
+           To_C_Quad_Points (Destination);
+         Result             : aliased Internal.C_API.C_Perspective_3x3_F64 :=
+           (others => 0.0);
+         Status             : Internal.C_API.Status;
+      begin
+         Status :=
+           Internal.C_API.Get_Perspective_Transform
+             (Packed_Source'Access,
+              Packed_Destination'Access,
+              To_C_Perspective_Solve_Method (Method),
+              Result'Access);
+         Raise_On_Error (Status, "Get_Perspective_Transform");
+         return To_Public_Perspective (Result);
+      end;
+   end Get_Perspective_Transform;
+
+   type Float64_Value_List is
+     array (Positive range <>) of OpenCV.Float64_Value;
+
+   --  Raises OpenCV_Error unless Point is finite and every coefficient is
+   --  finite and within Internal.Transforms.Coefficient_Limit.
+   procedure Validate_Transform_Point_Input
+     (Point : OpenCV.Float32_Point; Coefficients : Float64_Value_List)
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      if not Is_Finite_Public_Float32 (Point.X)
+        or else not Is_Finite_Public_Float32 (Point.Y)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Transform_Point requires a finite Point");
+      end if;
+
+      for Coefficient of Coefficients loop
+         if not Is_Finite_Public_Float64 (Coefficient)
+           or else not Internal.Transforms.Is_Bounded_Coefficient (Coefficient)
+         then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Transform_Point requires finite coefficients of magnitude "
+               & "at most 1.0E+269");
+         end if;
+      end loop;
+   end Validate_Transform_Point_Input;
+
+   function Transform_Point
+     (Transform : Affine_Transform_2D; Point : OpenCV.Float32_Point)
+      return OpenCV.Float32_Point
+   is
+      --  Validate possibly non-finite inputs without an Ada validity failure.
+      pragma Suppress (Validity_Check);
+      package Transforms renames Internal.Transforms;
+   begin
+      Validate_Transform_Point_Input
+        (Point,
+         (Transform (1, 1),
+          Transform (1, 2),
+          Transform (1, 3),
+          Transform (2, 1),
+          Transform (2, 2),
+          Transform (2, 3)));
+
+      declare
+         X        : constant OpenCV.Float64_Value :=
+           OpenCV.Float64_Value (Point.X);
+         Y        : constant OpenCV.Float64_Value :=
+           OpenCV.Float64_Value (Point.Y);
+         Mapped_X : constant OpenCV.Float64_Value :=
+           Transforms.Linear_Form
+             (Transform (1, 1), Transform (1, 2), Transform (1, 3), X, Y);
+         Mapped_Y : constant OpenCV.Float64_Value :=
+           Transforms.Linear_Form
+             (Transform (2, 1), Transform (2, 2), Transform (2, 3), X, Y);
+      begin
+         if not Transforms.Is_Binary32_Coordinate (Mapped_X)
+           or else not Transforms.Is_Binary32_Coordinate (Mapped_Y)
+         then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Transform_Point result is outside binary32 range");
+         end if;
+         return
+           (X => Transforms.To_Binary32 (Mapped_X),
+            Y => Transforms.To_Binary32 (Mapped_Y));
+      end;
+   end Transform_Point;
+
+   function Transform_Point
+     (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point)
+      return OpenCV.Float32_Point
+   is
+      --  Validate possibly non-finite inputs without an Ada validity failure.
+      pragma Suppress (Validity_Check);
+      package Transforms renames Internal.Transforms;
+      use type OpenCV.Float64_Value;
+   begin
+      Validate_Transform_Point_Input
+        (Point,
+         (Transform (1, 1),
+          Transform (1, 2),
+          Transform (1, 3),
+          Transform (2, 1),
+          Transform (2, 2),
+          Transform (2, 3),
+          Transform (3, 1),
+          Transform (3, 2),
+          Transform (3, 3)));
+
+      declare
+         X        : constant OpenCV.Float64_Value :=
+           OpenCV.Float64_Value (Point.X);
+         Y        : constant OpenCV.Float64_Value :=
+           OpenCV.Float64_Value (Point.Y);
+         U        : constant OpenCV.Float64_Value :=
+           Transforms.Linear_Form
+             (Transform (1, 1), Transform (1, 2), Transform (1, 3), X, Y);
+         V        : constant OpenCV.Float64_Value :=
+           Transforms.Linear_Form
+             (Transform (2, 1), Transform (2, 2), Transform (2, 3), X, Y);
+         W        : constant OpenCV.Float64_Value :=
+           Transforms.Linear_Form
+             (Transform (3, 1), Transform (3, 2), Transform (3, 3), X, Y);
+         Mapped_X : OpenCV.Float64_Value;
+         Mapped_Y : OpenCV.Float64_Value;
+         Fits_X   : Boolean;
+         Fits_Y   : Boolean;
+      begin
+         if W = 0.0 then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Transform_Point maps Point to infinity (W = 0)");
+         end if;
+         Transforms.Divide (U, W, Mapped_X, Fits_X);
+         Transforms.Divide (V, W, Mapped_Y, Fits_Y);
+         if not Fits_X or else not Fits_Y then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               "Transform_Point result is outside binary32 range");
+         end if;
+         return
+           (X => Transforms.To_Binary32 (Mapped_X),
+            Y => Transforms.To_Binary32 (Mapped_Y));
+      end;
+   end Transform_Point;
 end OpenCV.Geometry;

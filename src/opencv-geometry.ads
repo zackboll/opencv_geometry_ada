@@ -291,7 +291,7 @@ package OpenCV.Geometry is
    function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices;
 
    --  Ada-owned sequence of binary32 points, such as an intersection region
-   --  returned by OpenCV.
+   --  returned by OpenCV or one side of a transform correspondence.
    type Float32_Point_Array is
      array (Natural range <>) of OpenCV.Float32_Point;
 
@@ -489,5 +489,129 @@ package OpenCV.Geometry is
       Angle  : OpenCV.Float64_Value;
       Scale  : OpenCV.Float64_Value := 1.0;
       Units  : OpenCV.Angle_Unit := OpenCV.Degrees) return OpenCV.Core.Mat;
+
+   --  Geometry-owned transform matrices with value semantics. Indices are
+   --  1-based: Transform (R, C) is OpenCV's M (R - 1, C - 1). An affine
+   --  transform maps (X, Y) to
+   --    (T (1, 1) * X + T (1, 2) * Y + T (1, 3),
+   --     T (2, 1) * X + T (2, 2) * Y + T (2, 3)).
+   --  A perspective transform (homography) maps (X, Y) to (U / W, V / W),
+   --  where (U, V, W) is the product of T and the column (X, Y, 1).
+   type Affine_Row_Index is range 1 .. 2;
+   type Perspective_Row_Index is range 1 .. 3;
+   type Transform_Column_Index is range 1 .. 3;
+
+   type Affine_Transform_2D is
+     array (Affine_Row_Index, Transform_Column_Index) of OpenCV.Float64_Value;
+
+   type Perspective_Transform_2D is
+     array (Perspective_Row_Index, Transform_Column_Index)
+     of OpenCV.Float64_Value;
+
+   Identity_Affine_Transform : constant Affine_Transform_2D :=
+     ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0));
+
+   Identity_Perspective_Transform : constant Perspective_Transform_2D :=
+     ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0));
+
+   --  Affine transform that maps each Source point to the Destination point
+   --  at the same position, computed by cv::getAffineTransform. Source and
+   --  Destination must each contain exactly three points. Their bounds may
+   --  differ; points are paired in iteration order. Every coordinate must be
+   --  finite. OpenCV solves the 6x6 linear system by LU decomposition and
+   --  ignores a singular result. When its absolute pivot test (a pivot below
+   --  about 2.2E-14) finds the system singular, as for collinear or repeated
+   --  Source points, the result is therefore the all-zero transform rather
+   --  than an error. A degenerate or nearly degenerate triangle that passes
+   --  that test can instead yield very large finite coefficients. The zero
+   --  transform is also the correct result when every Destination point is
+   --  the origin, so callers that need a non-degenerate mapping must check
+   --  the Source triangle themselves. Source and Destination are unchanged.
+   --  Wrong point counts, non-finite coordinates, non-finite native
+   --  coefficients, and failures reported by OpenCV raise
+   --  OpenCV.OpenCV_Error.
+   function Get_Affine_Transform
+     (Source, Destination : Float32_Point_Array) return Affine_Transform_2D;
+
+   --  Inverse of an affine transform, computed by cv::invertAffineTransform
+   --  in binary64. Every coefficient must be finite. OpenCV evaluates the
+   --  determinant D = T (1, 1) * T (2, 2) - T (1, 2) * T (2, 1) and uses
+   --  1.0 / D, or 0.0 when D is exactly 0.0. A singular linear part, a D that
+   --  underflows to 0.0, and a D that overflows to infinity (for example
+   --  diagonal coefficients above about 1.3E+154 in magnitude) all give the
+   --  all-zero transform (some coefficients may be negative zero) rather than
+   --  an error, and this function returns it unchanged. A nearly singular
+   --  transform can yield very large coefficients. A nonzero D so small that
+   --  the inverse overflows, or a D that evaluates to NaN (infinity minus
+   --  infinity), yields non-finite coefficients, which raise
+   --  OpenCV.OpenCV_Error.
+   --  Transform is unchanged. Non-finite coefficients and failures reported
+   --  by OpenCV also raise OpenCV.OpenCV_Error.
+   function Invert_Affine_Transform
+     (Transform : Affine_Transform_2D) return Affine_Transform_2D;
+
+   --  Solver for the 8x8 linear system of Get_Perspective_Transform:
+   --  OpenCV DECOMP_LU (the default), DECOMP_SVD, and DECOMP_QR.
+   --  LU_Decomposition and QR_Decomposition detect a singular system;
+   --  Singular_Value_Decomposition returns a least-squares solution and
+   --  never reports one. OpenCV's DECOMP_EIG and DECOMP_CHOLESKY assume a
+   --  symmetric matrix, which this system is not, and DECOMP_NORMAL has no
+   --  effect on a square system, so none of them is offered.
+   type Perspective_Solve_Method is
+     (LU_Decomposition, Singular_Value_Decomposition, QR_Decomposition);
+
+   --  Perspective transform that maps each Source point to the Destination
+   --  point at the same position, computed by cv::getPerspectiveTransform
+   --  with Method. Source and Destination must each contain exactly four
+   --  points. Their bounds may differ; points are paired in iteration order.
+   --  Every coordinate must be finite. OpenCV solves for eight coefficients
+   --  with T (3, 3) fixed at 1.0, and this function returns the native
+   --  coefficients without further normalization:
+   --  - OpenCV before 4.12 always returns T (3, 3) = 1.0. When
+   --    LU_Decomposition or QR_Decomposition finds the system singular (a
+   --    pivot below about 2.2E-14), for example with three collinear Source
+   --    points, the result is the matrix whose only nonzero coefficient is
+   --    T (3, 3) = 1.0. QR_Decomposition can instead produce non-finite
+   --    coefficients, for example when every Source X is 0.
+   --    Singular_Value_Decomposition returns a least-squares solution that
+   --    need not map the points.
+   --  - OpenCV 4.12 and later, including 5.x, accept that solution only when
+   --    the solver reports success and the absolute residual of the 8x8
+   --    linear system is below 1.0E-8; this is not a reprojection error.
+   --    Otherwise, for example for degenerate correspondences or some
+   --    coordinates of magnitude 1.0E+7 and above, they return a least-squares
+   --    solution of the homogeneous system with unit Frobenius norm and
+   --    arbitrary sign. That solution is not unique for degenerate input, and
+   --    its T (3, 3) need not be 1.0 and can be negative or zero.
+   --  Source and Destination are unchanged. Wrong point counts, non-finite
+   --  coordinates, non-finite native coefficients, and failures reported by
+   --  OpenCV raise OpenCV.OpenCV_Error.
+   function Get_Perspective_Transform
+     (Source, Destination : Float32_Point_Array;
+      Method              : Perspective_Solve_Method := LU_Decomposition)
+      return Perspective_Transform_2D;
+
+   --  Maps Point through Transform with Ada arithmetic: each coordinate is
+   --  (T (R, 1) * X + T (R, 2) * Y) + T (R, 3), evaluated in binary64 and
+   --  then rounded to the nearest binary32 value. Point must be finite, and
+   --  every coefficient must be finite with magnitude at most 1.0E+269.
+   --  These requirements are checked at run time, and within them SPARK
+   --  proves that no binary64 intermediate overflows. Violations, and
+   --  results outside binary32 range, raise OpenCV.OpenCV_Error.
+   function Transform_Point
+     (Transform : Affine_Transform_2D; Point : OpenCV.Float32_Point)
+      return OpenCV.Float32_Point;
+
+   --  Maps Point through a perspective Transform with Ada arithmetic. U, V,
+   --  and W are evaluated like the affine rows, the result is (U / W, V / W)
+   --  in binary64, and each coordinate is then rounded to the nearest
+   --  binary32 value. The Point and coefficient requirements are those of
+   --  the affine Transform_Point. W = 0.0, which maps Point to infinity, and
+   --  results outside binary32 range raise OpenCV.OpenCV_Error. Unlike
+   --  cv::perspectiveTransform, which maps a point with |W| <= FLT_EPSILON
+   --  to the origin and multiplies by 1 / W, this divides by every nonzero W.
+   function Transform_Point
+     (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point)
+      return OpenCV.Float32_Point;
 
 end OpenCV.Geometry;

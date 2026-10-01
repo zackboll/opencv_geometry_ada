@@ -111,11 +111,35 @@ typedef struct {
     int32_t fixed_point_depth;
 } opencv_geometry_convexity_defect;
 
-/* One native binary32 point of a variable-length Geometry result. */
+/* One binary32 point: an element of a variable-length Geometry result or of
+   a fixed transform correspondence. */
 typedef struct {
     float x;
     float y;
 } opencv_geometry_point_f32;
+
+/* Row-major 3x3 perspective transform coefficients; mRC is row R, column C. */
+typedef struct {
+    double m00;
+    double m01;
+    double m02;
+    double m10;
+    double m11;
+    double m12;
+    double m20;
+    double m21;
+    double m22;
+} opencv_geometry_perspective_3x3_f64;
+
+/* Exactly three binary32 points: one side of an affine correspondence. */
+typedef struct {
+    opencv_geometry_point_f32 points[3];
+} opencv_geometry_triangle_points_f32;
+
+/* Exactly four binary32 points: one side of a perspective correspondence. */
+typedef struct {
+    opencv_geometry_point_f32 points[4];
+} opencv_geometry_quad_points_f32;
 
 /* A fitted 2D line: OpenCV's unit direction (vx, vy) and a point (x0, y0)
    on the line. */
@@ -306,6 +330,32 @@ opencv_geometry_get_rotation_matrix_2d(
     double angle_degrees,
     double scale,
     opencv_geometry_affine_2x3_f64 *out_transform);
+
+opencv_geometry_status
+opencv_geometry_get_affine_transform(
+    const opencv_geometry_triangle_points_f32 *source,
+    const opencv_geometry_triangle_points_f32 *destination,
+    opencv_geometry_affine_2x3_f64 *out_transform);
+
+/* transform may alias out_inverse: the shim copies the input before it
+   writes any output. */
+opencv_geometry_status
+opencv_geometry_invert_affine_transform(
+    const opencv_geometry_affine_2x3_f64 *transform,
+    opencv_geometry_affine_2x3_f64 *out_inverse);
+
+/* Explicit getPerspectiveTransform solve selectors; the shim maps them to
+   OpenCV's DecompTypes. */
+#define OPENCV_GEOMETRY_PERSPECTIVE_SOLVE_LU  ((int32_t)0)
+#define OPENCV_GEOMETRY_PERSPECTIVE_SOLVE_SVD ((int32_t)1)
+#define OPENCV_GEOMETRY_PERSPECTIVE_SOLVE_QR  ((int32_t)2)
+
+opencv_geometry_status
+opencv_geometry_get_perspective_transform(
+    const opencv_geometry_quad_points_f32 *source,
+    const opencv_geometry_quad_points_f32 *destination,
+    int32_t solve_method,
+    opencv_geometry_perspective_3x3_f64 *out_transform);
 
 opencv_geometry_status
 opencv_geometry_intersect_convex_convex(
