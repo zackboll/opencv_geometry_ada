@@ -1590,23 +1590,98 @@ package body OpenCV.Geometry is
       end;
    end Validate_Convex_Polygon;
 
-   function Intersect_Convex_Polygons
-     (Left, Right : Contour; Handle_Nested : Boolean := True)
-      return Convex_Polygon_Intersection
-   is
-      use type Interfaces.Integer_32;
-      use type OpenCV.Float32_Value;
+   --  Public policy shared by both Intersect_Convex_Polygons overloads, for
+   --  integer polygons that each passed Validate_Convex_Polygon: OpenCV 4.x
+   --  before 4.11 stays within its result buffer only while its tests are
+   --  exact, which needs every binary32 coordinate difference to be exact.
+   --  Rule states the span limit in the caller's units for the diagnostic.
+   procedure Validate_Exact_Spans
+     (Left, Right : Contour;
+      Rule        : String :=
+        "at most 2**24, or 2**25 when every coordinate is even") is
    begin
-      Validate_Convex_Polygon (Left, "Left");
-      Validate_Convex_Polygon (Right, "Right");
+      if not Internal.Intersection.Has_Exact_Differences
+               (Left,
+                Right,
+                Internal.Convexity.Bounds_Of (Left),
+                Internal.Convexity.Bounds_Of (Right))
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons requires the X and Y spans of Left "
+            & "and Right together to be "
+            & Rule);
+      end if;
+   end Validate_Exact_Spans;
+
+   procedure Validate_Intersection_Counts (Left_Length, Right_Length : Natural)
+   is
+   begin
       if not Internal.Intersection.Is_Safe_Input_Count
-               (Left'Length, Right'Length)
+               (Left_Length, Right_Length)
       then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
             "Intersect_Convex_Polygons point counts exceed the native "
             & "allocation range");
       end if;
+   end Validate_Intersection_Counts;
+
+   --  The public result of a native intersection that wrote Count vertices
+   --  to Output and the area Area.
+   function To_Public_Intersection
+     (Output : Internal.C_API.Point_F32_Array;
+      Count  : Interfaces.Integer_32;
+      Area   : Interfaces.C.C_float) return Convex_Polygon_Intersection
+   is
+      --  To_Public_Float32 inspects the raw native area and vertices.
+      pragma Suppress (Validity_Check);
+      use type Interfaces.Integer_32;
+      use type OpenCV.Float32_Value;
+      Public_Area : OpenCV.Float32_Value;
+   begin
+      if Count < 0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons failed: negative vertex count");
+      end if;
+      if Natural (Count) > Output'Length then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons failed: vertex count exceeds "
+            & "capacity");
+      end if;
+      Public_Area :=
+        To_Public_Float32
+          (Area, "Intersect_Convex_Polygons area is not finite");
+      if Public_Area < 0.0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons failed: OpenCV reported that the "
+            & "intersection did not converge");
+      end if;
+      return
+        (Vertex_Count => Natural (Count),
+         Area         => Public_Area,
+         Vertices     =>
+           To_Public_Float32_Points
+             (Output, Natural (Count), "Intersect_Convex_Polygons"));
+   end To_Public_Intersection;
+
+   function Intersect_Convex_Polygons
+     (Left, Right : Contour; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection is
+   begin
+      if Left'Length < 3 or else Right'Length < 3 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons requires Left and Right to have at "
+            & "least three vertices");
+      end if;
+      Validate_Intersection_Counts (Left'Length, Right'Length);
+      Validate_Convex_Polygon (Left, "Left");
+      Validate_Convex_Polygon (Right, "Right");
+      Validate_Exact_Spans (Left, Right);
 
       declare
          pragma Suppress (Validity_Check);
@@ -1618,7 +1693,6 @@ package body OpenCV.Geometry is
          Output       : Internal.C_API.Point_F32_Array (0 .. Capacity - 1);
          Count        : aliased Interfaces.Integer_32 := 0;
          Area         : aliased Interfaces.C.C_float := 0.0;
-         Public_Area  : OpenCV.Float32_Value;
          Status       : Internal.C_API.Status;
       begin
          Status :=
@@ -1633,32 +1707,7 @@ package body OpenCV.Geometry is
               Count'Access,
               Area'Access);
          Raise_On_Error (Status, "Intersect_Convex_Polygons");
-         if Count < 0 then
-            Ada.Exceptions.Raise_Exception
-              (OpenCV.OpenCV_Error'Identity,
-               "Intersect_Convex_Polygons failed: negative vertex count");
-         end if;
-         if Natural (Count) > Output'Length then
-            Ada.Exceptions.Raise_Exception
-              (OpenCV.OpenCV_Error'Identity,
-               "Intersect_Convex_Polygons failed: vertex count exceeds "
-               & "capacity");
-         end if;
-         Public_Area :=
-           To_Public_Float32
-             (Area, "Intersect_Convex_Polygons area is not finite");
-         if Public_Area < 0.0 then
-            Ada.Exceptions.Raise_Exception
-              (OpenCV.OpenCV_Error'Identity,
-               "Intersect_Convex_Polygons failed: OpenCV reported that the "
-               & "intersection did not converge");
-         end if;
-         return
-           (Vertex_Count => Natural (Count),
-            Area         => Public_Area,
-            Vertices     =>
-              To_Public_Float32_Points
-                (Output, Natural (Count), "Intersect_Convex_Polygons"));
+         return To_Public_Intersection (Output, Count, Area);
       end;
    end Intersect_Convex_Polygons;
 
@@ -3026,4 +3075,118 @@ package body OpenCV.Geometry is
       end if;
       return Line;
    end Fit_Line_2D;
+
+   --  The largest grid exponent at which every coordinate of Left and Right
+   --  is a binary32-exact integer multiple of 2.0**Exponent. Larger
+   --  exponents give smaller integer polygons, so if Left and Right are a
+   --  power-of-two scaling of acceptable integer polygons at all, they are
+   --  at this exponent. Raises OpenCV_Error when there is none.
+   function Grid_Exponent_Of
+     (Left, Right : Float32_Point_Array)
+      return Internal.Intersection.Grid_Exponent
+   is
+      package Intersection renames Internal.Intersection;
+
+      function On_Grid
+        (Points : Float32_Point_Array; Exponent : Intersection.Grid_Exponent)
+         return Boolean
+      is (for all Point of Points =>
+            Intersection.Is_Grid_Coordinate (Point.X, Exponent)
+            and then Intersection.Is_Grid_Coordinate (Point.Y, Exponent));
+   begin
+      for Exponent in reverse Intersection.Grid_Exponent loop
+         if On_Grid (Left, Exponent) and then On_Grid (Right, Exponent) then
+            return Exponent;
+         end if;
+      end loop;
+      Ada.Exceptions.Raise_Exception
+        (OpenCV.OpenCV_Error'Identity,
+         "Intersect_Convex_Polygons requires Left and Right coordinates on "
+         & "one binary grid: integer multiples of 2.0**K, for some K in "
+         & "-8 .. 6, of magnitude at most 2.0**(24 + K)");
+   end Grid_Exponent_Of;
+
+   --  Points divided by 2.0**Exponent, as an integer contour with the same
+   --  bounds. Callers ensure that every coordinate is a grid coordinate.
+   function To_Grid_Contour
+     (Points   : Float32_Point_Array;
+      Exponent : Internal.Intersection.Grid_Exponent) return Contour
+   is
+      Result : Contour (Points'Range);
+   begin
+      for Index in Points'Range loop
+         Result (Index) :=
+           (X =>
+              Internal.Intersection.Grid_Coordinate
+                (Points (Index).X, Exponent),
+            Y =>
+              Internal.Intersection.Grid_Coordinate
+                (Points (Index).Y, Exponent));
+      end loop;
+      return Result;
+   end To_Grid_Contour;
+
+   function Intersect_Convex_Polygons
+     (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection is
+   begin
+      if Left'Length < 3 or else Right'Length < 3 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons requires Left and Right to have at "
+            & "least three vertices");
+      end if;
+
+      Validate_Intersection_Counts (Left'Length, Right'Length);
+      Validate_Finite_Points (Left, "Intersect_Convex_Polygons");
+      Validate_Finite_Points (Right, "Intersect_Convex_Polygons");
+      --  Validate the integer polygons of which Left and Right are an exact
+      --  power-of-two scaling, with the integer overload's rules; OpenCV's
+      --  binary32 tests on Left and Right are then exactly as consistent.
+      declare
+         Exponent     : constant Internal.Intersection.Grid_Exponent :=
+           Grid_Exponent_Of (Left, Right);
+         Scaled_Left  : constant Contour := To_Grid_Contour (Left, Exponent);
+         Scaled_Right : constant Contour := To_Grid_Contour (Right, Exponent);
+      begin
+         Validate_Convex_Polygon (Scaled_Left, "Left");
+         Validate_Convex_Polygon (Scaled_Right, "Right");
+         Validate_Exact_Spans
+           (Scaled_Left,
+            Scaled_Right,
+            "at most 2.0**(24 + K) on their grid of multiples of 2.0**K, "
+            & "or twice that when every coordinate is a multiple of "
+            & "2.0**(K + 1)");
+      end;
+      declare
+         --  To_Public_Intersection inspects the raw native area and
+         --  vertices.
+         pragma Suppress (Validity_Check);
+         Packed_Left  : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Left);
+         Packed_Right : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Right);
+         Output       : aliased Internal.C_API.Point_F32_Array :=
+           Output_Buffer
+             (Internal.Intersection.Output_Capacity
+                (Left'Length, Right'Length));
+         Count        : aliased Interfaces.Integer_32 := 0;
+         Area         : aliased Interfaces.C.C_float := 0.0;
+         Status       : Internal.C_API.Status;
+      begin
+         Status :=
+           Internal.C_API.Intersect_Convex_Convex_F32
+             (First_Point (Packed_Left),
+              Point_Count (Packed_Left),
+              First_Point (Packed_Right),
+              Point_Count (Packed_Right),
+              To_C_Boolean (Handle_Nested),
+              First_Output (Output),
+              Point_Count (Output),
+              Count'Access,
+              Area'Access);
+         Raise_On_Error (Status, "Intersect_Convex_Polygons");
+         return To_Public_Intersection (Output, Count, Area);
+      end;
+   end Intersect_Convex_Polygons;
 end OpenCV.Geometry;

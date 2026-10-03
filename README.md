@@ -38,8 +38,8 @@ points, for native subpixel geometry: `Contour_Area`, `Arc_Length`,
 `Compute_Moments`, `Match_Shapes`, `Is_Convex`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Bounding_Rect`, `Convex_Hull`,
 `Convex_Hull_Indices`, `Approximate_Curve`, `Minimum_Area_Rectangle`,
-`Minimum_Enclosing_Circle`, the three `Fit_Ellipse` functions, and
-`Fit_Line_2D` have overloads that call OpenCV's `CV_32F` path without
+`Minimum_Enclosing_Circle`, the three `Fit_Ellipse` functions, `Fit_Line_2D`,
+and `Intersect_Convex_Polygons` have overloads that call OpenCV's `CV_32F` path without
 rounding coordinates to integers; Float32 results such as hulls and
 approximations are Float32 point sets. Float32 coordinates must be finite.
 OpenCV evaluates Float32 point sets partly in binary32, so near-degenerate or
@@ -253,6 +253,10 @@ function Intersect_Convex_Polygons
   (Left, Right : Contour; Handle_Nested : Boolean := True)
    return Convex_Polygon_Intersection;   --  Area and Vertices
 
+function Intersect_Convex_Polygons
+  (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
+   return Convex_Polygon_Intersection;   --  power-of-two grids only
+
 function Intersect_Rotated_Rectangles
   (Left, Right : OpenCV.Rotated_Rect)
    return Rotated_Rectangle_Intersection;  --  Kind and Vertices
@@ -268,11 +272,20 @@ every vertex must be a convex hull vertex, visited in hull order as
 leaves its result for non-simple contours undefined, and it may accept
 self-intersecting stars and repeated traversals. OpenCV does not
 check convexity, and OpenCV 4.x releases before 4.11 (including 4.6 and 4.10)
-can overflow an internal buffer on such input (OpenCV issue #25259). Vertex
+can overflow an internal buffer on such input (OpenCV issue #25259). They can
+also overflow it for valid convex polygons when their binary32 orientation
+tests round, so the binding keeps those tests exact: integer vertex
 coordinates must lie in `-2**24 .. 2**24`, where OpenCV's binary32 conversion
-is exact. `Handle_Nested` defaults to `True` as in OpenCV. OpenCV 4.6, 4.10,
-and 5.0 can emit an internal `(FLT_MAX, FLT_MAX)` sentinel as the first or last
-vertex of some disjoint and contact results; it is omitted. OpenCV 4.11+ and
+is exact, and the X and Y spans of both polygons together must be at most
+`2**24` (`2**25` when every coordinate is even), so that every coordinate
+difference is exact too. The `Float32_Point_Array` overload accepts polygons
+that are an exact scaling by `2.0**K`, with `K` in `-8 .. 6`, of such integer
+polygons, such as polygons on a 0.25 grid; OpenCV then returns its result for
+the integer polygons, scaled by `2.0**K`. Other binary32 polygons, including
+most with decimal fractions, are rejected. `Handle_Nested` defaults to `True`
+as in OpenCV. OpenCV 4.6, 4.10, and 5.0 can emit an internal
+`(FLT_MAX, FLT_MAX)` sentinel as the first or last vertex of some disjoint and
+contact results; it is omitted. OpenCV 4.11+ and
 5.x report a non-converging intersection with a negative area, which raises
 `OpenCV_Error`.
 
