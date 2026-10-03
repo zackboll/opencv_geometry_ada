@@ -9,6 +9,8 @@ with Interfaces.C;
 with OpenCV;
 with OpenCV.Geometry;
 with OpenCV.Geometry.Internal.C_API;
+with OpenCV.Geometry.Internal.Convexity;
+with OpenCV.Geometry.Internal.Intersection;
 
 package body Float32_Convex_Intersection_Tests is
 
@@ -701,6 +703,73 @@ package body Float32_Convex_Intersection_Tests is
         ("differences", "raw polygons with rounded differences");
    end C_ABI_Version_Guard;
 
+   procedure Pure_Limits (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      package Limits renames OpenCV.Geometry.Internal.Intersection;
+      package Convexity renames OpenCV.Geometry.Internal.Convexity;
+      Maximum  : constant Natural := Limits.Maximum_Input_Count;
+      --  Even coordinates beyond the public range exercise the helper
+      --  independently of Is_Binary32_Exact.
+      Left     : constant OpenCV.Geometry.Contour := (1 => (0, 0));
+      At_Limit : constant OpenCV.Geometry.Contour := (1 => (2**25, 0));
+      Beyond   : constant OpenCV.Geometry.Contour := (1 => (2**25 + 2, 0));
+   begin
+      AUnit.Assertions.Assert
+        (Limits.Is_Safe_Input_Count (Maximum - 3, 3)
+         and then Limits.Output_Capacity (Maximum - 3, 3) = Maximum
+         and then not Limits.Is_Safe_Input_Count (Maximum - 2, 3)
+         and then not Limits.Is_Safe_Input_Count (3, Maximum - 2)
+         and then not Limits.Is_Safe_Input_Count (Natural'Last, Natural'Last),
+         "combined count boundary must be checked without array allocation");
+      AUnit.Assertions.Assert
+        (Limits.Has_Exact_Differences
+           (Left,
+            At_Limit,
+            Convexity.Bounds_Of (Left),
+            Convexity.Bounds_Of (At_Limit))
+         and then not Limits.Has_Exact_Differences
+                        (Left,
+                         Beyond,
+                         Convexity.Bounds_Of (Left),
+                         Convexity.Bounds_Of (Beyond)),
+         "even differences need their own explicit 2**25 span bound");
+   end Pure_Limits;
+
+   procedure Minimum_Orientation (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Step     : constant := 2.0**(-8);
+      Triangle : constant Points := ((0.0, 0.0), (Step, 0.0), (0.0, Step));
+      --  A second convex polygon shares the triangle's hypotenuse.
+      --  Native predicates see Step**2 = 2**(-16) > 1.0E-5.
+      Other    : constant Points :=
+        ((0.0, -Step), (Step, 0.0), (0.0, Step), (-Step, 0.0));
+      Found    : constant Intersection := Intersect (Triangle, Other);
+   begin
+      AUnit.Assertions.Assert
+        (Found.Area = 2.0**(-17)
+         and then Same_Vertices (Found.Vertices, Triangle),
+         "K=-8 minimum determinant must remain above native tolerance");
+   end Minimum_Orientation;
+
+   procedure Coarse_Nested_Second (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Outer : constant Points :=
+        ((-2.0**30, -2.0**30),
+         (2.0**30, -2.0**30),
+         (2.0**30, 2.0**30),
+         (-2.0**30, 2.0**30));
+      Inner : constant Points :=
+        ((2.0**30 - 256.0, 2.0**30 - 256.0),
+         (2.0**30 - 128.0, 2.0**30 - 256.0),
+         (2.0**30 - 128.0, 2.0**30 - 128.0),
+         (2.0**30 - 256.0, 2.0**30 - 128.0));
+      Found : constant Intersection := Intersect (Inner, Outer);
+   begin
+      AUnit.Assertions.Assert
+        (Found.Area = 2.0**14 and then Same_Vertices (Found.Vertices, Inner),
+         "nested K=6 with outer second must safely round near 2**30");
+   end Coarse_Nested_Second;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       Result.Add_Test
@@ -753,6 +822,17 @@ package body Float32_Convex_Intersection_Tests is
         (Caller.Create
            ("Float32 intersection C ABI version guard",
             C_ABI_Version_Guard'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Intersection pure count and span limits", Pure_Limits'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Float32 intersection minimum K=-8 orientation",
+            Minimum_Orientation'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Float32 intersection K=6 nested outer second",
+            Coarse_Nested_Second'Access));
       return Result'Access;
    end Suite;
 

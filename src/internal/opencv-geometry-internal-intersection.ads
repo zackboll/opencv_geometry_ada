@@ -36,22 +36,23 @@ is
    --  differences, valid convex polygons can overflow the native buffer.
    --  When every coordinate is even, differences of at most 2**25 are even
    --  and still exact, so Has_Exact_Differences also accepts those.
-   function Spans_Are_Exact
-     (Left_Bounds, Right_Bounds : Convexity.Coordinate_Bounds) return Boolean
+   function Joint_Spans_Are_At_Most
+     (Left_Bounds, Right_Bounds : Convexity.Coordinate_Bounds; Limit : Natural)
+      return Boolean
    is (Long_Long_Integer'Max
          (Long_Long_Integer (Left_Bounds.Max_X),
           Long_Long_Integer (Right_Bounds.Max_X))
        - Long_Long_Integer'Min
            (Long_Long_Integer (Left_Bounds.Min_X),
             Long_Long_Integer (Right_Bounds.Min_X))
-       <= Binary32_Exact_Integer_Limit
+       <= Long_Long_Integer (Limit)
        and then Long_Long_Integer'Max
                   (Long_Long_Integer (Left_Bounds.Max_Y),
                    Long_Long_Integer (Right_Bounds.Max_Y))
                 - Long_Long_Integer'Min
                     (Long_Long_Integer (Left_Bounds.Min_Y),
                      Long_Long_Integer (Right_Bounds.Min_Y))
-                <= Binary32_Exact_Integer_Limit)
+                <= Long_Long_Integer (Limit))
    with Global => null;
 
    function Is_Even (Points : OpenCV.Point_Array) return Boolean
@@ -59,14 +60,18 @@ is
    with Global => null;
 
    --  The exact-difference rule for binary32-exact integer polygons with
-   --  the given bounds: joint spans of at most 2**24, or even coordinates,
-   --  whose joint spans are at most 2**25 because every coordinate lies in
-   --  -2**24 .. 2**24.
+   --  the given bounds: joint spans of at most 2**24, or all coordinates
+   --  even AND joint spans of at most 2**25. No coordinate-range assumption
+   --  from a prior Is_Binary32_Exact call is needed for this span rule.
    function Has_Exact_Differences
      (Left, Right               : OpenCV.Point_Array;
       Left_Bounds, Right_Bounds : Convexity.Coordinate_Bounds) return Boolean
-   is (Spans_Are_Exact (Left_Bounds, Right_Bounds)
-       or else (Is_Even (Left) and then Is_Even (Right)))
+   is (Joint_Spans_Are_At_Most
+         (Left_Bounds, Right_Bounds, Binary32_Exact_Integer_Limit)
+       or else (Is_Even (Left)
+                and then Is_Even (Right)
+                and then Joint_Spans_Are_At_Most
+                           (Left_Bounds, Right_Bounds, 2**25)))
    with Global => null;
 
    --  Binary32 polygons are intersected as exactly as integer ones when they

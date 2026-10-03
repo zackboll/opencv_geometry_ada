@@ -388,10 +388,14 @@ overload stays bound, and its documentation now names the hang.
    sum in `areaSign` and in all three `intersectLineSegments` formulas (4.6
    multiplies absolute coordinates by binary32 differences, 4.10 multiplies
    binary32 differences, and 4.11 and 5.0 multiply binary64 differences)
-   stays below `2**53` and is exact, the segment parameters compare exactly
-   with 0 and 1 (a nonzero distance from either is at least `2**-50`, while
-   binary64 rounding near 1 is below `2**-53`), and every nonzero
-   orientation is at least 1, far above the `1e-5` tolerance. A binary32
+   stays below `2**53` and is exact before division. The binary64 quotient
+   is rounded, not mathematically exact. Segment parameters nevertheless
+   compare correctly with 0 and 1: a conservative nonzero separation from
+   either is at least approximately `2**-51`, including the all-even
+   `2**25`-span branch whose determinant denominator can approach `2**51`.
+   This exceeds binary64 half an ulp near 1 (`2**-53`), so correct rounding
+   cannot turn a genuinely interior/exterior parameter into 0 or 1. Every
+   nonzero orientation is at least 1, far above the `1e-5` tolerance. A binary32
    polygon pair that is an exact power-of-two scaling of such integers,
    `2**K` with `-8 <= K <= 6`, runs the same computation scaled exactly (no
    overflow, underflow, or subnormal arises), with orientations of at least
@@ -411,6 +415,12 @@ overload stays bound, and its documentation now names the hang.
    shim applies the same rules as its ABI-safety guard before 4.11. The
    Float32 result equals the integer result on the scaled polygons, scaled
    back, bit for bit (tested on 4.6, 4.10, and 5.0).
+   Both public overloads check minimum cardinality, then the combined count
+   limit, before scans, scaled-contour construction, hull validation, packing,
+   or output allocation. The pure SPARK count predicate is tested directly
+   at and above its boundary without allocating polygons. Exercising the
+   over-limit public call itself would require already-existing Ada arrays
+   with more than a billion vertices; no such allocation is attempted.
 
 ## Pre-existing integer findings
 

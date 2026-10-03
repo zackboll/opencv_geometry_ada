@@ -1672,10 +1672,16 @@ package body OpenCV.Geometry is
      (Left, Right : Contour; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection is
    begin
+      if Left'Length < 3 or else Right'Length < 3 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Intersect_Convex_Polygons requires Left and Right to have at "
+            & "least three vertices");
+      end if;
+      Validate_Intersection_Counts (Left'Length, Right'Length);
       Validate_Convex_Polygon (Left, "Left");
       Validate_Convex_Polygon (Right, "Right");
       Validate_Exact_Spans (Left, Right);
-      Validate_Intersection_Counts (Left'Length, Right'Length);
 
       declare
          pragma Suppress (Validity_Check);
@@ -3124,8 +3130,6 @@ package body OpenCV.Geometry is
      (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection is
    begin
-      Validate_Finite_Points (Left, "Intersect_Convex_Polygons");
-      Validate_Finite_Points (Right, "Intersect_Convex_Polygons");
       if Left'Length < 3 or else Right'Length < 3 then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
@@ -3133,6 +3137,9 @@ package body OpenCV.Geometry is
             & "least three vertices");
       end if;
 
+      Validate_Intersection_Counts (Left'Length, Right'Length);
+      Validate_Finite_Points (Left, "Intersect_Convex_Polygons");
+      Validate_Finite_Points (Right, "Intersect_Convex_Polygons");
       --  Validate the integer polygons of which Left and Right are an exact
       --  power-of-two scaling, with the integer overload's rules; OpenCV's
       --  binary32 tests on Left and Right are then exactly as consistent.
@@ -3151,8 +3158,6 @@ package body OpenCV.Geometry is
             & "or twice that when every coordinate is a multiple of "
             & "2.0**(K + 1)");
       end;
-      Validate_Intersection_Counts (Left'Length, Right'Length);
-
       declare
          --  To_Public_Intersection inspects the raw native area and
          --  vertices.
