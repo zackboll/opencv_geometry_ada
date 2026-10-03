@@ -115,22 +115,39 @@ package body Box_Points_Tests is
 
    procedure Minimum_Area_Integration (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Points   : constant OpenCV.Geometry.Contour :=
+      Points           : constant OpenCV.Geometry.Contour :=
         ((X => -6, Y => -4),
          (X => -2, Y => -4),
          (X => -2, Y => -2),
          (X => -6, Y => -2));
-      Expected : constant OpenCV.Geometry.Box_Vertices :=
+      Expected         : constant OpenCV.Geometry.Box_Vertices :=
         ((X => -6.0, Y => -4.0),
          (X => -2.0, Y => -4.0),
          (X => -2.0, Y => -2.0),
          (X => -6.0, Y => -2.0));
+      Rotated          : constant OpenCV.Geometry.Contour :=
+        ((X => 0, Y => 0),
+         (X => 4, Y => 4),
+         (X => 2, Y => 6),
+         (X => -2, Y => 2));
+      Rotated_Expected : constant OpenCV.Geometry.Box_Vertices :=
+        ((X => 0.0, Y => 0.0),
+         (X => 4.0, Y => 4.0),
+         (X => 2.0, Y => 6.0),
+         (X => -2.0, Y => 2.0));
    begin
       Assert_Vertex_Set
         (OpenCV.Geometry.Box_Points
            (OpenCV.Geometry.Minimum_Area_Rectangle (Points)),
          Expected,
          "minimum-area rectangle corners");
+      --  A nonsquare rotated rectangle changes side assignment at 4.13.
+      --  Match its physical corners, not the native starting vertex/order.
+      Assert_Vertex_Set
+        (OpenCV.Geometry.Box_Points
+           (OpenCV.Geometry.Minimum_Area_Rectangle (Rotated)),
+         Rotated_Expected,
+         "rotated minimum-area rectangle corners");
    end Minimum_Area_Integration;
 
    procedure Fit_Ellipse_Integration (Test : in out Fixture) is

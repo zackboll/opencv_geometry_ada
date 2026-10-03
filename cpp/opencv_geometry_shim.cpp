@@ -1857,11 +1857,11 @@ opencv_geometry_min_area_rect(
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
     }
-    // OpenCV compatibility: an empty std::vector<cv::Point> has no depth for
-    // checkVector. Native typed empty behavior is a zero rectangle with 0
-    // degrees in OpenCV 4 and -90 degrees in OpenCV 5.
+    // OpenCV compatibility: an empty point vector fails checkVector. Match
+    // native typed zero-count input with backing storage: a zero rectangle
+    // with 0 degrees through 4.12 and -90 from 4.13, including 5.x.
     if (point_count == 0) {
-#if CV_VERSION_MAJOR >= 5
+#if CV_VERSION_MAJOR >= 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
         out_rect->angle_degrees = -90.0f;
 #endif
         return OPENCV_GEOMETRY_OK;
@@ -1906,10 +1906,10 @@ opencv_geometry_min_area_rect_f32(
         return invalid_argument("null contour points with positive count");
     }
     // OpenCV compatibility: as for integer contours, an empty point vector
-    // has no depth for checkVector; native typed empty behavior is a zero
-    // rectangle with 0 degrees in OpenCV 4 and -90 degrees in OpenCV 5.
+    // fails checkVector. Match native typed zero-count input with backing
+    // storage: a zero rectangle, 0 degrees through 4.12 and -90 from 4.13.
     if (point_count == 0) {
-#if CV_VERSION_MAJOR >= 5
+#if CV_VERSION_MAJOR >= 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
         out_rect->angle_degrees = -90.0f;
 #endif
         return OPENCV_GEOMETRY_OK;

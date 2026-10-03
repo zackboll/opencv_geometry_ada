@@ -803,3 +803,158 @@ Correction validation:
   header, through the tests Alire environment; no expanded proof claim.
 - GNATformat checks, 79-column Ada checks and `git diff --check` passed.
   The old unqualified aggregate source compiles in every rerun environment.
+
+## Task 015: minAreaRect representation boundary
+
+Starting Geometry main: `1cbbf2db933ccd5f29adbe6f3ea8dfccf774ce5c`.
+The Task 014 full-suite caveat above is historical; this task addresses it.
+
+### Exact tagged source evidence
+
+Independently inspected `cv::minAreaRect` and its calipers in:
+
+- [4.6.0 imgproc/rotcalipers.cpp](https://github.com/opencv/opencv/blob/4.6.0/modules/imgproc/src/rotcalipers.cpp#L360-L407)
+- [4.10.0 imgproc/rotcalipers.cpp](https://github.com/opencv/opencv/blob/4.10.0/modules/imgproc/src/rotcalipers.cpp#L360-L407)
+- [4.11.0 imgproc/rotcalipers.cpp](https://github.com/opencv/opencv/blob/4.11.0/modules/imgproc/src/rotcalipers.cpp#L360-L407)
+- [4.12.0 imgproc/rotcalipers.cpp](https://github.com/opencv/opencv/blob/4.12.0/modules/imgproc/src/rotcalipers.cpp#L360-L407)
+- [4.13.0 imgproc/rotcalipers.cpp](https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/rotcalipers.cpp#L361-L427)
+- [5.0.0 geometry/rotcalipers.cpp](https://github.com/opencv/opencv/blob/5.0.0/modules/geometry/src/rotcalipers.cpp#L361-L427)
+
+The first new convention among these releases is **4.13.0**, not 5.0.
+The complete 4.10, 4.11 and 4.12 source files have the same Git blob
+`3bec592c9be43c49412836f7661f05855560828c`; 4.6 has the same minAreaRect
+branches. The 4.13 and 5.0 minAreaRect and calipers implementations are
+identical; their file diff only removes the legacy `cvMinAreaRect2` C wrapper
+in 5.0. This is not inferred from native major version.
+
+Through 4.12:
+
+- Hulls with more than two vertices use width = norm(out[1]),
+  height = norm(out[2]), angle = atan2(out[1].y, out[1].x).
+- Two vertices use dx/dy = hpoints[1] - hpoints[0], width = segment length,
+  height = 0, angle = atan2(dy, dx).
+- Empty and singleton results retain the default angle 0.
+
+From 4.13, including 5.0:
+
+- The default angle is -pi/2 (-90 degrees).
+- More than two vertices use width = norm(out[2]), height = norm(out[1]),
+  angle = -atan2(out[1].x, out[1].y). If out[1].x = 0 and out[1].y > 0,
+  dimensions are swapped and the default -90 angle is retained.
+- Two vertices use dx/dy = hpoints[0] - hpoints[1], initially width = 0,
+  height = segment length. dx = 0 swaps dimensions, retaining -90;
+  dy < 0 swaps dimensions and uses atan2(dy, dx); dy > 0 keeps them and
+  uses -atan2(dx, dy). A horizontal segment retains -90 and length in height.
+- Radians are converted to degrees and debug checks enforce `[-90, 0)`.
+  Calipers now receive the known hull orientation rather than deriving it.
+
+For ordinary nondegenerate inputs the tuple representation changes, not the
+minimum-area region. Width need not identify the same physical side on each
+release. `Box_Points` is the better way to obtain physical vertices; native
+starting vertex/order is still not a cross-version contract. This does not
+promise numerical equivalence for degenerate or nearly degenerate inputs.
+
+### Reproduced baseline and native probes
+
+The untouched main full suite on exact-tag 4.13 ran **521** tests:
+**515 successful, six failed assertions, zero unexpected errors**.
+AUnit stops each procedure at its first failed assertion:
+
+| Registered test | First failure: native actual versus old expectation |
+| --- | --- |
+| Minimum area axis rectangle | angle -90 versus +90 |
+| Minimum area diamond | angle -45 versus +45 (original message only said `diamond angle`; direct native probe confirms the values) |
+| Minimum area empty and one point | singleton angle -90 versus 0; the empty assertion incorrectly passed |
+| Minimum area two-point conventions | horizontal width 0 versus 6 |
+| Minimum area collinear duplicates translation | collinear width 0 versus 4 |
+| Minimum area nonzero bounds input unchanged | angle -90 versus +90 |
+
+Direct C++ probes were compiled and run against real 4.10.0, 4.12.0,
+4.13.0 and 5.0.0 libraries. They confirmed all existing integer fixtures and
+the following exact binary32 fractional fixtures (tuple: center; size; angle):
+
+| Fixture | Through 4.12 | 4.13 / 5.0 |
+| --- | --- | --- |
+| Empty integer or Float32 | (0,0); (0,0); 0 | (0,0); (0,0); -90 |
+| Integer 6x4 rectangle | (3,2); (4,6); +90 | (3,2); (4,6); -90 |
+| Integer horizontal (0,0)..(6,0) | (3,0); (6,0); 180 | (3,0); (0,6); -90 |
+| Integer positive (0,0)..(3,4) | (1.5,2); (5,0); -126.869904 | (1.5,2); (0,5); -36.869896 |
+| Integer negative (0,0)..(3,-4) | (1.5,-2); (5,0); +126.869904 | (1.5,-2); (5,0); -53.130104 |
+| Float32 [0.5,3] x [0.25,1.75] | (1.75,1); (1.5,2.5); +90 | (1.75,1); (1.5,2.5); -90 |
+| Float32 (0.5,0.25)..(2,2.25) | (1.25,1.25); (2.5,0); -126.869904 | (1.25,1.25); (0,2.5); -36.869896 |
+| Float32 (0.5,0.25)..(2,-1.75) | (1.25,-0.75); (2.5,0); +126.869904 | (1.25,-0.75); (2.5,0); -53.130104 |
+
+Empty runtime probes use a typed zero-count Mat with harmless backing
+storage. A zero-row Mat without storage, like an empty point vector, fails
+`checkVector` before reaching the native empty branch. The original shim
+compatibility branches returned 0 on 4.13 in both overloads, while these
+native probes returned -90. That is a real **empty-result fidelity defect**,
+not a new safety defect. Correct only those two compile-time thresholds to
+include 4.13. Nonempty native results, Ada bodies, C ABI and public types
+are unchanged; no normalization or native algorithm replacement is added.
+
+### Regression design and safety review
+
+`Uses_New_Min_Area_Rectangle_Convention` reads existing internal major/minor
+accessors and uses `Major >= 5 or else (Major = 4 and then Minor >= 13)`.
+No public version API or support for future native major versions is added.
+Existing integer rectangle, diamond, empty/singleton, four segment directions,
+collinear/translated and nonzero-bound fixtures now follow this boundary.
+
+Three new registered tests cover raw integer/Float32 and public Float32 empty
+results, the fractional rectangle, and both fractional segment slopes. They
+check centers, side placement, angles, binary32 fields, nonzero bounds and
+unchanged inputs; the fractional rectangle also differs from the rounded
+integer path. Existing unordered/tolerance-qualified Box_Points integration
+now checks a rotated nonsquare rectangle with corners (0,0), (4,4), (2,6),
+(-2,2), as well as its axis-aligned fixture.
+
+Independent source review found no new uncovered signed/count overflow,
+NaN/Inf, assertion-range or C ABI memory hazard in the 4.13 transition.
+Signed `n*3` allocation and Float32 hull/span/non-finite risks predate it and
+retain the current preflight/result checks. The changed shim branches are
+empty-container native compatibility, not duplicated public rejection
+policy; the two version guards only select the native default angle.
+No new public semantic validation is duplicated in the C++ shim.
+
+### Full-suite validation
+
+The registered count is now **524** (521 baseline plus three focused tests).
+All runs below are the complete AUnit executable, not a Subdiv2D filter:
+
+| Native OpenCV / backend | Normal (Geometry release) | Validation |
+| --- | --- | --- |
+| Local 4.10.0 / imgproc | 524/524 | 524/524 |
+| Preserved exact 4.12.0 / imgproc | 524/524 | 524/524 |
+| Preserved exact-tag 4.13.0 / imgproc | **524/524** | **524/524** |
+| Preserved exact-tag 5.0.0 / geometry | 524/524 | 524/524 |
+
+Every run has zero failed assertions and zero unexpected errors. Integer
+conventions, all new Float32 fixtures and both Box_Points geometric fixtures
+pass on both convention families. Validation profiles preserve expected
+non-finite error handling without unexpected Constraint_Error. Geometry and
+test builds retain warnings-as-errors. The 5.0 executable links native
+geometry/core, not imgproc; the 4.13 executable links imgproc/core.
+
+During validation, unrelated in-progress edits appeared in the sibling Core
+worktree. A local link failed on missing Core ROI shim symbols, so the final
+matrix was rerun against an isolated clean copy of its committed main
+`67a99990583a0c454324ce187a6b8945e6741d6d`, using temporary ignored local
+lockfile paths only. No Core source was modified or reverted. Geometry
+manifests and dependency requirements are unchanged.
+
+Local 4.10 native Subdiv2D allocation-fault tests pass under AddressSanitizer
+and UndefinedBehaviorSanitizer: **zero failed checks**, two on-edge and two
+inside failures correctly mark the handle unusable. The Float32-bounds fault
+paths are unsupported on that release, as expected. GNATformat checks,
+79-column Ada checks and `git diff --check` pass. No release, tag, index,
+platform compiler/runtime or native backend selection changes are made.
+
+GNATprove through the tests Alire environment proves **277/277 checks**, level
+2, timeout 30, checks-as-errors and an invocation header, in a fresh output
+directory. The scope explicitly lists the same four Geometry helper bodies
+plus Core's `opencv-internal-safe_arithmetic.adb` (266 Geometry checks and 11
+Core checks). Explicitly listing the latter avoids relying on cached imported
+unit accounting in the earlier combined summary. Native results and the
+foreign boundary remain trusted/tested, not formally proved. The tests crate
+is restored to the Geometry release profile and local OpenCV 4.10 afterwards.

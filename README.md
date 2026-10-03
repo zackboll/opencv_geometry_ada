@@ -155,10 +155,16 @@ Triangle : constant OpenCV.Geometry.Enclosing_Triangle :=
 ```
 
 `Minimum_Area_Rectangle` returns `OpenCV.Rotated_Rect`, preserving native
-binary32 center, size, and angle-in-degrees fields. OpenCV 4.x and 5.x may use
-different width/height/angle representations for the same rectangle; no output
-normalization is applied. Inputs unsafe for native integer convex-hull
-arithmetic are rejected.
+binary32 center, size, and angle-in-degrees fields. **OpenCV 4.13** introduced
+the width/height/angle convention also used by 5.x, with angles in `[-90, 0)`;
+4.12 and earlier use the older representation. This affects both integer and
+Float32 inputs, including empty input (angle 0 before 4.13, -90 afterwards).
+For ordinary nondegenerate rectangles this is a representational change, not
+a different minimum-area region. Width need not denote the same physical side
+across releases. Use `Box_Points` to obtain actual geometric vertices, without
+depending on their starting vertex/order. No cross-version numerical
+equivalence is promised for degenerate cases, and no output normalization is
+applied. Inputs unsafe for native integer convex-hull arithmetic are rejected.
 `Fit_Ellipse` fits a least-squares ellipse to an Ada-owned contour through
 `cv::fitEllipse`. This is a fitted ellipse, not a minimum enclosing ellipse.
 The result is an `OpenCV.Rotated_Rect` describing the rectangle in which the
