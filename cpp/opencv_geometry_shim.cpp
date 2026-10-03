@@ -17,6 +17,15 @@
 
 namespace {
 
+constexpr bool native_feature_supported(int32_t feature) noexcept
+{
+    const int minor_required =
+        feature == OPENCV_GEOMETRY_FEATURE_APPROX_POLY_N ? 11 :
+        feature == OPENCV_GEOMETRY_FEATURE_CLOSEST_ELLIPSE_POINTS ? 12 : 13;
+    return CV_VERSION_MAJOR >= 5
+        || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= minor_required);
+}
+
 constexpr std::size_t error_message_capacity = 1024;
 // ABI safety: native convexHull allocates _stack(total + 2), with signed
 // int arithmetic before allocation, in OpenCV 4.6, 4.10, and 5.0.
@@ -46,6 +55,12 @@ opencv_geometry_status invalid_argument(const char *message) noexcept
 {
     set_error(message);
     return OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT;
+}
+
+opencv_geometry_status unsupported(const char *message) noexcept
+{
+    set_error(message);
+    return OPENCV_GEOMETRY_ERROR_UNSUPPORTED;
 }
 
 opencv_geometry_status translate_current_exception() noexcept
@@ -147,6 +162,104 @@ const char *opencv_geometry_last_error_message(void)
 int32_t opencv_geometry_opencv_major_version(void)
 {
     return CV_VERSION_MAJOR;
+}
+
+opencv_geometry_status opencv_geometry_native_feature_supported(
+    int32_t feature, int32_t *out_supported)
+{
+    clear_error();
+    if (out_supported == nullptr) {
+        return invalid_argument("null native feature output pointer");
+    }
+    *out_supported = 0;
+    if (feature < OPENCV_GEOMETRY_FEATURE_APPROX_POLY_N
+        || feature > OPENCV_GEOMETRY_FEATURE_FLOAT32_SUBDIVISION_BOUNDS) {
+        return invalid_argument("unknown native feature ID");
+    }
+    *out_supported = native_feature_supported(feature) ? 1 : 0;
+    return OPENCV_GEOMETRY_OK;
+}
+
+namespace {
+
+template<class Point>
+opencv_geometry_status closest_ellipse_points(
+    const opencv_geometry_rotated_rect_f32 *ellipse,
+    const Point *points, int32_t point_count,
+    opencv_geometry_point_f32 *output, int32_t capacity, int32_t *out_count)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument("null closest ellipse point count pointer");
+    }
+    *out_count = 0;
+    if (!native_feature_supported(
+            OPENCV_GEOMETRY_FEATURE_CLOSEST_ELLIPSE_POINTS)) {
+        return unsupported("getClosestEllipsePoints requires OpenCV 4.12 or newer");
+    }
+    if (point_count < 0 || capacity < 0) {
+        return invalid_argument("negative closest ellipse count or capacity");
+    }
+    if (ellipse == nullptr || (point_count > 0 && points == nullptr)
+        || (capacity > 0 && output == nullptr)) {
+        return invalid_argument("null closest ellipse buffer or ellipse");
+    }
+    if (capacity < point_count) {
+        return invalid_argument("closest ellipse output capacity is too small");
+    }
+    if (point_count == 0) {
+        return OPENCV_GEOMETRY_OK;
+    }
+#if CV_VERSION_MAJOR >= 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 12)
+    try {
+        // Preserve CV_32S/CV_32F input; never reinterpret POD point storage.
+        using Coordinate = decltype(points[0].x);
+        std::vector<cv::Point_<Coordinate>> input;
+        input.reserve(static_cast<std::size_t>(point_count));
+        for (int32_t i = 0; i < point_count; ++i) {
+            input.emplace_back(points[i].x, points[i].y);
+        }
+        const cv::RotatedRect box(
+            cv::Point2f(ellipse->center_x, ellipse->center_y),
+            cv::Size2f(ellipse->width, ellipse->height), ellipse->angle_degrees);
+        std::vector<cv::Point2f> result;
+        cv::getClosestEllipsePoints(box, input, result);
+        // ABI safety: enforce the one-to-one result before writing a
+        // caller-sized buffer or publishing its positional count.
+        if (result.size() != static_cast<std::size_t>(point_count)) {
+            return invalid_argument("unexpected closest ellipse result count");
+        }
+        for (int32_t i = 0; i < point_count; ++i) {
+            output[i] = {result[i].x, result[i].y};
+        }
+        *out_count = point_count;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        return translate_current_exception();
+    }
+#else
+    return unsupported("getClosestEllipsePoints requires OpenCV 4.12 or newer");
+#endif
+}
+
+}
+
+opencv_geometry_status opencv_geometry_closest_ellipse_points_i32(
+    const opencv_geometry_rotated_rect_f32 *ellipse,
+    const opencv_geometry_point_i32 *points, int32_t point_count,
+    opencv_geometry_point_f32 *output, int32_t capacity, int32_t *out_count)
+{
+    return closest_ellipse_points(
+        ellipse, points, point_count, output, capacity, out_count);
+}
+
+opencv_geometry_status opencv_geometry_closest_ellipse_points_f32(
+    const opencv_geometry_rotated_rect_f32 *ellipse,
+    const opencv_geometry_point_f32 *points, int32_t point_count,
+    opencv_geometry_point_f32 *output, int32_t capacity, int32_t *out_count)
+{
+    return closest_ellipse_points(
+        ellipse, points, point_count, output, capacity, out_count);
 }
 
 opencv_geometry_status

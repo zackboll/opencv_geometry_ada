@@ -157,6 +157,27 @@ typedef int32_t opencv_geometry_status;
 #define OPENCV_GEOMETRY_ERROR_STD              ((opencv_geometry_status)2)
 #define OPENCV_GEOMETRY_ERROR_UNKNOWN          ((opencv_geometry_status)3)
 #define OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT ((opencv_geometry_status)4)
+#define OPENCV_GEOMETRY_ERROR_UNSUPPORTED      ((opencv_geometry_status)5)
+
+/* Native availability, not Ada binding coverage. IDs are stable C ABI. */
+#define OPENCV_GEOMETRY_FEATURE_APPROX_POLY_N               ((int32_t)1)
+#define OPENCV_GEOMETRY_FEATURE_CLOSEST_ELLIPSE_POINTS      ((int32_t)2)
+#define OPENCV_GEOMETRY_FEATURE_MIN_ENCLOSING_CONVEX_POLYGON ((int32_t)3)
+#define OPENCV_GEOMETRY_FEATURE_FLOAT32_SUBDIVISION_BOUNDS  ((int32_t)4)
+
+opencv_geometry_status opencv_geometry_native_feature_supported(
+    int32_t feature, int32_t *out_supported);
+
+/* out_count is checked/zeroed before the unsupported-version return.
+   Older versions do not inspect any other argument. */
+opencv_geometry_status opencv_geometry_closest_ellipse_points_i32(
+    const opencv_geometry_rotated_rect_f32 *ellipse,
+    const opencv_geometry_point_i32 *points, int32_t point_count,
+    opencv_geometry_point_f32 *output, int32_t capacity, int32_t *out_count);
+opencv_geometry_status opencv_geometry_closest_ellipse_points_f32(
+    const opencv_geometry_rotated_rect_f32 *ellipse,
+    const opencv_geometry_point_f32 *points, int32_t point_count,
+    opencv_geometry_point_f32 *output, int32_t capacity, int32_t *out_count);
 
 const char *opencv_geometry_last_error_message(void);
 

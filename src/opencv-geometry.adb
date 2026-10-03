@@ -99,6 +99,30 @@ package body OpenCV.Geometry is
       end if;
    end Raise_On_Error;
 
+   function Is_Natively_Supported (Feature : Native_Feature) return Boolean is
+      use type Interfaces.Integer_32;
+      ID        : Interfaces.Integer_32;
+      Supported : aliased Interfaces.Integer_32 := 0;
+      Status    : Internal.C_API.Status;
+   begin
+      case Feature is
+         when Approximate_Convex_Polygon_Feature       =>
+            ID := Internal.C_API.Feature_Approx_Poly_N;
+
+         when Closest_Ellipse_Points_Feature           =>
+            ID := Internal.C_API.Feature_Closest_Ellipse_Points;
+
+         when Minimum_Enclosing_Convex_Polygon_Feature =>
+            ID := Internal.C_API.Feature_Min_Enclosing_Convex_Polygon;
+
+         when Float32_Subdivision_Bounds_Feature       =>
+            ID := Internal.C_API.Feature_Float32_Subdivision_Bounds;
+      end case;
+      Status := Internal.C_API.Native_Feature_Supported (ID, Supported'Access);
+      Raise_On_Error (Status, "native feature query");
+      return Supported = 1;
+   end Is_Natively_Supported;
+
    function Contour_Area
      (Points : Contour; Oriented : Boolean := False)
       return OpenCV.Float64_Value
@@ -2300,6 +2324,123 @@ package body OpenCV.Geometry is
          return Result;
       end;
    end Unpack_Float32_Points;
+
+   procedure Validate_Closest_Ellipse (Ellipse : OpenCV.Rotated_Rect) is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float32_Value;
+   begin
+      if not Is_Natively_Supported (Closest_Ellipse_Points_Feature) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "getClosestEllipsePoints requires OpenCV 4.12 or newer");
+      end if;
+      Validate_Finite_Rotated_Rect
+        (Ellipse, "Closest_Ellipse_Points requires finite ellipse fields");
+      if Ellipse.Size.Width <= 0.0 or else Ellipse.Size.Height <= 0.0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Closest_Ellipse_Points requires positive ellipse dimensions");
+      end if;
+   end Validate_Closest_Ellipse;
+
+   function Unpack_Closest_Points
+     (Output      : Internal.C_API.Point_F32_Array;
+      Count       : Interfaces.Integer_32;
+      First, Last : Natural) return Float32_Point_Array
+   is
+      pragma Suppress (Validity_Check);
+      use type Interfaces.Integer_32;
+      Result : Float32_Point_Array (First .. Last);
+   begin
+      if Count /= Interfaces.Integer_32 (Result'Length) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Closest_Ellipse_Points returned an unexpected point count");
+      end if;
+      for Index in Result'Range loop
+         Result (Index) :=
+           (X =>
+              To_Public_Float32
+                (Output
+                   (Internal.Convexity.Positional_Offset (First, Last, Index))
+                   .X,
+                 "closest ellipse point X is not finite"),
+            Y =>
+              To_Public_Float32
+                (Output
+                   (Internal.Convexity.Positional_Offset (First, Last, Index))
+                   .Y,
+                 "closest ellipse point Y is not finite"));
+      end loop;
+      return Result;
+   end Unpack_Closest_Points;
+
+   function Closest_Ellipse_Points
+     (Ellipse : OpenCV.Rotated_Rect; Points : Contour)
+      return Float32_Point_Array
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      Validate_Closest_Ellipse (Ellipse);
+      if Points'Length = 0 then
+         return Float32_Point_Array'(Points'Range => (X => 0.0, Y => 0.0));
+      end if;
+      declare
+         Packed : constant Internal.C_API.Point_I32_Array :=
+           Pack_Contour (Points);
+         Box    : aliased Internal.C_API.C_Rotated_Rect :=
+           To_C_Rotated_Rect (Ellipse);
+         Output : aliased Internal.C_API.Point_F32_Array :=
+           Output_Buffer (Points'Length);
+         Count  : aliased Interfaces.Integer_32 := 0;
+         Status : constant Internal.C_API.Status :=
+           Internal.C_API.Closest_Ellipse_Points_I32
+             (Box'Access,
+              Packed (Packed'First)'Access,
+              Interfaces.Integer_32 (Points'Length),
+              First_Output (Output),
+              Interfaces.Integer_32 (Output'Length),
+              Count'Access);
+      begin
+         Raise_On_Error (Status, "closest ellipse points");
+         return
+           Unpack_Closest_Points (Output, Count, Points'First, Points'Last);
+      end;
+   end Closest_Ellipse_Points;
+
+   function Closest_Ellipse_Points
+     (Ellipse : OpenCV.Rotated_Rect; Points : Float32_Point_Array)
+      return Float32_Point_Array
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      Validate_Closest_Ellipse (Ellipse);
+      Validate_Finite_Points (Points, "Closest_Ellipse_Points");
+      if Points'Length = 0 then
+         return Float32_Point_Array'(Points'Range => (X => 0.0, Y => 0.0));
+      end if;
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+         Box    : aliased Internal.C_API.C_Rotated_Rect :=
+           To_C_Rotated_Rect (Ellipse);
+         Output : aliased Internal.C_API.Point_F32_Array :=
+           Output_Buffer (Points'Length);
+         Count  : aliased Interfaces.Integer_32 := 0;
+         Status : constant Internal.C_API.Status :=
+           Internal.C_API.Closest_Ellipse_Points_F32
+             (Box'Access,
+              First_Point (Packed),
+              Point_Count (Packed),
+              First_Output (Output),
+              Point_Count (Output),
+              Count'Access);
+      begin
+         Raise_On_Error (Status, "closest ellipse points");
+         return
+           Unpack_Closest_Points (Output, Count, Points'First, Points'Last);
+      end;
+   end Closest_Ellipse_Points;
 
    --  Raises OpenCV_Error when Points has more than Limit points, the
    --  largest count whose native signed 32-bit size arithmetic is defined.

@@ -54,6 +54,17 @@ is
                 = Long_Long_Integer (Index) - Long_Long_Integer (First)
        and then To_Point_Index (First, Last, To_Native_Offset'Result) = Index;
 
+   --  Positional offset for one-to-one native output buffers, including
+   --  arrays ending at Natural'Last. No increment of the public index.
+   function Positional_Offset (First, Last, Index : Natural) return Natural
+   is (Index - First)
+   with
+     Global => null,
+     Pre    => First <= Last and then Index in First .. Last,
+     Post   =>
+       Positional_Offset'Result <= Last - First
+       and then First + Positional_Offset'Result = Index;
+
    function Is_Strictly_Increasing (Hull : Point_Index_Array) return Boolean
    is (for all Position in Hull'Range =>
          (if Position > Hull'First then Hull (Position - 1) < Hull (Position)))

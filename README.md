@@ -12,6 +12,40 @@ The only production Ada dependency is `opencv_core`. The public package is
 | 5.x | `opencv2/geometry.hpp` | `libopencv_geometry` |
 
 Both link native OpenCV Core. There is no Ada Imgproc dependency.
+
+### Optional native features
+
+The public Ada API does not disappear on older OpenCV releases.
+`Is_Natively_Supported (Feature : Native_Feature)` queries the linked native
+API, **not whether Geometry currently binds that API**:
+
+| Feature | First native 4.x release | Ada binding |
+| --- | --- | --- |
+| `Approximate_Convex_Polygon_Feature` | 4.11 | Deferred |
+| `Closest_Ellipse_Points_Feature` | 4.12 | `Closest_Ellipse_Points` |
+| `Minimum_Enclosing_Convex_Polygon_Feature` | 4.13 | Deferred |
+| `Float32_Subdivision_Bounds_Feature` | 4.13 | Deferred |
+
+All four capabilities are False on 4.6/4.10 and True on 5.x. In 4.x they
+become True at their listed thresholds. Thus approxPolyN may be natively
+supported while remaining unbound: its portable contraction-wide safety
+precondition is unresolved, as documented in
+[the preserved research](docs/versioned-features-research.md).
+
+`Closest_Ellipse_Points (Ellipse, Points)` accepts either `Contour` or
+`Float32_Point_Array` and returns one Float32 point per query with exactly
+the input Ada range, including null and high-bound ranges. Integer input
+stays CV_32S; native conversion to Point2f may lose low bits. Float32 input
+stays CV_32F. Ellipse fields and queries must be finite, and width/height
+must be positive. OpenCV uses a fixed three-iteration approximation; no
+arbitrary magnitude bound is imposed, but non-finite native output raises
+`OpenCV_Error`. Even querying a circle's center can trigger that numerical
+failure. Inputs are unchanged.
+
+OpenCV 4.6/4.10/4.11 builds remain supported. Calling this operation there
+raises `OpenCV_Error` with "requires OpenCV 4.12 or newer", including for
+empty input. On supported versions, empty input returns the same null range
+without a native call.
 Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
