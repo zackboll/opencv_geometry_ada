@@ -31,8 +31,9 @@ only a subset of the native modes; `docs/coverage.md` maps each native
 operation to its Ada binding and records the unbound modes, the operations
 missing from OpenCV 4.6 and 4.10, and the exclusions.
 
-Point sets come in two forms. `Contour` holds integer points, for exact
-integer geometry such as pixel outlines. `Float32_Point_Array` holds binary32
+Point sets come in two forms. `Contour` holds integer points, for
+integer-coordinate geometry such as pixel outlines. `Float32_Point_Array`
+holds binary32
 points, for native subpixel geometry: `Contour_Area`, `Arc_Length`,
 `Compute_Moments`, `Match_Shapes`, `Is_Convex`, `Locate_Point`,
 `Signed_Distance_To_Contour`, `Bounding_Rect`, `Convex_Hull`,
@@ -42,8 +43,8 @@ points, for native subpixel geometry: `Contour_Area`, `Arc_Length`,
 rounding coordinates to integers; Float32 results such as hulls and
 approximations are Float32 point sets. Float32 coordinates must be finite.
 OpenCV evaluates Float32 point sets partly in binary32, so near-degenerate or
-extreme inputs can give results that differ from integer-coordinate geometry, and
-some overloads limit coordinate spans or sums where binary32 overflow would
+extreme inputs can give results that differ from integer-coordinate geometry.
+Some overloads limit coordinate spans or sums where binary32 overflow would
 otherwise make OpenCV fail or answer wrongly. Each overload documents the
 native arithmetic, and `docs/coverage.md` lists which operations have a
 Float32 mode and why the others do not. `Convexity_Defects` is integer-only
