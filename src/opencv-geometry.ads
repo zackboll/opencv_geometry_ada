@@ -2,7 +2,7 @@ with OpenCV.Core;
 
 package OpenCV.Geometry is
 
-   --  An integer contour, for exact integer geometry. OpenCV CV_32S points.
+   --  An integer contour, for integer-coordinate geometry. CV_32S points.
    subtype Contour is OpenCV.Point_Array;
 
    --  Ada-owned sequence of binary32 points: a point set for native subpixel
@@ -15,7 +15,7 @@ package OpenCV.Geometry is
    --  OpenCV_Error. Iteration order is native order, and bounds may be any
    --  Natural range. OpenCV computes coordinate differences, and for some
    --  operations their products, in binary32, so results can differ from
-   --  those of exact integer contours with the same shape; each overload
+   --  those of integer-coordinate contours with the same shape; each overload
    --  states the native arithmetic that matters.
    type Float32_Point_Array is
      array (Natural range <>) of OpenCV.Float32_Point;
@@ -121,11 +121,33 @@ package OpenCV.Geometry is
    --  increases rightward and Y increases upward. Image coordinates often
    --  increase Y downward, so the visual winding may appear reversed.
    --  Empty input returns an empty contour. Points is unchanged.
+   --  More than Integer_32'Last - 2 points raise OpenCV_Error because native
+   --  convexHull computes total + 2 in signed int before stack allocation.
    type Hull_Orientation is (Counterclockwise, Clockwise);
 
    function Convex_Hull
      (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
       return Contour;
+
+   --  Convex hull of a Float32 point set as an Ada-owned Float32 point set,
+   --  zero-based like the integer result; empty input returns the null
+   --  range 1 .. 0. Hull points are copies of input points, never rounded,
+   --  except that OpenCV receives each -0.0 coordinate as +0.0: native
+   --  convexHull compares its extreme points bitwise, so a set of equal
+   --  points mixing +0.0 and -0.0 would otherwise yield an empty hull. The
+   --  orientation convention is the integer overload's. OpenCV compares
+   --  binary32 coordinate differences through binary64 cross products, and
+   --  OpenCV 5.x first normalizes those differences to unit vectors, so
+   --  nearly collinear points can be kept or dropped differently by OpenCV
+   --  4.x and 5.x. So that no difference overflows, the X span and the Y
+   --  span of Points, computed in binary64, must each be at most
+   --  Float32_Value'Last; wider sets raise OpenCV_Error. Points is
+   --  unchanged. More than Integer_32'Last - 2 points raise OpenCV_Error
+   --  because native convexHull computes total + 2 in signed int.
+   function Convex_Hull
+     (Points      : Float32_Point_Array;
+      Orientation : Hull_Orientation := Counterclockwise)
+      return Float32_Point_Array;
 
    --  Convex hull of Points as indices into Points. Every value is an index
    --  in Points'Range, not a native zero-based offset, so shifted and other
@@ -138,11 +160,29 @@ package OpenCV.Geometry is
    --  returned, and OpenCV 4.x and 5.x can choose differently. The result is
    --  zero-based; empty input returns the null range 1 .. 0. Points is
    --  unchanged. Inputs that would overflow native integer convex-hull
-   --  arithmetic raise OpenCV_Error.
+   --  arithmetic raise OpenCV_Error, including more than Integer_32'Last - 2
+   --  points because native convexHull computes total + 2 in signed int.
    type Point_Index_Array is array (Natural range <>) of Natural;
 
    function Convex_Hull_Indices
      (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
+      return Point_Index_Array
+   with
+     Post =>
+       Convex_Hull_Indices'Result'Length <= Points'Length
+       and then (for all Index of Convex_Hull_Indices'Result =>
+                   Index in Points'Range);
+
+   --  Convex hull of a Float32 point set as indices in Points'Range,
+   --  describing the same hull as the Float32 Convex_Hull with the same
+   --  Orientation, under the same count limit (Integer_32'Last - 2 points,
+   --  due to native signed total + 2), rules for signed zeros and spans,
+   --  and OpenCV 4.x and 5.x differences. Among points with equal coordinates,
+   --  any index may be returned. The result is zero-based; empty input
+   --  returns the null range 1 .. 0. Points is unchanged.
+   function Convex_Hull_Indices
+     (Points      : Float32_Point_Array;
+      Orientation : Hull_Orientation := Counterclockwise)
       return Point_Index_Array
    with
      Post =>
@@ -219,6 +259,20 @@ package OpenCV.Geometry is
    function Minimum_Area_Rectangle
      (Points : Contour) return OpenCV.Rotated_Rect;
 
+   --  Minimum_Area_Rectangle of a Float32 point set, computed by OpenCV's
+   --  binary32 rotating calipers over the hull that the Float32 Convex_Hull
+   --  describes, with the same handling of signed zeros and the same
+   --  coordinate span limit. OpenCV allocates three binary32 values per
+   --  hull vertex in signed 32-bit arithmetic, and every Float32 point can
+   --  be a hull vertex, so more than Integer_32'Last / 3 points raise
+   --  OpenCV_Error. OpenCV compares candidate areas in binary32, starting
+   --  from FLT_MAX: when every candidate rectangle's area exceeds
+   --  Float32_Value'Last (sides of about 1.8E+19 and more), it computes a
+   --  non-finite rectangle, which raises OpenCV_Error, as do other
+   --  non-finite or negative native fields. Points is unchanged.
+   function Minimum_Area_Rectangle
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
+
    --  Least-squares ellipse fitted to Points by cv::fitEllipse. This is a
    --  fitted ellipse, not a minimum enclosing ellipse. The result is the
    --  rotated rectangle in which that ellipse is inscribed. Center, Size,
@@ -276,6 +330,27 @@ package OpenCV.Geometry is
    --  Points is unchanged.
    function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect;
 
+   --  Fit_Ellipse, Fit_Ellipse_AMS, and Fit_Ellipse_Direct of a Float32
+   --  point set: the same native algorithms, dispatch, fallbacks, random
+   --  perturbation, point counts, and result representation as the integer
+   --  overloads, applied to the binary32 coordinates without rounding.
+   --  OpenCV's classic and AMS fits, which all three can reach, sum the
+   --  coordinates in binary32 to find their mean. An overflowing sum would
+   --  hand NaN to OpenCV's solver, which without LAPACK then takes time
+   --  quadratic in the number of points, so the absolute X coordinates and
+   --  the absolute Y coordinates must each sum to at most 2.0**103 (about
+   --  1.0E+31); larger sets raise OpenCV_Error. Native failures and
+   --  non-finite or negative size components raise OpenCV_Error. Points is
+   --  unchanged.
+   function Fit_Ellipse
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
+
+   function Fit_Ellipse_AMS
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
+
+   function Fit_Ellipse_Direct
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
+
    --  Distance model of Fit_Line_2D (OpenCV DistanceTypes). L2 is orthogonal
    --  (total) least squares, solved in closed form as the principal axis of
    --  the points; L1, L12, Fair, Welsch, and Huber are robust M-estimators
@@ -320,6 +395,31 @@ package OpenCV.Geometry is
    --  unchanged.
    function Fit_Line_2D
      (Points          : Contour;
+      Distance        : Line_Fit_Distance := L2;
+      Parameter       : OpenCV.Float64_Value := 0.0;
+      Radius_Accuracy : OpenCV.Float64_Value := 0.01;
+      Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D;
+
+   --  Fit_Line_2D of a Float32 point set, with the integer overload's
+   --  distances, parameters, scalar validation, and restarts, but
+   --  fitting the binary32 coordinates themselves, so subpixel positions
+   --  are kept. OpenCV's L2 fit sums the coordinates in binary64 but
+   --  forms each product X*X, Y*Y, and X*Y in binary32 before summing, and
+   --  does not first subtract the mean, so points far from the origin
+   --  relative to their spread lose direction accuracy. A product above
+   --  Float32_Value'Last overflows, and when only the X or only the Y
+   --  products do, OpenCV returns a finite but wrong direction. So every
+   --  coordinate must have magnitude at most 2.0**63, which keeps the
+   --  products finite; other sets raise OpenCV_Error. Non-finite native
+   --  results, and the all-zero line with which OpenCV's robust fit starts
+   --  and which it keeps when no candidate has a finite error, also raise
+   --  OpenCV_Error. Points is unchanged.
+   --  L2 accepts the ordinary C ABI count limit, Integer_32'Last. Robust
+   --  distances (L1, L12, Fair, Welsch, Huber) require at most
+   --  Integer_32'Last / 2 points: native fitLine allocates count*2 floats
+   --  after the L2 early return. Larger counts raise OpenCV_Error.
+   function Fit_Line_2D
+     (Points          : Float32_Point_Array;
       Distance        : Line_Fit_Distance := L2;
       Parameter       : OpenCV.Float64_Value := 0.0;
       Radius_Accuracy : OpenCV.Float64_Value := 0.01;
@@ -414,10 +514,30 @@ package OpenCV.Geometry is
    --  distance between the original curve and the result and must be
    --  in the range 0.0 <= Epsilon < 1.0E30. Closed connects the last
    --  vertex to the first. The result is an Ada-owned contour. Empty
-   --  input returns an empty contour. Points is unchanged.
+   --  input returns an empty contour. Points is unchanged. OpenCV 4.x
+   --  measures each point's distance to the line through a chord, while
+   --  OpenCV 5.x measures it to the chord itself, so the two can keep
+   --  different vertices.
    function Approximate_Curve
      (Points : Contour; Epsilon : OpenCV.Float64_Value; Closed : Boolean)
       return Contour;
+
+   --  Approximate_Curve of a Float32 point set, with the same Epsilon,
+   --  Closed, and version semantics. The result is an Ada-owned Float32
+   --  point set of input points in input order, cyclically for a closed
+   --  curve, whose start OpenCV chooses; it is zero-based, and empty input
+   --  returns the null range 1 .. 0. OpenCV takes coordinate differences
+   --  in binary32. If one overflowed, its distances would become NaN, and
+   --  OpenCV 4.6, 4.10, and 5.0 would then drop points at any distance or,
+   --  for Epsilon 0.0, read outside the curve without terminating. So the X
+   --  span and the Y span of Points, computed in binary64, must each be at
+   --  most Float32_Value'Last; wider sets raise OpenCV_Error. OpenCV 5.x
+   --  also squares some differences in binary32, so beyond about 1.8E+19
+   --  it can keep vertices that 4.x drops. Points is unchanged.
+   function Approximate_Curve
+     (Points  : Float32_Point_Array;
+      Epsilon : OpenCV.Float64_Value;
+      Closed  : Boolean) return Float32_Point_Array;
 
    --  Minimal upright axis-aligned bounding rectangle of Points. Integer
    --  extent is inclusive, so Width = X_Max - X_Min + 1 and Height =
@@ -446,7 +566,7 @@ package OpenCV.Geometry is
    --  not convex. Points is unchanged.
    function Is_Convex (Points : Contour) return Boolean;
 
-   --  Is_Convex of a Float32 point set. Unlike the exact integer test,
+   --  Is_Convex of a Float32 point set. Unlike the integer-coordinate test,
    --  OpenCV computes each edge's coordinate differences and the cross
    --  products of consecutive edges in binary32, so nearly collinear
    --  vertices are classified by rounded products, which can differ from
@@ -541,7 +661,12 @@ package OpenCV.Geometry is
    --  addition or subtraction would overflow raise OpenCV_Error. If a
    --  native center or radius component is non-finite, or if a successful
    --  native radius is negative, Minimum_Enclosing_Circle raises
-   --  OpenCV_Error.
+   --  OpenCV_Error. OpenCV finds the circle through three points from
+   --  binary32 dot products of absolute coordinates, so points far from the
+   --  origin relative to their spread can get a circle that misses one of
+   --  them: OpenCV 4.10 leaves a vertex of a triangle with sides of about 8
+   --  near (10_000_000, 10_000_000) 41% of the radius outside. The native
+   --  circle is returned as computed.
    type Enclosing_Circle is record
       Center : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
       Radius : OpenCV.Float32_Value := 0.0;
@@ -549,6 +674,30 @@ package OpenCV.Geometry is
 
    function Minimum_Enclosing_Circle
      (Points : Contour) return Enclosing_Circle;
+
+   --  Minimum_Enclosing_Circle of a Float32 point set, with the same empty,
+   --  one-point, and result rules, and the same loss of precision far from
+   --  the origin. OpenCV works in binary32 with absolute tolerances: it adds
+   --  1.0E-4 to radii and treats three points as collinear when its binary32
+   --  cross product of their edges is at most 1.0E-4 in magnitude. Integer
+   --  triangles never fall below that bound, but small Float32 sets can. In
+   --  the tested OpenCV 4.6, 4.10, and 5.0 equilateral-triangle fixture with
+   --  sides of 0.01, one vertex lies about 0.0036 outside the circle. The
+   --  native circle is returned as computed. OpenCV's circle through three
+   --  points also forms binary32 products of three coordinates; when they
+   --  overflow, OpenCV 4.x keeps a previous circle that misses a point. So
+   --  for three or more points every coordinate must have magnitude at most
+   --  2.0**41, keeping those products finite; other such sets raise
+   --  OpenCV_Error. Zero, one, and two points cannot reach the three-point
+   --  construction and have no such magnitude limit. Coordinates and native
+   --  center/radius must still be finite for every cardinality, or raise
+   --  OpenCV_Error. OpenCV 5.x shuffles more than ten points, with a
+   --  generator seeded from the points, before its incremental search, and
+   --  keeps the previous circle for such a collinear triple where 4.x uses
+   --  the triple's farthest pair; results can therefore differ between
+   --  them, in rounding or, near degeneracy, more. Points is unchanged.
+   function Minimum_Enclosing_Circle
+     (Points : Float32_Point_Array) return Enclosing_Circle;
 
    --  Smallest-area triangle enclosing Points. Area is OpenCV's native
    --  double result. Vertices are the three native CV_32F triangle
@@ -560,7 +709,14 @@ package OpenCV.Geometry is
    --  integer convex-hull arithmetic raise OpenCV.OpenCV_Error. If a
    --  native area or vertex component is non-finite, or if a successful
    --  native area is negative, Minimum_Enclosing_Triangle raises
-   --  OpenCV.OpenCV_Error.
+   --  OpenCV.OpenCV_Error. OpenCV's search loops in 4.6, 4.10, and 5.0
+   --  have no iteration bound and can fail to return for some nearly
+   --  degenerate hulls, such as the long thin quadrilateral (0, 0), (1, 0),
+   --  (100001, 1), (100000, 1), or nearly collinear vertices; the binding
+   --  cannot detect those inputs in advance. There is no Float32 overload:
+   --  binary32 point sets add more such inputs, including any hull smaller
+   --  than OpenCV's absolute tolerance, and signed zeros that make OpenCV
+   --  divide by zero.
    type Triangle_Vertex_Index is range 1 .. 3;
 
    type Triangle_Vertices is

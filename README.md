@@ -31,17 +31,25 @@ only a subset of the native modes; `docs/coverage.md` maps each native
 operation to its Ada binding and records the unbound modes, the operations
 missing from OpenCV 4.6 and 4.10, and the exclusions.
 
-Point sets come in two forms. `Contour` holds integer points, for exact
-integer geometry such as pixel outlines. `Float32_Point_Array` holds binary32
+Point sets come in two forms. `Contour` holds integer points, for
+integer-coordinate geometry such as pixel outlines. `Float32_Point_Array`
+holds binary32
 points, for native subpixel geometry: `Contour_Area`, `Arc_Length`,
 `Compute_Moments`, `Match_Shapes`, `Is_Convex`, `Locate_Point`,
-`Signed_Distance_To_Contour`, and `Bounding_Rect` have overloads that call
-OpenCV's `CV_32F` path without rounding coordinates to integers. Float32
-coordinates must be finite. OpenCV evaluates Float32 point sets partly in
-binary32, so near-degenerate or extreme inputs can give results that differ
-from exact integer geometry; each overload documents the native arithmetic,
-and `docs/coverage.md` lists which operations have a Float32 mode and why the
-others do not.
+`Signed_Distance_To_Contour`, `Bounding_Rect`, `Convex_Hull`,
+`Convex_Hull_Indices`, `Approximate_Curve`, `Minimum_Area_Rectangle`,
+`Minimum_Enclosing_Circle`, the three `Fit_Ellipse` functions, and
+`Fit_Line_2D` have overloads that call OpenCV's `CV_32F` path without
+rounding coordinates to integers; Float32 results such as hulls and
+approximations are Float32 point sets. Float32 coordinates must be finite.
+OpenCV evaluates Float32 point sets partly in binary32, so near-degenerate or
+extreme inputs can give results that differ from integer-coordinate geometry.
+Some overloads limit coordinate spans or sums where binary32 overflow would
+otherwise make OpenCV fail or answer wrongly. Each overload documents the
+native arithmetic, and `docs/coverage.md` lists which operations have a
+Float32 mode and why the others do not. `Convexity_Defects` is integer-only
+because OpenCV requires `CV_32S`, and `Minimum_Enclosing_Triangle` has no
+Float32 overload because OpenCV's search can fail to return.
 
 ```ada
 Outline : constant OpenCV.Geometry.Float32_Point_Array :=
@@ -102,7 +110,10 @@ guarantees a cyclic start or winding. Empty input is rejected by OpenCV.
 One-point, two-point, collinear, and repeated-point inputs may return repeated
 vertices and zero area. Integer contours whose native convex-hull arithmetic
 would overflow are rejected. Non-finite or negative native area, or a
-non-finite vertex component, raises `OpenCV_Error`.
+non-finite vertex component, raises `OpenCV_Error`. OpenCV's search loops have
+no iteration bound: in OpenCV 4.6, 4.10, and 5.0 they fail to return for some
+nearly degenerate hulls, such as long thin slivers, which the binding cannot
+detect in advance.
 
 ```ada
 Triangle : constant OpenCV.Geometry.Enclosing_Triangle :=

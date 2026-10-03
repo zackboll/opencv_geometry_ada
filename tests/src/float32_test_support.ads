@@ -14,6 +14,12 @@ package Float32_Test_Support is
    function Infinity_32 return OpenCV.Float32_Value;
    function Negative_Infinity_32 return OpenCV.Float32_Value;
 
+   --  -0.0, which a static Ada expression cannot produce.
+   function Negative_Zero_32 return OpenCV.Float32_Value;
+
+   --  True when Value is -0.0.
+   function Is_Negative_Zero (Value : OpenCV.Float32_Value) return Boolean;
+
    --  A quiet NaN for raw C ABI buffers.
    function NaN_C return Interfaces.C.C_float;
 
@@ -21,6 +27,20 @@ package Float32_Test_Support is
    --  integer-valued Source this is the same point set as an integer
    --  contour, preserving bounds and order.
    function Rounded (Source : Points) return OpenCV.Geometry.Contour;
+
+   --  Source converted to binary32 points with the same bounds and order.
+   function To_Float32 (Source : OpenCV.Geometry.Contour) return Points;
+
+   --  True when Source holds a point equal to Item.
+   function Contains_Point
+     (Source : Points; Item : OpenCV.Float32_Point) return Boolean;
+
+   --  True when Left and Right have the same length and every point of
+   --  each occurs in the other.
+   function Same_Vertex_Set (Left, Right : Points) return Boolean;
+
+   --  True when Right is a cyclic rotation of Left.
+   function Same_Cyclic_Order (Left, Right : Points) return Boolean;
 
    --  Source packed in iteration order into a zero-based raw C ABI buffer
    --  with at least one element; pass Source'Length as the count.

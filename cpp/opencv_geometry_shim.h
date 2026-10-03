@@ -222,6 +222,26 @@ opencv_geometry_convex_hull_indices(
     int32_t out_capacity,
     int32_t *out_count);
 
+/* Hull points are bitwise copies of input points. Both hull functions
+   reject NaN coordinates, which break OpenCV's sort. */
+opencv_geometry_status
+opencv_geometry_convex_hull_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t clockwise,
+    opencv_geometry_point_f32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count);
+
+opencv_geometry_status
+opencv_geometry_convex_hull_indices_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t clockwise,
+    int32_t *out_indices,
+    int32_t out_capacity,
+    int32_t *out_count);
+
 opencv_geometry_status
 opencv_geometry_convexity_defects(
     const opencv_geometry_point_i32 *points,
@@ -239,6 +259,18 @@ opencv_geometry_approximate_curve(
     double epsilon,
     int32_t closed,
     opencv_geometry_point_i32 *out_points,
+    int32_t out_capacity,
+    int32_t *out_count);
+
+/* Rejects NaN coordinates and X or Y spans above FLT_MAX, whose overflowing
+   binary32 differences can make OpenCV read outside the curve. */
+opencv_geometry_status
+opencv_geometry_approximate_curve_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    double epsilon,
+    int32_t closed,
+    opencv_geometry_point_f32 *out_points,
     int32_t out_capacity,
     int32_t *out_count);
 
@@ -326,6 +358,12 @@ opencv_geometry_min_enclosing_circle(
     opencv_geometry_enclosing_circle_f32 *out_circle);
 
 opencv_geometry_status
+opencv_geometry_min_enclosing_circle_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_enclosing_circle_f32 *out_circle);
+
+opencv_geometry_status
 opencv_geometry_min_enclosing_triangle(
     const opencv_geometry_point_i32 *points,
     int32_t point_count,
@@ -335,6 +373,15 @@ opencv_geometry_min_enclosing_triangle(
 opencv_geometry_status
 opencv_geometry_min_area_rect(
     const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+/* Rejects NaN coordinates and more than INT32_MAX / 3 points: OpenCV sizes
+   its rotating-calipers buffer as three floats per hull vertex in signed
+   int, and every binary32 point can be a hull vertex. */
+opencv_geometry_status
+opencv_geometry_min_area_rect_f32(
+    const opencv_geometry_point_f32 *points,
     int32_t point_count,
     opencv_geometry_rotated_rect_f32 *out_rect);
 
@@ -356,6 +403,25 @@ opencv_geometry_fit_ellipse_direct(
     int32_t point_count,
     opencv_geometry_rotated_rect_f32 *out_rect);
 
+/* Binary32 forms of the three ellipse fits, with the same count limits. */
+opencv_geometry_status
+opencv_geometry_fit_ellipse_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_ams_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
+opencv_geometry_status
+opencv_geometry_fit_ellipse_direct_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rotated_rect_f32 *out_rect);
+
 /* Explicit fitLine distance selectors; the shim maps them to OpenCV's
    DistanceTypes. */
 #define OPENCV_GEOMETRY_LINE_FIT_L2     ((int32_t)0)
@@ -368,6 +434,16 @@ opencv_geometry_fit_ellipse_direct(
 opencv_geometry_status
 opencv_geometry_fit_line_2d(
     const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t distance,
+    double parameter,
+    double radius_accuracy,
+    double angle_accuracy,
+    opencv_geometry_line_2d_f32 *out_line);
+
+opencv_geometry_status
+opencv_geometry_fit_line_2d_f32(
+    const opencv_geometry_point_f32 *points,
     int32_t point_count,
     int32_t distance,
     double parameter,

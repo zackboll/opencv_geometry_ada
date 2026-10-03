@@ -2140,9 +2140,20 @@ package body OpenCV.Geometry is
    end Validate_Finite_Points;
 
    --  Packs Points in iteration order into a zero-based C ABI buffer, which
-   --  is empty for empty Points.
+   --  is empty for empty Points. Positive_Zeros passes each -0.0
+   --  coordinate as +0.0, for native convexHull, which compares its extreme
+   --  points bitwise.
    function Pack_Float32_Points
-     (Points : Float32_Point_Array) return Internal.C_API.Point_F32_Array is
+     (Points : Float32_Point_Array; Positive_Zeros : Boolean := False)
+      return Internal.C_API.Point_F32_Array
+   is
+      use type OpenCV.Float32_Value;
+
+      function Packed
+        (Value : OpenCV.Float32_Value) return Interfaces.C.C_float
+      is (if Positive_Zeros and then Value = 0.0
+          then 0.0
+          else Interfaces.C.C_float (Value));
    begin
       if Points'Length > Natural (Interfaces.Integer_32'Last) then
          Ada.Exceptions.Raise_Exception
@@ -2153,22 +2164,105 @@ package body OpenCV.Geometry is
          Result : Internal.C_API.Point_F32_Array (0 .. Points'Length - 1);
       begin
          for Offset in Result'Range loop
-            Result (Offset) := To_C_Point_F32 (Points (Points'First + Offset));
+            Result (Offset) :=
+              (X => Packed (Points (Points'First + Offset).X),
+               Y => Packed (Points (Points'First + Offset).Y));
          end loop;
          return Result;
       end;
    end Pack_Float32_Points;
 
-   --  The C ABI view of a packed point buffer: its first point, or null
-   --  when it is empty, and its count.
+   --  The C ABI view of a point buffer: its first point, or null when it is
+   --  empty, and its count.
    function First_Point
      (Packed : aliased Internal.C_API.Point_F32_Array)
       return access constant Internal.C_API.Point_F32
    is (if Packed'Length = 0 then null else Packed (Packed'First)'Access);
 
+   function First_Output
+     (Buffer : aliased in out Internal.C_API.Point_F32_Array)
+      return access Internal.C_API.Point_F32
+   is (if Buffer'Length = 0 then null else Buffer (Buffer'First)'Access);
+
    function Point_Count
      (Packed : Internal.C_API.Point_F32_Array) return Interfaces.Integer_32
    is (Interfaces.Integer_32 (Packed'Length));
+
+   --  A zero-filled, zero-based C ABI output buffer of Capacity points.
+   --  Declared from this result, a buffer has the unconstrained nominal
+   --  subtype that First_Output's aliased parameter requires.
+   function Output_Buffer
+     (Capacity : Natural) return Internal.C_API.Point_F32_Array
+   is (Internal.C_API.Point_F32_Array'
+         (0 .. Capacity - 1 => (X => 0.0, Y => 0.0)));
+
+   --  A native result count, checked against the capacity the caller gave.
+   function Checked_Count
+     (Count : Interfaces.Integer_32; Capacity : Natural; Operation : String)
+      return Natural
+   is
+      use type Interfaces.Integer_32;
+   begin
+      if Count < 0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " failed: negative result count");
+      end if;
+      if Natural (Count) > Capacity then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " failed: result count exceeds capacity");
+      end if;
+      return Natural (Count);
+   end Checked_Count;
+
+   --  The first Count native points of Output as a zero-based Float32 point
+   --  set, or the null range 1 .. 0. Callers ensure Count <= Output'Length.
+   function Unpack_Float32_Points
+     (Output    : Internal.C_API.Point_F32_Array;
+      Count     : Natural;
+      Operation : String) return Float32_Point_Array
+   is
+      --  To_Public_Float32 inspects each raw native coordinate.
+      pragma Suppress (Validity_Check);
+   begin
+      if Count = 0 then
+         declare
+            Empty : Float32_Point_Array (1 .. 0);
+         begin
+            return Empty;
+         end;
+      end if;
+
+      declare
+         Result : Float32_Point_Array (0 .. Count - 1);
+      begin
+         for Offset in Result'Range loop
+            Result (Offset) :=
+              (X =>
+                 To_Public_Float32
+                   (Output (Output'First + Offset).X,
+                    Operation & " point X is not finite"),
+               Y =>
+                 To_Public_Float32
+                   (Output (Output'First + Offset).Y,
+                    Operation & " point Y is not finite"));
+         end loop;
+         return Result;
+      end;
+   end Unpack_Float32_Points;
+
+   --  Raises OpenCV_Error when Points has more than Limit points, the
+   --  largest count whose native signed 32-bit size arithmetic is defined.
+   procedure Validate_Native_Count
+     (Points : Float32_Point_Array; Limit : Natural; Operation : String) is
+   begin
+      if Points'Length > Limit then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " point count exceeds native allocation range");
+      end if;
+   end Validate_Native_Count;
 
    function To_Public_Boolean
      (Value : Interfaces.Integer_32; Operation : String) return Boolean is
@@ -2524,4 +2618,412 @@ package body OpenCV.Geometry is
       end if;
       return Distance;
    end Signed_Distance_To_Contour;
+
+   function Empty_Float32_Points return Float32_Point_Array is
+      Empty : Float32_Point_Array (1 .. 0);
+   begin
+      return Empty;
+   end Empty_Float32_Points;
+
+   --  Converts a native zero-based offset to its index in Points'Range.
+   function To_Public_Point_Index
+     (Points    : Float32_Point_Array;
+      Offset    : Interfaces.Integer_32;
+      Operation : String) return Natural is
+   begin
+      if Points'Length = 0
+        or else not Internal.Convexity.Is_Native_Offset
+                      (Points'First, Points'Last, Offset)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation
+            & " failed: native index"
+            & Interfaces.Integer_32'Image (Offset)
+            & " is outside the point set");
+      end if;
+      return
+        Internal.Convexity.To_Point_Index (Points'First, Points'Last, Offset);
+   end To_Public_Point_Index;
+
+   function Convex_Hull
+     (Points      : Float32_Point_Array;
+      Orientation : Hull_Orientation := Counterclockwise)
+      return Float32_Point_Array
+   is
+      Count  : aliased Interfaces.Integer_32 := 0;
+      Status : Internal.C_API.Status;
+   begin
+      --  Native convexHull computes total + 2 in signed int.
+      Validate_Native_Count
+        (Points, Natural (Interfaces.Integer_32'Last) - 2, "Convex_Hull");
+      Validate_Finite_Points (Points, "Convex_Hull");
+      --  OpenCV compares binary32 coordinate differences.
+      Validate_Binary32_Spans (Points, "Convex_Hull");
+      if Points'Length = 0 then
+         return Empty_Float32_Points;
+      end if;
+
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points, Positive_Zeros => True);
+         --  Hull vertices are distinct input points.
+         Output : aliased Internal.C_API.Point_F32_Array :=
+           Output_Buffer (Points'Length);
+      begin
+         Status :=
+           Internal.C_API.Convex_Hull_F32
+             (First_Point (Packed),
+              Point_Count (Packed),
+              To_C_Clockwise (Orientation),
+              First_Output (Output),
+              Point_Count (Output),
+              Count'Access);
+         Raise_On_Error (Status, "convex hull");
+         return
+           Unpack_Float32_Points
+             (Output,
+              Checked_Count (Count, Output'Length, "convex hull"),
+              "Convex_Hull");
+      end;
+   end Convex_Hull;
+
+   function Convex_Hull_Indices
+     (Points      : Float32_Point_Array;
+      Orientation : Hull_Orientation := Counterclockwise)
+      return Point_Index_Array
+   is
+      Count  : aliased Interfaces.Integer_32 := 0;
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Native_Count
+        (Points,
+         Natural (Interfaces.Integer_32'Last) - 2,
+         "Convex_Hull_Indices");
+      Validate_Finite_Points (Points, "Convex_Hull_Indices");
+      Validate_Binary32_Spans (Points, "Convex_Hull_Indices");
+      if Points'Length = 0 then
+         return Empty_Point_Indices;
+      end if;
+
+      declare
+         Packed     : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points, Positive_Zeros => True);
+         --  Hull vertices are distinct input points.
+         Output     : Internal.C_API.Int32_Array (0 .. Points'Length - 1);
+         Hull_Count : Natural;
+      begin
+         Status :=
+           Internal.C_API.Convex_Hull_Indices_F32
+             (First_Point (Packed),
+              Point_Count (Packed),
+              To_C_Clockwise (Orientation),
+              Output (Output'First)'Access,
+              Interfaces.Integer_32 (Output'Length),
+              Count'Access);
+         Raise_On_Error (Status, "convex hull indices");
+         Hull_Count :=
+           Checked_Count (Count, Output'Length, "convex hull indices");
+         if Hull_Count = 0 then
+            return Empty_Point_Indices;
+         end if;
+
+         declare
+            Result : Point_Index_Array (0 .. Hull_Count - 1);
+         begin
+            for Position in Result'Range loop
+               Result (Position) :=
+                 To_Public_Point_Index
+                   (Points,
+                    Output (Output'First + Position),
+                    "convex hull indices");
+            end loop;
+            return Result;
+         end;
+      end;
+   end Convex_Hull_Indices;
+
+   function Approximate_Curve
+     (Points  : Float32_Point_Array;
+      Epsilon : OpenCV.Float64_Value;
+      Closed  : Boolean) return Float32_Point_Array
+   is
+      use type OpenCV.Float64_Value;
+
+      Count  : aliased Interfaces.Integer_32 := 0;
+      Status : Internal.C_API.Status;
+   begin
+      if not Epsilon'Valid or else Epsilon < 0.0 or else Epsilon >= 1.0E30 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "approximate curve epsilon must be in the range "
+            & "0.0 <= epsilon < 1.0E30");
+      end if;
+      Validate_Finite_Points (Points, "Approximate_Curve");
+      if Points'Length = 0 then
+         return Empty_Float32_Points;
+      end if;
+      --  An overflowing binary32 difference would make OpenCV drop points or,
+      --  for Epsilon 0.0, read outside the curve without terminating.
+      Validate_Binary32_Spans (Points, "Approximate_Curve");
+
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+         --  The approximation is a subsequence of the input.
+         Output : aliased Internal.C_API.Point_F32_Array :=
+           Output_Buffer (Points'Length);
+      begin
+         Status :=
+           Internal.C_API.Approximate_Curve_F32
+             (First_Point (Packed),
+              Point_Count (Packed),
+              Interfaces.C.double (Epsilon),
+              To_C_Boolean (Closed),
+              First_Output (Output),
+              Point_Count (Output),
+              Count'Access);
+         Raise_On_Error (Status, "approximate curve");
+         return
+           Unpack_Float32_Points
+             (Output,
+              Checked_Count (Count, Output'Length, "approximate curve"),
+              "Approximate_Curve");
+      end;
+   end Approximate_Curve;
+
+   function Minimum_Area_Rectangle
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect
+   is
+      --  To_Public_Rotated_Rect inspects the raw native fields.
+      pragma Suppress (Validity_Check);
+      Result : aliased Internal.C_API.C_Rotated_Rect :=
+        (Center_X      => 0.0,
+         Center_Y      => 0.0,
+         Width         => 0.0,
+         Height        => 0.0,
+         Angle_Degrees => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, "Minimum_Area_Rectangle");
+      --  OpenCV allocates three binary32 values per hull vertex in signed
+      --  32-bit arithmetic, and every point can be a hull vertex.
+      Validate_Native_Count
+        (Points,
+         Natural (Interfaces.Integer_32'Last) / 3,
+         "Minimum_Area_Rectangle");
+      --  The hull compares binary32 coordinate differences.
+      Validate_Binary32_Spans (Points, "Minimum_Area_Rectangle");
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points, Positive_Zeros => True);
+      begin
+         Status :=
+           Internal.C_API.Min_Area_Rect_F32
+             (First_Point (Packed), Point_Count (Packed), Result'Access);
+      end;
+      Raise_On_Error (Status, "minimum area rectangle");
+      return To_Public_Rotated_Rect (Result);
+   end Minimum_Area_Rectangle;
+
+   function Minimum_Enclosing_Circle
+     (Points : Float32_Point_Array) return Enclosing_Circle
+   is
+      --  To_Public_Enclosing_Circle inspects the raw native fields.
+      pragma Suppress (Validity_Check);
+      Result : aliased Internal.C_API.C_Enclosing_Circle :=
+        (Center_X => 0.0, Center_Y => 0.0, Radius => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      Validate_Finite_Points (Points, "Minimum_Enclosing_Circle");
+      --  OpenCV's circle through three points forms binary32 products of
+      --  three coordinates; up to 2.0**41 they stay finite, so an overflow
+      --  of the center or radius is infinite and raises below rather than
+      --  making OpenCV 4.x silently keep a circle that misses a point.
+      if Points'Length >= 3
+        and then not Float32_Points.Magnitudes_Are_At_Most
+                       (Points, Float32_Points.Circle_Coordinate_Limit)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Minimum_Enclosing_Circle requires coordinates of magnitude at "
+            & "most 2.0**41 for three or more points");
+      end if;
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Min_Enclosing_Circle_F32
+             (First_Point (Packed), Point_Count (Packed), Result'Access);
+      end;
+      Raise_On_Error (Status, "minimum enclosing circle");
+      return To_Public_Enclosing_Circle (Result);
+   end Minimum_Enclosing_Circle;
+
+   type Float32_Ellipse_Fit is (Classic_Fit, AMS_Fit, Direct_Fit);
+
+   --  Shared body of the Float32 ellipse fits: the integer overloads' count
+   --  rules, plus the bound that keeps OpenCV's binary32 coordinate sums
+   --  finite.
+   function Fit_Float32_Ellipse
+     (Points    : Float32_Point_Array;
+      Fit       : Float32_Ellipse_Fit;
+      Operation : String) return OpenCV.Rotated_Rect
+   is
+      --  To_Public_Rotated_Rect inspects the raw native fields.
+      pragma Suppress (Validity_Check);
+      Result : aliased Internal.C_API.C_Rotated_Rect :=
+        (Center_X      => 0.0,
+         Center_Y      => 0.0,
+         Width         => 0.0,
+         Height        => 0.0,
+         Angle_Degrees => 0.0);
+      Status : Internal.C_API.Status;
+   begin
+      if Points'Length < 5 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " requires at least five points");
+      end if;
+      --  OpenCV's classic fit, which every fit can reach, allocates
+      --  n*12+n doubles with signed 32-bit arithmetic.
+      Validate_Native_Count
+        (Points, Natural (Interfaces.Integer_32'Last) / 13, Operation);
+      Validate_Finite_Points (Points, Operation);
+      if not Float32_Points.Coordinate_Sums_Are_Bounded (Points) then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation
+            & " requires the absolute X coordinates and the absolute Y "
+            & "coordinates each to sum to at most 2.0**103");
+      end if;
+
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         case Fit is
+            when Classic_Fit =>
+               Status :=
+                 Internal.C_API.Fit_Ellipse_F32
+                   (First_Point (Packed), Point_Count (Packed), Result'Access);
+
+            when AMS_Fit     =>
+               Status :=
+                 Internal.C_API.Fit_Ellipse_AMS_F32
+                   (First_Point (Packed), Point_Count (Packed), Result'Access);
+
+            when Direct_Fit  =>
+               Status :=
+                 Internal.C_API.Fit_Ellipse_Direct_F32
+                   (First_Point (Packed), Point_Count (Packed), Result'Access);
+         end case;
+      end;
+      Raise_On_Error (Status, Operation);
+      return To_Public_Rotated_Rect (Result);
+   end Fit_Float32_Ellipse;
+
+   function Fit_Ellipse
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect is
+   begin
+      return Fit_Float32_Ellipse (Points, Classic_Fit, "Fit_Ellipse");
+   end Fit_Ellipse;
+
+   function Fit_Ellipse_AMS
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect is
+   begin
+      return Fit_Float32_Ellipse (Points, AMS_Fit, "Fit_Ellipse_AMS");
+   end Fit_Ellipse_AMS;
+
+   function Fit_Ellipse_Direct
+     (Points : Float32_Point_Array) return OpenCV.Rotated_Rect is
+   begin
+      return Fit_Float32_Ellipse (Points, Direct_Fit, "Fit_Ellipse_Direct");
+   end Fit_Ellipse_Direct;
+
+   function Fit_Line_2D
+     (Points          : Float32_Point_Array;
+      Distance        : Line_Fit_Distance := L2;
+      Parameter       : OpenCV.Float64_Value := 0.0;
+      Radius_Accuracy : OpenCV.Float64_Value := 0.01;
+      Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D
+   is
+      --  The scalars and the native line may be Inf/NaN; they are
+      --  inspected before use.
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float32_Value;
+      Result : aliased Internal.C_API.C_Line_2D :=
+        (Direction_X => 0.0,
+         Direction_Y => 0.0,
+         Point_X     => 0.0,
+         Point_Y     => 0.0);
+      Status : Internal.C_API.Status;
+      Line   : Fitted_Line_2D;
+   begin
+      if Points'Length = 0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Line_2D requires at least one point");
+      end if;
+      --  Native fitLine computes count*2 in signed int for the robust
+      --  distances.
+      if Distance /= L2 then
+         Validate_Native_Count
+           (Points, Natural (Interfaces.Integer_32'Last) / 2, "Fit_Line_2D");
+      end if;
+      Validate_Finite_Points (Points, "Fit_Line_2D");
+      --  OpenCV forms the binary32 products X*X, Y*Y, and X*Y of raw
+      --  coordinates; up to 2.0**63 they stay finite. An overflow of one
+      --  axis alone would give a finite but wrong direction.
+      if not Float32_Points.Magnitudes_Are_At_Most
+               (Points, Float32_Points.Line_Coordinate_Limit)
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Line_2D requires coordinates of magnitude at most 2.0**63");
+      end if;
+      Validate_Line_Fit_Scalar (Parameter, "Parameter");
+      Validate_Line_Fit_Scalar (Radius_Accuracy, "Radius_Accuracy");
+      Validate_Line_Fit_Scalar (Angle_Accuracy, "Angle_Accuracy");
+
+      declare
+         Packed : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Points);
+      begin
+         Status :=
+           Internal.C_API.Fit_Line_2D_F32
+             (First_Point (Packed),
+              Point_Count (Packed),
+              To_C_Line_Fit_Distance (Distance),
+              Interfaces.C.double (Parameter),
+              Interfaces.C.double (Radius_Accuracy),
+              Interfaces.C.double (Angle_Accuracy),
+              Result'Access);
+      end;
+      Raise_On_Error (Status, "fit line 2D");
+      Line :=
+        (Direction =>
+           (X =>
+              To_Public_Float32
+                (Result.Direction_X, "fitted line direction X is not finite"),
+            Y =>
+              To_Public_Float32
+                (Result.Direction_Y, "fitted line direction Y is not finite")),
+         Point     =>
+           (X =>
+              To_Public_Float32
+                (Result.Point_X, "fitted line point X is not finite"),
+            Y =>
+              To_Public_Float32
+                (Result.Point_Y, "fitted line point Y is not finite")));
+      --  OpenCV's robust fit starts from an all-zero line and keeps it when
+      --  no candidate line has a finite error.
+      if Line.Direction.X = 0.0 and then Line.Direction.Y = 0.0 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "Fit_Line_2D failed: OpenCV found no line with a finite error");
+      end if;
+      return Line;
+   end Fit_Line_2D;
 end OpenCV.Geometry;

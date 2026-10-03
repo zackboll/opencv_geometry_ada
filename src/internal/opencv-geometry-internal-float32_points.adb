@@ -57,4 +57,25 @@ is
       return Result;
    end Bounds_Of;
 
+   function Coordinate_Sums_Are_Bounded
+     (Points : Float32_Point_Array) return Boolean
+   is
+      Sum_X : Float64 := 0.0;
+      Sum_Y : Float64 := 0.0;
+   begin
+      for Point of Points loop
+         Sum_X := Sum_X + abs Float64 (Point.X);
+         Sum_Y := Sum_Y + abs Float64 (Point.Y);
+         if Sum_X > Coordinate_Sum_Limit or else Sum_Y > Coordinate_Sum_Limit
+         then
+            return False;
+         end if;
+         pragma
+           Loop_Invariant
+             (Sum_X in 0.0 .. Coordinate_Sum_Limit
+                and then Sum_Y in 0.0 .. Coordinate_Sum_Limit);
+      end loop;
+      return True;
+   end Coordinate_Sums_Are_Bounded;
+
 end OpenCV.Geometry.Internal.Float32_Points;
