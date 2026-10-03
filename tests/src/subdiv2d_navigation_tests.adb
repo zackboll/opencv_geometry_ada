@@ -561,8 +561,7 @@ package body Subdiv2D_Navigation_Tests is
    procedure Translated_Bounds_And_Shifted_Arrays (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Object  : Subdiv.Subdivision :=
-        Subdiv.Create
-          (OpenCV.Rect'(X => -50, Y => -20, Width => 10, Height => 10));
+        Subdiv.Create ((X => -50, Y => -20, Width => 10, Height => 10));
       Shifted : constant Points (10 .. 12) :=
         ((X => -48.0, Y => -18.0),
          (X => -42.0, Y => -17.0),

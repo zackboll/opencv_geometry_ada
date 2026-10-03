@@ -684,13 +684,15 @@ cannot overflow/underflow, or prove native search liveness.
 
 Root/Core public specs were searched: no canonical axis-aligned binary32
 rectangle exists. `Subdiv2D.Float32_Rectangle` is a small four-field value
-record; not a rotated rectangle or a second owner. Create/Reset overload it.
+record; not a rotated rectangle or a second owner. `Create_Float32` and
+`Reset_Float32` accept it, with distinct names preserving the released integer
+`Create` / `Reset` API and unqualified rectangle aggregate syntax.
 `Bounds_Float32` preserves the exact successful descriptor; after integer
 initialization it reports each field converted as native does. `Bounds`
 retains original integer values, but raises after Float32 initialization
 rather than silently rounding/enclosing. Both retain last-successful bounds
-even if the handle becomes unusable. Unqualified record aggregates must now
-be type-qualified to resolve the overload; typed integer clients are unchanged.
+even if the handle becomes unusable. Integer clients, including calls with
+unqualified record aggregates, need no source changes or type qualifications.
 
 Two fixed POD C ABI symbols exist on every build, using four C floats.
 The actual Rect2f constructor and init calls are entirely inside the
@@ -703,9 +705,11 @@ newer". No fallback and no optional unresolved native call on older builds.
 
 Preflight/unsupported rejection makes no native initialization call and
 preserves points, readiness, last-successful descriptor and mode. On supported
-Reset the shim marks the handle unusable before native clears its vectors.
+`Reset_Float32` the shim marks the handle unusable before native clears its
+vectors.
 Native failure keeps it unusable; Ada raises before publishing new bounds.
-Successful Reset alone publishes the mode/descriptor and restores readiness.
+Successful `Reset_Float32` alone publishes the mode/descriptor and restores
+readiness.
 The existing integer path obeys the same state machine.
 
 The existing global-allocation fault harness covers Float32 construction and
@@ -767,3 +771,35 @@ is explicitly the entire focused stateful family, not a full-suite 4.13 pass.
 Release version remains 0.2.0-dev; the 0.1.0 tag object and Alire-index state
 are unchanged. The sibling Core worktree's unrelated user changes were not
 modified, staged, or committed.
+
+### PR #14 source-compatibility correction
+
+Reviewed starting head: `6d5fa462cd91cfd2b96a2f6646a595ff6300785d`.
+The initial Float32 Create/Reset overloads made released integer source such
+as `Create ((X => 0, Y => 0, Width => 100, Height => 100))` ambiguous.
+Only the new public operations are renamed to `Create_Float32` and
+`Reset_Float32`; `Float32_Rectangle` and `Bounds_Float32` stay unchanged.
+Six qualification-only edits in pre-existing tests and one in the README
+example are removed. The existing integer-bounds test additionally compiles
+and runs successful unqualified Create **and** Reset aggregates, preserving
+the registered **521** test count.
+
+All Task 014 Float32 callers use the distinct names. The production body
+change is solely the declaration/end names and Create_Float32's call to
+Reset_Float32. C ABI, shim, native calls, factors, capability, threshold,
+validation arithmetic, error precedence, bounds publication and readiness
+rules are unchanged from the reviewed head.
+
+Correction validation:
+
+- Local OpenCV 4.10/imgproc: build passed, normal and validation **521/521**.
+- Preserved 4.12/imgproc: normal and validation **521/521**.
+- Preserved 4.13/imgproc: complete Subdiv2D family **60/60** in both profiles;
+  the previously documented unrelated full-suite minAreaRect caveat remains.
+- Preserved 5.0/geometry: normal and validation **521/521**.
+- Native ASan/UBSan fault injection: PASS, zero failed checks on 4.10 and 5.0;
+  supported Float32 constructor/rebuild still exercises seven/six failures.
+- Established GNATprove scope: **277/277** checks proved, with invocation
+  header, through the tests Alire environment; no expanded proof claim.
+- GNATformat checks, 79-column Ada checks and `git diff --check` passed.
+  The old unqualified aggregate source compiles in every rerun environment.

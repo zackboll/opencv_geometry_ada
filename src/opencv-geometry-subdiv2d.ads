@@ -27,7 +27,9 @@ private with OpenCV.Geometry.Internal.C_API;
 --  virtual vertices, so inserted points need not receive consecutive ids.
 --
 --  Integer bounds are available on every supported release. Float32 bounds
---  require OpenCV 4.13+ or 5.x; there is no integer fallback.
+--  use Create_Float32 / Reset_Float32 and require OpenCV 4.13+ or 5.x; there
+--  is no integer fallback. References below to Reset's invalidation and
+--  recovery behavior also apply to Reset_Float32.
 --
 --  Scale: OpenCV's geometric predicates use absolute tolerances near
 --  FLT_EPSILON. Numerical behavior depends on coordinate scale and geometric
@@ -67,7 +69,9 @@ package OpenCV.Geometry.Subdiv2D is
    --  as if by Reset.
    function Create (Bounds : OpenCV.Rect) return Subdivision;
 
-   function Create (Bounds : Float32_Rectangle) return Subdivision;
+   --  A new subdivision as if by Reset_Float32. The distinct name preserves
+   --  integer Create calls with unqualified rectangle aggregates.
+   function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision;
 
    --  Discards every point and initializes Object to an empty Delaunay
    --  triangulation of Bounds, creating its native object when needed.
@@ -89,7 +93,8 @@ package OpenCV.Geometry.Subdiv2D is
    --  and X/Y +/- Big must remain finite. These conditions also guarantee a
    --  distinguishable, nondegenerate initial super-triangle, but not good
    --  conditioning of subsequent native geometric predicates.
-   procedure Reset (Object : in out Subdivision; Bounds : Float32_Rectangle);
+   procedure Reset_Float32
+     (Object : in out Subdivision; Bounds : Float32_Rectangle);
 
    --  True when Object owns a native subdivision that accepts operations.
    --  False for an object that has never been Reset or Created, and after an
@@ -100,7 +105,7 @@ package OpenCV.Geometry.Subdiv2D is
    --  the object is not ready.
    function Is_Ready (Object : Subdivision) return Boolean;
 
-   --  Original integer bounds of the last successful Reset or Create. Raises
+   --  Original integer bounds of the last successful initialization. Raises
    --  OpenCV.OpenCV_Error when there has been none or Float32 bounds were
    --  supplied. Never silently rounds or encloses a Float32 rectangle.
    function Bounds (Object : Subdivision) return OpenCV.Rect;

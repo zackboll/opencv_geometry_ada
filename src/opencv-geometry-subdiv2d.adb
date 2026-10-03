@@ -217,15 +217,17 @@ package body OpenCV.Geometry.Subdiv2D is
       Object.Bounds_Mode := Integer_Bounds;
    end Reset;
 
-   function Create (Bounds : Float32_Rectangle) return Subdivision is
+   function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision is
       pragma Suppress (Validity_Check);
    begin
       return Result : Subdivision do
-         Reset (Result, Bounds);
+         Reset_Float32 (Result, Bounds);
       end return;
-   end Create;
+   end Create_Float32;
 
-   procedure Reset (Object : in out Subdivision; Bounds : Float32_Rectangle) is
+   procedure Reset_Float32
+     (Object : in out Subdivision; Bounds : Float32_Rectangle)
+   is
       pragma Suppress (Validity_Check);
       Native_Bounds : aliased C_API.Rect_F32;
       Status        : C_API.Status;
@@ -252,7 +254,7 @@ package body OpenCV.Geometry.Subdiv2D is
       end if;
       Object.Native_Bounds := Bounds;
       Object.Bounds_Mode := Float32_Bounds;
-   end Reset;
+   end Reset_Float32;
 
    function Is_Ready (Object : Subdivision) return Boolean is
    begin

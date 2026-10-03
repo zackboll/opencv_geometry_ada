@@ -389,8 +389,7 @@ package body Subdiv2D_Foundation_Tests is
       pragma Unreferenced (Test);
       Left  : Subdiv.Subdivision := Subdiv.Create (Square);
       Right : Subdiv.Subdivision :=
-        Subdiv.Create
-          (OpenCV.Rect'(X => 0, Y => 0, Width => 200, Height => 50));
+        Subdiv.Create ((X => 0, Y => 0, Width => 200, Height => 50));
       Point : constant OpenCV.Float32_Point := (X => 30.0, Y => 30.0);
    begin
       AUnit.Assertions.Assert
@@ -410,8 +409,7 @@ package body Subdiv2D_Foundation_Tests is
       pragma Unreferenced (Test);
 
       Object : Subdiv.Subdivision :=
-        Subdiv.Create
-          (OpenCV.Rect'(X => -50, Y => -20, Width => 10, Height => 10));
+        Subdiv.Create ((X => -50, Y => -20, Width => 10, Height => 10));
 
       procedure Beyond_Right_Edge is
          Ignored : constant Subdiv.Vertex_Id :=
@@ -489,8 +487,7 @@ package body Subdiv2D_Foundation_Tests is
 
       procedure Create_Zero_Width is
          Other : constant Subdiv.Subdivision :=
-           Subdiv.Create
-             (OpenCV.Rect'(X => 0, Y => 0, Width => 0, Height => 10));
+           Subdiv.Create ((X => 0, Y => 0, Width => 0, Height => 10));
       begin
          AUnit.Assertions.Assert
            (Subdiv.Is_Ready (Other), "unreachable: zero width accepted");
@@ -498,8 +495,7 @@ package body Subdiv2D_Foundation_Tests is
 
       procedure Reset_Zero_Height is
       begin
-         Subdiv.Reset
-           (Object, OpenCV.Rect'(X => 5, Y => 5, Width => 10, Height => 0));
+         Subdiv.Reset (Object, (X => 5, Y => 5, Width => 10, Height => 0));
       end Reset_Zero_Height;
 
       procedure Insert_NaN is

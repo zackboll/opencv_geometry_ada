@@ -76,14 +76,14 @@ package body Subdiv2D_Bounds_Tests is
 
    procedure Reject_Float (Descriptor : S.Float32_Rectangle) is
       pragma Suppress (Validity_Check);
-      Object : S.Subdivision := S.Create (Fractional);
+      Object : S.Subdivision := S.Create_Float32 (Fractional);
       Vertex : constant S.Vertex_Id := S.Insert (Object, Site);
       procedure Try_Reset is
       begin
-         S.Reset (Object, Descriptor);
+         S.Reset_Float32 (Object, Descriptor);
       end Try_Reset;
       procedure Try_Create is
-         Other : constant S.Subdivision := S.Create (Descriptor);
+         Other : constant S.Subdivision := S.Create_Float32 (Descriptor);
       begin
          Check (not S.Is_Ready (Other), "invalid Create cannot succeed");
       end Try_Create;
@@ -98,13 +98,13 @@ package body Subdiv2D_Bounds_Tests is
       Object : S.Subdivision := S.Create (Square);
       Vertex : constant S.Vertex_Id := S.Insert (Object, Site);
       procedure Try_Create is
-         Other : constant S.Subdivision := S.Create (Fractional);
+         Other : constant S.Subdivision := S.Create_Float32 (Fractional);
       begin
          Check (not S.Is_Ready (Other), "unreachable unsupported Create");
       end Try_Create;
       procedure Try_Reset is
       begin
-         S.Reset (Object, S.Float32_Rectangle'(others => 0.0));
+         S.Reset_Float32 (Object, S.Float32_Rectangle'(others => 0.0));
       end Try_Reset;
    begin
       if Supported then
@@ -131,10 +131,10 @@ package body Subdiv2D_Bounds_Tests is
         (X => From_Bits (16#7FC0_0000#), others => 0.0);
       procedure Try_Reset is
       begin
-         S.Reset (Object, Bad);
+         S.Reset_Float32 (Object, Bad);
       end Try_Reset;
       procedure Try_Create is
-         Other : constant S.Subdivision := S.Create (Bad);
+         Other : constant S.Subdivision := S.Create_Float32 (Bad);
       begin
          Check (not S.Is_Ready (Other), "unreachable unsupported NaN");
       end Try_Create;
@@ -157,6 +157,22 @@ package body Subdiv2D_Bounds_Tests is
         (S.Bounds_Float32 (Object)
          = (X => 2.0**24, Y => -7.0, Width => 4.0, Height => 10.0),
          "each field is converted just as OpenCV converts it");
+
+      --  Source compatibility with 0.1.0: these aggregates intentionally have
+      --  no type qualification. Float32 APIs must not make them ambiguous.
+      declare
+         Legacy : S.Subdivision :=
+           S.Create ((X => 0, Y => 0, Width => 100, Height => 100));
+      begin
+         Check (S.Is_Ready (Legacy), "unqualified integer Create is ready");
+         Check (S.Bounds (Legacy) = Square, "aggregate resolves to Rect");
+         S.Reset (Legacy, (X => -5, Y => -10, Width => 100, Height => 100));
+         Check (S.Is_Ready (Legacy), "unqualified integer Reset is ready");
+         Check
+           (S.Bounds (Legacy)
+            = (X => -5, Y => -10, Width => 100, Height => 100),
+            "Reset aggregate retains integer bounds");
+      end;
    end Integer_Queries;
 
    procedure Integer_Collapse (Test : in out Fixture) is
@@ -206,7 +222,7 @@ package body Subdiv2D_Bounds_Tests is
          return;
       end if;
       declare
-         Object : constant S.Subdivision := S.Create (Fractional);
+         Object : constant S.Subdivision := S.Create_Float32 (Fractional);
          procedure Integer_Query is
             Ignored : constant OpenCV.Rect := S.Bounds (Object);
             pragma Unreferenced (Ignored);
@@ -231,12 +247,12 @@ package body Subdiv2D_Bounds_Tests is
          return;
       end if;
       Check (S.Insert (Object, Site) > 3, "integer site inserted");
-      S.Reset (Object, Fractional);
+      S.Reset_Float32 (Object, Fractional);
       Check (S.Bounds_Float32 (Object) = Fractional, "integer to Float32");
       Check
         (S.Locate (Object, Site).Kind /= S.On_Vertex, "Reset removes site");
       Check (S.Insert (Object, Site) > 3, "fractional site inserted");
-      S.Reset (Object, Shifted);
+      S.Reset_Float32 (Object, Shifted);
       Check (S.Bounds_Float32 (Object) = Shifted, "fractional Reset");
       Check
         (S.Locate (Object, Site).Kind /= S.On_Vertex, "Reset discards site");
@@ -244,7 +260,7 @@ package body Subdiv2D_Bounds_Tests is
       Check (S.Bounds (Object) = Square, "Float32 to integer");
       Check
         (S.Locate (Object, Site).Kind /= S.On_Vertex, "integer Reset clears");
-      S.Reset (Object, Fractional);
+      S.Reset_Float32 (Object, Fractional);
       Check (S.Is_Ready (Object), "modes alternate on the same owner");
    end Mode_Switching;
 
@@ -255,7 +271,7 @@ package body Subdiv2D_Bounds_Tests is
          return;
       end if;
       declare
-         Object : S.Subdivision := S.Create (Fractional);
+         Object : S.Subdivision := S.Create_Float32 (Fractional);
          Vertex : constant S.Vertex_Id := S.Insert (Object, Site);
       begin
          S.Insert
@@ -295,7 +311,7 @@ package body Subdiv2D_Bounds_Tests is
          return;
       end if;
       declare
-         Object : S.Subdivision := S.Create (Fractional);
+         Object : S.Subdivision := S.Create_Float32 (Fractional);
          Point  : OpenCV.Float32_Point;
          procedure Try_Insert is
             Ignored : constant S.Vertex_Id := S.Insert (Object, Point);
@@ -338,7 +354,7 @@ package body Subdiv2D_Bounds_Tests is
          return;
       end if;
       declare
-         Object : constant S.Subdivision := S.Create (Fractional);
+         Object : constant S.Subdivision := S.Create_Float32 (Fractional);
       begin
          Check (S.Vertex_Point (Object, 1) = (73.25, 0.5), "A: X+Big,Y");
          Check (S.Vertex_Point (Object, 2) = (-0.25, 74.0), "B: X,Y+Big");
@@ -422,7 +438,7 @@ package body Subdiv2D_Bounds_Tests is
          declare
             Descriptor : constant S.Float32_Rectangle :=
               (X => 2.0**24, Y => 0.0, Width => 2.0, Height => 10.0);
-            Object     : S.Subdivision := S.Create (Descriptor);
+            Object     : S.Subdivision := S.Create_Float32 (Descriptor);
          begin
             Check
               (S.Insert (Object, (X => 2.0**24, Y => 5.0)) > 3,
@@ -486,7 +502,7 @@ package body Subdiv2D_Bounds_Tests is
       Vertex : S.Vertex_Id := S.Insert (Object, Site);
       procedure Bad_Float is
       begin
-         S.Reset (Object, S.Float32_Rectangle'(others => 0.0));
+         S.Reset_Float32 (Object, S.Float32_Rectangle'(others => 0.0));
       end Bad_Float;
       procedure Bad_Integer is
       begin
@@ -511,7 +527,7 @@ package body Subdiv2D_Bounds_Tests is
         (Object,
          (X => 0.0, Y => 0.0, Width => 100.0, Height => 100.0),
          Vertex);
-      S.Reset (Object, Fractional);
+      S.Reset_Float32 (Object, Fractional);
       Vertex := S.Insert (Object, Site);
       Expect_Error (Bad_Integer'Access);
       Assert_Stored (Object, Fractional, Vertex);
@@ -533,14 +549,14 @@ package body Subdiv2D_Bounds_Tests is
          return;
       end if;
       --  Test initialization/storage only, not pathological native predicates.
-      S.Reset
+      S.Reset_Float32
         (Object,
          S.Float32_Rectangle'
            (X => 0.0, Y => 0.0, Width => Tiny, Height => Tiny));
       Check (S.Is_Ready (Object), "subnormal positive bounds not prohibited");
       Check (S.Bounds_Float32 (Object).Width = Tiny, "subnormal retained");
       Check (S.Vertex_Point (Object, 1).X = 6.0 * Tiny, "tiny Big retained");
-      S.Reset
+      S.Reset_Float32
         (Object,
          S.Float32_Rectangle'
            (X => 0.0, Y => 0.0, Width => Huge, Height => Huge));

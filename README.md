@@ -471,7 +471,7 @@ triangulation of points inside an integer or binary32 bounding rectangle:
 ```ada
 declare
    Mesh : Subdivision :=
-     Create (OpenCV.Rect'(X => 0, Y => 0, Width => 100, Height => 100));
+     Create ((X => 0, Y => 0, Width => 100, Height => 100));
    Near : Nearest_Result;
 begin
    Insert (Mesh, Points);
@@ -485,8 +485,9 @@ end;
 `Subdivision` is the only Geometry type that owns a native object. It is
 limited, so assignment cannot duplicate ownership, and finalization releases
 the native object. The opaque C handle stays private. A declared but never
-initialized `Subdivision` is not ready; `Create` or `Reset` initializes it,
-and `Reset` also discards every point. If a modification fails in a way that
+initialized `Subdivision` is not ready; `Create` or `Reset` initializes it
+(or `Create_Float32` / `Reset_Float32` for Float32 bounds). Both reset forms
+also discard every point. If a modification fails in a way that
 may have left the native triangulation inconsistent, such as an allocation
 failure during insertion, the object stops being ready, and every operation
 except the bounds queries raises `OpenCV_Error` until `Reset`. Ordinary
@@ -520,18 +521,19 @@ independent.
 supports both bounds representations:
 
 ```ada
-function Create (Bounds : Float32_Rectangle) return Subdivision;
-procedure Reset
+function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision;
+procedure Reset_Float32
   (Object : in out Subdivision; Bounds : Float32_Rectangle);
 function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle;
 ```
 
 Query `Is_Natively_Supported (Float32_Subdivision_Bounds_Feature)` before
-using the optional overloads. They call native `Rect2f` on 4.13+/5.x, with
+using these optional operations. They call native `Rect2f` on 4.13+/5.x, with
 **no integer fallback or rounding**. On older versions they raise
 `OpenCV_Error`: "Subdiv2D Float32 bounds require OpenCV 4.13 or newer".
 Unsupported takes precedence over semantic validation, including NaN or
-zero dimensions. Unsupported Reset leaves the object and its bounds intact.
+zero dimensions. Unsupported `Reset_Float32` leaves the object and its bounds
+intact.
 
 All four fields must be finite, and dimensions positive. Shared Ada preflight
 requires the actual binary32 upper limits to advance, and every native-stored
@@ -544,10 +546,10 @@ the numerical-conditioning caveats below.
 
 Positive **integer** dimensions that collapse after native binary32
 conversion are now rejected too: at `X = 2**24`, width 1 collapses, while
-width 2 advances. Integer overloads continue calling native `Rect` on every
-supported release. Typed integer calls retain their behavior; with both
-overloads present, qualify inline aggregates as `OpenCV.Rect'(...)` or
-`Float32_Rectangle'(...)`.
+width 2 advances. Integer `Create` / `Reset` continue calling native `Rect`
+on every supported release. The Float32 operations have distinct names so
+released integer calls with unqualified rectangle aggregates still compile
+unchanged; no type qualification is required.
 
 `Bounds` returns the original integer rectangle after integer initialization.
 After Float32 initialization it raises a clear `OpenCV_Error`, never making a
@@ -556,9 +558,9 @@ Float32 descriptor, or each original integer field converted as OpenCV does.
 It is available even on older releases. Both accessors retain the last
 successful bounds after a failed native Reset. Preflight rejection makes no
 native initialization call and preserves readiness and points; once native
-Reset starts, a failure leaves the handle unusable. Only successful Reset
-publishes the new bounds/mode and restores readiness. Integer and Float32
-modes may alternate on the same object.
+reset starts, a failure leaves the handle unusable. Only successful `Reset`
+or `Reset_Float32` publishes the new bounds/mode and restores readiness.
+Integer and Float32 modes may alternate on the same object.
 
 The focused stateful suite can be run with `tests/bin/tests Subdiv2D` after
 building the tests in the chosen OpenCV environment.

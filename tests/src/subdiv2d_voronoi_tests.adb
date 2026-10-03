@@ -253,8 +253,7 @@ package body Subdiv2D_Voronoi_Tests is
       pragma Unreferenced (Test);
       Sources : constant Points := Scattered_Points (200);
       Object  : Subdiv.Subdivision :=
-        Subdiv.Create
-          (OpenCV.Rect'(X => 0, Y => 0, Width => 1000, Height => 1000));
+        Subdiv.Create ((X => 0, Y => 0, Width => 1000, Height => 1000));
       Ids     : Vertex_Ids (Sources'Range);
    begin
       Insert_All (Object, Sources, Ids);
