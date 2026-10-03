@@ -10,6 +10,9 @@ with Contour_Moments_Tests;
 with Convex_Hull_Tests;
 with Convex_Hull_Indices_Tests;
 with Convexity_Defects_Tests;
+with Float32_Contour_Geometry_Tests;
+with Float32_Moments_Tests;
+with Float32_Point_Polygon_Tests;
 with Is_Convex_Tests;
 with Hu_Moments_Tests;
 with Match_Shapes_Tests;
@@ -69,6 +72,9 @@ begin
    Suite.Add_Test (Subdiv2D_Foundation_Tests.Suite);
    Suite.Add_Test (Subdiv2D_Navigation_Tests.Suite);
    Suite.Add_Test (Subdiv2D_Voronoi_Tests.Suite);
+   Suite.Add_Test (Float32_Contour_Geometry_Tests.Suite);
+   Suite.Add_Test (Float32_Moments_Tests.Suite);
+   Suite.Add_Test (Float32_Point_Polygon_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;

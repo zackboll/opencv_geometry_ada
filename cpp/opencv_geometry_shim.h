@@ -169,6 +169,15 @@ opencv_geometry_contour_area(
     int32_t oriented,
     double *out_area);
 
+/* The _f32 functions take binary32 (CV_32F) point sets and call the native
+   CV_32F path of the same OpenCV operation; coordinates are not rounded. */
+opencv_geometry_status
+opencv_geometry_contour_area_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t oriented,
+    double *out_area);
+
 opencv_geometry_status
 opencv_geometry_arc_length(
     const opencv_geometry_point_i32 *points,
@@ -177,8 +186,21 @@ opencv_geometry_arc_length(
     double *out_length);
 
 opencv_geometry_status
+opencv_geometry_arc_length_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    int32_t closed,
+    double *out_length);
+
+opencv_geometry_status
 opencv_geometry_contour_moments(
     const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    opencv_geometry_moments *out_moments);
+
+opencv_geometry_status
+opencv_geometry_contour_moments_f32(
+    const opencv_geometry_point_f32 *points,
     int32_t point_count,
     opencv_geometry_moments *out_moments);
 
@@ -226,9 +248,24 @@ opencv_geometry_bounding_rect(
     int32_t point_count,
     opencv_geometry_rect_i32 *out_rect);
 
+/* Rejects NaN coordinates, coordinates outside [-2^31, 2^31), and floored
+   extents whose inclusive width or height exceeds INT32_MAX, for which
+   OpenCV's floor conversion or extent arithmetic is undefined. */
+opencv_geometry_status
+opencv_geometry_bounding_rect_f32(
+    const opencv_geometry_point_f32 *points,
+    int32_t point_count,
+    opencv_geometry_rect_i32 *out_rect);
+
 opencv_geometry_status
 opencv_geometry_is_convex(
     const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    int32_t *out_is_convex);
+
+opencv_geometry_status
+opencv_geometry_is_convex_f32(
+    const opencv_geometry_point_f32 *points,
     int32_t point_count,
     int32_t *out_is_convex);
 
@@ -250,12 +287,32 @@ opencv_geometry_match_shapes(
     int32_t method,
     double *out_score);
 
+opencv_geometry_status
+opencv_geometry_match_shapes_f32(
+    const opencv_geometry_point_f32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_f32 *right_points,
+    int32_t right_count,
+    int32_t method,
+    double *out_score);
+
 #define OPENCV_GEOMETRY_POINT_POLYGON_CLASSIFY ((int32_t)0)
 #define OPENCV_GEOMETRY_POINT_POLYGON_DISTANCE ((int32_t)1)
 
 opencv_geometry_status
 opencv_geometry_point_polygon_test(
     const opencv_geometry_point_i32 *points,
+    int32_t point_count,
+    float query_x,
+    float query_y,
+    int32_t measure_distance,
+    double *out_result);
+
+/* A nonempty contour rejects queries outside the cvRound range, as
+   opencv_geometry_point_polygon_test does. */
+opencv_geometry_status
+opencv_geometry_point_polygon_test_f32(
+    const opencv_geometry_point_f32 *points,
     int32_t point_count,
     float query_x,
     float query_y,

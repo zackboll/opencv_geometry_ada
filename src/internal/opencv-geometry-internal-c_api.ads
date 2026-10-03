@@ -182,6 +182,56 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_contour_moments";
 
+   --  Binary32 (CV_32F) point-set variants. Points may be null only when
+   --  Point_Count is zero.
+
+   function Contour_Area_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Oriented    : Interfaces.Integer_32;
+      Area        : access Interfaces.C.double) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_contour_area_f32";
+
+   function Arc_Length_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Closed      : Interfaces.Integer_32;
+      Length      : access Interfaces.C.double) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_arc_length_f32";
+
+   function Contour_Moments_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access C_Moments) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_contour_moments_f32";
+
+   function Bounding_Rect_F32
+     (Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Result      : access Rect_I32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_bounding_rect_f32";
+
+   function Is_Convex_F32
+     (Points        : access constant Point_F32;
+      Point_Count   : Interfaces.Integer_32;
+      Out_Is_Convex : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_is_convex_f32";
+
    function Convex_Hull
      (Points       : access Point_I32;
       Point_Count  : Interfaces.Integer_32;
@@ -285,6 +335,30 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_point_polygon_test";
+
+   function Match_Shapes_F32
+     (Left_Points  : access constant Point_F32;
+      Left_Count   : Interfaces.Integer_32;
+      Right_Points : access constant Point_F32;
+      Right_Count  : Interfaces.Integer_32;
+      Method       : Interfaces.Integer_32;
+      Out_Score    : access Interfaces.C.double) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_match_shapes_f32";
+
+   function Point_Polygon_Test_F32
+     (Points           : access constant Point_F32;
+      Point_Count      : Interfaces.Integer_32;
+      Query_X          : Interfaces.C.C_float;
+      Query_Y          : Interfaces.C.C_float;
+      Measure_Distance : Interfaces.Integer_32;
+      Out_Result       : access Interfaces.C.double) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_point_polygon_test_f32";
 
    function Min_Enclosing_Circle
      (Points      : access Point_I32;

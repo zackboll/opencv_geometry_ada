@@ -2,7 +2,23 @@ with OpenCV.Core;
 
 package OpenCV.Geometry is
 
+   --  An integer contour, for exact integer geometry. OpenCV CV_32S points.
    subtype Contour is OpenCV.Point_Array;
+
+   --  Ada-owned sequence of binary32 points: a point set for native subpixel
+   --  geometry (OpenCV CV_32F, Point2f), an intersection region returned by
+   --  OpenCV, or one side of a transform correspondence.
+   --
+   --  Operations overloaded for Float32_Point_Array call OpenCV's native
+   --  CV_32F path, so coordinates are never rounded to integers. Every
+   --  coordinate passed to them must be finite: NaN and infinities raise
+   --  OpenCV_Error. Iteration order is native order, and bounds may be any
+   --  Natural range. OpenCV computes coordinate differences, and for some
+   --  operations their products, in binary32, so results can differ from
+   --  those of exact integer contours with the same shape; each overload
+   --  states the native arithmetic that matters.
+   type Float32_Point_Array is
+     array (Natural range <>) of OpenCV.Float32_Point;
 
    --  Calculates the OpenCV polygon area of Points. When Oriented is False,
    --  the result is nonnegative; otherwise it retains OpenCV's orientation
@@ -11,11 +27,28 @@ package OpenCV.Geometry is
      (Points : Contour; Oriented : Boolean := False)
       return OpenCV.Float64_Value;
 
+   --  Contour_Area of a Float32 point set. OpenCV accumulates the cross
+   --  products of the binary32 coordinates in binary64, so the result is
+   --  always finite. Points is unchanged.
+   function Contour_Area
+     (Points : Float32_Point_Array; Oriented : Boolean := False)
+      return OpenCV.Float64_Value;
+
    --  Calculates the OpenCV curve length of Points. Closed includes the
    --  segment from the final point to the first. Empty and one-point contours
    --  return zero. Points is unchanged.
    function Arc_Length
      (Points : Contour; Closed : Boolean) return OpenCV.Float64_Value;
+
+   --  Arc_Length of a Float32 point set. OpenCV computes each segment's
+   --  coordinate differences, their squares, and the segment length in
+   --  binary32 and sums the lengths in binary64. A segment longer than about
+   --  1.8E+19 overflows binary32 and makes the native length infinite, which
+   --  raises OpenCV_Error; segment components below about 1.0E-19 lose
+   --  precision as their squares underflow. Points is unchanged.
+   function Arc_Length
+     (Points : Float32_Point_Array; Closed : Boolean)
+      return OpenCV.Float64_Value;
 
    --  Spatial, central, and normalized central moments through third order
    --  for an Ada-owned contour. For ordinary non-self-intersecting contours,
@@ -54,6 +87,17 @@ package OpenCV.Geometry is
    end record;
 
    function Compute_Moments (Points : Contour) return Moments_Result;
+
+   --  Compute_Moments of a Float32 point set. OpenCV evaluates Green's
+   --  formula in binary64 from the binary32 coordinates. When the magnitude
+   --  of OpenCV's computed doubled area is at most FLT_EPSILON (2.0**(-23)),
+   --  that is, for an absolute area of at most about 6.0E-8, every field is
+   --  0.0; an integer contour never has such a nonzero area, but a small
+   --  Float32 one can. Non-finite native moments, which extreme coordinates
+   --  can produce, for example in a self-intersecting contour whose net area
+   --  is tiny, raise OpenCV_Error. Points is unchanged.
+   function Compute_Moments
+     (Points : Float32_Point_Array) return Moments_Result;
 
    --  Seven Hu invariants of Moments in OpenCV order, indexed 1 .. 7.
    --  The values are the raw invariants, not logarithmically transformed
@@ -297,11 +341,6 @@ package OpenCV.Geometry is
 
    function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices;
 
-   --  Ada-owned sequence of binary32 points, such as an intersection region
-   --  returned by OpenCV or one side of a transform correspondence.
-   type Float32_Point_Array is
-     array (Natural range <>) of OpenCV.Float32_Point;
-
    --  Intersection of two convex polygons. Area is OpenCV's nonnegative
    --  binary32 intersection area, and Vertices is the native binary32
    --  intersection polygon in native order without normalization. Vertices
@@ -388,12 +427,35 @@ package OpenCV.Geometry is
    --  or height raise OpenCV.OpenCV_Error. Points is unchanged.
    function Bounding_Rect (Points : Contour) return OpenCV.Rect;
 
+   --  Minimal upright integer rectangle containing a Float32 point set, as
+   --  OpenCV computes it from the floors of the extreme coordinates:
+   --  X = Floor (Min X), Width = Floor (Max X) - X + 1, and likewise Y and
+   --  Height. Every point P therefore satisfies X <= P.X < X + Width. For
+   --  integer-valued coordinates the result is the integer overload's.
+   --  OpenCV converts the floors to signed 32-bit integers, which is
+   --  undefined outside -2.0**31 .. 2.0**31, so every coordinate must be
+   --  at least -2.0**31 and less than 2.0**31, and Width and Height must
+   --  not exceed Integer_32'Last; other inputs raise OpenCV_Error. Empty
+   --  input returns (0, 0, 0, 0). Points is unchanged.
+   function Bounding_Rect (Points : Float32_Point_Array) return OpenCV.Rect;
+
    --  Tests whether Points is a convex contour. The contour is expected to
    --  be simple (non-self-intersecting); OpenCV leaves the result for
    --  non-simple contours undefined. Convexity does not depend on winding
    --  direction. Empty, one-point, two-point, and collinear contours are
    --  not convex. Points is unchanged.
    function Is_Convex (Points : Contour) return Boolean;
+
+   --  Is_Convex of a Float32 point set. Unlike the exact integer test,
+   --  OpenCV computes each edge's coordinate differences and the cross
+   --  products of consecutive edges in binary32, so nearly collinear
+   --  vertices are classified by rounded products, which can differ from
+   --  exact geometry. So that no difference or product overflows, the X
+   --  span and the Y span of Points, computed in binary64, must each be at
+   --  most Float32_Value'Last and their product at most
+   --  Float32_Value'Last / 2; other sets raise OpenCV_Error. Points is
+   --  unchanged.
+   function Is_Convex (Points : Float32_Point_Array) return Boolean;
 
    --  Compares Left and Right using OpenCV Hu-moment matching. Lower scores
    --  indicate more similar shapes; identical or equivalent contours
@@ -412,9 +474,24 @@ package OpenCV.Geometry is
      (Left, Right : Contour; Method : Shape_Match_Method)
       return OpenCV.Float64_Value;
 
+   --  Match_Shapes of two Float32 point sets, compared through their OpenCV
+   --  moments as computed by the Float32 Compute_Moments and their Hu
+   --  moments. OpenCV's matching silently skips non-finite Hu moments, so
+   --  non-finite moments or Hu moments of either set raise OpenCV_Error. A
+   --  set whose area is so small that its moments are all 0.0 has all-zero
+   --  Hu moments. OpenCV scores two sets with all-zero Hu moments 0.0, and
+   --  such a set against one with a nonzero Hu moment Float64_Value'Last.
+   --  Left and Right are unchanged.
+   function Match_Shapes
+     (Left, Right : Float32_Point_Array; Method : Shape_Match_Method)
+      return OpenCV.Float64_Value;
+
    --  Classifies Query relative to the polygon defined by Points.
    --  Query coordinates are binary32 and may be fractional. Empty
-   --  contours are Outside_Contour. Points is unchanged.
+   --  contours are Outside_Contour. For nonempty Points, OpenCV rounds
+   --  Query to a signed 32-bit integer point, so a Query coordinate that
+   --  is not finite, or not in -2.0**31 .. 2.0**31 (excluding 2.0**31),
+   --  raises OpenCV_Error. Points is unchanged.
    type Contour_Point_Location is
      (Outside_Contour, On_Contour_Boundary, Inside_Contour);
 
@@ -431,6 +508,29 @@ package OpenCV.Geometry is
    --  OpenCV_Error.
    function Signed_Distance_To_Contour
      (Points : Contour; Query : OpenCV.Float32_Point)
+      return OpenCV.Float64_Value;
+
+   --  Locate_Point and Signed_Distance_To_Contour for a Float32 polygon,
+   --  with fractional edges and Query. Points and Query must be finite,
+   --  even when Points is empty; for empty Points, Query is Outside_Contour
+   --  at distance -Float64_Value'Last. OpenCV computes coordinate
+   --  differences in binary32 and the crossing and distance tests in
+   --  binary64. So that no difference overflows, the X span and the Y span
+   --  of Points, computed in binary64, must each be at most
+   --  Float32_Value'Last. For nonempty Points, OpenCV also rounds Query to a
+   --  signed 32-bit integer point on every path, so each Query coordinate
+   --  must be at least -2.0**31 and less than 2.0**31. Other inputs raise
+   --  OpenCV_Error. OpenCV starts its nearest-edge search at a squared
+   --  distance of FLT_MAX and cannot report a farther edge, so a distance of
+   --  at least Sqrt (Float32_Value'Last), about 1.8447E+19, raises
+   --  OpenCV_Error rather than being clamped; integer contours cannot reach
+   --  it. Points is unchanged.
+   function Locate_Point
+     (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)
+      return Contour_Point_Location;
+
+   function Signed_Distance_To_Contour
+     (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)
       return OpenCV.Float64_Value;
 
    --  Smallest circle enclosing Points. Center and Radius are binary32

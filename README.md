@@ -30,6 +30,26 @@ operation common to OpenCV 4.6, 4.10, and 5.0 has a thick binding, some for
 only a subset of the native modes; `docs/coverage.md` maps each native
 operation to its Ada binding and records the unbound modes, the operations
 missing from OpenCV 4.6 and 4.10, and the exclusions.
+
+Point sets come in two forms. `Contour` holds integer points, for exact
+integer geometry such as pixel outlines. `Float32_Point_Array` holds binary32
+points, for native subpixel geometry: `Contour_Area`, `Arc_Length`,
+`Compute_Moments`, `Match_Shapes`, `Is_Convex`, `Locate_Point`,
+`Signed_Distance_To_Contour`, and `Bounding_Rect` have overloads that call
+OpenCV's `CV_32F` path without rounding coordinates to integers. Float32
+coordinates must be finite. OpenCV evaluates Float32 point sets partly in
+binary32, so near-degenerate or extreme inputs can give results that differ
+from exact integer geometry; each overload documents the native arithmetic,
+and `docs/coverage.md` lists which operations have a Float32 mode and why the
+others do not.
+
+```ada
+Outline : constant OpenCV.Geometry.Float32_Point_Array :=
+  ((X => 0.5, Y => 0.25), (X => 3.75, Y => 0.25), (X => 0.5, Y => 2.5));
+Area    : constant OpenCV.Float64_Value :=
+  OpenCV.Geometry.Contour_Area (Outline);  --  3.65625
+```
+
 `Contour` is a subtype of `OpenCV.Point_Array`; storage stays
 Ada-owned. `Convex_Hull` returns
 hull points, not source indices. `Hull_Orientation` defaults to
