@@ -2,7 +2,7 @@ private with Ada.Finalization;
 private with OpenCV.Geometry.Internal.C_API;
 
 --  Planar subdivision: an incremental Delaunay triangulation of points in
---  an integer bounding rectangle, backed by one native cv::Subdiv2D.
+--  an integer or binary32 bounding rectangle, backed by one cv::Subdiv2D.
 --
 --  Ownership: a Subdivision exclusively owns its native object. The type is
 --  limited, so assignment cannot duplicate ownership, and finalization
@@ -26,9 +26,8 @@ private with OpenCV.Geometry.Internal.C_API;
 --  Voronoi computation in Find_Nearest and Voronoi_Facets also creates
 --  virtual vertices, so inserted points need not receive consecutive ids.
 --
---  Bounds are an integer OpenCV.Rect, which every supported OpenCV release
---  accepts; the binary32 Rect2f initialization that only OpenCV 4.13+ and
---  5.x provide is not offered.
+--  Integer bounds are available on every supported release. Float32 bounds
+--  require OpenCV 4.13+ or 5.x; there is no integer fallback.
 --
 --  Scale: OpenCV's geometric predicates use absolute tolerances near
 --  FLT_EPSILON. Numerical behavior depends on coordinate scale and geometric
@@ -48,6 +47,14 @@ package OpenCV.Geometry.Subdiv2D is
 
    type Subdivision is limited private;
 
+   --  Axis-aligned binary32 initialization descriptor, not a rotated rect.
+   type Float32_Rectangle is record
+      X      : OpenCV.Float32_Value := 0.0;
+      Y      : OpenCV.Float32_Value := 0.0;
+      Width  : OpenCV.Float32_Value := 0.0;
+      Height : OpenCV.Float32_Value := 0.0;
+   end record;
+
    type Vertex_Id is range 0 .. 2**31 - 1;
 
    No_Vertex : constant Vertex_Id := 0;
@@ -60,27 +67,50 @@ package OpenCV.Geometry.Subdiv2D is
    --  as if by Reset.
    function Create (Bounds : OpenCV.Rect) return Subdivision;
 
+   function Create (Bounds : Float32_Rectangle) return Subdivision;
+
    --  Discards every point and initializes Object to an empty Delaunay
    --  triangulation of Bounds, creating its native object when needed.
    --  Bounds.Width and Bounds.Height must be positive. OpenCV accepts points
    --  in the half-open region X >= Bounds.X, X < Bounds.X + Bounds.Width,
-   --  and likewise for Y, with both limits computed in binary32. Zero
-   --  dimensions and native failures raise OpenCV.OpenCV_Error; after a
-   --  native failure Object is not ready.
+   --  and likewise for Y, with both limits computed in binary32 after native
+   --  conversion of each integer field. Positive dimensions that disappear
+   --  in this addition are rejected. Initialization arithmetic must produce
+   --  finite upper limits and super-triangle coordinates. Semantic rejection
+   --  leaves Object unchanged; native failure leaves it not ready. Neither
+   --  failure publishes new bounds. Failures raise OpenCV.OpenCV_Error.
    procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect);
+
+   --  As above, but calls native Rect2f without rounding to integers. Requires
+   --  Float32_Subdivision_Bounds_Feature (OpenCV 4.13+). Unsupported takes
+   --  precedence over bounds validation and leaves Object unchanged.
+   --  All fields must be finite; Width and Height must be positive and their
+   --  binary32 additions to X/Y must advance. Big = 6 * max(Width, Height)
+   --  and X/Y +/- Big must remain finite. These conditions also guarantee a
+   --  distinguishable, nondegenerate initial super-triangle, but not good
+   --  conditioning of subsequent native geometric predicates.
+   procedure Reset (Object : in out Subdivision; Bounds : Float32_Rectangle);
 
    --  True when Object owns a native subdivision that accepts operations.
    --  False for an object that has never been Reset or Created, and after an
    --  operation that failed while modifying the triangulation, such as an
    --  insertion that exhausted memory, left it possibly inconsistent. Only
    --  Reset makes such an object ready again. Every other operation on a
-   --  Subdivision except Bounds raises OpenCV.OpenCV_Error when the object
-   --  is not ready.
+   --  Subdivision except the bounds queries raises OpenCV.OpenCV_Error when
+   --  the object is not ready.
    function Is_Ready (Object : Subdivision) return Boolean;
 
-   --  Bounds of the last successful Reset or Create. Raises
-   --  OpenCV.OpenCV_Error when there has been none.
+   --  Original integer bounds of the last successful Reset or Create. Raises
+   --  OpenCV.OpenCV_Error when there has been none or Float32 bounds were
+   --  supplied. Never silently rounds or encloses a Float32 rectangle.
    function Bounds (Object : Subdivision) return OpenCV.Rect;
+
+   --  Exact descriptor of the last successful initialization: the supplied
+   --  Float32 rectangle, or each integer field converted as native OpenCV
+   --  does. Upper limits are still computed by binary32 addition. Available
+   --  on all releases, including after a failed native Reset; raises
+   --  OpenCV.OpenCV_Error only when initialization has never succeeded.
+   function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle;
 
    --  Inserts Point into the triangulation and returns its vertex. A point
    --  that OpenCV finds coincident with an existing vertex (binary32 L1
@@ -346,10 +376,13 @@ package OpenCV.Geometry.Subdiv2D is
 
 private
 
+   type Bounds_Representation is (No_Bounds, Integer_Bounds, Float32_Bounds);
+
    type Subdivision is new Ada.Finalization.Limited_Controlled with record
-      Handle     : Internal.C_API.Subdiv2D_Handle := null;
-      Bounds     : OpenCV.Rect := (X => 0, Y => 0, Width => 0, Height => 0);
-      Has_Bounds : Boolean := False;
+      Handle        : Internal.C_API.Subdiv2D_Handle := null;
+      Bounds        : OpenCV.Rect := (X => 0, Y => 0, Width => 0, Height => 0);
+      Native_Bounds : Float32_Rectangle;
+      Bounds_Mode   : Bounds_Representation := No_Bounds;
    end record;
 
    overriding

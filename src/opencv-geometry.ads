@@ -3,8 +3,8 @@ with OpenCV.Core;
 package OpenCV.Geometry is
 
    --  Availability in the linked native OpenCV, NOT Ada binding coverage.
-   --  Approximate_Convex_Polygon, Minimum_Enclosing_Convex_Polygon and
-   --  Float32 subdivision bounds remain unbound even when supported here.
+   --  Approximate_Convex_Polygon and Minimum_Enclosing_Convex_Polygon remain
+   --  unbound even when supported here.
    type Native_Feature is
      (Approximate_Convex_Polygon_Feature,
       Closest_Ellipse_Points_Feature,

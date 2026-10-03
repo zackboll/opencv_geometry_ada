@@ -24,7 +24,7 @@ API, **not whether Geometry currently binds that API**:
 | `Approximate_Convex_Polygon_Feature` | 4.11 | Deferred |
 | `Closest_Ellipse_Points_Feature` | 4.12 | `Closest_Ellipse_Points` |
 | `Minimum_Enclosing_Convex_Polygon_Feature` | 4.13 | Deferred |
-| `Float32_Subdivision_Bounds_Feature` | 4.13 | Deferred |
+| `Float32_Subdivision_Bounds_Feature` | 4.13 | Bound: Subdiv2D Float32 bounds |
 
 All four capabilities are False on 4.6/4.10 and True on 5.x. In 4.x they
 become True at their listed thresholds. Thus approxPolyN may be natively
@@ -466,12 +466,12 @@ not part of this binding.
 ## Planar subdivision (Subdiv2D)
 
 `OpenCV.Geometry.Subdiv2D` binds `cv::Subdiv2D`, an incremental Delaunay
-triangulation of points inside an integer bounding rectangle:
+triangulation of points inside an integer or binary32 bounding rectangle:
 
 ```ada
 declare
    Mesh : Subdivision :=
-     Create ((X => 0, Y => 0, Width => 100, Height => 100));
+     Create (OpenCV.Rect'(X => 0, Y => 0, Width => 100, Height => 100));
    Near : Nearest_Result;
 begin
    Insert (Mesh, Points);
@@ -489,13 +489,15 @@ initialized `Subdivision` is not ready; `Create` or `Reset` initializes it,
 and `Reset` also discards every point. If a modification fails in a way that
 may have left the native triangulation inconsistent, such as an allocation
 failure during insertion, the object stops being ready, and every operation
-except `Bounds` raises `OpenCV_Error` until `Reset`. Ordinary
+except the bounds queries raises `OpenCV_Error` until `Reset`. Ordinary
 OpenCV rejections, such as a point outside the bounds, leave it ready. A
 native fault-injection test (`sh scripts/run_native_tests.sh`) checks this
 state by failing individual allocations inside OpenCV.
 
-Bounds are half-open: OpenCV accepts `X` from `Bounds.X` up to but excluding
-`Bounds.X + Bounds.Width`, and likewise for `Y`. A point outside raises
+Bounds are effectively binary32 and half-open: OpenCV accepts `X` from the
+converted origin up to but excluding its binary32 sum with the converted
+width, and likewise for `Y`. This applies to integer bounds too. A point
+outside raises
 `OpenCV_Error`; OpenCV reports it by raising an error rather than returning
 its `PTLOC_OUTSIDE_RECT` classification. Duplicate insertions return the
 existing vertex. Vertex and edge identifiers are native OpenCV identifiers,
@@ -509,8 +511,57 @@ can create virtual vertices in other slots.
 A `Subdivision` must not be used by more than one task at a time. OpenCV
 mutates internal state in `Locate`, and in `Find_Nearest` and
 `Voronoi_Facets`, which compute Voronoi data. Distinct subdivisions are
-independent. The binary32 `Rect2f`
-initialization that only OpenCV 4.13+ and 5.x provide is not bound.
+independent.
+
+### Float32 bounds (OpenCV 4.13+)
+
+`Subdiv2D.Float32_Rectangle` is an axis-aligned value record with `X`, `Y`,
+`Width`, and `Height` of type `OpenCV.Float32_Value`. The same limited owner
+supports both bounds representations:
+
+```ada
+function Create (Bounds : Float32_Rectangle) return Subdivision;
+procedure Reset
+  (Object : in out Subdivision; Bounds : Float32_Rectangle);
+function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle;
+```
+
+Query `Is_Natively_Supported (Float32_Subdivision_Bounds_Feature)` before
+using the optional overloads. They call native `Rect2f` on 4.13+/5.x, with
+**no integer fallback or rounding**. On older versions they raise
+`OpenCV_Error`: "Subdiv2D Float32 bounds require OpenCV 4.13 or newer".
+Unsupported takes precedence over semantic validation, including NaN or
+zero dimensions. Unsupported Reset leaves the object and its bounds intact.
+
+All four fields must be finite, and dimensions positive. Shared Ada preflight
+requires the actual binary32 upper limits to advance, and every native-stored
+initialization coordinate to remain finite: upper limits, `Big`, and
+`X/Y +/- Big`. Float32 uses `Big = 6 * max(Width, Height)`; integer bounds
+use native factor 3 through 4.11 and 6 from 4.12. These conditions ensure the
+three super-triangle vertices remain distinguishable and nondegenerate,
+without imposing a general "small coordinates" rule. They do not remove
+the numerical-conditioning caveats below.
+
+Positive **integer** dimensions that collapse after native binary32
+conversion are now rejected too: at `X = 2**24`, width 1 collapses, while
+width 2 advances. Integer overloads continue calling native `Rect` on every
+supported release. Typed integer calls retain their behavior; with both
+overloads present, qualify inline aggregates as `OpenCV.Rect'(...)` or
+`Float32_Rectangle'(...)`.
+
+`Bounds` returns the original integer rectangle after integer initialization.
+After Float32 initialization it raises a clear `OpenCV_Error`, never making a
+lossy integer conversion. `Bounds_Float32` returns the exact last successful
+Float32 descriptor, or each original integer field converted as OpenCV does.
+It is available even on older releases. Both accessors retain the last
+successful bounds after a failed native Reset. Preflight rejection makes no
+native initialization call and preserves readiness and points; once native
+Reset starts, a failure leaves the handle unusable. Only successful Reset
+publishes the new bounds/mode and restores readiness. Integer and Float32
+modes may alternate on the same object.
+
+The focused stateful suite can be run with `tests/bin/tests Subdiv2D` after
+building the tests in the chosen OpenCV environment.
 
 OpenCV's `Subdiv2D` predicates use absolute tolerances near `FLT_EPSILON`.
 Numerical behavior depends on coordinate scale and geometric conditioning,

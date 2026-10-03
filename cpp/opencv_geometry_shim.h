@@ -19,6 +19,13 @@ typedef struct {
     int32_t height;
 } opencv_geometry_rect_i32;
 
+typedef struct {
+    float x;
+    float y;
+    float width;
+    float height;
+} opencv_geometry_rect_f32;
+
 typedef struct opencv_geometry_moments {
     double m00;
     double m10;
@@ -577,6 +584,19 @@ opencv_geometry_status
 opencv_geometry_subdiv2d_create(
     const opencv_geometry_rect_i32 *bounds,
     opencv_geometry_subdiv2d **out_handle);
+
+/* Fixed symbols on all builds. Rect2f requires OpenCV 4.13+. Create checks
+   out_handle and sets it null before returning UNSUPPORTED; no other
+   arguments are inspected on old releases. Reset returns UNSUPPORTED before
+   inspecting handle/bounds and leaves an existing handle unchanged. Native
+   reset failure marks the handle unusable, as with integer initialization. */
+opencv_geometry_status opencv_geometry_subdiv2d_create_f32(
+    const opencv_geometry_rect_f32 *bounds,
+    opencv_geometry_subdiv2d **out_handle);
+
+opencv_geometry_status opencv_geometry_subdiv2d_init_delaunay_f32(
+    opencv_geometry_subdiv2d *handle,
+    const opencv_geometry_rect_f32 *bounds);
 
 /* Destroys handle. A null handle is ignored. Never fails. */
 void

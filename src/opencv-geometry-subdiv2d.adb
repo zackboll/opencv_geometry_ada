@@ -80,6 +80,89 @@ package body OpenCV.Geometry.Subdiv2D is
          Height => Interfaces.Integer_32 (Bounds.Height));
    end To_C_Rect;
 
+   function Native_Descriptor (Bounds : OpenCV.Rect) return Float32_Rectangle
+   is
+   begin
+      return
+        (X      => OpenCV.Float32_Value (Bounds.X),
+         Y      => OpenCV.Float32_Value (Bounds.Y),
+         Width  => OpenCV.Float32_Value (Bounds.Width),
+         Height => OpenCV.Float32_Value (Bounds.Height));
+   end Native_Descriptor;
+
+   --  Model precisely the native stored binary32 expressions, not a wider
+   --  mathematical interval. Machine forces binary32 rounding even where an
+   --  Ada implementation permits excess intermediate precision. Overflow is
+   --  inspected as a non-finite result and translated to OpenCV_Error.
+   procedure Validate_Native_Bounds
+     (Bounds : Float32_Rectangle; Factor : OpenCV.Float32_Value)
+   is
+      pragma Suppress (Validity_Check);
+      pragma Suppress (Overflow_Check);
+      use type OpenCV.Float32_Value;
+      Big, Right, Bottom : OpenCV.Float32_Value;
+   begin
+      if not Is_Finite (Bounds.X)
+        or else not Is_Finite (Bounds.Y)
+        or else not Is_Finite (Bounds.Width)
+        or else not Is_Finite (Bounds.Height)
+      then
+         Raise_Error ("Subdiv2D.Reset requires finite bounds fields");
+      end if;
+      if Bounds.Width <= 0.0 or else Bounds.Height <= 0.0 then
+         Raise_Error
+           ("Subdiv2D.Reset requires a positive Bounds width and height");
+      end if;
+
+      Big :=
+        OpenCV.Float32_Value'Machine
+          (Factor * OpenCV.Float32_Value'Max (Bounds.Width, Bounds.Height));
+      if not Is_Finite (Big) or else Big <= 0.0 then
+         Raise_Error ("Subdiv2D.Reset super-triangle scale must be finite");
+      end if;
+      Right := OpenCV.Float32_Value'Machine (Bounds.X + Bounds.Width);
+      Bottom := OpenCV.Float32_Value'Machine (Bounds.Y + Bounds.Height);
+      if not Is_Finite (Right) or else not Is_Finite (Bottom) then
+         Raise_Error ("Subdiv2D.Reset upper bounds must remain finite");
+      end if;
+      if Right <= Bounds.X or else Bottom <= Bounds.Y then
+         Raise_Error
+           ("Subdiv2D.Reset bounds must advance in binary32 arithmetic");
+      end if;
+      if not Is_Finite (OpenCV.Float32_Value'Machine (Bounds.X + Big))
+        or else not Is_Finite (OpenCV.Float32_Value'Machine (Bounds.Y + Big))
+        or else not Is_Finite (OpenCV.Float32_Value'Machine (Bounds.X - Big))
+        or else not Is_Finite (OpenCV.Float32_Value'Machine (Bounds.Y - Big))
+      then
+         Raise_Error
+           ("Subdiv2D.Reset super-triangle coordinates must remain finite");
+      end if;
+   --  Positive effective extents and Factor >= 3 ensure X/Y + Big
+   --  advance and X/Y - Big retreat (including at binade boundaries).
+   --  Thus A is strictly right, B strictly below, C strictly left/above
+   --  the origin. Their exact determinant is positive; no separate
+   --  distinctness or arbitrary coordinate-size restriction is needed.
+   end Validate_Native_Bounds;
+
+   function Integer_Bounds_Factor return OpenCV.Float32_Value is
+   begin
+      if C_API.OpenCV_Major_Version = 4
+        and then C_API.OpenCV_Minor_Version < 12
+      then
+         return 3.0;
+      end if;
+      return 6.0;
+   end Integer_Bounds_Factor;
+
+   function To_C_Rect (Bounds : Float32_Rectangle) return C_API.Rect_F32 is
+   begin
+      return
+        (X      => Interfaces.C.C_float (Bounds.X),
+         Y      => Interfaces.C.C_float (Bounds.Y),
+         Width  => Interfaces.C.C_float (Bounds.Width),
+         Height => Interfaces.C.C_float (Bounds.Height));
+   end To_C_Rect;
+
    function To_Vertex_Id
      (Value : Interfaces.Integer_32; Operation : String) return Vertex_Id is
    begin
@@ -107,12 +190,10 @@ package body OpenCV.Geometry.Subdiv2D is
 
    procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect) is
       Native_Bounds : aliased constant C_API.Rect_I32 := To_C_Rect (Bounds);
+      Descriptor    : constant Float32_Rectangle := Native_Descriptor (Bounds);
       Status        : C_API.Status;
    begin
-      if Bounds.Width = 0 or else Bounds.Height = 0 then
-         Raise_Error
-           ("Subdiv2D.Reset requires a positive Bounds width and height");
-      end if;
+      Validate_Native_Bounds (Descriptor, Integer_Bounds_Factor);
 
       if Object.Handle = null then
          declare
@@ -132,7 +213,45 @@ package body OpenCV.Geometry.Subdiv2D is
       end if;
 
       Object.Bounds := Bounds;
-      Object.Has_Bounds := True;
+      Object.Native_Bounds := Descriptor;
+      Object.Bounds_Mode := Integer_Bounds;
+   end Reset;
+
+   function Create (Bounds : Float32_Rectangle) return Subdivision is
+      pragma Suppress (Validity_Check);
+   begin
+      return Result : Subdivision do
+         Reset (Result, Bounds);
+      end return;
+   end Create;
+
+   procedure Reset (Object : in out Subdivision; Bounds : Float32_Rectangle) is
+      pragma Suppress (Validity_Check);
+      Native_Bounds : aliased C_API.Rect_F32;
+      Status        : C_API.Status;
+   begin
+      if not Is_Natively_Supported (Float32_Subdivision_Bounds_Feature) then
+         Raise_Error ("Subdiv2D Float32 bounds require OpenCV 4.13 or newer");
+      end if;
+      Validate_Native_Bounds (Bounds, 6.0);
+      Native_Bounds := To_C_Rect (Bounds);
+      if Object.Handle = null then
+         declare
+            Handle : aliased C_API.Subdiv2D_Handle := null;
+         begin
+            Status :=
+              C_API.Subdiv2D_Create_F32 (Native_Bounds'Access, Handle'Access);
+            Object.Handle := Handle;
+            Raise_On_Error (Status, "Subdiv2D.Reset");
+         end;
+      else
+         Status :=
+           C_API.Subdiv2D_Init_Delaunay_F32
+             (Object.Handle, Native_Bounds'Access);
+         Raise_On_Error (Status, "Subdiv2D.Reset");
+      end if;
+      Object.Native_Bounds := Bounds;
+      Object.Bounds_Mode := Float32_Bounds;
    end Reset;
 
    function Is_Ready (Object : Subdivision) return Boolean is
@@ -144,13 +263,27 @@ package body OpenCV.Geometry.Subdiv2D is
 
    function Bounds (Object : Subdivision) return OpenCV.Rect is
    begin
-      if not Object.Has_Bounds then
+      if Object.Bounds_Mode = No_Bounds then
          Raise_Error
            ("Subdiv2D.Bounds requires a subdivision initialized by Create or "
             & "Reset");
       end if;
+      if Object.Bounds_Mode = Float32_Bounds then
+         Raise_Error
+           ("Subdiv2D.Bounds: subdivision was initialized with Float32 bounds"
+            & "; use Bounds_Float32");
+      end if;
       return Object.Bounds;
    end Bounds;
+
+   function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle is
+   begin
+      if Object.Bounds_Mode = No_Bounds then
+         Raise_Error
+           ("Subdiv2D.Bounds_Float32 requires a successful Create or Reset");
+      end if;
+      return Object.Native_Bounds;
+   end Bounds_Float32;
 
    function Insert
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
@@ -958,7 +1091,7 @@ package body OpenCV.Geometry.Subdiv2D is
          C_API.Subdiv2D_Destroy (Object.Handle);
          Object.Handle := null;
       end if;
-      Object.Has_Bounds := False;
+      Object.Bounds_Mode := No_Bounds;
    end Finalize;
 
 end OpenCV.Geometry.Subdiv2D;

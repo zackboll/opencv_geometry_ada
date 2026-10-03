@@ -3427,6 +3427,8 @@ namespace opencv_geometry_shim_detail {
 // tell computed ones from OpenCV's placeholder.
 class GeometrySubdiv2D : public cv::Subdiv2D {
 public:
+    using cv::Subdiv2D::Subdiv2D;
+
     std::size_t quad_edge_count() const noexcept
     {
         return qedges.size();
@@ -3508,6 +3510,10 @@ cv::Rect subdiv2d_bounds(const opencv_geometry_rect_i32 &bounds)
 
 struct opencv_geometry_subdiv2d {
     opencv_geometry_subdiv2d() = default;
+#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
+    explicit opencv_geometry_subdiv2d(cv::Rect2f bounds)
+        : native(bounds), usable(true) {}
+#endif
     opencv_geometry_subdiv2d(const opencv_geometry_subdiv2d &) = delete;
     opencv_geometry_subdiv2d &operator=(const opencv_geometry_subdiv2d &) =
         delete;
@@ -3619,6 +3625,63 @@ int32_t
 opencv_geometry_subdiv2d_is_usable(const opencv_geometry_subdiv2d *handle)
 {
     return handle != nullptr && handle->usable ? 1 : 0;
+}
+
+opencv_geometry_status opencv_geometry_subdiv2d_create_f32(
+    const opencv_geometry_rect_f32 *bounds,
+    opencv_geometry_subdiv2d **out_handle)
+{
+    clear_error();
+    if (out_handle == nullptr) {
+        return invalid_argument("null subdivision output handle pointer");
+    }
+    *out_handle = nullptr;
+#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
+    if (bounds == nullptr) {
+        return invalid_argument("null subdivision bounds pointer");
+    }
+    try {
+        std::unique_ptr<opencv_geometry_subdiv2d> handle(
+            new opencv_geometry_subdiv2d(cv::Rect2f(
+                bounds->x, bounds->y, bounds->width, bounds->height)));
+        *out_handle = handle.release();
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        return translate_current_exception();
+    }
+#else
+    (void)bounds;
+    return unsupported("Subdiv2D Float32 bounds require OpenCV 4.13 or newer");
+#endif
+}
+
+opencv_geometry_status opencv_geometry_subdiv2d_init_delaunay_f32(
+    opencv_geometry_subdiv2d *handle,
+    const opencv_geometry_rect_f32 *bounds)
+{
+    clear_error();
+#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
+    if (handle == nullptr) {
+        return invalid_argument("null subdivision handle");
+    }
+    if (bounds == nullptr) {
+        return invalid_argument("null subdivision bounds pointer");
+    }
+    // Native initialization clears its state before potentially allocating.
+    handle->usable = false;
+    try {
+        handle->native.initDelaunay(cv::Rect2f(
+            bounds->x, bounds->y, bounds->width, bounds->height));
+        handle->usable = true;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        return translate_current_exception();
+    }
+#else
+    (void)handle;
+    (void)bounds;
+    return unsupported("Subdiv2D Float32 bounds require OpenCV 4.13 or newer");
+#endif
 }
 
 opencv_geometry_status

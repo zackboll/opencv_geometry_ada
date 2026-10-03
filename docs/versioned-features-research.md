@@ -57,7 +57,8 @@ API reports that commit ahead of 4.10.0 (108 commits, zero behind), and
 4.11.0 ahead of that commit (446 commits, zero behind).
 
 This matrix concerns native availability, **not** which Ada APIs are bound.
-The first binding is getClosestEllipsePoints; approxPolyN remains unbound.
+The first binding is getClosestEllipsePoints; Task 014 also binds Float32
+Subdiv2D bounds. approxPolyN remains unbound.
 Major versions beyond 5 remain outside the supported architecture.
 
 ## Implementation comparison
@@ -578,3 +579,191 @@ It is not a binding-coverage query or authorization to invoke approxPolyN.
 The temporary sources/builds/install prefixes are outside the repository.
 The 4.6 endpoint and Apple-toolchain behavior remain PR CI checks; local
 5.0 execution is Linux/GNU evidence, not macOS evidence.
+
+## Task 014: Float32 Subdiv2D bounds
+
+Starting main: `c668ba039d8c1ce6697580dcae6d822e7a65572c` (PR #13).
+The declaration matrix above was rechecked against the six exact tags.
+`Subdiv2D(Rect2f)` and `initDelaunay(Rect2f)` are absent through 4.12 and
+present first in **4.13.0**, also in **5.0.0**. Exact declarations:
+
+- 4.6.0 `imgproc.hpp`: integer constructor/init at 1078/1085.
+- 4.10.0 and 4.11.0: integer constructor/init at 1111/1118.
+- 4.12.0: integer constructor/init at 1113/1120.
+- [4.13.0 imgproc.hpp, 1129–1150](https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/include/opencv2/imgproc.hpp#L1129-L1150):
+  `CV_WRAP Subdiv2D(Rect2f rect2f);` and
+  `CV_WRAP_AS(initDelaunay2f) CV_WRAP void initDelaunay(Rect2f rect);`.
+- [5.0.0 geometry/2d.hpp, 74–95](https://github.com/opencv/opencv/blob/5.0.0/modules/geometry/include/opencv2/geometry/2d.hpp#L74-L95):
+  the same two signatures, in native Geometry rather than Imgproc.
+
+### Implementation and integer audit
+
+The complete subdivision implementations in
+[4.13.0](https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/subdivision2d.cpp)
+and [5.0.0](https://github.com/opencv/opencv/blob/5.0.0/modules/geometry/src/subdivision2d.cpp)
+are byte-identical: SHA256
+`7863b0dec9896d99d9a4b75ab6deb330632fd5a17fe12691761eea5a3b7f3a40`.
+The Rect2f constructor (121–130) initializes flags and calls
+`initDelaunay(rect)`. Both overloads (integer 502–546, Float32 548–592)
+independently implement initialization; integer does not delegate to Rect2f.
+
+For Rect2f, native initialization computes and stores:
+
+```
+Big = binary32(6.f * max(width,height))
+topLeft = (X,Y)
+bottomRight = (binary32(X+Width), binary32(Y+Height))
+A = (binary32(X+Big), Y)
+B = (X, binary32(Y+Big))
+C = (binary32(X-Big), binary32(Y-Big))
+```
+
+It clears vertex/edge vectors before rebuilding, creates null slots, then
+three vertices in order A/B/C (IDs 1/2/3), creates edges AB/BC/CA, sets their
+endpoints and splices them. The arithmetic has no semantic guard. `locate`
+(297) rejects `pt.x < topLeft.x || pt.y < topLeft.y ||
+pt.x >= bottomRight.x || pt.y >= bottomRight.y`: native half-open limits.
+
+The integer bodies in [4.6.0](https://github.com/opencv/opencv/blob/4.6.0/modules/imgproc/src/subdivision2d.cpp),
+[4.10.0](https://github.com/opencv/opencv/blob/4.10.0/modules/imgproc/src/subdivision2d.cpp),
+and [4.11.0](https://github.com/opencv/opencv/blob/4.11.0/modules/imgproc/src/subdivision2d.cpp)
+use `3.f * MAX(rect.width, rect.height)`; [4.12.0](https://github.com/opencv/opencv/blob/4.12.0/modules/imgproc/src/subdivision2d.cpp)
+and newer use `6.f`. All explicitly cast X/Y to float; normal C++ arithmetic
+converts width/height to float before multiplying/adding, **not** integer
+addition of the origin and dimension. Shared Ada validation converts each
+integer field separately and uses the actual native factor. Integer overloads
+still call integer native Rect, never Rect2f.
+
+Independent native probes, before implementing the correction, inspected
+protected topLeft/bottomRight via a temporary derived class and inserted at
+the left edge. On actual 4.10.0, preserved 4.12.0, exact-tag 4.13.0, and 5.0.0:
+
+| Descriptor | Effective upper X | Insertion at `(2**24,5)` |
+|---|---|---|
+| integer X=2**24, width=1, height=10 | 2**24 (collapsed) | OpenCV StsOutOfRange (-211) |
+| integer X=2**24, width=2, height=10 | 2**24+2 | accepted, vertex 4 |
+| Rect2f same values (4.13 / 5.0) | identical collapse/advance | same stored upper limits |
+
+The tagged 4.6/4.11 expressions have the same binary32 extent semantics;
+runtime claims above are only for the listed installed builds. The temporary
+probe and exact-tag minimal 4.13 core/imgproc build are under `/tmp`, not
+globally installed or committed. Positive integer dimensions therefore did
+require a correctness fix: absorbed effective widths/heights now raise
+OpenCV_Error before any native initialization.
+
+### Source-derived safety contract
+
+Ada requires finite X/Y/Width/Height and strictly positive dimensions.
+`Float32_Value` is Core's `Interfaces.IEEE_Float_32` subtype. Preflight uses
+this type's arithmetic and `'Machine` rounding for each native-stored result,
+not binary64 comparisons of mathematical bounds. It checks:
+
+1. Big is finite and positive (factor 6 Float32; version-correct 3/6 integer).
+2. Rounded X+Width and Y+Height are finite and strictly greater than X/Y.
+3. Rounded X+Big, Y+Big, X-Big and Y-Big are finite.
+
+These are initialization conditions, **not** a guarantee of well-conditioned
+later native predicates. No arbitrary maximum coordinate, minimum spacing,
+or general geometric restriction is introduced. Overflow/validity checks are
+suppressed only in the arithmetic/finite-inspection procedure, so intended
+OpenCV_Error replaces Inf/NaN-driven Constraint_Error under validation.
+
+Distinctness/nondegeneracy needs no additional public test: an effective
+positive dimension crosses the upward rounding midpoint at the origin.
+The adjacent downward binary32 spacing is at most twice the upward spacing,
+including binade boundaries. Rounded Big, at least a rounded factor 3 times
+either positive dimension, crosses both rounding midpoints. Thus the stored
+A.x > X, B.y > Y, C.x < X and C.y < Y. Write their exact real differences as
+`a=A.x-X > 0`, `b=B.y-Y > 0`, `c=X-C.x > 0`, `d=Y-C.y > 0`.
+The determinant of `(B-A,C-A)` is `a*b + a*d + b*c > 0`, so A/B/C are
+distinguishable and non-collinear even after rounding. This argument also
+covers subnormal spacing. It does not claim a later binary32 area computation
+cannot overflow/underflow, or prove native search liveness.
+
+### API, unsupported ordering, and state machine
+
+Root/Core public specs were searched: no canonical axis-aligned binary32
+rectangle exists. `Subdiv2D.Float32_Rectangle` is a small four-field value
+record; not a rotated rectangle or a second owner. Create/Reset overload it.
+`Bounds_Float32` preserves the exact successful descriptor; after integer
+initialization it reports each field converted as native does. `Bounds`
+retains original integer values, but raises after Float32 initialization
+rather than silently rounding/enclosing. Both retain last-successful bounds
+even if the handle becomes unusable. Unqualified record aggregates must now
+be type-qualified to resolve the overload; typed integer clients are unchanged.
+
+Two fixed POD C ABI symbols exist on every build, using four C floats.
+The actual Rect2f constructor and init calls are entirely inside the
+4.13+/5.x preprocessor branches. Raw Create clears diagnostics, requires
+out_handle and sets it null, then returns Unsupported on old versions before
+inspecting bounds. Raw Reset returns Unsupported before inspecting either
+argument. Ada capability gating precedes semantic validation, including
+nonfinite input. Diagnostic: "Subdiv2D Float32 bounds require OpenCV 4.13 or
+newer". No fallback and no optional unresolved native call on older builds.
+
+Preflight/unsupported rejection makes no native initialization call and
+preserves points, readiness, last-successful descriptor and mode. On supported
+Reset the shim marks the handle unusable before native clears its vectors.
+Native failure keeps it unusable; Ada raises before publishing new bounds.
+Successful Reset alone publishes the mode/descriptor and restores readiness.
+The existing integer path obeys the same state machine.
+
+The existing global-allocation fault harness covers Float32 construction and
+rebuild without production hooks. A ready native object retains its vector
+capacity across clear(), so its Reset performs **no allocation**; arming the
+injector verifies this rather than claiming an injected ready-object failure.
+Rebuilding an existing default native handle with no storage exercises six
+failing allocation positions; constructor exercises seven. Failures publish
+no create handle, leave reset handle unusable, and a subsequent Reset recovers.
+Public stored-bounds preservation after a native allocation failure is
+established by publication-after-success code review, not by forcing an Ada
+failure on a ready object. Public preflight and unsupported preservation are
+directly tested with existing points and exact descriptors.
+
+No public semantic validation is duplicated in the C++ shim. New guards are
+only version dispatch and null-pointer safety; numerical policy stays in Ada.
+
+### Task 014 validation evidence
+
+- PR #13 post-merge workflow 37102354378: initially in progress; the permitted
+  final single check found SUCCESS on Linux, macOS and Windows MSYS2.
+- Local OpenCV 4.10.0/imgproc: `alr -n build` passed; full normal and
+  validation-profile suites **521/521**, zero failed assertions/errors.
+- Preserved exact OpenCV 4.12.0/imgproc: full normal and validation suites
+  **521/521**. Capability False, optional public/raw operations Unsupported;
+  integer subdivisions remain usable.
+- Ephemeral exact-tag OpenCV 4.13.0/imgproc: minimal core/imgproc build and
+  Ada build passed; complete focused Subdiv2D suite **60/60** in release and
+  validation profiles. Capability True, real Rect2f constructor/reset, exact
+  vertices 1..3, fractional insert/locate/nearest/lists/navigation/Voronoi,
+  half-open edges, mode switching, invalid-field and arithmetic regressions.
+- Exact OpenCV 5.0.0/geometry: full normal and validation suites **521/521**;
+  complete focused Subdiv2D suite passed. No native Imgproc backend dependency.
+- Native fault injection under AddressSanitizer/UndefinedBehaviorSanitizer:
+  zero failed checks on 4.10, 4.13 and 5.0. Float32 construction/rebuild paths
+  actually fail seven/six allocation positions on supported releases.
+- Symbol inspection on 4.10 and 4.12 found the two fixed Float32 shim symbols
+  and **no Rect2f native constructor/init reference**.
+- Established GNATprove scope through the tests Alire environment: **277/277
+  checks proved**, level 2, timeout 30, checks-as-errors, invocation header.
+  New stateful binary32 validation is runtime-checked and tested, not part
+  of that proof claim. The foreign boundary remains trusted.
+- GNATformat checks, 79-column Ada checks and `git diff --check` pass.
+  No new warnings/dependencies, generators, Mat/STL ABI exposure, ownership
+  model, compiler/runtime strategy, or native backend selection changes.
+  Local tests restored to release profile with native OpenCV 4.10.
+
+An exploratory full-suite 4.13 run (before the last two bounds tests) had
+**513/519 successful**, six failed assertions and no unexpected errors.
+All six failures are unchanged `Minimum_Area_Rectangle_Tests` expectations:
+4.13 adopted the newer minAreaRect angle/size conventions, whereas those tests
+recognize that convention only for major version 5. The tagged
+[4.12–4.13 rotcalipers.cpp diff](https://github.com/opencv/opencv/compare/4.12.0...4.13.0)
+confirms the native change (angle default -90, new width/height ordering).
+This existing test compatibility issue is outside Task 014; no minAreaRect
+binding or tests were changed to hide it. Threshold runtime evidence above
+is explicitly the entire focused stateful family, not a full-suite 4.13 pass.
+
+Release version remains 0.2.0-dev; the 0.1.0 tag object and Alire-index state
+are unchanged. The sibling Core worktree's unrelated user changes were not
+modified, staged, or committed.
