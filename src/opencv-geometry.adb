@@ -2654,6 +2654,9 @@ package body OpenCV.Geometry is
       Count  : aliased Interfaces.Integer_32 := 0;
       Status : Internal.C_API.Status;
    begin
+      --  Native convexHull computes total + 2 in signed int.
+      Validate_Native_Count
+        (Points, Natural (Interfaces.Integer_32'Last) - 2, "Convex_Hull");
       Validate_Finite_Points (Points, "Convex_Hull");
       --  OpenCV compares binary32 coordinate differences.
       Validate_Binary32_Spans (Points, "Convex_Hull");
@@ -2693,6 +2696,10 @@ package body OpenCV.Geometry is
       Count  : aliased Interfaces.Integer_32 := 0;
       Status : Internal.C_API.Status;
    begin
+      Validate_Native_Count
+        (Points,
+         Natural (Interfaces.Integer_32'Last) - 2,
+         "Convex_Hull_Indices");
       Validate_Finite_Points (Points, "Convex_Hull_Indices");
       Validate_Binary32_Spans (Points, "Convex_Hull_Indices");
       if Points'Length = 0 then
@@ -2833,13 +2840,14 @@ package body OpenCV.Geometry is
       --  three coordinates; up to 2.0**41 they stay finite, so an overflow
       --  of the center or radius is infinite and raises below rather than
       --  making OpenCV 4.x silently keep a circle that misses a point.
-      if not Float32_Points.Magnitudes_Are_At_Most
-               (Points, Float32_Points.Circle_Coordinate_Limit)
+      if Points'Length >= 3
+        and then not Float32_Points.Magnitudes_Are_At_Most
+                       (Points, Float32_Points.Circle_Coordinate_Limit)
       then
          Ada.Exceptions.Raise_Exception
            (OpenCV.OpenCV_Error'Identity,
             "Minimum_Enclosing_Circle requires coordinates of magnitude at "
-            & "most 2.0**41");
+            & "most 2.0**41 for three or more points");
       end if;
       declare
          Packed : aliased constant Internal.C_API.Point_F32_Array :=
@@ -2960,8 +2968,10 @@ package body OpenCV.Geometry is
       end if;
       --  Native fitLine computes count*2 in signed int for the robust
       --  distances.
-      Validate_Native_Count
-        (Points, Natural (Interfaces.Integer_32'Last) / 2, "Fit_Line_2D");
+      if Distance /= L2 then
+         Validate_Native_Count
+           (Points, Natural (Interfaces.Integer_32'Last) / 2, "Fit_Line_2D");
+      end if;
       Validate_Finite_Points (Points, "Fit_Line_2D");
       --  OpenCV forms the binary32 products X*X, Y*Y, and X*Y of raw
       --  coordinates; up to 2.0**63 they stay finite. An overflow of one

@@ -2,7 +2,7 @@ with OpenCV.Core;
 
 package OpenCV.Geometry is
 
-   --  An integer contour, for exact integer geometry. OpenCV CV_32S points.
+   --  An integer contour, for integer-coordinate geometry. CV_32S points.
    subtype Contour is OpenCV.Point_Array;
 
    --  Ada-owned sequence of binary32 points: a point set for native subpixel
@@ -15,7 +15,7 @@ package OpenCV.Geometry is
    --  OpenCV_Error. Iteration order is native order, and bounds may be any
    --  Natural range. OpenCV computes coordinate differences, and for some
    --  operations their products, in binary32, so results can differ from
-   --  those of exact integer contours with the same shape; each overload
+   --  those of integer-coordinate contours with the same shape; each overload
    --  states the native arithmetic that matters.
    type Float32_Point_Array is
      array (Natural range <>) of OpenCV.Float32_Point;
@@ -121,6 +121,8 @@ package OpenCV.Geometry is
    --  increases rightward and Y increases upward. Image coordinates often
    --  increase Y downward, so the visual winding may appear reversed.
    --  Empty input returns an empty contour. Points is unchanged.
+   --  More than Integer_32'Last - 2 points raise OpenCV_Error because native
+   --  convexHull computes total + 2 in signed int before stack allocation.
    type Hull_Orientation is (Counterclockwise, Clockwise);
 
    function Convex_Hull
@@ -140,7 +142,8 @@ package OpenCV.Geometry is
    --  4.x and 5.x. So that no difference overflows, the X span and the Y
    --  span of Points, computed in binary64, must each be at most
    --  Float32_Value'Last; wider sets raise OpenCV_Error. Points is
-   --  unchanged.
+   --  unchanged. More than Integer_32'Last - 2 points raise OpenCV_Error
+   --  because native convexHull computes total + 2 in signed int.
    function Convex_Hull
      (Points      : Float32_Point_Array;
       Orientation : Hull_Orientation := Counterclockwise)
@@ -157,7 +160,8 @@ package OpenCV.Geometry is
    --  returned, and OpenCV 4.x and 5.x can choose differently. The result is
    --  zero-based; empty input returns the null range 1 .. 0. Points is
    --  unchanged. Inputs that would overflow native integer convex-hull
-   --  arithmetic raise OpenCV_Error.
+   --  arithmetic raise OpenCV_Error, including more than Integer_32'Last - 2
+   --  points because native convexHull computes total + 2 in signed int.
    type Point_Index_Array is array (Natural range <>) of Natural;
 
    function Convex_Hull_Indices
@@ -171,7 +175,8 @@ package OpenCV.Geometry is
 
    --  Convex hull of a Float32 point set as indices in Points'Range,
    --  describing the same hull as the Float32 Convex_Hull with the same
-   --  Orientation, under the same rules for signed zeros, coordinate spans,
+   --  Orientation, under the same count limit (Integer_32'Last - 2 points,
+   --  due to native signed total + 2), rules for signed zeros and spans,
    --  and OpenCV 4.x and 5.x differences. Among points with equal coordinates,
    --  any index may be returned. The result is zero-based; empty input
    --  returns the null range 1 .. 0. Points is unchanged.
@@ -396,7 +401,7 @@ package OpenCV.Geometry is
       Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D;
 
    --  Fit_Line_2D of a Float32 point set, with the integer overload's
-   --  distances, parameters, validation, point counts, and restarts, but
+   --  distances, parameters, scalar validation, and restarts, but
    --  fitting the binary32 coordinates themselves, so subpixel positions
    --  are kept. OpenCV's L2 fit sums the coordinates in binary64 but
    --  forms each product X*X, Y*Y, and X*Y in binary32 before summing, and
@@ -409,6 +414,10 @@ package OpenCV.Geometry is
    --  results, and the all-zero line with which OpenCV's robust fit starts
    --  and which it keeps when no candidate has a finite error, also raise
    --  OpenCV_Error. Points is unchanged.
+   --  L2 accepts the ordinary C ABI count limit, Integer_32'Last. Robust
+   --  distances (L1, L12, Fair, Welsch, Huber) require at most
+   --  Integer_32'Last / 2 points: native fitLine allocates count*2 floats
+   --  after the L2 early return. Larger counts raise OpenCV_Error.
    function Fit_Line_2D
      (Points          : Float32_Point_Array;
       Distance        : Line_Fit_Distance := L2;
@@ -557,7 +566,7 @@ package OpenCV.Geometry is
    --  not convex. Points is unchanged.
    function Is_Convex (Points : Contour) return Boolean;
 
-   --  Is_Convex of a Float32 point set. Unlike the exact integer test,
+   --  Is_Convex of a Float32 point set. Unlike the integer-coordinate test,
    --  OpenCV computes each edge's coordinate differences and the cross
    --  products of consecutive edges in binary32, so nearly collinear
    --  vertices are classified by rounded products, which can differ from
@@ -671,15 +680,17 @@ package OpenCV.Geometry is
    --  the origin. OpenCV works in binary32 with absolute tolerances: it adds
    --  1.0E-4 to radii and treats three points as collinear when its binary32
    --  cross product of their edges is at most 1.0E-4 in magnitude. Integer
-   --  triangles never fall below that bound, but small Float32 sets can: for
-   --  an equilateral triangle with sides of 0.01, OpenCV 4.6, 4.10, and 5.0
-   --  return a circle that leaves one vertex about 0.0036 outside. The
+   --  triangles never fall below that bound, but small Float32 sets can. In
+   --  the tested OpenCV 4.6, 4.10, and 5.0 equilateral-triangle fixture with
+   --  sides of 0.01, one vertex lies about 0.0036 outside the circle. The
    --  native circle is returned as computed. OpenCV's circle through three
    --  points also forms binary32 products of three coordinates; when they
    --  overflow, OpenCV 4.x keeps a previous circle that misses a point. So
-   --  every coordinate must have magnitude at most 2.0**41, which keeps
-   --  them finite, and other sets raise OpenCV_Error. Within that range a
-   --  native overflow of the center or radius is infinite, which raises
+   --  for three or more points every coordinate must have magnitude at most
+   --  2.0**41, keeping those products finite; other such sets raise
+   --  OpenCV_Error. Zero, one, and two points cannot reach the three-point
+   --  construction and have no such magnitude limit. Coordinates and native
+   --  center/radius must still be finite for every cardinality, or raise
    --  OpenCV_Error. OpenCV 5.x shuffles more than ten points, with a
    --  generator seeded from the points, before its incremental search, and
    --  keeps the previous circle for such a collinear triple where 4.x uses

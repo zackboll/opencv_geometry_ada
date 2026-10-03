@@ -42,7 +42,7 @@ points, for native subpixel geometry: `Contour_Area`, `Arc_Length`,
 rounding coordinates to integers; Float32 results such as hulls and
 approximations are Float32 point sets. Float32 coordinates must be finite.
 OpenCV evaluates Float32 point sets partly in binary32, so near-degenerate or
-extreme inputs can give results that differ from exact integer geometry, and
+extreme inputs can give results that differ from integer-coordinate geometry, and
 some overloads limit coordinate spans or sums where binary32 overflow would
 otherwise make OpenCV fail or answer wrongly. Each overload documents the
 native arithmetic, and `docs/coverage.md` lists which operations have a

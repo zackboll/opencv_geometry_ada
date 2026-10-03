@@ -170,18 +170,24 @@ points return 0.
    re-selects duplicate-point indices; nearly collinear Float32 input can
    therefore give a different hull in 5.0.
 3. Points (`CV_32FC2`) or zero-based `int` indices.
-4. Any; empty input is rejected by `checkVector` (shim returns empty).
+4. At most `INT32_MAX - 2`; empty input is rejected by `checkVector` (shim
+   returns empty).
 5. 4.x: binary32 differences, binary64 cross products. 5.0: binary32
    differences, normalized in binary64 and narrowed to binary32.
 6. Undefined behavior: NaN in `std::sort`. Count arithmetic:
-   `AutoBuffer<int> _stack(total + 2)` cannot overflow in practice, because
-   `checkVector` already rejects `2**30` or more points (observed by the
-   independent review on all three releases). The Sklansky loop terminates
+   `AutoBuffer<int> _stack(total + 2)` overflows signed int for the two counts
+   `INT_MAX - 1` and `INT_MAX`. There is no source-supported `2**30` rejection:
+   OpenCV 4.x can represent vector counts up to `INT_MAX`, and 5.0's explicit
+   vector-size check permits `INT_MAX`. The Sklansky loop terminates
    structurally, but an overflowing difference makes its cross products
    infinite or NaN and the hull silently wrong.
 7. Signed zeros as above.
-8. ABI: separate `_f32` entry points that reject NaN (sort safety). Ada passes
-   `-0.0` as `+0.0` and requires spans of at most `FLT_MAX`.
+8. ABI: all four direct hull entry points (integer/Float32, points/indices)
+   reject counts above `INT32_MAX - 2` before scanning any input or calling
+   OpenCV. Synthetic counts with a single dummy point test every path and
+   require a zero output count. Float32 entries also reject NaN (sort safety).
+   Ada checks the count before packing/output allocation, passes `-0.0` as
+   `+0.0`, and requires spans of at most `FLT_MAX`.
 
 ### convexityDefects
 
@@ -244,11 +250,12 @@ There is no native Float32 mode to bind.
 6. Non-finite output when coordinate sums or differences overflow binary32.
    Loops are bounded; the 5.0 source notes that without its shuffle, as in
    4.x, sorted input makes the algorithm cubic in time.
-7. Float-specific: the absolute tolerances matter at small scales. Probed in
-   all three releases: an equilateral triangle with sides `0.01` (cross
+7. Float-specific: the absolute tolerances matter at small scales. In the
+   tested OpenCV 4.6, 4.10, and 5.0 equilateral-triangle fixture, sides `0.01` (cross
    product below `1e-4`) gets a circle that leaves one vertex about `0.0036`
    outside, and with sides `0.001` about `0.00027` outside; sides of `0.1`
-   and more are enclosed. Integer triangles have cross products of at
+   and more were enclosed in that fixture, not a universal scale threshold.
+   Integer triangles have cross products of at
    least 1.
    Far from the origin, `findCircle3pts` loses precision in its binary32
    dot products of absolute coordinates: an **integer** triangle with sides
@@ -260,11 +267,16 @@ There is no native Float32 mode to bind.
    vertex 73% of the radius outside for equilateral triangles with sides
    `3e13`; random sets at `±8e12` fail about 3% of the time).
 8. ABI: separate `_f32` entry point with no arithmetic guard. Ada requires
-   coordinates of magnitude at most `2**41`, which keeps those products
+   coordinates of magnitude at most `2**41` only for three or more points,
+   when the three-point construction can be reached. This keeps its products
    below `2**127`; with the determinant above the `1e-4` tolerance, an
    overflowing center or radius is then infinite and raises. The binding
    documents the small-scale and far-from-origin behavior and returns the
-   native circle.
+   native circle. Zero points give a zero circle; a singleton uses its point
+   as center and EPS radius; two points use the midpoint/pair path. These
+   paths still require finite input and finite native output but have no
+   triple-product bound. A singleton and repeated pair at `2**80` are
+   regression fixtures.
 
 ### minEnclosingTriangle
 
@@ -327,11 +339,18 @@ overload stays bound, and its documentation now names the hang.
 6. Non-finite or degenerate output: binary32 products overflow above about
    `1.8E+19`, giving a NaN direction (L2) or, for the robust distances, the
    initial all-zero line when no candidate has a finite error. Loops are
-   bounded (20 restarts, 30 reweightings). Count arithmetic as for integers.
+   bounded (20 restarts, 30 reweightings). Robust distances allocate
+   `AutoBuffer<float> wr(count * 2)` in signed int, requiring
+   `count <= INT32_MAX / 2`. L2 returns through `fitLine2D_wods` before that
+   allocation; continuous Float32 input also skips integer `convertTo`.
    When only one axis overflows, `dx2` is infinite and `atan2(2 * dxy, +Inf)`
    is 0, so the direction is a finite but wrong `(1, 0)` (independent review:
    the vertical line `x = 2e19` on all three releases).
-7. Binding: separate `_f32` entry point with the integer count limit. Ada
+7. Binding: separate `_f32` entry point: L2 has only the ordinary `INT32_MAX`
+   point-count limit; L1, L12, Fair, Welsch, and Huber have the robust
+   `INT32_MAX / 2` limit. The ABI resolves the selector before that guard,
+   and the guard precedes point reads. The integer common limit is unchanged
+   because its `convertTo` also computes count*2. Ada
    requires coordinates of magnitude at most `2**63`, which keeps every
    product at most `2**126` (robust weights start at 1 and are then
    normalized, so weighted products stay finite too), and rejects

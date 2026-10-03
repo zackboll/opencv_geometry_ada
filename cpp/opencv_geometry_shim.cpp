@@ -18,6 +18,9 @@
 namespace {
 
 constexpr std::size_t error_message_capacity = 1024;
+// ABI safety: native convexHull allocates _stack(total + 2), with signed
+// int arithmetic before allocation, in OpenCV 4.6, 4.10, and 5.0.
+constexpr int32_t maximum_convex_hull_point_count = INT32_MAX - 2;
 thread_local char last_error_message[error_message_capacity] = "";
 
 void clear_error() noexcept
@@ -451,6 +454,9 @@ opencv_geometry_convex_hull(
         return invalid_argument(
             "convex hull point count must not be negative");
     }
+    if (point_count > maximum_convex_hull_point_count) {
+        return invalid_argument("convex hull point count exceeds native total + 2 range");
+    }
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
     }
@@ -523,6 +529,9 @@ opencv_geometry_convex_hull_indices(
     if (point_count < 0) {
         return invalid_argument(
             "convex hull indices point count must not be negative");
+    }
+    if (point_count > maximum_convex_hull_point_count) {
+        return invalid_argument("convex hull point count exceeds native total + 2 range");
     }
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
@@ -597,6 +606,9 @@ opencv_geometry_convex_hull_f32(
         return invalid_argument(
             "convex hull point count must not be negative");
     }
+    if (point_count > maximum_convex_hull_point_count) {
+        return invalid_argument("convex hull point count exceeds native total + 2 range");
+    }
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
     }
@@ -666,6 +678,9 @@ opencv_geometry_convex_hull_indices_f32(
     if (point_count < 0) {
         return invalid_argument(
             "convex hull indices point count must not be negative");
+    }
+    if (point_count > maximum_convex_hull_point_count) {
+        return invalid_argument("convex hull point count exceeds native total + 2 range");
     }
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
@@ -2117,21 +2132,20 @@ opencv_geometry_fit_line_2d_f32(
     if (point_count < 0) {
         return invalid_argument("fit line point count must not be negative");
     }
-    // ABI safety: the robust distances allocate AutoBuffer<float>(count*2)
-    // in signed int (OpenCV 4.6, 4.10, and 5.0). A continuous CV_32F input
-    // skips the integer path's convertTo, but not that allocation.
-    if (point_count > INT32_MAX / 2) {
+    int native_distance = 0;
+    if (!line_fit_distance(distance, &native_distance)) {
+        return invalid_argument("fit line distance selector is invalid");
+    }
+    // ABI safety: robust distances allocate AutoBuffer<float>(count*2)
+    // in signed int. Float32 L2 returns before that allocation and skips
+    // the integer path's convertTo (OpenCV 4.6, 4.10, and 5.0).
+    if (native_distance != cv::DIST_L2 && point_count > INT32_MAX / 2) {
         return invalid_argument(
             "fit line point count exceeds native allocation range");
     }
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
     }
-    int native_distance = 0;
-    if (!line_fit_distance(distance, &native_distance)) {
-        return invalid_argument("fit line distance selector is invalid");
-    }
-
     try {
         cv::Vec4f line;
         cv::fitLine(

@@ -578,6 +578,54 @@ package body Float32_Fit_Tests is
          "null line output must be rejected");
    end C_ABI_Validation;
 
+   procedure Line_Robust_Degenerate (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Repeated : constant Points (7 .. 12) := (others => (1.25, -2.5));
+      Line     : constant OpenCV.Geometry.Fitted_Line_2D :=
+        OpenCV.Geometry.Fit_Line_2D
+          (Repeated, Distance => OpenCV.Geometry.Huber);
+   begin
+      AUnit.Assertions.Assert
+        (Is_Unit (Line)
+         and then Line.Direction.X'Valid
+         and then Line.Direction.Y'Valid
+         and then Line.Point = Repeated (7),
+         "identical points must give a finite nonzero robust unit direction");
+   end Line_Robust_Degenerate;
+
+   procedure Line_C_ABI_Count_Policy (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Huge   : constant Interfaces.Integer_32 :=
+        Interfaces.Integer_32'Last / 2 + 1;
+      Line   : aliased C_API.C_Line_2D;
+      Status : C_API.Status;
+   begin
+      for Distance in C_API.Line_Fit_L1 .. C_API.Line_Fit_Huber loop
+         Status :=
+           C_API.Fit_Line_2D_F32
+             (null, Huge, Distance, 0.0, 0.01, 0.01, Line'Access);
+         AUnit.Assertions.Assert
+           (Status = C_API.Error_Invalid_Argument
+            and then Has_Message ("allocation")
+            and then OpenCV.Float32_Value (Line.Direction_X) = 0.0,
+            "robust count guard must run before input access");
+      end loop;
+      Status :=
+        C_API.Fit_Line_2D_F32
+          (null, Huge, C_API.Line_Fit_L2, 0.0, 0.01, 0.01, Line'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument
+         and then Has_Message ("null contour points")
+         and then not Has_Message ("allocation"),
+         "Float32 L2 must not apply the robust count limit");
+      Status :=
+        C_API.Fit_Line_2D_F32 (null, Huge, -1, 0.0, 0.01, 0.01, Line'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument
+         and then Has_Message ("distance selector"),
+         "distance must be resolved before the robust count guard");
+   end Line_C_ABI_Count_Policy;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       Result.Add_Test
@@ -628,6 +676,14 @@ package body Float32_Fit_Tests is
       Result.Add_Test
         (Caller.Create
            ("Float32 fits C ABI validation", C_ABI_Validation'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Float32 robust line identical points",
+            Line_Robust_Degenerate'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Float32 line C ABI L2 versus robust counts",
+            Line_C_ABI_Count_Policy'Access));
       return Result'Access;
    end Suite;
 

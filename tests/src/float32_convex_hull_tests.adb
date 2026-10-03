@@ -482,6 +482,38 @@ package body Float32_Convex_Hull_Tests is
          "empty raw hull indices must succeed with no indices");
    end C_ABI_Validation;
 
+   procedure C_ABI_Count_Overflow (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Dummy_I : aliased C_API.Point_I32 := (0, 0);
+      Dummy_F : aliased C_API.Point_F32 := (0.0, 0.0);
+      Count   : aliased Interfaces.Integer_32 := 9;
+      Huge    : constant Interfaces.Integer_32 :=
+        Interfaces.Integer_32'Last - 1;
+
+      procedure Check (Status : C_API.Status) is
+      begin
+         AUnit.Assertions.Assert
+           (Status = C_API.Error_Invalid_Argument
+            and then Has_Message ("total + 2")
+            and then Count = 0,
+            "unsafe hull count must fail before reading the dummy buffer");
+         Count := 9;
+      end Check;
+   begin
+      --  Only one point exists: any scan of Huge points would be invalid.
+      Check
+        (C_API.Convex_Hull (Dummy_I'Access, Huge, 0, null, 0, Count'Access));
+      Check
+        (C_API.Convex_Hull_Indices
+           (Dummy_I'Access, Huge, 0, null, 0, Count'Access));
+      Check
+        (C_API.Convex_Hull_F32
+           (Dummy_F'Access, Huge, 0, null, 0, Count'Access));
+      Check
+        (C_API.Convex_Hull_Indices_F32
+           (Dummy_F'Access, Huge, 0, null, 0, Count'Access));
+   end C_ABI_Count_Overflow;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       Result.Add_Test
@@ -521,6 +553,10 @@ package body Float32_Convex_Hull_Tests is
       Result.Add_Test
         (Caller.Create
            ("Float32 hull C ABI validation", C_ABI_Validation'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Hull C ABI count overflow before reads",
+            C_ABI_Count_Overflow'Access));
       return Result'Access;
    end Suite;
 

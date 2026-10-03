@@ -397,6 +397,24 @@ package body Float32_Enclosing_Tests is
          "null circle output must be rejected");
    end C_ABI_Validation;
 
+   procedure Circle_Large_Small_Sets (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      use type OpenCV.Float32_Point;
+      One       : constant Points := (1 => (2.0**80, -2.0**80));
+      Two       : constant Points := (One (1), One (1));
+      Singleton : constant OpenCV.Geometry.Enclosing_Circle :=
+        OpenCV.Geometry.Minimum_Enclosing_Circle (One);
+      Pair      : constant OpenCV.Geometry.Enclosing_Circle :=
+        OpenCV.Geometry.Minimum_Enclosing_Circle (Two);
+   begin
+      AUnit.Assertions.Assert
+        (Singleton.Center = One (1) and then Singleton.Radius = 1.0E-4,
+         "large singleton must retain its center and native EPS radius");
+      AUnit.Assertions.Assert
+        (Pair.Center = One (1) and then Pair.Radius = 1.0E-4,
+         "large repeated pair must retain its center and native EPS radius");
+   end Circle_Large_Small_Sets;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       Result.Add_Test
@@ -432,6 +450,10 @@ package body Float32_Enclosing_Tests is
       Result.Add_Test
         (Caller.Create
            ("Float32 enclosing C ABI validation", C_ABI_Validation'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Float32 circle large singleton and repeated pair",
+            Circle_Large_Small_Sets'Access));
       return Result'Access;
    end Suite;
 
