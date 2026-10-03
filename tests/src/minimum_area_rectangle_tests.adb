@@ -2,6 +2,7 @@ with Ada.Strings.Fixed;
 with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
+with Float32_Test_Support;
 with Interfaces;
 with Interfaces.C;
 with OpenCV;
@@ -11,6 +12,7 @@ with OpenCV.Geometry.Internal.C_API;
 package body Minimum_Area_Rectangle_Tests is
 
    package C_API renames OpenCV.Geometry.Internal.C_API;
+   package Support renames Float32_Test_Support;
 
    use type C_API.Status;
    use type Interfaces.Integer_32;
@@ -18,6 +20,7 @@ package body Minimum_Area_Rectangle_Tests is
    use type OpenCV.Float32_Value;
    use type OpenCV.Point;
    use type OpenCV.Point_Coordinate;
+   use type OpenCV.Geometry.Float32_Point_Array;
 
    type Fixture is new AUnit.Test_Fixtures.Test_Fixture with null record;
    package Caller is new AUnit.Test_Caller (Fixture);
@@ -25,10 +28,13 @@ package body Minimum_Area_Rectangle_Tests is
 
    Tolerance : constant OpenCV.Float32_Value := 1.0E-4;
 
-   function Is_OpenCV_5 return Boolean is
+   --  Tagged rotcalipers.cpp and native probes agree at the 4.13 boundary.
+   function Uses_New_Min_Area_Rectangle_Convention return Boolean is
+      Major : constant Interfaces.Integer_32 := C_API.OpenCV_Major_Version;
+      Minor : constant Interfaces.Integer_32 := C_API.OpenCV_Minor_Version;
    begin
-      return C_API.OpenCV_Major_Version = 5;
-   end Is_OpenCV_5;
+      return Major >= 5 or else (Major = 4 and then Minor >= 13);
+   end Uses_New_Min_Area_Rectangle_Convention;
 
    function Close (Left, Right : OpenCV.Float32_Value) return Boolean is
    begin
@@ -42,8 +48,8 @@ package body Minimum_Area_Rectangle_Tests is
       Message                      : String)
    is
       function Detail
-        (Name : String; Actual, Expected : OpenCV.Float32_Value)
-         return String is
+        (Name : String; Actual, Expected : OpenCV.Float32_Value) return String
+      is
       begin
          return
            Message
@@ -94,7 +100,7 @@ package body Minimum_Area_Rectangle_Tests is
          (X => 6, Y => 4),
          (X => 0, Y => 4));
    begin
-      if Is_OpenCV_5 then
+      if Uses_New_Min_Area_Rectangle_Convention then
          Assert_Rect
            (OpenCV.Geometry.Minimum_Area_Rectangle (Points),
             3.0,
@@ -132,7 +138,9 @@ package body Minimum_Area_Rectangle_Tests is
       AUnit.Assertions.Assert
         (Close (Actual.Size.Height, 2.828427), "diamond height");
       AUnit.Assertions.Assert
-        (Close (Actual.Angle_Degrees, (if Is_OpenCV_5 then -45.0 else 45.0)),
+        (Close
+           (Actual.Angle_Degrees,
+            (if Uses_New_Min_Area_Rectangle_Convention then -45.0 else 45.0)),
          "diamond angle");
    end Diamond;
 
@@ -143,7 +151,7 @@ package body Minimum_Area_Rectangle_Tests is
    begin
       declare
          Angle : constant OpenCV.Float32_Value :=
-           (if Is_OpenCV_5 then -90.0 else 0.0);
+           (if Uses_New_Min_Area_Rectangle_Convention then -90.0 else 0.0);
       begin
          Assert_Rect
            (OpenCV.Geometry.Minimum_Area_Rectangle (Empty),
@@ -175,7 +183,7 @@ package body Minimum_Area_Rectangle_Tests is
       Negative   : constant OpenCV.Geometry.Contour :=
         ((X => 0, Y => 0), (X => 3, Y => -4));
    begin
-      if Is_OpenCV_5 then
+      if Uses_New_Min_Area_Rectangle_Convention then
          Assert_Rect
            (OpenCV.Geometry.Minimum_Area_Rectangle (Horizontal),
             3.0,
@@ -257,7 +265,7 @@ package body Minimum_Area_Rectangle_Tests is
          (X => -4, Y => 9),
          (X => -10, Y => 9));
    begin
-      if Is_OpenCV_5 then
+      if Uses_New_Min_Area_Rectangle_Convention then
          Assert_Rect
            (OpenCV.Geometry.Minimum_Area_Rectangle (Collinear),
             2.0,
@@ -303,7 +311,7 @@ package body Minimum_Area_Rectangle_Tests is
          14 => (X => 0, Y => 4));
       Before : constant OpenCV.Geometry.Contour := Points;
    begin
-      if Is_OpenCV_5 then
+      if Uses_New_Min_Area_Rectangle_Convention then
          Assert_Rect
            (OpenCV.Geometry.Minimum_Area_Rectangle (Points),
             3.0,
@@ -325,6 +333,125 @@ package body Minimum_Area_Rectangle_Tests is
       AUnit.Assertions.Assert
         (Same_Contour (Points, Before), "input unchanged");
    end Nonzero_Bounds_And_Input_Unchanged;
+
+   procedure Empty_Convention_Boundary (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Empty : constant OpenCV.Geometry.Float32_Point_Array (7 .. 6) :=
+        (others => (0.0, 0.0));
+      Angle : constant OpenCV.Float32_Value :=
+        (if Uses_New_Min_Area_Rectangle_Convention then -90.0 else 0.0);
+      Raw   : aliased C_API.C_Rotated_Rect;
+
+      procedure Assert_Raw_Empty (Status : C_API.Status; Message : String) is
+      begin
+         AUnit.Assertions.Assert (Status = C_API.Success, Message & " status");
+         AUnit.Assertions.Assert
+           (Raw.Center_X = 0.0
+            and then Raw.Center_Y = 0.0
+            and then Raw.Width = 0.0
+            and then Raw.Height = 0.0
+            and then Close (OpenCV.Float32_Value (Raw.Angle_Degrees), Angle),
+            Message & " native empty representation");
+      end Assert_Raw_Empty;
+   begin
+      Assert_Rect
+        (OpenCV.Geometry.Minimum_Area_Rectangle (Empty),
+         0.0,
+         0.0,
+         0.0,
+         0.0,
+         Angle,
+         "Float32 empty boundary");
+      Raw := (others => -1.0);
+      Assert_Raw_Empty
+        (C_API.Min_Area_Rect (null, 0, Raw'Access), "integer empty boundary");
+      Raw := (others => -1.0);
+      Assert_Raw_Empty
+        (C_API.Min_Area_Rect_F32 (null, 0, Raw'Access),
+         "Float32 empty boundary");
+   end Empty_Convention_Boundary;
+
+   procedure Fractional_Rectangle_Convention (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Points  : constant OpenCV.Geometry.Float32_Point_Array (11 .. 14) :=
+        ((X => 0.5, Y => 0.25),
+         (X => 3.0, Y => 0.25),
+         (X => 3.0, Y => 1.75),
+         (X => 0.5, Y => 1.75));
+      Before  : constant OpenCV.Geometry.Float32_Point_Array := Points;
+      Actual  : constant OpenCV.Rotated_Rect :=
+        OpenCV.Geometry.Minimum_Area_Rectangle (Points);
+      Rounded : constant OpenCV.Rotated_Rect :=
+        OpenCV.Geometry.Minimum_Area_Rectangle (Support.Rounded (Points));
+      Angle   : constant OpenCV.Float32_Value :=
+        (if Uses_New_Min_Area_Rectangle_Convention then -90.0 else 90.0);
+   begin
+      Assert_Rect
+        (Actual, 1.75, 1.0, 1.5, 2.5, Angle, "fractional axis boundary");
+      AUnit.Assertions.Assert
+        (not Close (Actual.Center.X, Rounded.Center.X),
+         "fractional rectangle must not take the rounded integer path");
+      AUnit.Assertions.Assert (Points = Before, "fractional input unchanged");
+      AUnit.Assertions.Assert
+        (OpenCV.Float32_Value'Size = 32, "native fields remain binary32");
+   end Fractional_Rectangle_Convention;
+
+   procedure Fractional_Two_Point_Convention (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Positive        :
+        constant OpenCV.Geometry.Float32_Point_Array (5 .. 6) :=
+          ((X => 0.5, Y => 0.25), (X => 2.0, Y => 2.25));
+      Negative        :
+        constant OpenCV.Geometry.Float32_Point_Array (9 .. 10) :=
+          ((X => 0.5, Y => 0.25), (X => 2.0, Y => -1.75));
+      Before_Positive : constant OpenCV.Geometry.Float32_Point_Array :=
+        Positive;
+      Before_Negative : constant OpenCV.Geometry.Float32_Point_Array :=
+        Negative;
+   begin
+      --  Hull order gives dx > 0 in the new implementation. dy > 0 keeps
+      --  the length in height and uses -atan2(dx,dy); dy < 0 swaps it into
+      --  width and uses atan2(dy,dx). Old code reverses the delta and puts
+      --  the length in width in both cases. Values were probed on 4.12/4.13.
+      if Uses_New_Min_Area_Rectangle_Convention then
+         Assert_Rect
+           (OpenCV.Geometry.Minimum_Area_Rectangle (Positive),
+            1.25,
+            1.25,
+            0.0,
+            2.5,
+            -36.869896,
+            "fractional positive pair");
+         Assert_Rect
+           (OpenCV.Geometry.Minimum_Area_Rectangle (Negative),
+            1.25,
+            -0.75,
+            2.5,
+            0.0,
+            -53.130104,
+            "fractional negative pair");
+      else
+         Assert_Rect
+           (OpenCV.Geometry.Minimum_Area_Rectangle (Positive),
+            1.25,
+            1.25,
+            2.5,
+            0.0,
+            -126.869904,
+            "fractional positive pair");
+         Assert_Rect
+           (OpenCV.Geometry.Minimum_Area_Rectangle (Negative),
+            1.25,
+            -0.75,
+            2.5,
+            0.0,
+            126.869904,
+            "fractional negative pair");
+      end if;
+      AUnit.Assertions.Assert
+        (Positive = Before_Positive and then Negative = Before_Negative,
+         "fractional pairs unchanged");
+   end Fractional_Two_Point_Convention;
 
    procedure Binary32_Precision (Test : in out Fixture) is
       pragma Unreferenced (Test);
@@ -423,6 +550,18 @@ package body Minimum_Area_Rectangle_Tests is
         (Caller.Create
            ("Minimum area nonzero bounds input unchanged",
             Nonzero_Bounds_And_Input_Unchanged'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Minimum area empty convention boundary",
+            Empty_Convention_Boundary'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Minimum area Float32 fractional rectangle convention",
+            Fractional_Rectangle_Convention'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Minimum area Float32 fractional two-point convention",
+            Fractional_Two_Point_Convention'Access));
       Result.Add_Test
         (Caller.Create
            ("Minimum area binary32 precision", Binary32_Precision'Access));

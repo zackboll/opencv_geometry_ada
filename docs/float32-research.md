@@ -223,7 +223,8 @@ There is no native Float32 mode to bind.
 ### minAreaRect (`Minimum_Area_Rectangle`)
 
 1. CV_32F: accepted; the float hull goes straight to `rotatingCalipers`.
-2. Representation differs between 4.x and 5.0 as for integer input.
+2. OpenCV 4.13 introduced the width/height/angle convention also used by 5.0;
+   4.12 and earlier use the older representation, as for integer input.
 3. `RotatedRect` of `float`. 4. Any.
 5. Rotating calipers in binary32.
 6. Count arithmetic: `AutoBuffer<float> abuf(n*3)` in signed `int`, where `n`

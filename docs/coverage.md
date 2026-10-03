@@ -41,7 +41,7 @@ sets are Ada-owned integer `Contour` values (`OpenCV.Point_Array`, native
 | `approxPolyDP` | `Approximate_Curve` | Bound, open and closed, integer and Float32 | 5.0 measures distance to the segment, 4.x to its line |
 | `boundingRect` | `Bounding_Rect` | Partial: integer and Float32 point sets | Grayscale-image mode unbound |
 | `pointPolygonTest` | `Locate_Point`, `Signed_Distance_To_Contour` | Bound, both `measureDist` modes, integer and Float32 | |
-| `minAreaRect` | `Minimum_Area_Rectangle` | Bound, integer and Float32 | 4.x and 5.x may represent the same rectangle differently |
+| `minAreaRect` | `Minimum_Area_Rectangle` | Bound, integer and Float32 | 4.13 introduced the 5.x width/height/angle convention (`[-90, 0)`); 4.12 and earlier use the older representation. Width may identify a different physical side; use `Box_Points` for vertices, without assuming their order. Degenerate numerical equivalence is not guaranteed |
 | `boxPoints` | `Box_Points` | Bound | Native vertex order is preserved; the 4.12+ and 5.0 documentation's start vertex is not guaranteed |
 | `minEnclosingCircle` | `Minimum_Enclosing_Circle` | Bound, integer and Float32 | 5.x shuffles more than ten points first. Binary32 arithmetic on absolute coordinates can miss a point far from the origin, even for integer input |
 | `minEnclosingTriangle` | `Minimum_Enclosing_Triangle` | Bound, integer only | OpenCV's search loops have no iteration bound and fail to return for some nearly degenerate hulls in 4.6, 4.10, and 5.0; see [Float32 point sets](#float32-cv_32f-point-sets) |

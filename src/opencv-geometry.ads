@@ -289,15 +289,21 @@ package OpenCV.Geometry is
 
    --  Returns OpenCV's native minimum-area rotated rectangle. Center, Size,
    --  and Angle_Degrees are binary32 native results; Angle_Degrees is in
-   --  degrees. OpenCV 4.x and 5.x can encode an equivalent rectangle with
-   --  different width, height, and angle fields, so callers must not assume
-   --  one cross-version angle range. Empty and degenerate contours preserve
-   --  the active backend representation. Points is unchanged. Inputs that
-   --  would overflow native integer convex-hull arithmetic raise OpenCV_Error.
+   --  degrees. OpenCV 4.13 introduced the convention also used by 5.x:
+   --  angles in [-90, 0), with changed width/height assignment; 4.12 and
+   --  earlier use the older representation. For ordinary nondegenerate
+   --  inputs this changes the representation, not the minimum-area region.
+   --  Width need not identify the same physical side across releases. Use
+   --  Box_Points for geometric vertices, without assuming a starting vertex.
+   --  Empty and degenerate contours preserve the native representation; no
+   --  cross-version numerical equivalence is promised for degenerate cases.
+   --  Points is unchanged. Inputs that would overflow native integer
+   --  convex-hull arithmetic raise OpenCV_Error.
    function Minimum_Area_Rectangle
      (Points : Contour) return OpenCV.Rotated_Rect;
 
-   --  Minimum_Area_Rectangle of a Float32 point set, computed by OpenCV's
+   --  Minimum_Area_Rectangle of a Float32 point set, with the native version
+   --  convention described above and without integer rounding. OpenCV uses
    --  binary32 rotating calipers over the hull that the Float32 Convex_Hull
    --  describes, with the same handling of signed zeros and the same
    --  coordinate span limit. OpenCV allocates three binary32 values per
