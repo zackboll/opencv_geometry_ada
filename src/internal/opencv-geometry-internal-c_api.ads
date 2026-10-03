@@ -11,6 +11,20 @@ package OpenCV.Geometry.Internal.C_API is
    Error_Standard_CPP     : constant Status := 2;
    Error_Unknown          : constant Status := 3;
    Error_Invalid_Argument : constant Status := 4;
+   Error_Unsupported      : constant Status := 5;
+
+   Feature_Approx_Poly_N                : constant Interfaces.Integer_32 := 1;
+   Feature_Closest_Ellipse_Points       : constant Interfaces.Integer_32 := 2;
+   Feature_Min_Enclosing_Convex_Polygon : constant Interfaces.Integer_32 := 3;
+   Feature_Float32_Subdivision_Bounds   : constant Interfaces.Integer_32 := 4;
+
+   function Native_Feature_Supported
+     (Feature   : Interfaces.Integer_32;
+      Supported : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_native_feature_supported";
 
    type Point_I32 is record
       X : Interfaces.Integer_32;
@@ -134,6 +148,30 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   function Closest_Ellipse_Points_I32
+     (Ellipse     : access constant C_Rotated_Rect;
+      Points      : access constant Point_I32;
+      Point_Count : Interfaces.Integer_32;
+      Output      : access Point_F32;
+      Capacity    : Interfaces.Integer_32;
+      Count       : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_closest_ellipse_points_i32";
+
+   function Closest_Ellipse_Points_F32
+     (Ellipse     : access constant C_Rotated_Rect;
+      Points      : access constant Point_F32;
+      Point_Count : Interfaces.Integer_32;
+      Output      : access Point_F32;
+      Capacity    : Interfaces.Integer_32;
+      Count       : access Interfaces.Integer_32) return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_closest_ellipse_points_f32";
+
    type C_Affine_2x3_F64 is record
       M00 : Interfaces.C.double;
       M01 : Interfaces.C.double;
@@ -155,6 +193,12 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_opencv_major_version";
+
+   function OpenCV_Minor_Version return Interfaces.Integer_32
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_opencv_minor_version";
 
    function Contour_Area
      (Points      : access Point_I32;

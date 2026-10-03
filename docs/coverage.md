@@ -137,18 +137,20 @@ Two notes apply to the whole family:
 
 `Is_Ready` and `Bounds` report Ada-side state and have no native counterpart.
 
-## Operations missing from OpenCV 4.6 and 4.10 (deferred)
+## Version-gated native operations
 
-These operations are in OpenCV 5.0 `geometry` and in 4.x releases newer than
-4.10, but not in the reference releases 4.6 and 4.10. So no binding of them
-would work on every supported OpenCV 4 release, and the binding has no
-fallback that fakes them there. Binding them needs a cross-version strategy
-for the releases that lack them.
+The Ada declarations and C ABI are stable on every supported version.
+`Is_Natively_Supported (Feature : Native_Feature)` reports native API
+availability, **not Ada binding coverage**. It knows the four thresholds
+below even when an operation remains deliberately unbound. For example,
+approxPolyN capability is True on 4.11+ although no Ada binding exists.
+Calling a bound optional operation on an older version raises OpenCV_Error
+with an unsupported-version diagnostic; there is no algorithm fallback.
 
 | Native operation | First 4.x release | Status |
 | --- | --- | --- |
-| `approxPolyN` | 4.11 | Deferred |
-| `getClosestEllipsePoints` | 4.12 | Deferred |
+| `approxPolyN` | 4.11 | Deferred: unresolved contraction-wide numerical-safety contract; finite convex input can develop sentinel and NaN heap candidates. See [research](versioned-features-research.md). |
+| `getClosestEllipsePoints` | 4.12 | Bound, version-gated: `Closest_Ellipse_Points`, integer and Float32 input, Float32 output with identical cardinality and Ada range. Older versions report unsupported. |
 | `minEnclosingConvexPolygon` | 4.13 | Deferred |
 | `Subdiv2D(Rect2f)`, `Subdiv2D::initDelaunay(Rect2f)` | 4.13 | Deferred |
 

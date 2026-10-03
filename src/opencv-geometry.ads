@@ -2,6 +2,17 @@ with OpenCV.Core;
 
 package OpenCV.Geometry is
 
+   --  Availability in the linked native OpenCV, NOT Ada binding coverage.
+   --  Approximate_Convex_Polygon, Minimum_Enclosing_Convex_Polygon and
+   --  Float32 subdivision bounds remain unbound even when supported here.
+   type Native_Feature is
+     (Approximate_Convex_Polygon_Feature,
+      Closest_Ellipse_Points_Feature,
+      Minimum_Enclosing_Convex_Polygon_Feature,
+      Float32_Subdivision_Bounds_Feature);
+
+   function Is_Natively_Supported (Feature : Native_Feature) return Boolean;
+
    --  An integer contour, for integer-coordinate geometry. CV_32S points.
    subtype Contour is OpenCV.Point_Array;
 
@@ -19,6 +30,33 @@ package OpenCV.Geometry is
    --  states the native arithmetic that matters.
    type Float32_Point_Array is
      array (Natural range <>) of OpenCV.Float32_Point;
+
+   --  One native approximate closest ellipse point per query, preserving
+   --  Points'Range (including null and Natural'Last-adjacent ranges).
+   --  Requires OpenCV 4.12+ or 5.x; older versions raise OpenCV_Error even
+   --  for empty input. On supported versions, empty input returns empty.
+   --  Ellipse fields and Float32 queries must be finite; both ellipse
+   --  dimensions must be positive. Native arithmetic has three fixed
+   --  iterations: extreme inputs can produce non-finite output, rejected
+   --  with OpenCV_Error. No arbitrary coordinate limit is imposed.
+   --  Integer queries enter CV_32S and OpenCV converts them to Point2f,
+   --  possibly losing low bits. Both overloads return Float32 points.
+   --  Ellipse and Points are unchanged.
+   function Closest_Ellipse_Points
+     (Ellipse : OpenCV.Rotated_Rect; Points : Contour)
+      return Float32_Point_Array
+   with
+     Post =>
+       Closest_Ellipse_Points'Result'First = Points'First
+       and then Closest_Ellipse_Points'Result'Last = Points'Last;
+
+   function Closest_Ellipse_Points
+     (Ellipse : OpenCV.Rotated_Rect; Points : Float32_Point_Array)
+      return Float32_Point_Array
+   with
+     Post =>
+       Closest_Ellipse_Points'Result'First = Points'First
+       and then Closest_Ellipse_Points'Result'Last = Points'Last;
 
    --  Calculates the OpenCV polygon area of Points. When Oriented is False,
    --  the result is nonnegative; otherwise it retains OpenCV's orientation

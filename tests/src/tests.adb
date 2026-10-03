@@ -37,6 +37,7 @@ with Perspective_Transform_Tests;
 with Subdiv2D_Foundation_Tests;
 with Subdiv2D_Navigation_Tests;
 with Subdiv2D_Voronoi_Tests;
+with Versioned_Feature_Tests;
 
 procedure Tests is
 
@@ -85,6 +86,7 @@ begin
    Suite.Add_Test (Float32_Enclosing_Tests.Suite);
    Suite.Add_Test (Float32_Fit_Tests.Suite);
    Suite.Add_Test (Float32_Convex_Intersection_Tests.Suite);
+   Suite.Add_Test (Versioned_Feature_Tests.Suite);
    if Run (Reporter) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;
