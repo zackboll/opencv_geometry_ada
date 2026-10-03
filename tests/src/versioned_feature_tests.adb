@@ -29,10 +29,29 @@ package body Versioned_Feature_Tests is
 
    procedure Capabilities (F : in out Fixture) is
       pragma Unreferenced (F);
-      Raw    : aliased Interfaces.Integer_32 := -1;
-      Status : C.Status;
+      Raw                      : aliased Interfaces.Integer_32 := -1;
+      Status                   : C.Status;
+      Major                    : constant Interfaces.Integer_32 :=
+        C.OpenCV_Major_Version;
+      Minor                    : constant Interfaces.Integer_32 :=
+        C.OpenCV_Minor_Version;
+      Threshold                : Interfaces.Integer_32;
+      Expected, Public_Support : Boolean;
    begin
+      AUnit.Assertions.Assert (Major in 4 .. 5, "supported native major");
       for Feature in G.Native_Feature loop
+         case Feature is
+            when G.Approximate_Convex_Polygon_Feature =>
+               Threshold := 11;
+
+            when G.Closest_Ellipse_Points_Feature     =>
+               Threshold := 12;
+
+            when G.Minimum_Enclosing_Convex_Polygon_Feature
+               | G.Float32_Subdivision_Bounds_Feature =>
+               Threshold := 13;
+         end case;
+         Expected := Major = 5 or else (Major = 4 and then Minor >= Threshold);
          Status :=
            C.Native_Feature_Supported
              (Interfaces.Integer_32 (G.Native_Feature'Pos (Feature) + 1),
@@ -40,17 +59,13 @@ package body Versioned_Feature_Tests is
          AUnit.Assertions.Assert
            (Status = C.Success and then Raw in 0 .. 1,
             "capability must be explicit Boolean");
+         Public_Support := G.Is_Natively_Supported (Feature);
          AUnit.Assertions.Assert
-           (G.Is_Natively_Supported (Feature) = (Raw = 1),
-            "public/raw capability agreement");
-         if C.OpenCV_Major_Version >= 5 then
-            AUnit.Assertions.Assert (Raw = 1, "5.x native capability");
-         elsif not Available then
-            --  4.11 has approxPolyN but not closest ellipse points.
-            if Feature /= G.Approximate_Convex_Polygon_Feature then
-               AUnit.Assertions.Assert (Raw = 0, "pre-4.12 capability");
-            end if;
-         end if;
+           ((Raw = 1) = Expected, "raw exact version matrix");
+         AUnit.Assertions.Assert
+           (Public_Support = Expected, "public exact version matrix");
+         AUnit.Assertions.Assert
+           (Public_Support = (Raw = 1), "public/raw capability agreement");
       end loop;
    end Capabilities;
 
@@ -59,13 +74,16 @@ package body Versioned_Feature_Tests is
       Raw    : aliased Interfaces.Integer_32 := 99;
       Status : C.Status;
    begin
+      Raw := 99;
       Status := C.Native_Feature_Supported (0, Raw'Access);
       AUnit.Assertions.Assert
         (Status = C.Error_Invalid_Argument and then Raw = 0,
          "invalid feature zeroes output");
+      Raw := 99;
       Status := C.Native_Feature_Supported (5, Raw'Access);
       AUnit.Assertions.Assert
-        (Status = C.Error_Invalid_Argument, "unknown feature rejected");
+        (Status = C.Error_Invalid_Argument and then Raw = 0,
+         "unknown feature rejected and output zeroed");
       Status := C.Native_Feature_Supported (1, null);
       AUnit.Assertions.Assert
         (Status = C.Error_Invalid_Argument, "null capability output rejected");
@@ -396,21 +414,27 @@ package body Versioned_Feature_Tests is
       if not Available then
          return;
       end if;
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_F32
            (E'Access, P'Access, -1, O'Access, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_F32
            (E'Access, null, 1, O'Access, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_F32
            (null, P'Access, 1, O'Access, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_F32
            (E'Access, P'Access, 1, O'Access, -1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_F32
            (E'Access, P'Access, 1, null, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_F32
            (E'Access, P'Access, 1, O'Access, 0, Count'Access));
@@ -419,21 +443,27 @@ package body Versioned_Feature_Tests is
           (E'Access, I'Access, 1, O'Access, 1, Count'Access);
       AUnit.Assertions.Assert
         (Status = C.Success and then Count = 1, "raw i32 one-to-one output");
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_I32
            (E'Access, I'Access, -1, O'Access, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_I32
            (E'Access, null, 1, O'Access, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_I32
            (null, I'Access, 1, O'Access, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_I32
            (E'Access, I'Access, 1, O'Access, -1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_I32
            (E'Access, I'Access, 1, null, 1, Count'Access));
+      Count := 99;
       Check
         (C.Closest_Ellipse_Points_I32
            (E'Access, I'Access, 1, O'Access, 0, Count'Access));

@@ -194,6 +194,12 @@ package OpenCV.Geometry.Internal.C_API is
      Convention    => C,
      External_Name => "opencv_geometry_opencv_major_version";
 
+   function OpenCV_Minor_Version return Interfaces.Integer_32
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_opencv_minor_version";
+
    function Contour_Area
      (Points      : access Point_I32;
       Point_Count : Interfaces.Integer_32;

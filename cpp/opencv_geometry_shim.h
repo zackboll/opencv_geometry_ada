@@ -182,6 +182,7 @@ opencv_geometry_status opencv_geometry_closest_ellipse_points_f32(
 const char *opencv_geometry_last_error_message(void);
 
 int32_t opencv_geometry_opencv_major_version(void);
+int32_t opencv_geometry_opencv_minor_version(void);
 
 opencv_geometry_status
 opencv_geometry_contour_area(

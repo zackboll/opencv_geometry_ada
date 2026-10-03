@@ -164,6 +164,11 @@ int32_t opencv_geometry_opencv_major_version(void)
     return CV_VERSION_MAJOR;
 }
 
+int32_t opencv_geometry_opencv_minor_version(void)
+{
+    return CV_VERSION_MINOR;
+}
+
 opencv_geometry_status opencv_geometry_native_feature_supported(
     int32_t feature, int32_t *out_supported)
 {
@@ -227,7 +232,8 @@ opencv_geometry_status closest_ellipse_points(
         // ABI safety: enforce the one-to-one result before writing a
         // caller-sized buffer or publishing its positional count.
         if (result.size() != static_cast<std::size_t>(point_count)) {
-            return invalid_argument("unexpected closest ellipse result count");
+            set_error("getClosestEllipsePoints returned an unexpected point count");
+            return OPENCV_GEOMETRY_ERROR_UNKNOWN;
         }
         for (int32_t i = 0; i < point_count; ++i) {
             output[i] = {result[i].x, result[i].y};
