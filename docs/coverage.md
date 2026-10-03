@@ -159,7 +159,7 @@ with an unsupported-version diagnostic; there is no algorithm fallback.
 | --- | --- | --- |
 | `approxPolyN` | 4.11 | Deferred: unresolved contraction-wide numerical-safety contract; finite convex input can develop sentinel and NaN heap candidates. See [research](versioned-features-research.md). |
 | `getClosestEllipsePoints` | 4.12 | Bound, version-gated: `Closest_Ellipse_Points`, integer and Float32 input, Float32 output with identical cardinality and Ada range. Older versions report unsupported. |
-| `minEnclosingConvexPolygon` | 4.13 | Deferred |
+| `minEnclosingConvexPolygon` | 4.13 | Deferred: every released implementation (4.13, 4.14, 5.0) can read out of bounds for finite input, including k = 3 with a larger hull and small-scale k ≥ 4 input; no defensible preflight exists. See [research](versioned-features-research.md#task-016-minenclosingconvexpolygon-safety-gate). |
 | `Subdiv2D(Rect2f)`, `Subdiv2D::initDelaunay(Rect2f)` | 4.13 | Bound, version-gated, OpenCV 4.13+: `Subdiv2D.Create_Float32` / `Reset_Float32` with `Float32_Rectangle`. Older versions report unsupported before semantic validation. |
 
 ## Unbound modes of bound operations
