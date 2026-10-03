@@ -418,6 +418,79 @@ void exercise_create_and_initialize()
     }
 }
 
+void exercise_float32_initialization()
+{
+#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
+    const opencv_geometry_rect_f32 fractional{-0.25f, 0.5f, 100.5f, 100.25f};
+    long create_failures = 0;
+    for (long step = 0;; ++step) {
+        opencv_geometry_subdiv2d *handle = nullptr;
+        allocation_countdown = step;
+        const auto status =
+            opencv_geometry_subdiv2d_create_f32(&fractional, &handle);
+        allocation_countdown = -1;
+        if (status == OPENCV_GEOMETRY_OK) {
+            check(handle != nullptr
+                      && opencv_geometry_subdiv2d_is_usable(handle) == 1,
+                  "Float32 constructor publishes a usable handle", step);
+            opencv_geometry_subdiv2d_destroy(handle);
+            break;
+        }
+        ++create_failures;
+        check(handle == nullptr, "failed Float32 creation publishes null", step);
+        check(status == OPENCV_GEOMETRY_ERROR_STD,
+              "Float32 constructor contains allocation failure", step);
+    }
+
+    // A ready native subdivision retains vector capacity across clear(), so
+    // resetting it does not allocate. To cover exceptions while rebuilding,
+    // use an existing default handle with no storage. This reaches the same
+    // native rebuild failure path without a production hook; it is not an
+    // injected public Ada Reset failure on an already-ready object.
+    long reset_failures = 0;
+    for (long step = 0;; ++step) {
+        auto *handle = new opencv_geometry_subdiv2d();
+        allocation_countdown = step;
+        const auto status =
+            opencv_geometry_subdiv2d_init_delaunay_f32(handle, &fractional);
+        allocation_countdown = -1;
+        if (status == OPENCV_GEOMETRY_OK) {
+            check(opencv_geometry_subdiv2d_is_usable(handle) == 1,
+                  "Float32 initialization restores readiness", step);
+            opencv_geometry_subdiv2d_destroy(handle);
+            break;
+        }
+        ++reset_failures;
+        check(rejects_everything(handle),
+              "failed Float32 rebuild leaves handle unusable", step);
+        check(opencv_geometry_subdiv2d_init_delaunay_f32(handle, &fractional)
+                      == OPENCV_GEOMETRY_OK
+                  && opencv_geometry_subdiv2d_is_usable(handle) == 1,
+              "Float32 Reset recovers after a native failure", step);
+        opencv_geometry_subdiv2d_destroy(handle);
+    }
+    check(create_failures > 0 && reset_failures > 0,
+          "Float32 allocation failure paths actually exercised", -1);
+
+    auto *handle = make_fixture();
+    allocation_countdown = 0;
+    const auto status =
+        opencv_geometry_subdiv2d_init_delaunay_f32(handle, &fractional);
+    const bool no_allocation = allocation_countdown == 0;
+    allocation_countdown = -1;
+    check(status == OPENCV_GEOMETRY_OK && no_allocation,
+          "ready Float32 Reset reuses retained native storage", -1);
+    check(opencv_geometry_subdiv2d_is_usable(handle) == 1
+              && !locates_on_vertex(handle, 10.0f, 10.0f),
+          "Float32 Reset discards the old triangulation", -1);
+    opencv_geometry_subdiv2d_destroy(handle);
+    std::printf("Float32 creation/rebuild allocation failures: %ld/%ld\n",
+                create_failures, reset_failures);
+#else
+    std::printf("Float32 fault injection: unsupported on this release\n");
+#endif
+}
+
 }
 
 void *operator new(std::size_t size)
@@ -463,6 +536,7 @@ int main()
     exercise_lists();
     exercise_voronoi_facets();
     exercise_create_and_initialize();
+    exercise_float32_initialization();
     std::printf("on-edge failures marking unusable: %d\n", on_edge_unusable);
     std::printf("inside failures marking unusable: %d\n", inside_unusable);
     std::printf("%s: %d failed check(s)\n",

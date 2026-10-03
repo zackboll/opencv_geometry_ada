@@ -1,8 +1,10 @@
 with Ada.Command_Line;
 with AUnit;
+with AUnit.Options;
 with AUnit.Reporter.Text;
 with AUnit.Run;
 with AUnit.Test_Suites;
+with AUnit.Test_Filters;
 with Approximate_Curve_Tests;
 with Bounding_Rect_Tests;
 with Contour_Geometry_Tests;
@@ -35,6 +37,7 @@ with Rotation_Matrix_Tests;
 with Affine_Transform_Tests;
 with Perspective_Transform_Tests;
 with Subdiv2D_Foundation_Tests;
+with Subdiv2D_Bounds_Tests;
 with Subdiv2D_Navigation_Tests;
 with Subdiv2D_Voronoi_Tests;
 with Versioned_Feature_Tests;
@@ -52,6 +55,8 @@ procedure Tests is
    function Run is new AUnit.Run.Test_Runner_With_Status (Stored_Suite);
 
    Reporter : AUnit.Reporter.Text.Text_Reporter;
+   Filter   : aliased AUnit.Test_Filters.Name_Filter;
+   Options  : AUnit.Options.AUnit_Options := AUnit.Options.Default_Options;
 begin
    Suite.Add_Test (Contour_Moments_Tests.Suite);
    Suite.Add_Test (Convex_Hull_Tests.Suite);
@@ -76,6 +81,7 @@ begin
    Suite.Add_Test (Affine_Transform_Tests.Suite);
    Suite.Add_Test (Perspective_Transform_Tests.Suite);
    Suite.Add_Test (Subdiv2D_Foundation_Tests.Suite);
+   Suite.Add_Test (Subdiv2D_Bounds_Tests.Suite);
    Suite.Add_Test (Subdiv2D_Navigation_Tests.Suite);
    Suite.Add_Test (Subdiv2D_Voronoi_Tests.Suite);
    Suite.Add_Test (Float32_Contour_Geometry_Tests.Suite);
@@ -87,7 +93,13 @@ begin
    Suite.Add_Test (Float32_Fit_Tests.Suite);
    Suite.Add_Test (Float32_Convex_Intersection_Tests.Suite);
    Suite.Add_Test (Versioned_Feature_Tests.Suite);
-   if Run (Reporter) = AUnit.Failure then
+   --  An optional name prefix selects focused tests (e.g. "Subdiv2D").
+   --  Run consumes the filter synchronously, before this local goes away.
+   if Ada.Command_Line.Argument_Count = 1 then
+      AUnit.Test_Filters.Set_Name (Filter, Ada.Command_Line.Argument (1));
+      Options.Filter := Filter'Unchecked_Access;
+   end if;
+   if Run (Reporter, Options) = AUnit.Failure then
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end if;
 end Tests;

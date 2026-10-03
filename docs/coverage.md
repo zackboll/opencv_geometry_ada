@@ -133,9 +133,17 @@ Two notes apply to the whole family:
 | `getEdge` | `Navigate` | Bound: all eight `*_AROUND_*` choices as `Edge_Navigation` | |
 | `nextEdge`, `rotateEdge`, `symEdge` | `Next_Edge`, `Rotate`, `Symmetric_Edge` | Bound | |
 | `edgeOrg`, `edgeDst` | `Origin`, `Destination` | Bound | Positions via `Vertex_Point` |
-| `Subdiv2D(Rect2f)`, `initDelaunay(Rect2f)` | none | Deferred: 4.13+ and 5.x only | |
+| `Subdiv2D(Rect2f)`, `initDelaunay(Rect2f)` | `Create_Float32`, `Reset_Float32` with `Float32_Rectangle` | Bound, version-gated, OpenCV 4.13+ | Exact binary32 descriptor; no integer fallback; distinct names preserve integer aggregate source compatibility |
 
-`Is_Ready` and `Bounds` report Ada-side state and have no native counterpart.
+`Is_Ready`, `Bounds`, and `Bounds_Float32` report state and have no native
+counterpart. `Bounds` retains the original integer descriptor and raises
+after Float32 initialization. `Bounds_Float32` returns the exact supplied
+Float32 descriptor, or native conversions of the integer fields. Failed
+`Reset` / `Reset_Float32` never publishes new bounds. Ada preflight rejects
+non-finite fields, nonpositive dimensions, binary32-absorbed extents (including
+positive integer dimensions), and non-finite native initialization coordinates.
+See the
+[source-derived contract and probes](versioned-features-research.md#task-014-float32-subdiv2d-bounds).
 
 ## Version-gated native operations
 
@@ -152,7 +160,7 @@ with an unsupported-version diagnostic; there is no algorithm fallback.
 | `approxPolyN` | 4.11 | Deferred: unresolved contraction-wide numerical-safety contract; finite convex input can develop sentinel and NaN heap candidates. See [research](versioned-features-research.md). |
 | `getClosestEllipsePoints` | 4.12 | Bound, version-gated: `Closest_Ellipse_Points`, integer and Float32 input, Float32 output with identical cardinality and Ada range. Older versions report unsupported. |
 | `minEnclosingConvexPolygon` | 4.13 | Deferred |
-| `Subdiv2D(Rect2f)`, `Subdiv2D::initDelaunay(Rect2f)` | 4.13 | Deferred |
+| `Subdiv2D(Rect2f)`, `Subdiv2D::initDelaunay(Rect2f)` | 4.13 | Bound, version-gated, OpenCV 4.13+: `Subdiv2D.Create_Float32` / `Reset_Float32` with `Float32_Rectangle`. Older versions report unsupported before semantic validation. |
 
 ## Unbound modes of bound operations
 

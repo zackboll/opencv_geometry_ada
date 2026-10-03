@@ -69,6 +69,14 @@ package OpenCV.Geometry.Internal.C_API is
    end record
    with Convention => C;
 
+   type Rect_F32 is record
+      X      : Interfaces.C.C_float;
+      Y      : Interfaces.C.C_float;
+      Width  : Interfaces.C.C_float;
+      Height : Interfaces.C.C_float;
+   end record
+   with Convention => C;
+
    type C_Moments is record
       M00 : Interfaces.C.double;
       M10 : Interfaces.C.double;
@@ -727,6 +735,22 @@ package OpenCV.Geometry.Internal.C_API is
      Import,
      Convention    => C,
      External_Name => "opencv_geometry_subdiv2d_destroy";
+
+   function Subdiv2D_Create_F32
+     (Bounds : access constant Rect_F32; Out_Handle : access Subdiv2D_Handle)
+      return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_create_f32";
+
+   function Subdiv2D_Init_Delaunay_F32
+     (Handle : Subdiv2D_Handle; Bounds : access constant Rect_F32)
+      return Status
+   with
+     Import,
+     Convention    => C,
+     External_Name => "opencv_geometry_subdiv2d_init_delaunay_f32";
 
    function Subdiv2D_Init_Delaunay
      (Handle : Subdiv2D_Handle; Bounds : access constant Rect_I32)
