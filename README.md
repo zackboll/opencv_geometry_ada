@@ -3,6 +3,11 @@
 Thick Ada binding to OpenCV Geometry, published as `opencv_geometry`.
 Repository: https://github.com/zackboll/opencv_geometry_ada
 
+Release 0.2.0 certifies the existing safe 2-D surface against exact OpenCV
+4.14.0. See the [release notes and evidence](docs/release-0.2.0.md), including
+the intentionally deferred native operations. No coverage-percentage target
+overrides those safety decisions.
+
 The only production Ada dependency is `opencv_core`. The public package is
 `OpenCV.Geometry` on both OpenCV versions:
 
