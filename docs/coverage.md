@@ -180,7 +180,7 @@ with an unsupported-version diagnostic; there is no algorithm fallback.
 | Point sets of `Point2f` (`CV_32F`) in `minEnclosingTriangle` | Deferred | OpenCV's search can fail to return; see [Float32 point sets](#float32-cv_32f-point-sets). |
 | Point sets of `Point2f` (`CV_32F`) in `convexityDefects` | Not applicable | OpenCV requires `CV_32S` contours. |
 | Float32 `intersectConvexConvex` input off a binary grid | Excluded | Its binary32 tests can round, which on 4.6 and 4.10 can corrupt the native heap; see [Float32 point sets](#float32-cv_32f-point-sets). |
-| `fitLine` on 3D point sets | Deferred | Needs a new public 3D point type, a design decision for this 2D crate. |
+| `fitLine` on 3D point sets | Deferred | Task 019 stopped at the type-ownership gate: shared root OpenCV 3-D point values require a separately approved Core task/release. Native arithmetic/liveness certification remains pending. See [ownership and source research](fit-line-3d-research.md). |
 | `fitLine` with `DIST_C` or `DIST_USER` | Not applicable | OpenCV's `fitLine` rejects both as unknown distance types. |
 | `getPerspectiveTransform` with `DECOMP_EIG` or `DECOMP_CHOLESKY`, or the `DECOMP_NORMAL` flag | Not applicable | EIG and Cholesky assume a symmetric matrix, which the perspective system is not; `DECOMP_NORMAL` has no effect on a square system. |
 
