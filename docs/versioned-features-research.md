@@ -3,6 +3,10 @@
 Status: approxPolyN is **deliberately deferred at its safety gate**; Task 013
 pivoted to native capability plumbing and closest ellipse points. The
 approxPolyN investigation is preserved below, not declared impossible.
+minEnclosingConvexPolygon is likewise **deferred at its safety gate**
+(Task 016): each examined release, 4.13.0, 4.14.0 and 5.0.0, reads out of
+bounds for some finite input; see
+[Task 016](#task-016-minenclosingconvexpolygon-safety-gate).
 
 ## Baseline
 
@@ -958,3 +962,543 @@ Core checks). Explicitly listing the latter avoids relying on cached imported
 unit accounting in the earlier combined summary. Native results and the
 foreign boundary remain trusted/tested, not formally proved. The tests crate
 is restored to the Geometry release profile and local OpenCV 4.10 afterwards.
+
+## Task 016: minEnclosingConvexPolygon safety gate
+
+Status: **deferred; the safety gate fails.** In each examined release,
+4.13.0, 4.14.0 and 5.0.0, some finite input makes the native code read out
+of bounds. No known input precondition prevents it unless Geometry
+reimplements the algorithm. Production Ada, the C ABI, the C++ shim, the
+AUnit tests, manifests and the version are unchanged.
+`Minimum_Enclosing_Convex_Polygon_Feature` keeps reporting native API
+availability (True on 4.13+ and 5.x), not a binding.
+
+The first research commit, `eb77dd67c7424c03fd537b0e45a2b0c2e924ac8a`,
+changed only this document, `README.md` and `docs/coverage.md`. A follow-up
+audit tightened its claims and added an opt-in probe, runner and frozen
+corpus ([tooling](#reproducible-research-tooling)). It also compared
+upstream [PR 30111](#upstream-pr-30111-controlled-comparison) before and
+after. Each fact below is labelled source-derived, measured on the stated
+builds, or empirical.
+
+### Baseline
+
+- Starting main: `74f362ae621b14f7c35993ea022768842ba6c858` (PR #15 merge),
+  unchanged when the audit fetched it. Branch:
+  `feature/016-versioned-min-enclosing-convex-polygon`.
+- Version `0.2.0-dev`. The annotated `0.1.0` tag object remains
+  `0ca4437eba8422a9a3ba8ce8c761ef06e13eac7d` with target
+  `86a18b138acb74bddb4ddb18033c59d4341020a6`; manifests and dependencies are
+  unchanged.
+- The first research run, local OpenCV 4.10.0 with native imgproc, reported
+  `alr -n build` passing and `alr -n -C tests run` **524/524**, with zero
+  failed assertions and errors. That working tree's Alire lockfile links
+  `opencv_core` to the sibling Core checkout, so the run depended on whatever
+  Core branch was checked out there. The audit's revalidation does not
+  depend on it; see [Validation](#task-016-validation-evidence).
+- PR #15 post-merge workflow 37141670018 completed with SUCCESS on Linux,
+  macOS and Windows MSYS2.
+
+### Exact tagged sources
+
+Inspected at exact tags of `opencv/opencv`, not in documentation. All tags
+are annotated. The table gives each tag object and the commit it targets,
+both re-resolved through the GitHub API during the audit.
+
+| Tag: tag object → commit | Implementation and its SHA-256 | Declaration |
+|---|---|---|
+| 4.6.0: `8a185195` → `b0dc4741` | none | none |
+| 4.10.0: `67f3511f` → `71d3237a` | none | none |
+| 4.11.0: `1d3b34dd` → `31b0eeea` | none | none |
+| 4.12.0: `cbee6841` → `49486f61` | none | none |
+| 4.13.0: `2e1f8da6` → `fe38fc608f6acb8b68953438a62305d8318f4fcd` | `modules/imgproc/src/min_enclosing_convex_polygon.cpp`, `d9be1d250fade8f0b56f633fc1dfcd42e69f583e0a9f9822db7186655dff821e` | `imgproc.hpp:4305` |
+| 4.14.0: `ea8e6079` → `0654a42e19215ef25b1d367d822f3c630447e7c7` | same path, `3fd651cee9c7ab0f0e10902b10a4c28a4c28444633e06e1cb262a7d1a857e67c` | `imgproc.hpp:4314` |
+| 5.0.0: `9e2ede96` → `40738fb16ceddb5fb3fea747585f7ce6abb0605b` | `modules/geometry/src/min_enclosing_convex_polygon.cpp`, same SHA-256 as 4.14.0 | `geometry/2d.hpp:439` |
+
+Scope: these seven are the only releases examined. On 2026-10-04 the newest
+`opencv/opencv` tags were 5.0.0 and 5.0.0-alpha. No claim is made about any
+other release, branch or vendor build. The 4.x branch head fetched then,
+`62587ae9976b28cfa61ad940d0e7f610b8742ee4`, has the 4.14.0 file byte for
+byte.
+
+4.14.0 was tagged after the earlier matrix was recorded. Its approxPolyN
+(4176), getClosestEllipsePoints (4530) and Rect2f Subdiv2D (1132/1150)
+declarations are also present, consistent with the existing thresholds.
+
+The 4.14.0 and 5.0.0 implementations are byte-identical. They differ from
+4.13.0 only by the added line `sides.reserve(k);` in `findKSides`, from
+[upstream PR 28569](https://github.com/opencv/opencv/pull/28569), which fixed
+a GCC `-Wstringop-overflow` false positive and changed no logic. That line
+shifts the later line numbers by one. The bodies of the two helpers called
+before the chain code were compared at each tag. The `convexHull` body is
+identical in 4.13.0, 4.14.0 and 5.0.0. The `contourArea` body is identical
+in all three, apart from the `cv::` qualification used in 4.x. It lives in
+`imgproc/src/shapedescr.cpp` on 4.x and `geometry/src/geometry.cpp` on 5.0.0.
+
+The upstream tests (`test_convhull.cpp`) are input_errors,
+input_corner_cases, unit_circle (n=64, k=7), random_points (n=100, k=7, on
+[1,101)) and pentagon (k=4). None covers k=3 with a larger hull or
+sub-unit coordinate scales.
+
+### Native contract derived from the body
+
+```
+n = checkVector(2); CV_Assert(!empty && n >= k)
+CV_CheckGE(n, 3); CV_CheckGE(k, 3)
+convexHull(points, std::vector<Point2f> ngon, clockwise = true)
+hull <  k                     -> log warning, release output, return 0
+hull == k                     -> copy hull, return contourArea(hull)
+contourArea(hull) < 1e-6      -> log warning, release output, return 0
+otherwise                     -> findMinAreaPolygon(ngon, kgon, k)
+```
+
+Here and below, n is the hull vertex count. `findMinAreaPolygon` builds
+`Chains(ngon, k)`, fills the one-sided and h-sided chains, and calls
+`minimumArea(n, k)`. That routine selects only pairs with
+`single_sides[i][j].exists && middle_sides[k-3][j][i].exists`. When none
+qualifies, it returns the default `Minimum{max, -1, -1}`.
+`findMinAreaPolygon` then passes `min.i` and `min.j` to `findKSides`
+**unchecked**, and `findKSides` immediately indexes `single_sides[i][j]`.
+None of the examined releases, nor the 4.x head above, has a guard there.
+
+- **k = 3, hull of more than 3 vertices, hull area ≥ 1e-6**
+  (source-derived). `calcMiddleChains(0)` sets every
+  `middle_sides[0][i][j].exists = false`, so `minimumArea` cannot select a
+  pair. Every input on this path reaches `findKSides` with i = j = −1, and
+  `single_sides[-1]` indexes outside the outer vector's storage. The read
+  itself is certain. Its consequence is not: what it returns, and whether a
+  fault follows, depends on the heap.
+- **k = 3, observed consequences.** Every instrumented k = 3 run reported
+  that read (ASan) or stopped at the libstdc++ bounds assertion. Release
+  runs mostly stopped with SIGSEGV. Some release runs survived the read and
+  then failed `CV_Assert(h != 0)` in `reconstructHSidedChain(0, …)`. That
+  happened in 31 of the k = 3 fuzz cases below, which raised `cv::Exception`
+  −215 only *after* the out-of-bounds read. That exception is not
+  containment.
+- **k ≥ 4.** The same sentinel occurs whenever no chain pair qualifies.
+  Intersection and balanced-side tests compare cross products of binary32
+  differences, evaluated in binary64 by `Point_::cross`, with the absolute
+  `EPSILON = 1e-6`. Those products scale with squared coordinates.
+
+Output shape also differs (measured). Mat output is k×1 `CV_32FC2` on
+4.13.0 and 4.14.0 but 1×k on 5.0.0 and on both 5.x commits below. Any
+future shim would have to accept both shapes through `checkVector(2)`.
+
+#### Scale observations (empirical only)
+
+These come from fixed inputs on the builds named here. They suggest where
+the k ≥ 4 sentinel appears, but prove nothing. No threshold below is a
+precondition.
+
+- Regular 33-gon at k = 4: r = 0.004 and 0.005 read out of bounds;
+  r = 0.009 and 0.01 return a polygon. The hull edge is 2r·sin(π/33), so L²
+  is about 9.1e-7 at r = 0.005 and 3.6e-6 at r = 0.01.
+- Regular 200-gon at k = 4: r = 0.03 (L² ≈ 8.9e-7) reads out of bounds;
+  r = 0.04 (L² ≈ 1.6e-6) returns a polygon.
+- 50-point arc of span 3.14159 at k = 8: r = 0.003 reads out of bounds. At
+  k = 4 the same points return a polygon.
+
+These boundaries are consistent with a squared hull-edge length near the
+absolute EPSILON. However, short edges and near-parallel sides can occur at
+any scale, and other tests in the dynamic program apply the same EPSILON to
+other quantities. No coordinate or edge-length bound has been shown to be
+sufficient.
+
+Returned polygons also change with scale (release 4.13.0, re-measured in the
+audit):
+
+- For the arc at k = 4, area/r² is 1.73080 for r from 0.02 to 1e6, but
+  2.46272 for r from 0.003 to 0.01. The arc's exact minimum-area enclosing
+  rectangle is 1.99897·r², so the small-scale result is provably not
+  minimal. The first research compared it with the 2·r² bounding box.
+- For a regular 33-gon at k = 4, area/r² is 4.012427 for r from 0.01 to
+  1e37 and 4.093854 at r = 0.009. Its exact minimum enclosing rectangle,
+  3.98642·r², is smaller in both cases. So this k = 4 result is not minimal
+  at any scale tested.
+
+### Sanitizer and native evidence
+
+All results here are from Linux x86-64 with g++ 14.2.0. Each version was
+tested in three builds, using the runner described
+[below](#reproducible-research-tooling):
+
+- **release**: the probe linked to the unmodified installed libraries.
+- **asan**: the exact upstream implementation file, unmodified, compiled
+  into the probe with `-fsanitize=address,undefined` against a stub
+  `precomp.hpp` of public headers only. It links that version's own OpenCV
+  build for `convexHull`, `contourArea` and Core.
+- **asan-assert**: the same, plus `-D_GLIBCXX_ASSERTIONS`.
+
+The 4.14.0 file is linked against an exact-tag 4.14.0 build. The first
+research had linked it against 4.13.0. Every case runs in its own child
+process under a timeout.
+
+| Input | k | 4.13.0 / 4.14.0 / 5.0.0 result |
+|---|---|---|
+| square (0,0),(10,0),(10,10),(0,10), and translated by (10,10) | 3 | out-of-bounds read in `findKSides` |
+| upstream pentagon; PR 30111's pentagon; a hexagon | 3 | out-of-bounds read in `findKSides` |
+| regular 33-gon, r = 0.004 / 0.005 (hull area 5.0e-5 / 7.8e-5) | 4 | out-of-bounds read |
+| regular 200-gon, r = 0.03 (hull area 2.8e-3) | 4 | out-of-bounds read |
+| 50-point arc, r = 0.003 (hull area 1.4e-5) | 8 | out-of-bounds read |
+| triangle (0,0),(0,4),(4,0) | 3 | hull == k path: the hull, area 8 |
+| upstream pentagon | 4 | area 90, the upstream test's vertices |
+| regular 64-gon, r = 1 | 7 | area 3.36418049 |
+
+All hull areas above exceed the native 1e-6 singularity threshold. The
+first research used a 4 × 4 square at k = 3. The corpus uses PR 30111's
+10 × 10 square instead, and keeps the 4 × 4 square at k = 4 (`square4_k4`).
+
+- asan-assert: every out-of-bounds case stops at `Assertion '__n <
+  this->size()' failed` (SIGABRT) inside `findKSides`.
+- asan: ASan reports a `heap-buffer-overflow` READ of 8 bytes in
+  `findKSides`, at line 919 of the 4.13.0 file and line 920 of the 4.14.0
+  and 5.0.0 file. For the r = 0.005 33-gon the access is "24 bytes before
+  792-byte region": index −1 of the array of 33 row vectors, each 24 bytes.
+  For the k = 3 square, the access is "8 bytes after 96-byte region".
+- In the first research, gdb on an instrumented build showed
+  `findKSides(k=3, i=-1, j=-1)` for the 4 × 4 square, `(4, -1, -1)` for the
+  r = 0.005 33-gon, and `(4, 24, 6)` for the r = 0.01 control.
+- release: `libopencv_imgproc.so.413`, `.so.414` and
+  `libopencv_geometry.so.500` stop with SIGSEGV for every out-of-bounds
+  case in this table.
+- UBSan reported nothing. No C++ exception is raised before the read, so
+  exception containment in a shim cannot help.
+
+Input depth: `std::vector<Point>` and `CV_32SC2` input raise
+`cv::Exception` −215 on every build examined, because `convexHull` writes
+CV_32S into the fixed `vector<Point2f>`. Only CV_32F input is accepted, so
+integer `Contour` input would need an explicit Float32 conversion.
+
+### Fuzz campaign
+
+The generator is now in the probe as `--fuzz SEED ITERATION`. It produces
+random clouds, circle samples, 1000:1 slivers, 7×7 integer grids and
+regular polygons. Each case has n in 4..40, k in 4..n−1, and a scale of
+1e-3, 1e-2, 1, 1e3 or 1e6. The generator uses libstdc++'s distributions, so
+cases regenerate identically only with libstdc++. The corpus therefore
+freezes the cases it uses as bit patterns.
+
+The audit reran the whole campaign with the runner. Each case runs in its
+own child process. Every returned polygon is checked with exact rational
+arithmetic on its binary32 vertices:
+
+- count = k and all values finite;
+- convexity, and enclosure of every hull vertex;
+- the reported area against the vertices' exact area;
+- comparison with two independent competitor bounds:
+  - the exact minimum-area enclosing rectangle when k = 4;
+  - the smallest triangle on three hull-edge lines when k = 3.
+
+A polygon is reported as "not minimal" when either competitor is strictly
+smaller. Both competitors enclose the hull, so that conclusion is a proof.
+The converse does not hold: passing these checks does not show minimality.
+
+| Build | Cases | Polygon | Not minimal | Empty | Exception | Crash |
+|---|---|---|---|---|---|---|
+| release 4.13.0, 4.14.0, 5.0.0: each, seeds 1–4 | 6000 | 2795 | 102 | 2682 | 0 | **421 SIGSEGV** |
+| asan 4.13.0, 5.0.0: each, seeds 1–2, iterations 0–599 | 1200 | 585 | 17 | 522 | 0 | **76 ASan** |
+
+Outcomes, and every returned area, are identical case by case across the
+three releases and the 5.x base below. The ASan crashes are exactly the
+release crashes among those iterations. All 421 crashes are at scale 1e-3,
+and all ASan reports are the `findKSides` heap-buffer-overflow. UBSan
+reported nothing. No returned polygon failed a validity check.
+
+The first research reported 2897 "valid" polygons because it did not test
+minimality. Of those, 102 are not minimal, all at k = 4 and at every scale
+(5, 24, 20, 22 and 31 cases from 1e-3 up to 1e6). Each is larger than the
+exact minimum-area enclosing rectangle, by up to 75%.
+
+The first research's initial ASan run under-counted crashes, because ASan's
+default exit status 1 collided with that harness's "empty" status. The
+runner uses distinct sanitizer exit statuses. The absence of crashes at
+scales ≥ 1e-2 in this campaign is test evidence, not a contract.
+
+**k = 3 variant.** This variant keeps each generated point set but passes
+k = 3 (seeds 1–2, iterations 0–1499, 3000 cases). On release 4.13.0,
+4.14.0, 5.0.0 and the 5.x base the results were:
+
+- 2592 SIGSEGV;
+- 31 `cv::Exception` −215 `h != 0`, raised after the out-of-bounds read;
+- 353 empty (hull below k, or singular);
+- 24 polygons, all with a 3-vertex hull, that is, on the hull == k path.
+
+With library assertions, the 4.13.0 source stops at the assertion in all
+2623 cases that reach `findKSides`.
+
+### Cost and arithmetic audit
+
+Storage, complexity and timing are separate claims with different evidence.
+
+**Storage (source-derived; sizes measured).** `Chains(ngon, k)` allocates
+four kinds of nested `std::vector` storage:
+
+- `single_sides`: n² `Segment`s;
+- `middle_sides`: k·n² `Segment`s;
+- two n×n intersection caches.
+
+With g++ 14.2.0 on x86-64, a `Segment` is 16 bytes, a cache entry 32 bytes,
+and each row vector adds 24 bytes. The total is therefore about
+(16k + 80)·n² bytes, all allocated up front before any result is known.
+For n = 400, k = 49 that is about 138 MB.
+
+**Complexity (source claim, not verified).** The source header cites
+Aggarwal, Chang and Yap and states Θ(n² log n log k). The audit did not
+check that bound against this implementation.
+
+**Time and memory (empirical only).** Points on a radius-1000 circle, one
+run per configuration, release 4.13.0, re-measured by the audit. The
+PR 30111 head build was within 15% on every row.
+
+| n | k | Wall time | Peak RSS |
+|---|---|---|---|
+| 200 | 4 / 16 / 49 | 0.08 / 0.09 / 0.10 s | 12 / 20 / 41 MB |
+| 400 | 4 / 16 / 49 | 0.65 / 0.69 / 0.75 s | 29 / 59 / 143 MB |
+
+Time grew about 8× from n = 200 to 400. Two sizes cannot establish an
+exponent, so the first research's "roughly n³" is withdrawn. Under an
+address-space limit of 60, 100 or 140 MB, n = 400 and k = 49 raised
+`std::bad_alloc`; at 200 MB it returned. A shim would contain that
+exception. However, address-space limits are not a portable defense.
+Without one, a very large request can meet the OOM killer instead, which
+the audit did not exercise.
+
+**Integer arithmetic (source-derived).** Table dimensions are passed to the
+vector constructors as `size_t`. The largest `int` intermediates are:
+
+- `j1 + n + j2`, at most 3n − 2;
+- `j + n - i`, `(e - 1 + n)` and `(i + h_floor + 1)`, below 2n + 1.
+
+Every index is already in 0..n−1, apart from the −1 sentinel. So no signed
+overflow occurs while 3n − 2 ≤ `INT_MAX`, that is n ≤ 715 827 883. That
+limit is far beyond any feasible allocation. `n = (int)checkVector(2)`
+narrows a `size_t`, which matters only above `INT_MAX` points; a binding
+would pass an `int32_t` count.
+
+### Why no defensible contract exists
+
+A binding over the examined releases would need a preflight showing that
+`minimumArea` will find a pair. None is available:
+
+- **k = 3** with a hull of more than three vertices and area ≥ 1e-6 could
+  be rejected exactly, since that path always reaches the read. But k = 3
+  is the documented minimum, and rejecting it still leaves k ≥ 4 unsafe.
+- **k ≥ 4.** Whether the sentinel occurs depends on EPSILON-thresholded
+  tests across the whole chain dynamic program. The only known way to
+  predict it exactly is to evaluate that program, and `.clinerules` forbids
+  reimplementing it. The observed scale boundaries are not a proven
+  sufficient condition; this is the same situation as approxPolyN. Nothing
+  proves that no simpler sufficient precondition exists, but none has been
+  found.
+- **Containment.** A SIGSEGV cannot be contained by the shim, and process
+  isolation would be an architectural change.
+- **Substitution.** Silently substituting `minEnclosingTriangle` for k = 3
+  is ruled out.
+
+### Upstream PR 30111: controlled comparison
+
+[PR 30111](https://github.com/opencv/opencv/pull/30111), "geometry: fix a
+crash in minEnclosingConvexPolygon for k = 3", opened 2026-09-30, targets
+5.x. Its state on 2026-10-04:
+
+- open, not a draft, not merged, no reviews;
+- its one CI run, `PR:5.x`, ended `action_required`, awaiting maintainer
+  approval;
+- it is in no release.
+
+The commits compared:
+
+- **Base:** `20e367198c7adde8f1efc0f525256b1e15798024`, the 5.x head at the
+  time. Its implementation file is byte-identical to 4.14.0 and 5.0.0.
+- **Head:** `01f4d0e5da231d00c1eca735a0880b492a69fdde`, a single commit. Its
+  implementation file is
+  `5f33b6169bfee0c0995e6f2704defd02d47ce096a0297e9f36b89082ab27fa91`. It also
+  adds six tests to `test_convhull.cpp`.
+
+The implementation diff changes four places (15 lines added, 3 removed):
+
+1. `calcOneSidedChains` also computes the one-sided chain between each pair
+   of adjacent sides: `findSingleE(i, i−1, i+1, i−2)`, indices mod n.
+2. `calcMiddleChains(0)` sets `exists` from the flush intersection's
+   validity instead of `false`, so zero-length chains can be selected.
+3. `findKSides` calls `reconstructHSidedChain` only when k > 3, so
+   `CV_Assert(h != 0)` is no longer reached for k = 3.
+4. `findMinAreaPolygon` raises `CV_Error(StsError, "minEnclosingConvexPolygon:
+   no valid enclosing polygon found")` when `min.i < 0 || min.j < 0`. This
+   happens immediately after `minimumArea` and before any use of the indices.
+
+**Guard placement (source-derived).** Change 4 covers the one sentinel this
+research found, and `findKSides` is reached only from there. Deeper
+reconstruction indices are not guarded. `reconstructHSidedChain` and
+`findKVertices` index tables with stored `side` values. A chain that the
+h ≥ 1 code marks as existing has a valid side. A zero-length chain made
+selectable by change 2 has `side = −1`, but for k = 3 it is never used as
+an index: `findKSides` then holds sides {i, j, s}, with s from
+`single_sides[i][j]`, which change 1 makes valid for adjacent pairs. No
+instrumented head run reported an out-of-bounds access. This is an
+observation, not a proof that no other path exists.
+
+**Builds.** Base and head were built from `git archive` trees into separate
+prefixes, with the same CMake options:
+
+- options file SHA-256 `f43b386f…`;
+- Release, shared, `BUILD_LIST=core,geometry`;
+- IPP, ITT, Eigen, LAPACK, OpenCL, CUDA, TBB, OpenMP and KleidiCV off;
+- pkg-config files generated.
+
+Exact-tag 4.14.0 was built with the same options except
+`BUILD_LIST=core,imgproc`. The installed 4.13.0 and 5.0.0 builds from
+earlier tasks were reused, and the system OpenCV was not touched. The
+head's instrumented builds compile the head's implementation file against
+the base libraries. That is sound because the extracted base and head trees
+differ only in the implementation file and `test_convhull.cpp`.
+
+| Evidence | Base, 4.13.0, 4.14.0, 5.0.0 | PR 30111 head |
+|---|---|---|
+| Frozen corpus, 33 cases; release, asan and asan-assert each | 14 crash | no crash: 11 `cv::Exception`, 13 polygon, 6 not minimal, 3 empty |
+| k ≥ 4 fuzz, 6000 cases, release | 421 SIGSEGV | the same 421 cases raise `StsError`; every other outcome and returned area is identical |
+| k ≥ 4 fuzz, seeds 1–2, 3000 cases; asan and asan-assert | 207 SIGSEGV (release base) | the same 207 raise `StsError`; no sanitizer report |
+| k = 3 fuzz, 3000 cases; release, asan and asan-assert | 2592 SIGSEGV + 31 `h != 0` (release); 2623 assertion (asan-assert 4.13.0) | 2427 polygon, 220 `StsError`, 353 empty; no sanitizer report |
+
+The head's 220 k = 3 exceptions are all at scales 1e-3 and 1e-2. The six
+upstream head tests were not built, because upstream test infrastructure
+was out of scope. With LeakSanitizer enabled, six spot checks of the head's
+exception and k = 3 paths reported no leak.
+
+**Geometric checks (exact arithmetic on the binary32 values).**
+
+- **Square, k = 3.** The head returns (20,10), (0,−10), (0,10), area exactly
+  200. The smallest triangle enclosing a parallelogram has twice its area,
+  so 200 is optimal; `minEnclosingTriangle` also returns 200. The
+  translated square gives 200 as well, and the first research's 4 × 4
+  square gives 32, also optimal.
+- **Rectangle competitor, k = 4.** The head does not change k ≥ 4 results.
+  Its non-minimal k = 4 polygons are exactly the releases': 102 fuzz cases,
+  plus the corpus's regular 33-gons at r = 0.009, 0.01 and 1e37, the
+  200-gon at r = 0.04, and the r = 0.003 arc. The exact minimum-area
+  enclosing rectangle beats each of them.
+- **Triangle competitor, k = 3.** The smallest triangle whose sides lie on
+  three hull-edge lines encloses the hull, so any larger result is provably
+  not minimal. Of the head's 2427 k = 3 triangles in the fuzz run, 525 are
+  larger than that competitor, by a median of 61% and up to 4.9×. PR 30111's
+  own pentagon gives 169.02 against 131.73.
+- **`minEnclosingTriangle` oracle, used cautiously.** It is an independent
+  OpenCV algorithm, but it rounds its vertices to binary32. The runner
+  therefore accepts its area as a bound only when those vertices exactly
+  enclose the input. On the corpus it matched the head's area for the
+  square and the hexagon, both with exact enclosure. On the upstream
+  pentagon its triangle missed enclosure by a relative 2.3e-8, so it was not
+  used there.
+
+**Conclusion.** The head turns every observed out-of-bounds read into either
+a result or a contained `cv::Exception`. That is necessary for a binding,
+not sufficient. Every exception rejects valid input, since an enclosing
+convex k-gon always exists. Many returned polygons are also provably not
+minimal, at k = 3 and at k = 4. If an equivalent guard is released, these
+facts would shape a binding's contract, not just its gate; see
+[the binding gate](#future-binding-gate).
+
+No upstream comment was posted. The non-minimal k = 3 results above may be
+useful to the PR's reviewers; whether to share them is left to the
+maintainer.
+
+### Future binding gate
+
+This is a design note, not an implementation. `Is_Natively_Supported` keeps
+its current meaning, native API availability with threshold 4.13. No future
+release or version number is assumed.
+
+1. **Wait for a release.** Reconsider only when a tagged release contains a
+   guard equivalent to change 4, on every major branch Geometry supports. A
+   5.x fix does not cover 4.13 or 4.14.
+2. **Gate on a separate safety boundary.** Below the first guarded release
+   on each major branch, a binding would raise `OpenCV_Error` with a
+   "requires OpenCV …" message, as the Subdiv2D Float32 bounds do. The
+   feature query would still report declaration availability. Whether that
+   boundary also becomes a distinct public query is a public-API decision
+   for the user.
+3. **Treat version numbers as a weak signal.** Distributions backport, and
+   the shim cannot inspect native code. A gate based only on versions
+   accepts that risk. The alternative, process isolation, is an
+   architectural change.
+4. **Rerun this corpus first.** Every `crash` expectation must become
+   `cv_exception` or a validated polygon. This must hold under the release
+   build and both sanitizer builds on Linux, and on macOS and Windows where
+   their toolchains allow.
+5. **Specify non-minimal results; do not hide them.** The public contract
+   would state that results are OpenCV's and may not be minimal, and that
+   `OpenCV_Error` can occur for valid input at small scales. Geometry should
+   not post-check minimality, because that would require a reimplementation.
+6. **Keep the ABI conventional:**
+   - a caller-provided buffer of capacity k, filled in Ada iteration order;
+   - k×1 and 1×k native output both accepted through `checkVector(2)`;
+   - integer `Contour` input converted to Float32 in Ada;
+   - large k·n² can raise `std::bad_alloc`, contained as `OpenCV_Error`;
+   - Ada bounds the count by the ABI's `int32_t`.
+
+### Reproducible research tooling
+
+Nothing here is built by `alr`, the AUnit suite or CI.
+`scripts/run_native_tests.sh` only globs `tests/native/*.cpp`, so it does
+not build these files either.
+
+- `tests/native/research/min_enclosing_convex_polygon_probe.cpp` runs one
+  case per process. Input comes from bit patterns on standard input, the
+  fuzz generator, or the circle and arc generators. The probe records:
+  - the OpenCV version;
+  - the loaded object that defines `cv::minEnclosingConvexPolygon`;
+  - every input and output coordinate as a bit pattern.
+
+  Everything before the native call is flushed first.
+- `tests/native/research/stub/precomp.hpp` is a public-header stand-in used
+  when compiling an exact upstream implementation file.
+- `tests/native/research/min_enclosing_convex_polygon_corpus.txt` holds 33
+  frozen cases. They include hand-written inputs, PR 30111's test inputs,
+  the first research's fixtures, and five fuzz cases. Each case records
+  expected outcomes for the families `released`, `pr30111-base` and
+  `pr30111-head`.
+- `scripts/run_min_enclosing_polygon_research.py` has subcommands `build`,
+  `run`, `fuzz`, `freeze` and `self-test`.
+  - **Child processes:** bounded concurrency; a timeout that kills the
+    process group; core dumps off; captured output limited by
+    `RLIMIT_FSIZE`; `LD_LIBRARY_PATH` and `LD_PRELOAD` removed; distinct
+    sanitizer exit statuses.
+  - **Identity checks:** each run confirms that the implementation came from
+    the expected library, or from the probe itself for an instrumented
+    build. It also reports SHA-256 hashes of the loaded objects.
+
+```sh
+python3 scripts/run_min_enclosing_polygon_research.py self-test
+python3 scripts/run_min_enclosing_polygon_research.py build \
+    --prefix /path/to/opencv-5.0.0 --output /tmp/probe-500
+python3 scripts/run_min_enclosing_polygon_research.py run \
+    --probe /tmp/probe-500 --expect released
+python3 scripts/run_min_enclosing_polygon_research.py build \
+    --prefix /path/to/opencv-5.0.0 --output /tmp/probe-500-asan \
+    --variant asan-assert \
+    --implementation-source /path/to/min_enclosing_convex_polygon.cpp
+```
+
+`run` exits 0 when every expectation matched, 1 on a mismatch, and 2 on a
+configuration, identity or probe error. Every corpus expectation matched on
+all 15 builds: release 4.13.0, 4.14.0, 5.0.0, base and head, each also as
+asan and asan-assert. Three negative controls behaved as intended: the
+wrong family, a mislabelled library and a forced timeout.
+
+### Task 016 validation evidence
+
+- **Repository validation.** A fresh clone of this branch was validated in
+  `/var/tmp`. `alr -n build` passed, and `alr -n -C tests run` reported
+  **524/524**, with zero failed assertions and errors, on OpenCV 4.10.0
+  with native imgproc.
+- **Core resolution.** With no lockfile, Alire resolved `opencv_core` to the
+  indexed release 0.2.0, not to any Core checkout. The developer worktree's
+  lockfile instead links the sibling Core checkout. Main's Linux CI job
+  checks Core out but also deploys an indexed release (0.3.0).
+- **No dependency changes.** This task changes no manifest, lockfile, Core
+  file or Alire index entry.
+- **GNATprove** was not rerun. No Ada, project or proof-scope file changed,
+  so the 277-check result from main still applies.
+- **Ephemeral artifacts**, not committed: `/tmp/geometry-016-research` and
+  `/var/tmp/geometry-016-pr30111`. They hold the exact upstream sources, the
+  OpenCV builds, the 15 probe builds and the JSON-lines reports.

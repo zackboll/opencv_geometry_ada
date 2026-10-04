@@ -31,6 +31,10 @@ become True at their listed thresholds. Thus approxPolyN may be natively
 supported while remaining unbound: its portable contraction-wide safety
 precondition is unresolved, as documented in
 [the preserved research](docs/versioned-features-research.md).
+minEnclosingConvexPolygon is likewise unbound. In each examined release,
+4.13.0, 4.14.0 and 5.0.0, finite input can make the native code read out
+of bounds; see the
+[Task 016 research](docs/versioned-features-research.md#task-016-minenclosingconvexpolygon-safety-gate).
 
 `Closest_Ellipse_Points (Ellipse, Points)` accepts either `Contour` or
 `Float32_Point_Array` and returns one Float32 point per query with exactly
