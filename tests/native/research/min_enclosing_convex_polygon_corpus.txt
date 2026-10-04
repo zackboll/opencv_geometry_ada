@@ -1,0 +1,568 @@
+# Frozen corpus for the opt-in minEnclosingConvexPolygon research runner,
+# scripts/run_min_enclosing_polygon_research.py. Nothing in the default
+# build, the AUnit suite or CI reads it.
+#
+# Each case is a block of lines:
+#
+#   case NAME            lowercase letters, digits and underscores
+#   origin TEXT          where the input comes from; may repeat
+#   k INT                the polygon vertex count passed to OpenCV
+#   depth f32|i32        optional: CV_32FC2 (the default) or CV_32SC2 input
+#   points X:Y ...       binary32 points, each coordinate as the 8 hex digits
+#                        of its IEEE 754 bit pattern; may repeat
+#   optimum VALUE WHY    optional: the exact minimum area, with its proof
+#   expect FAMILY KIND   optional: an observed outcome; may repeat
+#   end
+#
+# Generated inputs were frozen with the runner's freeze subcommand, so the
+# bit patterns, not libm or the libstdc++ distributions, define them.
+#
+# Expectation families, all observed on Linux x86-64 with g++ 14.2.0:
+#
+#   released      exact tags 4.13.0, 4.14.0 and 5.0.0, as installed release
+#                 libraries and as the unmodified tagged source compiled into
+#                 the probe with sanitizers and library assertions
+#   pr30111-base  opencv/opencv 5.x 20e367198c7adde8f1efc0f525256b1e15798024,
+#                 the base of upstream PR 30111, built the same two ways
+#   pr30111-head  01f4d0e5da231d00c1eca735a0880b492a69fdde, the PR's head
+#
+# Outcomes are those the runner reports: polygon, polygon_nonminimal,
+# polygon_invalid, empty, cv_exception and crash. An expectation records what
+# happened, not what should happen; polygon means that the runner's checks
+# found no fault, not that the polygon is minimal.
+
+case square10_k3
+origin upstream PR 30111 regression_k3: axis-aligned 10 x 10 square
+k 3
+points 00000000:00000000 41200000:00000000 41200000:41200000 00000000:41200000
+optimum 200 the smallest triangle enclosing a parallelogram has twice its area
+expect released crash
+expect pr30111-base crash
+expect pr30111-head polygon
+end
+
+case square10_offset_k3
+origin square10_k3 translated by (10, 10)
+k 3
+points 41200000:41200000 41200000:41a00000 41a00000:41a00000 41a00000:41200000
+optimum 200 the smallest triangle enclosing a parallelogram has twice its area
+expect released crash
+expect pr30111-base crash
+expect pr30111-head polygon
+end
+
+case pentagon_upstream_k3
+origin upstream pentagon test points: (1,0) (0,8) (4,12) (8,8) (7,0)
+k 3
+points 3f800000:00000000 00000000:41000000 40800000:41400000 41000000:41000000
+points 40e00000:00000000
+expect released crash
+expect pr30111-base crash
+expect pr30111-head polygon
+end
+
+case pentagon_upstream_k4
+origin upstream pentagon test, which expects area 90
+k 4
+points 3f800000:00000000 00000000:41000000 40800000:41400000 41000000:41000000
+points 40e00000:00000000
+expect released polygon
+expect pr30111-base polygon
+expect pr30111-head polygon
+end
+
+case pentagon_upstream_i32_k4
+origin pentagon_upstream_k4 as CV_32SC2 input
+k 4
+depth i32
+points 3f800000:00000000 00000000:41000000 40800000:41400000 41000000:41000000
+points 40e00000:00000000
+expect released cv_exception
+expect pr30111-base cv_exception
+expect pr30111-head cv_exception
+end
+
+case pentagon_pr30111_k3
+origin upstream PR 30111 regression_k3_convex_pentagon:
+origin (19,10) (6,17) (4,15) (7,4) (13,4)
+k 3
+points 41980000:41200000 40c00000:41880000 40800000:41700000 40e00000:40800000
+points 41500000:40800000
+expect released crash
+expect pr30111-base crash
+expect pr30111-head polygon_nonminimal
+end
+
+case hexagon_k3
+origin hexagon (0,0) (10,0) (15,10) (10,20) (0,20) (-5,10)
+k 3
+points 00000000:00000000 41200000:00000000 41700000:41200000 41200000:41a00000
+points 00000000:41a00000 c0a00000:41200000
+expect released crash
+expect pr30111-base crash
+expect pr30111-head polygon
+end
+
+case triangle_k3
+origin triangle (0,0) (0,4) (4,0); the hull has k vertices
+k 3
+points 00000000:00000000 00000000:40800000 40800000:00000000
+expect released polygon
+expect pr30111-base polygon
+expect pr30111-head polygon
+end
+
+case square4_k4
+origin square (0,0) (0,4) (4,4) (4,0); the hull has k vertices
+k 4
+points 00000000:00000000 00000000:40800000 40800000:40800000 40800000:00000000
+expect released polygon
+expect pr30111-base polygon
+expect pr30111-head polygon
+end
+
+case square1em4_k3
+origin square of side 1e-4 (binary32 38d1b717): hull area below 1e-6
+k 3
+points 38d1b717:00000000 38d1b717:38d1b717 00000000:38d1b717 00000000:00000000
+expect released empty
+expect pr30111-base empty
+expect pr30111-head empty
+end
+
+case collinear_k3
+origin upstream PR 30111 degenerate_input: four collinear points
+k 3
+points 00000000:00000000 40a00000:00000000 41200000:00000000 40e00000:00000000
+expect released empty
+expect pr30111-base empty
+expect pr30111-head empty
+end
+
+case square_center_k5
+origin upstream PR 30111 more_sides_than_hull: a square and its center
+k 5
+points 00000000:00000000 41200000:00000000 41200000:41200000 00000000:41200000
+points 40a00000:40a00000
+expect released empty
+expect pr30111-base empty
+expect pr30111-head empty
+end
+
+case square10_k2
+origin square10_k3 with k = 2, below OpenCV's minimum
+k 2
+points 00000000:00000000 41200000:00000000 41200000:41200000 00000000:41200000
+expect released cv_exception
+expect pr30111-base cv_exception
+expect pr30111-head cv_exception
+end
+
+case square10_k5
+origin square10_k3 with k = 5, more than the input points
+k 5
+points 00000000:00000000 41200000:00000000 41200000:41200000 00000000:41200000
+expect released cv_exception
+expect pr30111-base cv_exception
+expect pr30111-head cv_exception
+end
+
+case empty_k3
+origin no points
+k 3
+expect released cv_exception
+expect pr30111-base cv_exception
+expect pr30111-head cv_exception
+end
+
+case circle33_r0p004_k4
+origin Task 016 regular 33-gon, radius 0.004
+k 4
+points 3b83126f:00000000 3b80b40f:3a4671be 3b735db8:3ac2dbb1 3b5c8792:3b0db9cb
+points 3b3db8f8:3b34e66b 3b180ef6:3b558944 3ad9cc0f:3b6e745f 3a77360f:3b7ec12c
+points 394792b1:3b82ec6d ba153a59:3b81bce5 baab7a52:3b77b9ee bb03126f:3b6305fb
+points bb2baaf6:3b461d7f bb4e0f21:3b220bf3 bb6900bd:3af03e1f bb7b867c:3a93b581
+points bb827a7f:39c758d3 bb827a7f:b9c758d3 bb7b867c:ba93b581 bb6900bd:baf03e1f
+points bb4e0f21:bb220bf3 bb2baaf6:bb461d7f bb03126f:bb6305fb baab7a52:bb77b9ee
+points ba153a59:bb81bce5 394792b1:bb82ec6d 3a77360f:bb7ec12c 3ad9cc0f:bb6e745f
+points 3b180ef6:bb558944 3b3db8f8:bb34e66b 3b5c8792:bb0db9cb 3b735db8:bac2dbb1
+points 3b80b40f:ba4671be
+expect released crash
+expect pr30111-base crash
+expect pr30111-head cv_exception
+end
+
+case circle33_r0p005_k4
+origin Task 016 regular 33-gon, radius 0.005
+k 4
+points 3ba3d70a:00000000 3ba0e113:3a780e2e 3b981a93:3af3929d 3b89d4bb:3b31283d
+points 3b6d2736:3b622006 3b3e12b3:3b8575cb 3b081f89:3b9508bb 3a9a81c9:3b9f38bb
+points 3979775e:3ba3a788 ba3a88f0:3ba22c1f bad658e6:3b9ad435 bb23d70a:3b8de3bd
+points bb5695b3:3b77a4df bb80c975:3b4a8eef bb91a076:3b1626d4 bb9d340d:3ab8a2e1
+points bba3191e:39f92f08 bba3191e:b9f92f08 bb9d340d:bab8a2e1 bb91a076:bb1626d4
+points bb80c975:bb4a8eef bb5695b3:bb77a4df bb23d70a:bb8de3bd bad658e6:bb9ad435
+points ba3a88f0:bba22c1f 3979775e:bba3a788 3a9a81c9:bb9f38bb 3b081f89:bb9508bb
+points 3b3e12b3:bb8575cb 3b6d2736:bb622006 3b89d4bb:bb31283d 3b981a93:baf3929d
+points 3ba0e113:ba780e2e
+expect released crash
+expect pr30111-base crash
+expect pr30111-head cv_exception
+end
+
+case circle33_r0p009_k4
+origin Task 016 regular 33-gon, radius 0.009
+k 4
+points 3c1374bc:00000000 3c10ca91:3adf3ff6 3c08e4b7:3b5b3727 3bf81884:3b9f7104
+points 3bd57017:3bcb8339 3bab10d5:3bf03a6d 3b750591:3c062175 3b0b0e68:3c0f4ca9
+points 39e08508:3c1349fb baa7e1a4:3c11f482 bb40e99c:3c0b5896 bb9374bc:3bff66bb
+points bbc12054:3bdee12f bbe7d106:3bb64d71 bc03106a:3b8722f2 bc0d7ba6:3b262c31
+points bc12c9cf:3a6043ee bc12c9cf:ba6043ee bc0d7ba6:bb262c31 bc03106a:bb8722f2
+points bbe7d106:bbb64d71 bbc12054:bbdee12f bb9374bc:bbff66bb bb40e99c:bc0b5896
+points baa7e1a4:bc11f482 39e08508:bc1349fb 3b0b0e68:bc0f4ca9 3b750591:bc062175
+points 3bab10d5:bbf03a6d 3bd57017:bbcb8339 3bf81884:bb9f7104 3c08e4b7:bb5b3727
+points 3c10ca91:badf3ff6
+expect released polygon_nonminimal
+expect pr30111-base polygon_nonminimal
+expect pr30111-head polygon_nonminimal
+end
+
+case circle33_r0p01_k4
+origin Task 016 regular 33-gon, radius 0.01
+k 4
+points 3c23d70a:00000000 3c20e113:3af80e2e 3c181a93:3b73929d 3c09d4bb:3bb1283d
+points 3bed2736:3be22006 3bbe12b3:3c0575cb 3b881f89:3c1508bb 3b1a81c9:3c1f38bb
+points 39f9775e:3c23a788 baba88f0:3c222c1f bb5658e6:3c1ad435 bba3d70a:3c0de3bd
+points bbd695b3:3bf7a4df bc00c975:3bca8eef bc11a076:3b9626d4 bc1d340d:3b38a2e1
+points bc23191e:3a792f08 bc23191e:ba792f08 bc1d340d:bb38a2e1 bc11a076:bb9626d4
+points bc00c975:bbca8eef bbd695b3:bbf7a4df bba3d70a:bc0de3bd bb5658e6:bc1ad435
+points baba88f0:bc222c1f 39f9775e:bc23a788 3b1a81c9:bc1f38bb 3b881f89:bc1508bb
+points 3bbe12b3:bc0575cb 3bed2736:bbe22006 3c09d4bb:bbb1283d 3c181a93:bb73929d
+points 3c20e113:baf80e2e
+expect released polygon_nonminimal
+expect pr30111-base polygon_nonminimal
+expect pr30111-head polygon_nonminimal
+end
+
+case circle200_r0p03_k4
+origin Task 016 regular 200-gon, radius 0.03
+k 4
+points 3cf5c28f:00000000 3cf5a384:3a770636 3cf5466a:3af6e702 3cf4ab58:3b390644
+points 3cf3d276:3b766a48 3cf2bbfa:3b99c806 3cf1682c:3bb8340d 3cefd760:3bd6718b
+points 3cee09fc:3bf478dc 3cec0074:3c092135 3ce9bb4d:3c17e356 3ce73b19:3c267f18
+points 3ce4807a:3c34f0ca 3ce18c21:3c4334c5 3cde5ecc:3c51476f 3cdaf949:3c5f253a
+points 3cd75c73:3c6ccaa4 3cd38935:3c7a343c 3ccf8085:3c83af4f 3ccb4369:3c8a233a
+points 3cc6d2f3:3c907440 3cc23041:3c96a0c7 3cbd5c80:3c9ca740 3cb858e8:3ca28625
+points 3cb326be:3ca83bfb 3cadc750:3cadc750 3ca83bfb:3cb326be 3ca28625:3cb858e8
+points 3c9ca740:3cbd5c80 3c96a0c7:3cc23041 3c907440:3cc6d2f3 3c8a233a:3ccb4369
+points 3c83af4f:3ccf8085 3c7a343c:3cd38935 3c6ccaa4:3cd75c73 3c5f253a:3cdaf949
+points 3c51476f:3cde5ecc 3c4334c5:3ce18c21 3c34f0ca:3ce4807a 3c267f18:3ce73b19
+points 3c17e356:3ce9bb4d 3c092135:3cec0074 3bf478dc:3cee09fc 3bd6718b:3cefd760
+points 3bb8340d:3cf1682c 3b99c806:3cf2bbfa 3b766a48:3cf3d276 3b390644:3cf4ab58
+points 3af6e702:3cf5466a 3a770636:3cf5a384 22078b63:3cf5c28f ba770636:3cf5a384
+points baf6e702:3cf5466a bb390644:3cf4ab58 bb766a48:3cf3d276 bb99c806:3cf2bbfa
+points bbb8340d:3cf1682c bbd6718b:3cefd760 bbf478dc:3cee09fc bc092135:3cec0074
+points bc17e356:3ce9bb4d bc267f18:3ce73b19 bc34f0ca:3ce4807a bc4334c5:3ce18c21
+points bc51476f:3cde5ecc bc5f253a:3cdaf949 bc6ccaa4:3cd75c73 bc7a343c:3cd38935
+points bc83af4f:3ccf8085 bc8a233a:3ccb4369 bc907440:3cc6d2f3 bc96a0c7:3cc23041
+points bc9ca740:3cbd5c80 bca28625:3cb858e8 bca83bfb:3cb326be bcadc750:3cadc750
+points bcb326be:3ca83bfb bcb858e8:3ca28625 bcbd5c80:3c9ca740 bcc23041:3c96a0c7
+points bcc6d2f3:3c907440 bccb4369:3c8a233a bccf8085:3c83af4f bcd38935:3c7a343c
+points bcd75c73:3c6ccaa4 bcdaf949:3c5f253a bcde5ecc:3c51476f bce18c21:3c4334c5
+points bce4807a:3c34f0ca bce73b19:3c267f18 bce9bb4d:3c17e356 bcec0074:3c092135
+points bcee09fc:3bf478dc bcefd760:3bd6718b bcf1682c:3bb8340d bcf2bbfa:3b99c806
+points bcf3d276:3b766a48 bcf4ab58:3b390644 bcf5466a:3af6e702 bcf5a384:3a770636
+points bcf5c28f:22878b63 bcf5a384:ba770636 bcf5466a:baf6e702 bcf4ab58:bb390644
+points bcf3d276:bb766a48 bcf2bbfa:bb99c806 bcf1682c:bbb8340d bcefd760:bbd6718b
+points bcee09fc:bbf478dc bcec0074:bc092135 bce9bb4d:bc17e356 bce73b19:bc267f18
+points bce4807a:bc34f0ca bce18c21:bc4334c5 bcde5ecc:bc51476f bcdaf949:bc5f253a
+points bcd75c73:bc6ccaa4 bcd38935:bc7a343c bccf8085:bc83af4f bccb4369:bc8a233a
+points bcc6d2f3:bc907440 bcc23041:bc96a0c7 bcbd5c80:bc9ca740 bcb858e8:bca28625
+points bcb326be:bca83bfb bcadc750:bcadc750 bca83bfb:bcb326be bca28625:bcb858e8
+points bc9ca740:bcbd5c80 bc96a0c7:bcc23041 bc907440:bcc6d2f3 bc8a233a:bccb4369
+points bc83af4f:bccf8085 bc7a343c:bcd38935 bc6ccaa4:bcd75c73 bc5f253a:bcdaf949
+points bc51476f:bcde5ecc bc4334c5:bce18c21 bc34f0ca:bce4807a bc267f18:bce73b19
+points bc17e356:bce9bb4d bc092135:bcec0074 bbf478dc:bcee09fc bbd6718b:bcefd760
+points bbb8340d:bcf1682c bb99c806:bcf2bbfa bb766a48:bcf3d276 bb390644:bcf4ab58
+points baf6e702:bcf5466a ba770636:bcf5a384 a2cb5114:bcf5c28f 3a770636:bcf5a384
+points 3af6e702:bcf5466a 3b390644:bcf4ab58 3b766a48:bcf3d276 3b99c806:bcf2bbfa
+points 3bb8340d:bcf1682c 3bd6718b:bcefd760 3bf478dc:bcee09fc 3c092135:bcec0074
+points 3c17e356:bce9bb4d 3c267f18:bce73b19 3c34f0ca:bce4807a 3c4334c5:bce18c21
+points 3c51476f:bcde5ecc 3c5f253a:bcdaf949 3c6ccaa4:bcd75c73 3c7a343c:bcd38935
+points 3c83af4f:bccf8085 3c8a233a:bccb4369 3c907440:bcc6d2f3 3c96a0c7:bcc23041
+points 3c9ca740:bcbd5c80 3ca28625:bcb858e8 3ca83bfb:bcb326be 3cadc750:bcadc750
+points 3cb326be:bca83bfb 3cb858e8:bca28625 3cbd5c80:bc9ca740 3cc23041:bc96a0c7
+points 3cc6d2f3:bc907440 3ccb4369:bc8a233a 3ccf8085:bc83af4f 3cd38935:bc7a343c
+points 3cd75c73:bc6ccaa4 3cdaf949:bc5f253a 3cde5ecc:bc51476f 3ce18c21:bc4334c5
+points 3ce4807a:bc34f0ca 3ce73b19:bc267f18 3ce9bb4d:bc17e356 3cec0074:bc092135
+points 3cee09fc:bbf478dc 3cefd760:bbd6718b 3cf1682c:bbb8340d 3cf2bbfa:bb99c806
+points 3cf3d276:bb766a48 3cf4ab58:bb390644 3cf5466a:baf6e702 3cf5a384:ba770636
+expect released crash
+expect pr30111-base crash
+expect pr30111-head cv_exception
+end
+
+case circle200_r0p04_k4
+origin Task 016 regular 200-gon, radius 0.04
+k 4
+points 3d23d70a:00000000 3d23c258:3aa4aecf 3d238446:3b249a01 3d231ce5:3b76b305
+points 3d228c4e:3ba446db 3d21d2a7:3bcd0ab2 3d20f01d:3bf59abc 3d1fe4ea:3c0ef65d
+points 3d1eb153:3c22fb3d 3d1d55a3:3c36d6f1 3d1bd234:3c4a8473 3d1a2766:3c5dfecb
+points 3d1855a7:3c71410d 3d165d6b:3c82232e 3d143f32:3c8b84f5 3d11fb86:3c94c37c
+points 3d0f92f7:3c9ddc6d 3d0d0623:3ca6cd7d 3d0a55ae:3caf9469 3d078246:3cb82ef9
+points 3d048ca2:3cc09b00 3d017581:3cc8d65f 3cfc7b56:3cd0df00 3cf5cbe1:3cd8b2dc
+points 3ceede52:3ce04ff9 3ce7b46a:3ce7b46a 3ce04ff9:3ceede52 3cd8b2dc:3cf5cbe1
+points 3cd0df00:3cfc7b56 3cc8d65f:3d017581 3cc09b00:3d048ca2 3cb82ef9:3d078246
+points 3caf9469:3d0a55ae 3ca6cd7d:3d0d0623 3c9ddc6d:3d0f92f7 3c94c37c:3d11fb86
+points 3c8b84f5:3d143f32 3c82232e:3d165d6b 3c71410d:3d1855a7 3c5dfecb:3d1a2766
+points 3c4a8473:3d1bd234 3c36d6f1:3d1d55a3 3c22fb3d:3d1eb153 3c0ef65d:3d1fe4ea
+points 3bf59abc:3d20f01d 3bcd0ab2:3d21d2a7 3ba446db:3d228c4e 3b76b305:3d231ce5
+points 3b249a01:3d238446 3aa4aecf:3d23c258 2234b9d9:3d23d70a baa4aecf:3d23c258
+points bb249a01:3d238446 bb76b305:3d231ce5 bba446db:3d228c4e bbcd0ab2:3d21d2a7
+points bbf59abc:3d20f01d bc0ef65d:3d1fe4ea bc22fb3d:3d1eb153 bc36d6f1:3d1d55a3
+points bc4a8473:3d1bd234 bc5dfecb:3d1a2766 bc71410d:3d1855a7 bc82232e:3d165d6b
+points bc8b84f5:3d143f32 bc94c37c:3d11fb86 bc9ddc6d:3d0f92f7 bca6cd7d:3d0d0623
+points bcaf9469:3d0a55ae bcb82ef9:3d078246 bcc09b00:3d048ca2 bcc8d65f:3d017581
+points bcd0df00:3cfc7b56 bcd8b2dc:3cf5cbe1 bce04ff9:3ceede52 bce7b46a:3ce7b46a
+points bceede52:3ce04ff9 bcf5cbe1:3cd8b2dc bcfc7b56:3cd0df00 bd017581:3cc8d65f
+points bd048ca2:3cc09b00 bd078246:3cb82ef9 bd0a55ae:3caf9469 bd0d0623:3ca6cd7d
+points bd0f92f7:3c9ddc6d bd11fb86:3c94c37c bd143f32:3c8b84f5 bd165d6b:3c82232e
+points bd1855a7:3c71410d bd1a2766:3c5dfecb bd1bd234:3c4a8473 bd1d55a3:3c36d6f1
+points bd1eb153:3c22fb3d bd1fe4ea:3c0ef65d bd20f01d:3bf59abc bd21d2a7:3bcd0ab2
+points bd228c4e:3ba446db bd231ce5:3b76b305 bd238446:3b249a01 bd23c258:3aa4aecf
+points bd23d70a:22b4b9d9 bd23c258:baa4aecf bd238446:bb249a01 bd231ce5:bb76b305
+points bd228c4e:bba446db bd21d2a7:bbcd0ab2 bd20f01d:bbf59abc bd1fe4ea:bc0ef65d
+points bd1eb153:bc22fb3d bd1d55a3:bc36d6f1 bd1bd234:bc4a8473 bd1a2766:bc5dfecb
+points bd1855a7:bc71410d bd165d6b:bc82232e bd143f32:bc8b84f5 bd11fb86:bc94c37c
+points bd0f92f7:bc9ddc6d bd0d0623:bca6cd7d bd0a55ae:bcaf9469 bd078246:bcb82ef9
+points bd048ca2:bcc09b00 bd017581:bcc8d65f bcfc7b56:bcd0df00 bcf5cbe1:bcd8b2dc
+points bceede52:bce04ff9 bce7b46a:bce7b46a bce04ff9:bceede52 bcd8b2dc:bcf5cbe1
+points bcd0df00:bcfc7b56 bcc8d65f:bd017581 bcc09b00:bd048ca2 bcb82ef9:bd078246
+points bcaf9469:bd0a55ae bca6cd7d:bd0d0623 bc9ddc6d:bd0f92f7 bc94c37c:bd11fb86
+points bc8b84f5:bd143f32 bc82232e:bd165d6b bc71410d:bd1855a7 bc5dfecb:bd1a2766
+points bc4a8473:bd1bd234 bc36d6f1:bd1d55a3 bc22fb3d:bd1eb153 bc0ef65d:bd1fe4ea
+points bbf59abc:bd20f01d bbcd0ab2:bd21d2a7 bba446db:bd228c4e bb76b305:bd231ce5
+points bb249a01:bd238446 baa4aecf:bd23c258 a3078b63:bd23d70a 3aa4aecf:bd23c258
+points 3b249a01:bd238446 3b76b305:bd231ce5 3ba446db:bd228c4e 3bcd0ab2:bd21d2a7
+points 3bf59abc:bd20f01d 3c0ef65d:bd1fe4ea 3c22fb3d:bd1eb153 3c36d6f1:bd1d55a3
+points 3c4a8473:bd1bd234 3c5dfecb:bd1a2766 3c71410d:bd1855a7 3c82232e:bd165d6b
+points 3c8b84f5:bd143f32 3c94c37c:bd11fb86 3c9ddc6d:bd0f92f7 3ca6cd7d:bd0d0623
+points 3caf9469:bd0a55ae 3cb82ef9:bd078246 3cc09b00:bd048ca2 3cc8d65f:bd017581
+points 3cd0df00:bcfc7b56 3cd8b2dc:bcf5cbe1 3ce04ff9:bceede52 3ce7b46a:bce7b46a
+points 3ceede52:bce04ff9 3cf5cbe1:bcd8b2dc 3cfc7b56:bcd0df00 3d017581:bcc8d65f
+points 3d048ca2:bcc09b00 3d078246:bcb82ef9 3d0a55ae:bcaf9469 3d0d0623:bca6cd7d
+points 3d0f92f7:bc9ddc6d 3d11fb86:bc94c37c 3d143f32:bc8b84f5 3d165d6b:bc82232e
+points 3d1855a7:bc71410d 3d1a2766:bc5dfecb 3d1bd234:bc4a8473 3d1d55a3:bc36d6f1
+points 3d1eb153:bc22fb3d 3d1fe4ea:bc0ef65d 3d20f01d:bbf59abc 3d21d2a7:bbcd0ab2
+points 3d228c4e:bba446db 3d231ce5:bb76b305 3d238446:bb249a01 3d23c258:baa4aecf
+expect released polygon_nonminimal
+expect pr30111-base polygon_nonminimal
+expect pr30111-head polygon_nonminimal
+end
+
+case arc50_r0p003_k8
+origin Task 016 50-point arc, radius 0.003, span 3.14159
+k 8
+points 3b449ba6:00000000 3b44343d:39498c1d 3b42fe6d:39c9221a 3b40fb7e:3a165548
+points 3b3e2d8c:3a477b5f 3b3a978b:3a77cf9d 3b363d41:3a938f95 3b312342:3aaa9c22
+points 3b2b4eeb:3ac0f535 3b24c65e:3ad6834d 3b1d907c:3aeb2fbc 3b15b4d9:3afee4c3
+points 3b0d3bbb:3b08c6d3 3b042e0a:3b118b63 3af52a99:3b19b6d8 3ae0f737:3b214099
+points 3acbd72e:3b2820b9 3ab5e0b6:3b2e4ffc 3a9f2aea:3b33c7e0 3a87cdaf:3b3882a5
+points 3a5fc32e:3b3c7b51 3a2eff9b:3b3fadb7 39fb07e1:3b42167a 3997087a:3b43b311
+points 38c9a8c5:3b4481c9 b8c9a480:3b4481ca b997076a:3b43b314 b9fb06d3:3b42167f
+points ba2eff15:3b3fadbf ba5fc2ab:3b3c7b5b ba87cd6e:3b3882b1 ba9f2aac:3b33c7ee
+points bab5e079:3b2e500b bacbd6f3:3b2820cb bae0f6ff:3b2140ad baf52a64:3b19b6ed
+points bb042df0:3b118b7a bb0d3ba3:3b08c6ec bb15b4c3:3afee4f7 bb1d9068:3aeb2ff3
+points bb24c64c:3ad68386 bb2b4eda:3ac0f571 bb312333:3aaa9c60 bb363d34:3a938fd5
+points bb3a9781:3a77d01e bb3e2d83:3a477be3 bb40fb77:3a1655cf bb42fe69:39c9232a
+points bb44343a:39498e3f bb449ba6:3208c3d6
+expect released crash
+expect pr30111-base crash
+expect pr30111-head cv_exception
+end
+
+case arc50_r0p003_k4
+origin Task 016 50-point arc, radius 0.003, span 3.14159
+k 4
+points 3b449ba6:00000000 3b44343d:39498c1d 3b42fe6d:39c9221a 3b40fb7e:3a165548
+points 3b3e2d8c:3a477b5f 3b3a978b:3a77cf9d 3b363d41:3a938f95 3b312342:3aaa9c22
+points 3b2b4eeb:3ac0f535 3b24c65e:3ad6834d 3b1d907c:3aeb2fbc 3b15b4d9:3afee4c3
+points 3b0d3bbb:3b08c6d3 3b042e0a:3b118b63 3af52a99:3b19b6d8 3ae0f737:3b214099
+points 3acbd72e:3b2820b9 3ab5e0b6:3b2e4ffc 3a9f2aea:3b33c7e0 3a87cdaf:3b3882a5
+points 3a5fc32e:3b3c7b51 3a2eff9b:3b3fadb7 39fb07e1:3b42167a 3997087a:3b43b311
+points 38c9a8c5:3b4481c9 b8c9a480:3b4481ca b997076a:3b43b314 b9fb06d3:3b42167f
+points ba2eff15:3b3fadbf ba5fc2ab:3b3c7b5b ba87cd6e:3b3882b1 ba9f2aac:3b33c7ee
+points bab5e079:3b2e500b bacbd6f3:3b2820cb bae0f6ff:3b2140ad baf52a64:3b19b6ed
+points bb042df0:3b118b7a bb0d3ba3:3b08c6ec bb15b4c3:3afee4f7 bb1d9068:3aeb2ff3
+points bb24c64c:3ad68386 bb2b4eda:3ac0f571 bb312333:3aaa9c60 bb363d34:3a938fd5
+points bb3a9781:3a77d01e bb3e2d83:3a477be3 bb40fb77:3a1655cf bb42fe69:39c9232a
+points bb44343a:39498e3f bb449ba6:3208c3d6
+expect released polygon_nonminimal
+expect pr30111-base polygon_nonminimal
+expect pr30111-head polygon_nonminimal
+end
+
+case arc50_r1_k4
+origin Task 016 50-point arc, radius 1, span 3.14159
+k 4
+points 3f800000:00000000 3f7f7959:3d833738 3f7de5f4:3e02f234 3f7b4777:3e43bf0c
+points 3f77a0a4:3e81defc 3f72f553:3ea155d5 3f6d4a6d:3ec022f5 3f66a5e8:3ede25f7
+points 3f5f0ec2:3efb3f48 3f568cf6:3f0ba826 3f4d2977:3f191dbe 3f42ee26:3f25f244
+points 3f37e5c6:3f321839 3f2c1bf2:3f3d82d4 3f1f9d11:3f482614 3f127648:3f51f6c7
+points 3f04b56d:3f5aea9b 3eecd1ed:3f62f825 3ecf3fe1:3f6a16eb 3eb0d3d1:3f703f71
+points 3e91adbc:3f756b3c 3e63dcd2:3f7994dc 3e236e77:3f7cb7ef 3dc4a85f:3f7ed128
+points 3d0349e1:3f7fde53 bd034719:3f7fde55 bdc4a6fc:3f7ed12d be236dc7:3f7cb7f6
+points be63dc24:3f7994e6 be91ad67:3f756b49 beb0d37d:3f703f81 becf3f90:3f6a16fd
+points beecd19e:3f62f83a bf04b546:3f5aeab2 bf127623:3f51f6e1 bf1f9cee:3f48262f
+points bf2c1bd1:3f3d82f2 bf37e5a7:3f321859 bf42ee09:3f25f266 bf4d295c:3f191de2
+points bf568cdd:3f0ba84b bf5f0eac:3efb3f96 bf66a5d5:3ede2647 bf6d4a5c:3ec02348
+points bf72f545:3ea15629 bf77a098:3e81df53 bf7b476e:3e43bfbb bf7de5ee:3e02f2e4
+points bf7f7957:3d83389c bf800000:36321453
+expect released polygon
+expect pr30111-base polygon
+expect pr30111-head polygon
+end
+
+case arc50_r1_k8
+origin Task 016 50-point arc, radius 1, span 3.14159
+k 8
+points 3f800000:00000000 3f7f7959:3d833738 3f7de5f4:3e02f234 3f7b4777:3e43bf0c
+points 3f77a0a4:3e81defc 3f72f553:3ea155d5 3f6d4a6d:3ec022f5 3f66a5e8:3ede25f7
+points 3f5f0ec2:3efb3f48 3f568cf6:3f0ba826 3f4d2977:3f191dbe 3f42ee26:3f25f244
+points 3f37e5c6:3f321839 3f2c1bf2:3f3d82d4 3f1f9d11:3f482614 3f127648:3f51f6c7
+points 3f04b56d:3f5aea9b 3eecd1ed:3f62f825 3ecf3fe1:3f6a16eb 3eb0d3d1:3f703f71
+points 3e91adbc:3f756b3c 3e63dcd2:3f7994dc 3e236e77:3f7cb7ef 3dc4a85f:3f7ed128
+points 3d0349e1:3f7fde53 bd034719:3f7fde55 bdc4a6fc:3f7ed12d be236dc7:3f7cb7f6
+points be63dc24:3f7994e6 be91ad67:3f756b49 beb0d37d:3f703f81 becf3f90:3f6a16fd
+points beecd19e:3f62f83a bf04b546:3f5aeab2 bf127623:3f51f6e1 bf1f9cee:3f48262f
+points bf2c1bd1:3f3d82f2 bf37e5a7:3f321859 bf42ee09:3f25f266 bf4d295c:3f191de2
+points bf568cdd:3f0ba84b bf5f0eac:3efb3f96 bf66a5d5:3ede2647 bf6d4a5c:3ec02348
+points bf72f545:3ea15629 bf77a098:3e81df53 bf7b476e:3e43bfbb bf7de5ee:3e02f2e4
+points bf7f7957:3d83389c bf800000:36321453
+expect released polygon
+expect pr30111-base polygon
+expect pr30111-head polygon
+end
+
+case circle64_r1_k7
+origin upstream unit_circle test: regular 64-gon, radius 1
+k 7
+points 3f800000:00000000 3f7ec46d:3dc8bd36 3f7b14be:3e47c5c2 3f74fa0b:3e94a031
+points 3f6c835e:3ec3ef15 3f61c598:3ef15aea 3f54db31:3f0e39da 3f45e403:3f226799
+points 3f3504f3:3f3504f3 3f226799:3f45e403 3f0e39da:3f54db31 3ef15aea:3f61c598
+points 3ec3ef15:3f6c835e 3e94a031:3f74fa0b 3e47c5c2:3f7b14be 3dc8bd36:3f7ec46d
+points 248d3132:3f800000 bdc8bd36:3f7ec46d be47c5c2:3f7b14be be94a031:3f74fa0b
+points bec3ef15:3f6c835e bef15aea:3f61c598 bf0e39da:3f54db31 bf226799:3f45e403
+points bf3504f3:3f3504f3 bf45e403:3f226799 bf54db31:3f0e39da bf61c598:3ef15aea
+points bf6c835e:3ec3ef15 bf74fa0b:3e94a031 bf7b14be:3e47c5c2 bf7ec46d:3dc8bd36
+points bf800000:250d3132 bf7ec46d:bdc8bd36 bf7b14be:be47c5c2 bf74fa0b:be94a031
+points bf6c835e:bec3ef15 bf61c598:bef15aea bf54db31:bf0e39da bf45e403:bf226799
+points bf3504f3:bf3504f3 bf226799:bf45e403 bf0e39da:bf54db31 bef15aea:bf61c598
+points bec3ef15:bf6c835e be94a031:bf74fa0b be47c5c2:bf7b14be bdc8bd36:bf7ec46d
+points a553c9ca:bf800000 3dc8bd36:bf7ec46d 3e47c5c2:bf7b14be 3e94a031:bf74fa0b
+points 3ec3ef15:bf6c835e 3ef15aea:bf61c598 3f0e39da:bf54db31 3f226799:bf45e403
+points 3f3504f3:bf3504f3 3f45e403:bf226799 3f54db31:bf0e39da 3f61c598:bef15aea
+points 3f6c835e:bec3ef15 3f74fa0b:be94a031 3f7b14be:be47c5c2 3f7ec46d:bdc8bd36
+expect released polygon
+expect pr30111-base polygon
+expect pr30111-head polygon
+end
+
+case circle33_r1e6_k12
+origin Task 016 regular 33-gon, radius 1e6
+k 12
+points 49742400:00000000 496fba8b:4838d0d0 4962a6ff:48b579cf 494d6259:4903fe0d
+points 4930b161:492879f0 490d9d8f:4946deff 48cad6e0:495e1400 48663bbc:496d4239
+points 4739ddea:4973dd35 c80afab6:4971a7d7 c89fb37f:4966b68d c8f42400:49536e96
+points c91fe0cc:49388259 c93fe852:4916eaf0 c9590037:48dfbe51 c96a4050:48899092
+points c97308ff:47b9a806 c97308ff:c7b9a806 c96a4050:c8899092 c9590037:c8dfbe51
+points c93fe852:c916eaf0 c91fe0cc:c9388259 c8f42400:c9536e96 c89fb37f:c966b68d
+points c80afab6:c971a7d7 4739ddea:c973dd35 48663bbc:c96d4239 48cad6e0:c95e1400
+points 490d9d8f:c946deff 4930b161:c92879f0 494d6259:c903fe0d 4962a6ff:c8b579cf
+points 496fba8b:c838d0d0
+expect released polygon
+expect pr30111-base polygon
+expect pr30111-head polygon
+end
+
+case circle33_r1e37_k4
+origin Task 016 regular 33-gon, radius 1e37
+k 4
+points 7cf0bdc2:00000000 7cec6407:7bb63e09 7cdf7f17:7c32f2ef 7cca8640:7c822790
+points 7cae3b8e:7ca62167 7c8ba4c4:7cc41a1e 7c4803db:7cdafc66 7be30711:7ce9f483
+points 7ab74764:7cf077f4 fb890b51:7cee4a75 fc1d7a3d:7ce3802c fc70bdc2:7cd07cf0
+points fc9da6e9:7cb5f0aa fcbd3c43:7c94d0fd fcd5fab7:7c5ca0c8 fce6fd52:7c07a638
+points fcefa6b2:7b37123f fcefa6b2:fb37123f fce6fd52:fc07a638 fcd5fab7:fc5ca0c8
+points fcbd3c43:fc94d0fd fc9da6e9:fcb5f0aa fc70bdc2:fcd07cf0 fc1d7a3d:fce3802c
+points fb890b51:fcee4a75 7ab74764:fcf077f4 7be30711:fce9f483 7c4803db:fcdafc66
+points 7c8ba4c4:fcc41a1e 7cae3b8e:fca62167 7cca8640:fc822790 7cdf7f17:fc32f2ef
+points 7cec6407:fbb63e09
+expect released polygon_nonminimal
+expect pr30111-base polygon_nonminimal
+expect pr30111-head polygon_nonminimal
+end
+
+case fuzz_s1_i8_k12
+origin Task 016 fuzz seed 1 iteration 8: circle samples, scale 1e-3
+k 12
+points 39b81afe:ba75733d ba47b89c:3a29cbfa 3a2b8cd6:ba463795 b797b3b5:ba830cf2
+points ba75f261:b9b56f52 3a2b8dc4:3a4636c7 3a73c903:39c0c04d 3a3d92bd:3a350e7b
+points 3a7bf0ae:3990da80 3a4c9759:3a23e564 391f6a7b:3a818c63 b971a6c5:ba7f1677
+points ba73e814:b9c022d9 3a82aa11:38a546aa 3a6bcace:39e5192e 3a804fac:b95614a8
+points ba6e829d:b9d98da5 3997a98f:3a7aefbc b775288b:3a830ed9 b822ab86:ba82f930
+points 39b043b2:3a76e28e ba64a1c2:ba003ee2 3a80c0e1:b9445aac 3a15d40f:ba571b58
+points 3885aee8:3a82ce30 ba82f8ba:38242603 ba3f250a:ba336590 39f9a172:ba6685c1
+points 3a10e5a9:3a5a757c 3a822e23:38f43829 3a6d2df0:39df4c07 ba829703:38b3b502
+points ba4dc8fa:ba226500
+expect released crash
+expect pr30111-base crash
+expect pr30111-head cv_exception
+end
+
+case fuzz_s1_i50_k4
+origin Task 016 fuzz seed 1 iteration 50: regular 7-gon, scale 1e-3
+k 4
+points 3a83126f:00000000 3a2371b1:3a4cf3d3 b9695482:3a7f924e ba6c2eff:39e37ae4
+points ba6c2eff:b9e37ae4 b9695482:ba7f924e 3a2371b1:ba4cf3d3
+expect released crash
+expect pr30111-base crash
+expect pr30111-head cv_exception
+end
+
+case fuzz_s1_i118_k4
+origin Task 016 fuzz seed 1 iteration 118: circle samples, scale 1e-3
+k 4
+points 3a6dcce6:b9dca3b9 3a1e2aad:ba510d55 3a420685:3a3046ec ba707862:b9d0be86
+points b98a27ad:ba7ce105 3a47d938:ba29a597
+expect released crash
+expect pr30111-base crash
+expect pr30111-head cv_exception
+end
+
+case fuzz_s1_i3_k3
+origin Task 016 fuzz seed 1 iteration 3, k replaced by 3: 7x7 integer grid,
+origin scale 1
+k 3
+points 3f800000:40a00000 40c00000:40a00000 40c00000:3f800000 40c00000:3f800000
+points 3f800000:40a00000 40800000:40c00000 40a00000:40400000 40400000:3f800000
+points 40a00000:40a00000 00000000:40800000 00000000:40c00000 40400000:40400000
+points 40000000:40c00000 3f800000:40a00000 3f800000:40a00000 40400000:40400000
+points 40800000:40800000 40000000:40000000 40c00000:40c00000 40a00000:3f800000
+points 40a00000:3f800000 3f800000:40000000 40c00000:40800000 40800000:40400000
+points 40800000:40a00000 40800000:00000000 40800000:40a00000 40400000:40000000
+points 40400000:40a00000
+expect released crash
+expect pr30111-base crash
+expect pr30111-head polygon
+end
+
+case fuzz_s1_i36_k3
+origin Task 016 fuzz seed 1 iteration 36, k replaced by 3: 7x7 integer grid,
+origin scale 1000
+k 3
+points 44fa0000:44fa0000 00000000:459c4000 44fa0000:44fa0000 44fa0000:45bb8000
+points 453b8000:44fa0000 457a0000:00000000 00000000:457a0000 44fa0000:447a0000
+points 457a0000:45bb8000 459c4000:44fa0000 457a0000:459c4000
+expect released crash
+expect pr30111-base crash
+expect pr30111-head polygon
+end
