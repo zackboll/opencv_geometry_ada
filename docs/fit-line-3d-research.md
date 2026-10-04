@@ -106,15 +106,23 @@ Do not silently relocate existing Geometry `Float32_Point_Array` or add
 unneeded Float64 families as part of that prerequisite.
 
 No indexed release currently inspected (through Core 0.3.0) supplies the
-proposed values. The live 0.4.0 tree does not supply them either. If the
-owner releases them in Core 0.4.0, Geometry would need a new minimum and an
-owner-approved upper-bound change because its present `<0.4.0` excludes
-that release. If they are released in an eligible 0.3.x release, Geometry
-would still need its minimum raised to that actual release. Merely keeping
-`>=0.2.0` would falsely promise builds against versions without the types.
-The version choice belongs to Core's release owner. No dependency change
-is made here, and Geometry's immutable 0.2.0 remains independent of this
-future API.
+proposed values. Core 0.4.0 is already immutably tagged and submitted to
+the Alire index in PR #2198 without these types; Core main has since moved
+beyond that release. The shared 3-D point values must therefore first
+appear in a subsequent Core release, not a retroactive change to 0.4.0.
+A feature-bearing Core 0.5.0 is the natural target if the owner approves
+this proposal, not an existing release commitment.
+
+Geometry must then raise its minimum Core dependency to the first released
+version that actually contains the shared types. If that is Core 0.5.0,
+the expected constraint becomes `opencv_core >=0.5.0 & <0.6.0`. Merely
+keeping `>=0.2.0` would falsely promise builds against versions without
+the types. This is a future dependency decision only: no manifest change
+is made in PR #18. Geometry remains version `0.2.0` with its current
+`opencv_core >=0.2.0 & <0.4.0` dependency. Core ownership remains
+recommended, and Geometry `Fit_Line_3D` remains deferred until the shared
+types exist in a released Core version and the separate native
+arithmetic/liveness safety gate succeeds.
 
 Proposed follow-on sequence:
 
