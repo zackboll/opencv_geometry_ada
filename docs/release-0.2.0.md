@@ -156,6 +156,12 @@ also confirm those counts. Release preparation does not rebuild that large
 historical matrix unnecessarily; the candidate receives focused local
 4.10/4.12/4.13 compatibility checks and mandatory full 4.14 checks.
 
+Candidate focused normal-profile checks passed on each of **4.10.0, 4.12.0,
+and 4.13.0**: minAreaRect **11/11**, closest ellipse **15/15**, and the complete
+Subdiv2D family **60/60**. Every run had zero failed assertions and unexpected
+errors. The main working checkout was restored to OpenCV 4.10/release and its
+complete final AUnit run passed **524/524**.
+
 ## Proof and static validation scope
 
 The established scope is the four Geometry helpers `Float32_Points`,
@@ -178,7 +184,9 @@ Runtime tests establish native behavior and error translation. Ada runtime
 checks enforce public preflight outside the proof scope; foreign operations
 remain trusted. Warnings-as-errors are preserved. No Ada source is modified
 or reformatted as a release side effect. Whitespace and changed-line
-GNATformat checks are required before committing.
+GNATformat checks passed before committing. A full GNATformat 26.0.0
+`--check` of Geometry public/internal sources with the Geometry project also
+passed, as did the 79-column Ada check and `git diff --check`.
 
 Fresh exact-4.14 certification with indexed Core 0.3.0 reports **277/277**,
 no unproved or justified checks, and no flow/proof warnings. The invocation
@@ -188,7 +196,8 @@ result (266 Geometry checks plus 11 imported Core checks).
 
 ## Publication and review gate
 
-The candidate must pass, from a fresh detached checkout of its exact commit:
+Publication validation passes from a fresh detached checkout of the candidate
+commit using:
 
 ```sh
 alr -n publish --skip-submit . <candidate-sha>
@@ -203,6 +212,12 @@ absence of local paths/development pins, and preservation of:
 - Windows `mingw_w64_gcc` dependency;
 - MSYS2 `PATH.prepend = "${CRATE_ROOT}/lib"`;
 - the existing configure and test actions.
+
+The dry run includes a successful full build against exact OpenCV 4.14.0
+and clean indexed resolution to **opencv_core 0.3.0**. The generated manifest
+contains an immutable `git+https://github.com/zackboll/opencv_geometry_ada.git`
+origin and version **0.2.0**, with no filesystem dependencies or development
+pins. It is a generated local validation artifact, not an index submission.
 
 The exact candidate SHA, publication result/resolved Core, candidate CI state,
 and local/remote/PR head parity are recorded in the release PR description
