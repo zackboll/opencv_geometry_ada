@@ -2,13 +2,21 @@
 
 This table is maintained by hand. It maps each native OpenCV Geometry
 operation to its thick Ada binding, or records why there is none. Its
-reference releases are OpenCV 4.6 and 4.10, where the operations live in
+reference releases are OpenCV 4.6, 4.10, and 4.14.0, where operations live in
 `imgproc` (`opencv2/imgproc.hpp`, `libopencv_imgproc`), and OpenCV 5.0, where
 they live in `geometry` (`opencv2/geometry.hpp`, `libopencv_geometry`). The
 binding also builds against other OpenCV 4.x releases; notes below name the
 releases where behavior changes. The public Ada package is `OpenCV.Geometry`
 on every release. The native lists come from the upstream headers of the
 reference releases. Update this file with every change to the public API.
+
+The 0.2.0 release audit rechecked exact 4.14.0 `imgproc.hpp` and exact 5.0.0
+`geometry.hpp` / `geometry/2d.hpp` against both public Ada specs. No additional
+in-scope contour, shape, transform, or public Subdiv2D operation was found:
+the common free functions, version-gated rows, and explicitly unbound modes
+below account for the intended 2-D surface. This is not a claim to cover
+image processing or the 3-D/segmentation/MST families. See the
+[release evidence](release-0.2.0.md) for source identities and certification.
 
 Status values:
 

@@ -1,6 +1,6 @@
 name = "opencv_geometry"
 description = "Thick Ada binding to OpenCV Geometry"
-version = "0.2.0-dev"
+version = "0.2.0"
 
 authors = ["Zack Boll"]
 maintainers = ["Zack Boll <zackboll@gmail.com>"]
