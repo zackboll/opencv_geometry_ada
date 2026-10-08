@@ -232,9 +232,6 @@ package body OpenCV.Geometry.Subdiv2D is
       Native_Bounds : aliased C_API.Rect_F32;
       Status        : C_API.Status;
    begin
-      if not Is_Natively_Supported (Float32_Subdivision_Bounds_Feature) then
-         Raise_Error ("Subdiv2D Float32 bounds require OpenCV 4.13 or newer");
-      end if;
       Validate_Native_Bounds (Bounds, 6.0);
       Native_Bounds := To_C_Rect (Bounds);
       if Object.Handle = null then

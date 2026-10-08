@@ -141,7 +141,7 @@ Two notes apply to the whole family:
 | `getEdge` | `Navigate` | Bound: all eight `*_AROUND_*` choices as `Edge_Navigation` | |
 | `nextEdge`, `rotateEdge`, `symEdge` | `Next_Edge`, `Rotate`, `Symmetric_Edge` | Bound | |
 | `edgeOrg`, `edgeDst` | `Origin`, `Destination` | Bound | Positions via `Vertex_Point` |
-| `Subdiv2D(Rect2f)`, `initDelaunay(Rect2f)` | `Create_Float32`, `Reset_Float32` with `Float32_Rectangle` | Bound, version-gated, OpenCV 4.13+ | Exact binary32 descriptor; no integer fallback; distinct names preserve integer aggregate source compatibility |
+| `Subdiv2D(Rect2f)`, `initDelaunay(Rect2f)` | `Create_Float32`, `Reset_Float32` with `Float32_Rectangle` | Universally bound, OpenCV 4.6+ and 5.x | Private initialization backport before 4.13, native afterwards; exact binary32 descriptor, no integer rounding; distinct names preserve integer aggregate source compatibility |
 
 `Is_Ready`, `Bounds`, and `Bounds_Float32` report state and have no native
 counterpart. `Bounds` retains the original integer descriptor and raises
@@ -168,7 +168,7 @@ with an unsupported-version diagnostic; there is no algorithm fallback.
 | `approxPolyN` | 4.11 | Deferred: unresolved contraction-wide numerical-safety contract; finite convex input can develop sentinel and NaN heap candidates. See [research](versioned-features-research.md). |
 | `getClosestEllipsePoints` | 4.12 | Universally bound: `Closest_Ellipse_Points`, integer and Float32 input, Float32 output with identical cardinality and Ada range. Private compatibility backport on 4.6–4.11; native on 4.12+ and 5.x. Native capability query remains False before 4.12. |
 | `minEnclosingConvexPolygon` | 4.13 | Deferred: in each examined release (4.13.0, 4.14.0, 5.0.0), finite input can make the native code read out of bounds. Every k = 3 call whose hull has more than three vertices and area of at least 1e-6 does; so does some small-scale k ≥ 4 input. No known preflight avoids reimplementing the algorithm. Upstream PR 30111, open and unreleased, turns the observed reads into `cv::Exception` but still returns non-minimal polygons. See [research](versioned-features-research.md#task-016-minenclosingconvexpolygon-safety-gate). |
-| `Subdiv2D(Rect2f)`, `Subdiv2D::initDelaunay(Rect2f)` | 4.13 | Bound, version-gated, OpenCV 4.13+: `Subdiv2D.Create_Float32` / `Reset_Float32` with `Float32_Rectangle`. Older versions report unsupported before semantic validation. |
+| `Subdiv2D(Rect2f)`, `Subdiv2D::initDelaunay(Rect2f)` | 4.13 | Universally bound: `Subdiv2D.Create_Float32` / `Reset_Float32`. Private initialization backport on 4.6–4.12, native on 4.13+/5.x. Native capability remains False before 4.13. |
 
 ## Unbound modes of bound operations
 

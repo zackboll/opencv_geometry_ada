@@ -61,14 +61,6 @@ opencv_geometry_status invalid_argument(const char *message) noexcept
     return OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT;
 }
 
-#if CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 13
-opencv_geometry_status unsupported(const char *message) noexcept
-{
-    set_error(message);
-    return OPENCV_GEOMETRY_ERROR_UNSUPPORTED;
-}
-#endif
-
 opencv_geometry_status translate_current_exception() noexcept
 {
     try {
@@ -3424,12 +3416,29 @@ namespace opencv_geometry_shim_detail {
 
 // cv::Subdiv2D keeps its vertex and quad-edge storage in protected members
 // that OpenCV 4.6, 4.10, and 5.0 declare identically. This derived class
-// only reads their sizes and vertex kinds so the shim can bound native int
+// reads their sizes and vertex kinds so the shim can bound native int
 // arithmetic and identifiers, and reads a facet's Voronoi vertices so it can
 // tell computed ones from OpenCV's placeholder.
+// On older releases it also initializes Float32 bounds through protected
+// native operations, with no access-control or object-layout workaround.
 class GeometrySubdiv2D : public cv::Subdiv2D {
 public:
     using cv::Subdiv2D::Subdiv2D;
+    GeometrySubdiv2D() = default;
+
+    explicit GeometrySubdiv2D(cv::Rect2f bounds)
+    {
+        initialize_float32(bounds);
+    }
+
+    void initialize_float32(cv::Rect2f bounds)
+    {
+#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
+        cv::Subdiv2D::initDelaunay(bounds);
+#else
+        initialize_float32_compat(bounds);
+#endif
+    }
 
     std::size_t quad_edge_count() const noexcept
     {
@@ -3471,6 +3480,44 @@ public:
         } while (edge != start);
         return true;
     }
+private:
+#if CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 13
+    // Adapted from OpenCV 4.13.0 subdivision2d.cpp, initDelaunay(Rect2f).
+    // The retained upstream license is in subdiv2d_compat_license.hpp.
+    // Only initialization is backported; all triangulation stays native.
+    void initialize_float32_compat(cv::Rect2f rect)
+    {
+        const float big = 6.f * std::max(rect.width, rect.height);
+        const float rx = rect.x;
+        const float ry = rect.y;
+        vtx.clear();
+        qedges.clear();
+        recentEdge = 0;
+        validGeometry = false;
+        topLeft = cv::Point2f(rx, ry);
+        bottomRight = cv::Point2f(rx + rect.width, ry + rect.height);
+        const cv::Point2f a(rx + big, ry);
+        const cv::Point2f b(rx, ry + big);
+        const cv::Point2f c(rx - big, ry - big);
+        vtx.emplace_back();
+        qedges.emplace_back();
+        freeQEdge = 0;
+        freePoint = 0;
+        const int pa = newPoint(a, false);
+        const int pb = newPoint(b, false);
+        const int pc = newPoint(c, false);
+        const int ab = newEdge();
+        const int bc = newEdge();
+        const int ca = newEdge();
+        setEdgePoints(ab, pa, pb);
+        setEdgePoints(bc, pb, pc);
+        setEdgePoints(ca, pc, pa);
+        splice(ab, symEdge(ca));
+        splice(bc, symEdge(ab));
+        splice(ca, symEdge(bc));
+        recentEdge = ab;
+    }
+#endif
 };
 
 }
@@ -3512,10 +3559,8 @@ cv::Rect subdiv2d_bounds(const opencv_geometry_rect_i32 &bounds)
 
 struct opencv_geometry_subdiv2d {
     opencv_geometry_subdiv2d() = default;
-#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
     explicit opencv_geometry_subdiv2d(cv::Rect2f bounds)
         : native(bounds), usable(true) {}
-#endif
     opencv_geometry_subdiv2d(const opencv_geometry_subdiv2d &) = delete;
     opencv_geometry_subdiv2d &operator=(const opencv_geometry_subdiv2d &) =
         delete;
@@ -3638,7 +3683,6 @@ opencv_geometry_status opencv_geometry_subdiv2d_create_f32(
         return invalid_argument("null subdivision output handle pointer");
     }
     *out_handle = nullptr;
-#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
     if (bounds == nullptr) {
         return invalid_argument("null subdivision bounds pointer");
     }
@@ -3651,10 +3695,6 @@ opencv_geometry_status opencv_geometry_subdiv2d_create_f32(
     } catch (...) {
         return translate_current_exception();
     }
-#else
-    (void)bounds;
-    return unsupported("Subdiv2D Float32 bounds require OpenCV 4.13 or newer");
-#endif
 }
 
 opencv_geometry_status opencv_geometry_subdiv2d_init_delaunay_f32(
@@ -3662,7 +3702,6 @@ opencv_geometry_status opencv_geometry_subdiv2d_init_delaunay_f32(
     const opencv_geometry_rect_f32 *bounds)
 {
     clear_error();
-#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
     if (handle == nullptr) {
         return invalid_argument("null subdivision handle");
     }
@@ -3672,18 +3711,13 @@ opencv_geometry_status opencv_geometry_subdiv2d_init_delaunay_f32(
     // Native initialization clears its state before potentially allocating.
     handle->usable = false;
     try {
-        handle->native.initDelaunay(cv::Rect2f(
+        handle->native.initialize_float32(cv::Rect2f(
             bounds->x, bounds->y, bounds->width, bounds->height));
         handle->usable = true;
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         return translate_current_exception();
     }
-#else
-    (void)handle;
-    (void)bounds;
-    return unsupported("Subdiv2D Float32 bounds require OpenCV 4.13 or newer");
-#endif
 }
 
 opencv_geometry_status

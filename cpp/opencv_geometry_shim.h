@@ -586,11 +586,10 @@ opencv_geometry_subdiv2d_create(
     const opencv_geometry_rect_i32 *bounds,
     opencv_geometry_subdiv2d **out_handle);
 
-/* Fixed symbols on all builds. Rect2f requires OpenCV 4.13+. Create checks
-   out_handle and sets it null before returning UNSUPPORTED; no other
-   arguments are inspected on old releases. Reset returns UNSUPPORTED before
-   inspecting handle/bounds and leaves an existing handle unchanged. Native
-   reset failure marks the handle unusable, as with integer initialization. */
+/* Float32 initialization on every supported build: protected-operation
+   compatibility before 4.13, native Rect2f on 4.13+/5.x. Create publishes null
+   on failure. Null pointers are rejected before mutation. Rebuild failure
+   marks the handle unusable, as with integer initialization. */
 opencv_geometry_status opencv_geometry_subdiv2d_create_f32(
     const opencv_geometry_rect_f32 *bounds,
     opencv_geometry_subdiv2d **out_handle);

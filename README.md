@@ -536,7 +536,7 @@ mutates internal state in `Locate`, and in `Find_Nearest` and
 `Voronoi_Facets`, which compute Voronoi data. Distinct subdivisions are
 independent.
 
-### Float32 bounds (OpenCV 4.13+)
+### Float32 bounds (every supported release)
 
 `Subdiv2D.Float32_Rectangle` is an axis-aligned value record with `X`, `Y`,
 `Width`, and `Height` of type `OpenCV.Float32_Value`. The same limited owner
@@ -549,13 +549,16 @@ procedure Reset_Float32
 function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle;
 ```
 
-Query `Is_Natively_Supported (Float32_Subdivision_Bounds_Feature)` before
-using these optional operations. They call native `Rect2f` on 4.13+/5.x, with
-**no integer fallback or rounding**. On older versions they raise
-`OpenCV_Error`: "Subdiv2D Float32 bounds require OpenCV 4.13 or newer".
-Unsupported takes precedence over semantic validation, including NaN or
-zero dimensions. Unsupported `Reset_Float32` leaves the object and its bounds
-intact.
+These operations are universally available with **no integer rounding**.
+OpenCV 4.6–4.12 uses a private backport of 4.13's Float32 initialization
+through protected native operations; 4.13+/5.x calls native `Rect2f`.
+`Is_Natively_Supported (Float32_Subdivision_Bounds_Feature)` still reports
+actual native availability (False before 4.13), not portable availability.
+Triangulation, location, nearest queries and Voronoi remain native on every
+version. Compatibility initialization does not repair native numerical or
+liveness limitations. See the [Task 022 source audit and qualification
+record](docs/versioned-features-research.md#task-022-universal-float32-subdiv2d-bounds)
+for provenance, licensing obligations and tested versions.
 
 All four fields must be finite, and dimensions positive. Shared Ada preflight
 requires the actual binary32 upper limits to advance, and every native-stored

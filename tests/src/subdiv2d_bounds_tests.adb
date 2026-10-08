@@ -29,18 +29,11 @@ package body Subdiv2D_Bounds_Tests is
    package Caller is new AUnit.Test_Caller (Fixture);
    Result : aliased AUnit.Test_Suites.Test_Suite;
 
-   Square              : constant OpenCV.Rect :=
+   Square     : constant OpenCV.Rect :=
      (X => 0, Y => 0, Width => 100, Height => 100);
-   Fractional          : constant S.Float32_Rectangle :=
+   Fractional : constant S.Float32_Rectangle :=
      (X => -0.25, Y => 0.5, Width => 10.5, Height => 12.25);
-   Site                : constant OpenCV.Float32_Point :=
-     (X => 2.25, Y => 3.5);
-   Unsupported_Message : constant String :=
-     "Subdiv2D Float32 bounds require OpenCV 4.13 or newer";
-
-   function Supported return Boolean
-   is (OpenCV.Geometry.Is_Natively_Supported
-         (OpenCV.Geometry.Float32_Subdivision_Bounds_Feature));
+   Site       : constant OpenCV.Float32_Point := (X => 2.25, Y => 3.5);
 
    procedure Check (Condition : Boolean; Message : String) is
    begin
@@ -93,33 +86,31 @@ package body Subdiv2D_Bounds_Tests is
       Assert_Stored (Object, Fractional, Vertex);
    end Reject_Float;
 
-   procedure Unsupported_Precedence (Test : in out Fixture) is
+   procedure Universal_Create (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Object : S.Subdivision := S.Create (Square);
       Vertex : constant S.Vertex_Id := S.Insert (Object, Site);
       procedure Try_Create is
          Other : constant S.Subdivision := S.Create_Float32 (Fractional);
       begin
-         Check (not S.Is_Ready (Other), "unreachable unsupported Create");
+         Check (S.Is_Ready (Other), "Float32 Create on every release");
+         Check (S.Bounds_Float32 (Other) = Fractional, "exact bounds");
       end Try_Create;
       procedure Try_Reset is
       begin
          S.Reset_Float32 (Object, S.Float32_Rectangle'(others => 0.0));
       end Try_Reset;
    begin
-      if Supported then
-         return;
-      end if;
-      Expect_Error (Try_Create'Access, Unsupported_Message);
-      Expect_Error (Try_Reset'Access, Unsupported_Message);
-      Check (S.Bounds (Object) = Square, "unsupported keeps integer mode");
+      Try_Create;
+      Expect_Error (Try_Reset'Access, "positive");
+      Check (S.Bounds (Object) = Square, "invalid keeps integer mode");
       Assert_Stored
         (Object,
          (X => 0.0, Y => 0.0, Width => 100.0, Height => 100.0),
          Vertex);
-   end Unsupported_Precedence;
+   end Universal_Create;
 
-   procedure Unsupported_Nonfinite (Test : in out Fixture) is
+   procedure Universal_Nonfinite (Test : in out Fixture) is
       pragma Unreferenced (Test);
       pragma Suppress (Validity_Check);
       function From_Bits is new
@@ -136,15 +127,13 @@ package body Subdiv2D_Bounds_Tests is
       procedure Try_Create is
          Other : constant S.Subdivision := S.Create_Float32 (Bad);
       begin
-         Check (not S.Is_Ready (Other), "unreachable unsupported NaN");
+         Check (not S.Is_Ready (Other), "unreachable invalid NaN");
       end Try_Create;
    begin
-      if not Supported then
-         Expect_Error (Try_Create'Access, Unsupported_Message);
-         Expect_Error (Try_Reset'Access, Unsupported_Message);
-         Check (S.Is_Ready (Object), "unsupported NaN does not mutate");
-      end if;
-   end Unsupported_Nonfinite;
+      Expect_Error (Try_Create'Access, "finite");
+      Expect_Error (Try_Reset'Access, "finite");
+      Check (S.Is_Ready (Object), "invalid NaN does not mutate");
+   end Universal_Nonfinite;
 
    procedure Integer_Queries (Test : in out Fixture) is
       pragma Unreferenced (Test);
@@ -157,6 +146,17 @@ package body Subdiv2D_Bounds_Tests is
         (S.Bounds_Float32 (Object)
          = (X => 2.0**24, Y => -7.0, Width => 4.0, Height => 10.0),
          "each field is converted just as OpenCV converts it");
+      declare
+         Native : constant S.Subdivision := S.Create (Square);
+         Factor : constant OpenCV.Float32_Value :=
+           (if C.OpenCV_Major_Version = 4 and then C.OpenCV_Minor_Version < 12
+            then 3.0
+            else 6.0);
+      begin
+         Check
+           (S.Vertex_Point (Native, 1) = (100.0 * Factor, 0.0),
+            "integer initialization retains native versioned factor");
+      end;
 
       --  Source compatibility with 0.1.0: these aggregates intentionally have
       --  no type qualification. Float32 APIs must not make them ambiguous.
@@ -218,9 +218,6 @@ package body Subdiv2D_Bounds_Tests is
    procedure Fractional_Create (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if not Supported then
-         return;
-      end if;
       declare
          Object : constant S.Subdivision := S.Create_Float32 (Fractional);
          procedure Integer_Query is
@@ -243,9 +240,6 @@ package body Subdiv2D_Bounds_Tests is
       Shifted : constant S.Float32_Rectangle :=
         (X => -1.5, Y => -2.25, Width => 20.5, Height => 25.75);
    begin
-      if not Supported then
-         return;
-      end if;
       Check (S.Insert (Object, Site) > 3, "integer site inserted");
       S.Reset_Float32 (Object, Fractional);
       Check (S.Bounds_Float32 (Object) = Fractional, "integer to Float32");
@@ -267,9 +261,6 @@ package body Subdiv2D_Bounds_Tests is
    procedure Fractional_Operations (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if not Supported then
-         return;
-      end if;
       declare
          Object : S.Subdivision := S.Create_Float32 (Fractional);
          Vertex : constant S.Vertex_Id := S.Insert (Object, Site);
@@ -281,6 +272,7 @@ package body Subdiv2D_Bounds_Tests is
                (X => 5.25, Y => 10.5),
                (X => 5.25, Y => 6.5)));
          Check (S.Locate (Object, Site).Vertex = Vertex, "fractional Locate");
+         Check (S.Insert (Object, Site) = Vertex, "duplicate keeps vertex");
          Check
            (S.Find_Nearest (Object, (X => 2.5, Y => 3.75)).Vertex = Vertex,
             "fractional nearest");
@@ -307,9 +299,6 @@ package body Subdiv2D_Bounds_Tests is
    procedure Half_Open (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if not Supported then
-         return;
-      end if;
       declare
          Object : S.Subdivision := S.Create_Float32 (Fractional);
          Point  : OpenCV.Float32_Point;
@@ -350,9 +339,6 @@ package body Subdiv2D_Bounds_Tests is
    procedure Super_Triangle (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if not Supported then
-         return;
-      end if;
       declare
          Object : constant S.Subdivision := S.Create_Float32 (Fractional);
       begin
@@ -371,9 +357,6 @@ package body Subdiv2D_Bounds_Tests is
            OpenCV.Float32_Value);
       Bad : S.Float32_Rectangle;
    begin
-      if not Supported then
-         return;
-      end if;
       for Field in 1 .. 4 loop
          Bad := Fractional;
          case Field is
@@ -414,52 +397,54 @@ package body Subdiv2D_Bounds_Tests is
    procedure Dimensions (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if Supported then
+      declare
+      begin
          Reject_Float ((X => 0.0, Y => 0.0, Width => 0.0, Height => 10.0));
          Reject_Float ((X => 0.0, Y => 0.0, Width => -1.0, Height => 10.0));
          Reject_Float ((X => 0.0, Y => 0.0, Width => 10.0, Height => 0.0));
          Reject_Float ((X => 0.0, Y => 0.0, Width => 10.0, Height => -1.0));
-      end if;
+      end;
    end Dimensions;
 
    procedure Float_Collapse (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if Supported then
+      declare
+      begin
          Reject_Float ((X => 2.0**24, Y => 0.0, Width => 1.0, Height => 10.0));
          Reject_Float ((X => 0.0, Y => 2.0**24, Width => 10.0, Height => 1.0));
-      end if;
+      end;
    end Float_Collapse;
 
    procedure Float_Advance (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if Supported then
-         declare
-            Descriptor : constant S.Float32_Rectangle :=
-              (X => 2.0**24, Y => 0.0, Width => 2.0, Height => 10.0);
-            Object     : S.Subdivision := S.Create_Float32 (Descriptor);
-         begin
-            Check
-              (S.Insert (Object, (X => 2.0**24, Y => 5.0)) > 3,
-               "representably positive Float32 width accepted");
-         end;
-      end if;
+      declare
+         Descriptor : constant S.Float32_Rectangle :=
+           (X => 2.0**24, Y => 0.0, Width => 2.0, Height => 10.0);
+         Object     : S.Subdivision := S.Create_Float32 (Descriptor);
+      begin
+         Check
+           (S.Insert (Object, (X => 2.0**24, Y => 5.0)) > 3,
+            "representably positive Float32 width accepted");
+      end;
    end Float_Advance;
 
    procedure Scale_Overflow (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if Supported then
+      declare
+      begin
          Reject_Float ((X => 0.0, Y => 0.0, Width => 1.0E38, Height => 10.0));
          Reject_Float ((X => 0.0, Y => 0.0, Width => 10.0, Height => 1.0E38));
-      end if;
+      end;
    end Scale_Overflow;
 
    procedure Coordinate_Overflow (Test : in out Fixture) is
       pragma Unreferenced (Test);
    begin
-      if Supported then
+      declare
+      begin
          --  Big is finite (3E38), and upper limits advance, but each of the
          --  four X/Y +/- Big expressions overflows in the respective case.
          Reject_Float
@@ -480,7 +465,7 @@ package body Subdiv2D_Bounds_Tests is
              Y      => OpenCV.Float32_Value'Last,
              Width  => 10.0,
              Height => 5.0E37));
-      end if;
+      end;
    end Coordinate_Overflow;
 
    procedure Uninitialized_Query (Test : in out Fixture) is
@@ -517,9 +502,6 @@ package body Subdiv2D_Bounds_Tests is
          null;
       end Integer_Query;
    begin
-      if not Supported then
-         return;
-      end if;
       Expect_Error (Bad_Float'Access);
       Check
         (S.Bounds (Object) = Square, "failed Float32 Reset keeps int mode");
@@ -545,9 +527,6 @@ package body Subdiv2D_Bounds_Tests is
         OpenCV.Float32_Value'Last / 8.0;
       Object : S.Subdivision;
    begin
-      if not Supported then
-         return;
-      end if;
       --  Test initialization/storage only, not pathological native predicates.
       S.Reset_Float32
         (Object,
@@ -566,13 +545,11 @@ package body Subdiv2D_Bounds_Tests is
 
    procedure Raw_Ordering (Test : in out Fixture) is
       pragma Unreferenced (Test);
-      Has_Float_Bounds : constant Boolean := Supported;
-      Descriptor       : aliased constant C.Rect_F32 :=
-        (-0.25, 0.5, 10.5, 12.25);
-      Integers         : aliased constant C.Rect_I32 := (0, 0, 100, 100);
-      Handle           : aliased C.Subdiv2D_Handle := null;
-      Saved            : C.Subdiv2D_Handle := null;
-      Status           : C.Status;
+      Descriptor : aliased constant C.Rect_F32 := (-0.25, 0.5, 10.5, 12.25);
+      Integers   : aliased constant C.Rect_I32 := (0, 0, 100, 100);
+      Handle     : aliased C.Subdiv2D_Handle := null;
+      Saved      : C.Subdiv2D_Handle := null;
+      Status     : C.Status;
    begin
       Status := C.Subdiv2D_Create_F32 (null, null);
       Check (Status = C.Error_Invalid_Argument, "out_handle always required");
@@ -581,17 +558,9 @@ package body Subdiv2D_Bounds_Tests is
       Check (Status = C.Success, "safe non-null sentinel is a live handle");
       Saved := Handle;
       Status := C.Subdiv2D_Create_F32 (null, Handle'Access);
-      Check (Handle = null, "failure/unsupported publishes null");
-      if not Has_Float_Bounds then
-         Check
-           (Status = C.Error_Unsupported, "old Create ignores null bounds");
-         Check (C.Last_Error_Message = Unsupported_Message, "version message");
-         Status := C.Subdiv2D_Init_Delaunay_F32 (null, null);
-         Check (Status = C.Error_Unsupported, "old Reset ignores null args");
-         Status := C.Subdiv2D_Init_Delaunay_F32 (Saved, null);
-         Check (Status = C.Error_Unsupported, "old Reset ignores bounds");
-         Check (C.Subdiv2D_Is_Usable (Saved) = 1, "old Reset keeps usable");
-      else
+      Check (Handle = null, "failure publishes null");
+      declare
+      begin
          Check (Status = C.Error_Invalid_Argument, "supported needs bounds");
          Status := C.Subdiv2D_Init_Delaunay_F32 (null, Descriptor'Access);
          Check (Status = C.Error_Invalid_Argument, "Reset needs handle");
@@ -603,7 +572,7 @@ package body Subdiv2D_Bounds_Tests is
          Status := C.Subdiv2D_Init_Delaunay_F32 (Saved, Descriptor'Access);
          Check (Status = C.Success, "raw f32 Reset");
          Check (C.Subdiv2D_Is_Usable (Saved) = 1, "successful Reset ready");
-      end if;
+      end;
       C.Subdiv2D_Destroy (Handle);
       Handle := null;
       C.Subdiv2D_Destroy (Saved);
@@ -626,11 +595,10 @@ package body Subdiv2D_Bounds_Tests is
            ("Subdiv2D finite extreme initialization", Finite_Extremes'Access));
       Result.Add_Test
         (Caller.Create
-           ("Subdiv2D Float32 unsupported precedence",
-            Unsupported_Precedence'Access));
+           ("Subdiv2D Float32 universal Create", Universal_Create'Access));
       Result.Add_Test
         (Caller.Create
-           ("Subdiv2D Float32 unsupported NaN", Unsupported_Nonfinite'Access));
+           ("Subdiv2D Float32 universal NaN", Universal_Nonfinite'Access));
       Result.Add_Test
         (Caller.Create
            ("Subdiv2D integer bounds queries", Integer_Queries'Access));
