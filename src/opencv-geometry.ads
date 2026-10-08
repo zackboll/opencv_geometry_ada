@@ -31,10 +31,10 @@ package OpenCV.Geometry is
    type Float32_Point_Array is
      array (Natural range <>) of OpenCV.Float32_Point;
 
-   --  One native approximate closest ellipse point per query, preserving
+   --  One approximate closest ellipse point per query, preserving
    --  Points'Range (including null and Natural'Last-adjacent ranges).
-   --  Requires OpenCV 4.12+ or 5.x; older versions raise OpenCV_Error even
-   --  for empty input. On supported versions, empty input returns empty.
+   --  Native on OpenCV 4.12+ and 5.x; a private compatibility implementation
+   --  is used on 4.6--4.11. Empty input returns the same null range.
    --  Ellipse fields and Float32 queries must be finite; both ellipse
    --  dimensions must be positive. Native arithmetic has three fixed
    --  iterations: extreme inputs can produce non-finite output, rejected

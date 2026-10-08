@@ -27,7 +27,7 @@ API, **not whether Geometry currently binds that API**:
 | Feature | First native 4.x release | Ada binding |
 | --- | --- | --- |
 | `Approximate_Convex_Polygon_Feature` | 4.11 | Deferred |
-| `Closest_Ellipse_Points_Feature` | 4.12 | `Closest_Ellipse_Points` |
+| `Closest_Ellipse_Points_Feature` | 4.12 | Universal `Closest_Ellipse_Points` |
 | `Minimum_Enclosing_Convex_Polygon_Feature` | 4.13 | Deferred |
 | `Float32_Subdivision_Bounds_Feature` | 4.13 | Bound: Subdiv2D Float32 bounds |
 
@@ -51,10 +51,17 @@ arbitrary magnitude bound is imposed, but non-finite native output raises
 `OpenCV_Error`. Even querying a circle's center can trigger that numerical
 failure. Inputs are unchanged.
 
-OpenCV 4.6/4.10/4.11 builds remain supported. Calling this operation there
-raises `OpenCV_Error` with "requires OpenCV 4.12 or newer", including for
-empty input. On supported versions, empty input returns the same null range
-without a native call.
+`Closest_Ellipse_Points` works on every supported version: OpenCV 4.6–4.11
+uses a private backport of OpenCV's Float32 algorithm; 4.12+ and 5.x call
+the native implementation. `Is_Natively_Supported` still returns False
+before 4.12: it reports native functionality, not portable Ada availability.
+Empty input returns the same null range without a native call on every version.
+The backport preserves the three iterations, rotation, semiaxis swapping,
+integer conversion and numerical failure behavior. See the
+[Task 021 qualification](docs/versioned-features-research.md#task-021-portable-closest-ellipse-points).
+The backport's retained upstream license is in
+[`cpp/closest_ellipse_compat.hpp`](cpp/closest_ellipse_compat.hpp); binary
+redistributions must reproduce that notice, conditions and disclaimer.
 Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 

@@ -8,6 +8,129 @@ minEnclosingConvexPolygon is likewise **deferred at its safety gate**
 bounds for some finite input; see
 [Task 016](#task-016-minenclosingconvexpolygon-safety-gate).
 
+## Task 021: portable closest ellipse points
+
+Starting main: `05004664116fa85ac51d6a6e8ad4df7c94d3365a`.
+Branch: `feature/021-portable-closest-ellipse`, in an isolated worktree.
+Baseline OpenCV 4.10.0/imgproc build and AUnit: **524/524**. That baseline
+skipped ellipse functionality on old releases; the updated suite does not.
+
+### Exact upstream sources and license
+
+The full `solveFast` and `getClosestEllipsePoints` implementations were
+inspected in:
+
+- [4.12.0 shapedescr.cpp](https://github.com/opencv/opencv/blob/4.12.0/modules/imgproc/src/shapedescr.cpp),
+  tag commit `49486f61fb25722cbcf586b7f4320921d46fb38e`.
+- [4.13.0 shapedescr.cpp](https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/shapedescr.cpp),
+  tag commit `fe38fc608f6acb8b68953438a62305d8318f4fcd`.
+- [5.0.0 shapedescr.cpp](https://github.com/opencv/opencv/blob/5.0.0/modules/geometry/src/shapedescr.cpp).
+
+The solver and ellipse transformations are identical in these three sources.
+The extracted block from `static void solveFast` through the final
+`closest_pts_list).convertTo` has SHA-256
+`a312244d13f20c895dbf773a191b3f8b43a53473099e8c60e3859ae5a6d0abc5`
+in all three versions.
+The private `cpp/closest_ellipse_compat.hpp` adapts only the input/output
+container plumbing: typed vectors replace InputArray/Mat/OutputArray, with
+explicit integer-to-float conversion and no ABI storage reinterpretation.
+No native objects cross the ABI. `CV_PI` substitutes the identical binary64
+`M_PI` constant for strict cross-platform C++17 availability.
+
+The upstream file carries the Intel Open Source Computer Vision Library
+license, Copyright (C) 2000 Intel Corporation, with third-party copyrights
+reserved. Its copyright, conditions and disclaimer are retained in the
+backport header. Source redistributions must retain them; binary
+redistributions must reproduce them in documentation or accompanying
+materials. Intel's name cannot be used for endorsement without permission.
+This task does not change the crate's Apache-2.0 license.
+
+### Arithmetic, ownership and validation review
+
+- Compile-time dispatch uses the backport before OpenCV 4.12, and native
+  `cv::getClosestEllipsePoints` on 4.12+ and 5.x. No optional unresolved
+  native symbol is referenced on old versions. Native capability reporting
+  retains its exact 4.12 threshold, independent of portable availability.
+- Both public overloads, postconditions, C symbols, layouts and status
+  constants are unchanged. Only unsupported-operation gating is removed.
+  Old versions now perform the same pointer/count/capacity checks as newer
+  versions instead of returning Unsupported before inspecting arguments.
+- The solver retains initial `0.707f`, exactly three iterations, binary32
+  products/divisions, `hypotf`, min/max operand order and `copysign`.
+  Angle calculation retains the upstream binary64 multiply/divide followed
+  by conversion to float; transforms retain `Matx23f` multiplication.
+  Semiaxes, swapping and the added 90-degree rotation remain unchanged.
+- Integer coordinates convert individually to binary32 before arithmetic:
+  no integer subtraction or multiplication can overflow in this algorithm.
+  Low bits of large integers may be lost, exactly as in the native routine.
+- Squaring large semiaxes, transform overflow, underflow and zero solver
+  divisors can produce nonfinite results even with finite valid input.
+  A circle-center query is one such case. No extra iteration, arbitrary
+  coordinate restriction, improved solver or fallback result is introduced.
+- Ada remains responsible for finite fields/queries, positive dimensions
+  and finite results, translating failures to `OpenCV_Error`. Existing
+  local validity-check suppression preserves this under validation builds.
+- ABI checks reject negative counts/capacities, missing ellipse, invalid
+  pointer/count pairs and insufficient capacity. The result-size guard is
+  retained for buffer safety. Count is zero before failure; publication
+  follows successful computation. Empty input returns without indexing.
+  Temporary vectors are private RAII storage; allocation exceptions remain
+  caught by the existing exception translator. Ada-owned results retain
+  iteration order, cardinality, shifted/high/null ranges and immutability.
+
+**No public semantic validation is duplicated in the C++ shim.** The new
+preprocessor guards select implementation/helper availability, not semantic
+policy. Existing pointer/count/capacity and result-size checks are ABI safety.
+
+### Qualification evidence
+
+The registered suite now has **525 tests**, including an additional native
+golden fixture with translated, rotated, swapped semiaxes and fractional
+queries. Existing ellipse tests execute unconditionally on older versions;
+capability tests still assert the exact native version thresholds.
+
+`tests/native/closest_ellipse_equivalence.cpp` compares deterministic grids,
+INT32 extrema, signed zero, extreme finite queries, circles, both semiaxis
+orders, translations, five rotations, and very large/tiny dimensions.
+On each native release it compares **51,900 coordinates** and checks equal
+finite/NaN/Infinity classifications. Observed maximum absolute error is
+**zero** on 4.12.0, 4.13.0, 4.14.0 and 5.0.0. Its permitted relative error
+is `2e-5 * max(1, abs(native))`, allowing compiler/libm rounding, not a
+different solver. The Ada golden fixture permits `2e-5` absolute error.
+These are empirical equivalence results, not a proof for all binary32 input.
+
+| OpenCV / backend | Normal AUnit | Validation AUnit | Native ASan/UBSan |
+|---|---|---|---|
+| 4.6.0 / imgproc | PASS 525/525 | PASS 525/525 | PASS |
+| 4.10.0 / imgproc | PASS 525/525 | PASS 525/525 | PASS |
+| 4.12.0 / imgproc | PASS 525/525 | PASS 525/525 | PASS |
+| 4.13.0 / imgproc | PASS 525/525 | PASS 525/525 | PASS |
+| 4.14.0 / imgproc | PASS 525/525 | PASS 525/525 | PASS |
+| 5.0.0 / geometry | PASS 525/525 | PASS 525/525 | PASS |
+
+The 4.12/4.13/4.14 environments are exact-tag minimal core/imgproc Release
+builds, not version-macro simulations. 4.10 is the installed native library;
+5.0 is the preserved exact-tag native installation. Native sanitizer runs
+instrument the shim/test code, not the prebuilt OpenCV libraries.
+The initial 4.6 attempt failed linking stale shared-cache Core objects built
+against newer OpenCV; a second attempt failed pinning an index manifest.
+Qualification therefore rebuilds released Core 0.3.0 in isolated storage
+with its original upstream manifest. Neither failed attempt is a PASS.
+That corrected 4.6 run passed both full suites and the sanitizer harness;
+its capability query is False while the portable/golden fixture tests run.
+4.10 likewise reports False and executes the backport. The older native
+harness prints zero compared coordinates because no native reference exists
+there; this is ABI/sanitizer qualification, not a native equivalence claim.
+
+Hosted Linux and macOS qualification will be checked on the feature PR.
+Windows is intentionally skipped on PR/feature pushes, retained for main
+pushes and manual workflow dispatch; no Windows PR pass is claimed.
+The feature workflow will also be manually dispatched for Windows evidence.
+No platform toolchain, backend or ownership architecture is changed.
+
+The historical Task 013 unsupported behavior below is superseded only for
+`Closest_Ellipse_Points` by this task; other versioned features are unchanged.
+
 ## Baseline
 
 - Starting main: `40b1e25a3cc3dc96c8d1eca862727791034693f7`.

@@ -1,5 +1,3 @@
-with Ada.Exceptions;
-with Ada.Strings.Fixed;
 with AUnit.Assertions;
 with AUnit.Test_Caller;
 with AUnit.Test_Fixtures;
@@ -24,8 +22,6 @@ package body Versioned_Feature_Tests is
    Result : aliased AUnit.Test_Suites.Test_Suite;
    Circle : constant OpenCV.Rotated_Rect :=
      (Center => (0.0, 0.0), Size => (2.0, 2.0), Angle_Degrees => 0.0);
-   function Available return Boolean
-   is (G.Is_Natively_Supported (G.Closest_Ellipse_Points_Feature));
 
    procedure Capabilities (F : in out Fixture) is
       pragma Unreferenced (F);
@@ -89,7 +85,7 @@ package body Versioned_Feature_Tests is
         (Status = C.Error_Invalid_Argument, "null capability output rejected");
    end Invalid_Feature;
 
-   procedure Unsupported_Public (F : in out Fixture) is
+   procedure Portable_Public (F : in out Fixture) is
       pragma Unreferenced (F);
       I : constant G.Contour (20 .. 20) := (others => (4, 0));
       P : constant G.Float32_Point_Array (20 .. 20) := (others => (4.0, 0.0));
@@ -105,26 +101,53 @@ package body Versioned_Feature_Tests is
                  G.Closest_Ellipse_Points
                    (Circle, P (20 .. (if Empty then 19 else 20))));
          begin
-            AUnit.Assertions.Assert (R'Length = 999, "expected unsupported");
-         end;
-      exception
-         when E : OpenCV.OpenCV_Error =>
             AUnit.Assertions.Assert
-              (Ada.Strings.Fixed.Index
-                 (Ada.Exceptions.Exception_Message (E),
-                  "requires OpenCV 4.12 or newer")
-               > 0,
-               "clear unsupported diagnostic");
+              (R'First = 20 and then R'Length = (if Empty then 0 else 1),
+               "portable overload preserves range and count");
+            if not Empty then
+               AUnit.Assertions.Assert
+                 (abs (R (20).X - 1.0) < 1.0E-4
+                  and then abs (R (20).Y) < 1.0E-4,
+                  "portable overload closest point");
+            end if;
+         end;
       end Attempt;
    begin
-      if Available then
-         return;
-      end if;
       Attempt (True, False);
       Attempt (False, False);
       Attempt (True, True);
       Attempt (False, True);
-   end Unsupported_Public;
+   end Portable_Public;
+
+   procedure Native_Fixture (F : in out Fixture) is
+      pragma Unreferenced (F);
+      E        : constant OpenCV.Rotated_Rect :=
+        (Center => (3.25, -7.5), Size => (3.0, 8.0), Angle_Degrees => 17.5);
+      P        : constant G.Float32_Point_Array :=
+        (31 => (-4.25, 2.5),
+         32 => (0.375, -0.5),
+         33 => (12.5, -8.75),
+         34 => (3.25, -6.0));
+      --  Native 5.0.0 fixture, independently compared to 4.12+ by the
+      --  native harness. Absolute tolerance allows binary32/libm rounding.
+      Expected : constant G.Float32_Point_Array :=
+        (31 => (1.80754912, -3.83031845),
+         32 => (1.96617615, -3.71774125),
+         33 => (5.10623789, -9.22019386),
+         34 => (4.08910942, -5.57871199));
+      R        : constant G.Float32_Point_Array :=
+        G.Closest_Ellipse_Points (E, P);
+   begin
+      AUnit.Assertions.Assert
+        (R'First = P'First and then R'Last = P'Last,
+         "native fixture cardinality and bounds");
+      for J in P'Range loop
+         AUnit.Assertions.Assert
+           (abs (R (J).X - Expected (J).X) < 2.0E-5
+            and then abs (R (J).Y - Expected (J).Y) < 2.0E-5,
+            "native fixture positional numerical agreement");
+      end loop;
+   end Native_Fixture;
 
    procedure Raw_Ordering (F : in out Fixture) is
       pragma Unreferenced (F);
@@ -134,26 +157,18 @@ package body Versioned_Feature_Tests is
       Status :=
         C.Closest_Ellipse_Points_I32 (null, null, -1, null, -1, Count'Access);
       AUnit.Assertions.Assert
-        (Count = 0
-         and then Status
-                  = (if Available
-                     then C.Error_Invalid_Argument
-                     else C.Error_Unsupported),
-         "raw i32 version gate ordering");
+        (Count = 0 and then Status = C.Error_Invalid_Argument,
+         "raw i32 argument validation on every version");
       Count := 99;
       Status :=
         C.Closest_Ellipse_Points_F32 (null, null, 1, null, 0, Count'Access);
       AUnit.Assertions.Assert
-        (Count = 0
-         and then Status
-                  = (if Available
-                     then C.Error_Invalid_Argument
-                     else C.Error_Unsupported),
-         "raw f32 version gate ordering");
+        (Count = 0 and then Status = C.Error_Invalid_Argument,
+         "raw f32 argument validation on every version");
       Status := C.Closest_Ellipse_Points_F32 (null, null, 1, null, 0, null);
       AUnit.Assertions.Assert
         (Status = C.Error_Invalid_Argument,
-         "count pointer precedes version gate");
+         "null count pointer rejected on every version");
    end Raw_Ordering;
 
    procedure Circle_Axes (F : in out Fixture) is
@@ -164,9 +179,6 @@ package body Versioned_Feature_Tests is
          22 => (-4.0, 0.0),
          23 => (0.0, -4.0));
    begin
-      if not Available then
-         return;
-      end if;
       declare
          R : constant G.Float32_Point_Array :=
            G.Closest_Ellipse_Points (Circle, P);
@@ -187,9 +199,6 @@ package body Versioned_Feature_Tests is
       E : OpenCV.Rotated_Rect := Circle;
       P : constant G.Float32_Point_Array := ((8.0, 0.0), (0.0, 8.0));
    begin
-      if not Available then
-         return;
-      end if;
       E.Size := (4.0, 2.0);
       declare
          R : constant G.Float32_Point_Array := G.Closest_Ellipse_Points (E, P);
@@ -221,9 +230,6 @@ package body Versioned_Feature_Tests is
       pragma Unreferenced (F);
       P : constant G.Contour := (20 => (4, 0), 21 => (0, 4));
    begin
-      if not Available then
-         return;
-      end if;
       declare
          R : constant G.Float32_Point_Array :=
            G.Closest_Ellipse_Points (Circle, P);
@@ -239,9 +245,6 @@ package body Versioned_Feature_Tests is
       P : constant G.Float32_Point_Array (Natural'Last - 1 .. Natural'Last) :=
         (others => (0.375, 0.5));
    begin
-      if not Available then
-         return;
-      end if;
       declare
          R : constant G.Float32_Point_Array :=
            G.Closest_Ellipse_Points (Circle, P);
@@ -262,9 +265,6 @@ package body Versioned_Feature_Tests is
       P : G.Float32_Point_Array (27 .. 20);
       I : G.Contour (Natural'Last .. Natural'Last - 1);
    begin
-      if not Available then
-         return;
-      end if;
       declare
          R : constant G.Float32_Point_Array :=
            G.Closest_Ellipse_Points (Circle, P);
@@ -290,9 +290,6 @@ package body Versioned_Feature_Tests is
          AUnit.Assertions.Assert (R'Length = 999, "invalid ellipse accepted");
       end Attempt;
    begin
-      if not Available then
-         return;
-      end if;
       for V in -1 .. 0 loop
          E.Size := (OpenCV.Float32_Value (V), 2.0);
          S.Assert_Raises_OpenCV_Error (Attempt'Access, "invalid width");
@@ -311,9 +308,6 @@ package body Versioned_Feature_Tests is
          AUnit.Assertions.Assert (R'Length = 999, "nonfinite query accepted");
       end Attempt;
    begin
-      if not Available then
-         return;
-      end if;
       S.Assert_Rejects_Non_Finite
         ((0 => (4.0, 0.0)), Attempt'Access, "closest ellipse query");
    end Nonfinite_Queries;
@@ -331,9 +325,6 @@ package body Versioned_Feature_Tests is
            (R'Length = 999, "nonfinite ellipse accepted");
       end Attempt;
    begin
-      if not Available then
-         return;
-      end if;
       for Kind in 1 .. 3 loop
          declare
             V : constant OpenCV.Float32_Value :=
@@ -376,9 +367,6 @@ package body Versioned_Feature_Tests is
          AUnit.Assertions.Assert (R'Length = 999, "native nonfinite escaped");
       end Attempt;
    begin
-      if not Available then
-         return;
-      end if;
       E.Size := (1.0E20, 1.0E20);
       S.Assert_Raises_OpenCV_Error
         (Attempt'Access, "native numerical failure");
@@ -411,9 +399,6 @@ package body Versioned_Feature_Tests is
             "malformed ABI zero count");
       end Check;
    begin
-      if not Available then
-         return;
-      end if;
       Count := 99;
       Check
         (C.Closest_Ellipse_Points_F32
@@ -482,9 +467,6 @@ package body Versioned_Feature_Tests is
       E      : constant OpenCV.Rotated_Rect := Circle;
       Before : constant G.Contour := P;
    begin
-      if not Available then
-         return;
-      end if;
       declare
          R : constant G.Float32_Point_Array := G.Closest_Ellipse_Points (E, P);
       begin
@@ -502,9 +484,6 @@ package body Versioned_Feature_Tests is
       pragma Unreferenced (F);
       P : constant G.Contour := (0 => (OpenCV.Point_Coordinate'Last, 0));
    begin
-      if not Available then
-         return;
-      end if;
       declare
          R : constant G.Float32_Point_Array :=
            G.Closest_Ellipse_Points (Circle, P);
@@ -528,6 +507,10 @@ package body Versioned_Feature_Tests is
    begin
       Result.Add_Test
         (Caller.Create
+           ("Closest ellipse native cross-version fixture",
+            Native_Fixture'Access));
+      Result.Add_Test
+        (Caller.Create
            ("Closest ellipse single unchanged high bound",
             Single_Unchanged'Access));
       Result.Add_Test
@@ -542,10 +525,10 @@ package body Versioned_Feature_Tests is
         (Caller.Create ("Invalid native feature IDs", Invalid_Feature'Access));
       Result.Add_Test
         (Caller.Create
-           ("Closest ellipse unsupported public", Unsupported_Public'Access));
+           ("Closest ellipse portable public", Portable_Public'Access));
       Result.Add_Test
         (Caller.Create
-           ("Closest ellipse raw version ordering", Raw_Ordering'Access));
+           ("Closest ellipse raw argument ordering", Raw_Ordering'Access));
       Result.Add_Test
         (Caller.Create ("Closest ellipse circle axes", Circle_Axes'Access));
       Result.Add_Test
