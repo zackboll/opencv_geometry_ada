@@ -2329,11 +2329,6 @@ package body OpenCV.Geometry is
       pragma Suppress (Validity_Check);
       use type OpenCV.Float32_Value;
    begin
-      if not Is_Natively_Supported (Closest_Ellipse_Points_Feature) then
-         Ada.Exceptions.Raise_Exception
-           (OpenCV.OpenCV_Error'Identity,
-            "getClosestEllipsePoints requires OpenCV 4.12 or newer");
-      end if;
       Validate_Finite_Rotated_Rect
         (Ellipse, "Closest_Ellipse_Points requires finite ellipse fields");
       if Ellipse.Size.Width <= 0.0 or else Ellipse.Size.Height <= 0.0 then

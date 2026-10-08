@@ -15,6 +15,10 @@
 #include <memory>
 #include <vector>
 
+#if CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 12
+#include "closest_ellipse_compat.hpp"
+#endif
+
 namespace {
 
 constexpr bool native_feature_supported(int32_t feature) noexcept
@@ -57,11 +61,13 @@ opencv_geometry_status invalid_argument(const char *message) noexcept
     return OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT;
 }
 
+#if CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 13
 opencv_geometry_status unsupported(const char *message) noexcept
 {
     set_error(message);
     return OPENCV_GEOMETRY_ERROR_UNSUPPORTED;
 }
+#endif
 
 opencv_geometry_status translate_current_exception() noexcept
 {
@@ -198,10 +204,6 @@ opencv_geometry_status closest_ellipse_points(
         return invalid_argument("null closest ellipse point count pointer");
     }
     *out_count = 0;
-    if (!native_feature_supported(
-            OPENCV_GEOMETRY_FEATURE_CLOSEST_ELLIPSE_POINTS)) {
-        return unsupported("getClosestEllipsePoints requires OpenCV 4.12 or newer");
-    }
     if (point_count < 0 || capacity < 0) {
         return invalid_argument("negative closest ellipse count or capacity");
     }
@@ -215,7 +217,6 @@ opencv_geometry_status closest_ellipse_points(
     if (point_count == 0) {
         return OPENCV_GEOMETRY_OK;
     }
-#if CV_VERSION_MAJOR >= 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 12)
     try {
         // Preserve CV_32S/CV_32F input; never reinterpret POD point storage.
         using Coordinate = decltype(points[0].x);
@@ -228,7 +229,11 @@ opencv_geometry_status closest_ellipse_points(
             cv::Point2f(ellipse->center_x, ellipse->center_y),
             cv::Size2f(ellipse->width, ellipse->height), ellipse->angle_degrees);
         std::vector<cv::Point2f> result;
+#if CV_VERSION_MAJOR >= 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 12)
         cv::getClosestEllipsePoints(box, input, result);
+#else
+        opencv_geometry_compat::closest_ellipse_points(box, input, result);
+#endif
         // ABI safety: enforce the one-to-one result before writing a
         // caller-sized buffer or publishing its positional count.
         if (result.size() != static_cast<std::size_t>(point_count)) {
@@ -243,9 +248,6 @@ opencv_geometry_status closest_ellipse_points(
     } catch (...) {
         return translate_current_exception();
     }
-#else
-    return unsupported("getClosestEllipsePoints requires OpenCV 4.12 or newer");
-#endif
 }
 
 }

@@ -175,8 +175,9 @@ typedef int32_t opencv_geometry_status;
 opencv_geometry_status opencv_geometry_native_feature_supported(
     int32_t feature, int32_t *out_supported);
 
-/* out_count is checked/zeroed before the unsupported-version return.
-   Older versions do not inspect any other argument. */
+/* Available on all supported versions; native beginning with 4.12.
+   out_count is checked/zeroed before other arguments; failure leaves it zero.
+   Empty input succeeds without a native call. */
 opencv_geometry_status opencv_geometry_closest_ellipse_points_i32(
     const opencv_geometry_rotated_rect_f32 *ellipse,
     const opencv_geometry_point_i32 *points, int32_t point_count,
