@@ -18,6 +18,10 @@ below account for the intended 2-D surface. This is not a claim to cover
 image processing or the 3-D/segmentation/MST families. See the
 [release evidence](release-0.2.0.md) for source identities and certification.
 
+The Task 025 [native risk reassessment](native-risk-reassessment.md)
+re-examined the Deferred and Excluded native rows below. It changes none of
+their statuses.
+
 Status values:
 
 - **Bound**: every mode common to the reference releases has a thick
