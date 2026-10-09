@@ -2188,6 +2188,55 @@ package body OpenCV.Geometry is
       end;
    end Transform_Point;
 
+   function Transform_Points
+     (Transform : Affine_Transform_2D; Points : Float32_Point_Array)
+      return Float32_Point_Array
+   is
+      --  Pass possibly non-finite inputs to the established scalar checks.
+      pragma Suppress (Validity_Check);
+   begin
+      --  A finite placeholder reuses coefficient validation without mapping
+      --  a point, so even an empty input checks the same coefficient policy.
+      Validate_Transform_Point_Input
+        ((X => 0.0, Y => 0.0),
+         (Transform (1, 1),
+          Transform (1, 2),
+          Transform (1, 3),
+          Transform (2, 1),
+          Transform (2, 2),
+          Transform (2, 3)));
+      return Result : Float32_Point_Array (Points'Range) do
+         for Index in Points'Range loop
+            Result (Index) := Transform_Point (Transform, Points (Index));
+         end loop;
+      end return;
+   end Transform_Points;
+
+   function Transform_Points
+     (Transform : Perspective_Transform_2D; Points : Float32_Point_Array)
+      return Float32_Point_Array
+   is
+      --  Pass possibly non-finite inputs to the established scalar checks.
+      pragma Suppress (Validity_Check);
+   begin
+      Validate_Transform_Point_Input
+        ((X => 0.0, Y => 0.0),
+         (Transform (1, 1),
+          Transform (1, 2),
+          Transform (1, 3),
+          Transform (2, 1),
+          Transform (2, 2),
+          Transform (2, 3),
+          Transform (3, 1),
+          Transform (3, 2),
+          Transform (3, 3)));
+      return Result : Float32_Point_Array (Points'Range) do
+         for Index in Points'Range loop
+            Result (Index) := Transform_Point (Transform, Points (Index));
+         end loop;
+      end return;
+   end Transform_Points;
+
    --  Float32 point sets. Every overload rejects non-finite coordinates
    --  before packing, so packed points are finite.
 

@@ -751,8 +751,138 @@ package body Affine_Transform_Tests is
       end;
    end C_ABI_Validation;
 
+   procedure Assert_Batch (Transform : Affine; Input : Points) is
+      Before : constant Points := Input;
+      Matrix : constant Affine := Transform;
+      Mapped : constant Points :=
+        OpenCV.Geometry.Transform_Points (Transform, Input);
+   begin
+      AUnit.Assertions.Assert
+        (Mapped'First = Input'First and then Mapped'Last = Input'Last,
+         "batch preserves exact bounds, including null ranges");
+      for Index in Input'Range loop
+         AUnit.Assertions.Assert
+           (Mapped (Index)
+            = OpenCV.Geometry.Transform_Point (Transform, Input (Index)),
+            "batch exactly equals scalar at" & Index'Image);
+      end loop;
+      AUnit.Assertions.Assert
+        (Input = Before and then Transform = Matrix, "inputs unchanged");
+   end Assert_Batch;
+
+   procedure Batch_Values (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Input       : constant Points (7 .. 9) :=
+        ((-3.5, 7.25), (0.125, -0.75), (4.0, -2.5));
+      Edge        : constant Points (Natural'Last - 2 .. Natural'Last) :=
+        Input;
+      Empty_One   : constant Points (1 .. 0) := (others => (0.0, 0.0));
+      Empty_Shift : constant Points (19 .. 8) := (others => (0.0, 0.0));
+      Empty_Edge  : constant Points (Natural'Last .. Natural'Last - 1) :=
+        (others => (0.0, 0.0));
+      type Matrices is array (Positive range <>) of Affine;
+      Cases       : constant Matrices :=
+        (OpenCV.Geometry.Identity_Affine_Transform,
+         ((1.0, 0.0, 10.25), (0.0, 1.0, -20.5)),
+         ((0.0, -1.0, 0.0), (1.0, 0.0, 0.0)),
+         ((2.0, 0.0, 0.0), (0.0, 3.0, 0.0)),
+         ((1.0, 0.5, 0.0), (-0.25, 1.0, 0.0)));
+   begin
+      for Transform of Cases loop
+         Assert_Batch (Transform, Input);
+         Assert_Batch (Transform, Edge);
+         Assert_Batch (Transform, Input (8 .. 8));
+         Assert_Batch (Transform, Empty_One);
+         Assert_Batch (Transform, Empty_Shift);
+         Assert_Batch (Transform, Empty_Edge);
+      end loop;
+   end Batch_Values;
+
+   procedure Batch_Registration (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      --  Exactly representable fractional image coordinates and map units.
+      Source      : constant Points :=
+        ((100.25, 200.5), (900.25, 200.5), (100.25, 800.5));
+      Destination : constant Points :=
+        ((10.0, 20.0), (210.0, 20.0), (10.0, 320.0));
+      Transform   : constant Affine :=
+        OpenCV.Geometry.Get_Affine_Transform (Source, Destination);
+      Features    : constant Points (31 .. 33) :=
+        ((500.25, 500.5), (300.25, 350.5), (700.25, 650.5));
+      Expected    : constant Points (31 .. 33) :=
+        ((110.0, 170.0), (60.0, 95.0), (160.0, 245.0));
+      Mapped      : constant Points :=
+        OpenCV.Geometry.Transform_Points (Transform, Features);
+   begin
+      Assert_Batch (Transform, Features);
+      for Index in Features'Range loop
+         AUnit.Assertions.Assert
+           (Nearly_Equal
+              (OpenCV.Float64_Value (Mapped (Index).X),
+               OpenCV.Float64_Value (Expected (Index).X),
+               Point_Tolerance)
+            and then Nearly_Equal
+                       (OpenCV.Float64_Value (Mapped (Index).Y),
+                        OpenCV.Float64_Value (Expected (Index).Y),
+                        Point_Tolerance),
+            "approximate geometric registration expectation");
+      end loop;
+   end Batch_Registration;
+
+   procedure Batch_Failures (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      pragma Suppress (Validity_Check);
+      Transform : Affine := OpenCV.Geometry.Identity_Affine_Transform;
+      Input     : Points (7 .. 9) := (others => (1.0, 2.0));
+      Empty     : constant Points (19 .. 8) := (others => (0.0, 0.0));
+
+      procedure Map_Input is
+         Ignored : constant Points :=
+           OpenCV.Geometry.Transform_Points (Transform, Input);
+      begin
+         null;
+      end Map_Input;
+
+      procedure Map_Empty is
+         Ignored : constant Points :=
+           OpenCV.Geometry.Transform_Points (Transform, Empty);
+      begin
+         null;
+      end Map_Empty;
+   begin
+      for Index in Input'Range loop
+         Input (Index).X := NaN_32;
+         Assert_Raises_OpenCV_Error (Map_Input'Access, "NaN at any position");
+         Input (Index).X := -Infinity_32;
+         Assert_Raises_OpenCV_Error (Map_Input'Access, "infinite point");
+         Input (Index).X := 1.0;
+      end loop;
+      for Kind in 1 .. 3 loop
+         Transform (2, 3) :=
+           (case Kind is
+              when 1      => NaN_64,
+              when 2      => Infinity_64,
+              when others => 1.0E+270);
+         Assert_Raises_OpenCV_Error (Map_Input'Access, "bad coefficient");
+         Assert_Raises_OpenCV_Error
+           (Map_Empty'Access, "empty input still validates coefficients");
+      end loop;
+      Transform := ((1.0E+269, 0.0, 0.0), (0.0, 1.0, 0.0));
+      Assert_Raises_OpenCV_Error (Map_Input'Access, "binary32 overflow");
+      Assert_Batch (Transform, Empty);
+   end Batch_Failures;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
+      Result.Add_Test
+        (Caller.Create
+           ("Affine batch values and bounds", Batch_Values'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Affine batch image-to-map registration",
+            Batch_Registration'Access));
+      Result.Add_Test
+        (Caller.Create ("Affine batch failures", Batch_Failures'Access));
       Result.Add_Test
         (Caller.Create
            ("Get_Affine_Transform identity correspondence",

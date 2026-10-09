@@ -22,6 +22,7 @@ package body Perspective_Transform_Tests is
    use type OpenCV.Float32_Value;
    use type OpenCV.Float64_Value;
    use type OpenCV.Geometry.Float32_Point_Array;
+   use type OpenCV.Geometry.Perspective_Transform_2D;
    use type OpenCV.Geometry.Perspective_Row_Index;
    use type OpenCV.Geometry.Transform_Column_Index;
 
@@ -624,8 +625,166 @@ package body Perspective_Transform_Tests is
          "the shim does not reject raw non-finite points");
    end C_ABI_Validation;
 
+   procedure Assert_Batch (Transform : Homography; Input : Points) is
+      Before : constant Points := Input;
+      Matrix : constant Homography := Transform;
+      Mapped : constant Points :=
+        OpenCV.Geometry.Transform_Points (Transform, Input);
+   begin
+      AUnit.Assertions.Assert
+        (Mapped'First = Input'First and then Mapped'Last = Input'Last,
+         "batch preserves exact bounds, including null ranges");
+      for Index in Input'Range loop
+         AUnit.Assertions.Assert
+           (Mapped (Index)
+            = OpenCV.Geometry.Transform_Point (Transform, Input (Index)),
+            "batch exactly equals scalar at" & Index'Image);
+      end loop;
+      AUnit.Assertions.Assert
+        (Input = Before and then Transform = Matrix, "inputs unchanged");
+   end Assert_Batch;
+
+   procedure Batch_Values (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Input       : constant Points (17 .. 19) :=
+        ((-3.5, 7.25), (0.125, -0.75), (4.0, -2.5));
+      Edge        : constant Points (Natural'Last - 2 .. Natural'Last) :=
+        Input;
+      Empty_One   : constant Points (1 .. 0) := (others => (0.0, 0.0));
+      Empty_Shift : constant Points (19 .. 8) := (others => (0.0, 0.0));
+      Empty_Edge  : constant Points (Natural'Last .. Natural'Last - 1) :=
+        (others => (0.0, 0.0));
+      type Matrices is array (Positive range <>) of Homography;
+      Cases       : constant Matrices :=
+        (OpenCV.Geometry.Identity_Perspective_Transform,
+         ((1.0, 0.0, 10.25), (0.0, 1.0, -20.5), (0.0, 0.0, 1.0)),
+         ((1.0, 0.5, 1.0), (-0.25, 1.0, 2.0), (1.0, 0.0, 2.0)),
+         ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, -2.0)),
+         ((1.0E-200, 0.0, 0.0), (0.0, 1.0E-200, 0.0), (0.0, 0.0, 1.0E-200)));
+   begin
+      for Transform of Cases loop
+         Assert_Batch (Transform, Input);
+         Assert_Batch (Transform, Edge);
+         Assert_Batch (Transform, Input (18 .. 18));
+         Assert_Batch (Transform, Empty_One);
+         Assert_Batch (Transform, Empty_Shift);
+         Assert_Batch (Transform, Empty_Edge);
+      end loop;
+      AUnit.Assertions.Assert
+        (OpenCV.Geometry.Transform_Points (Cases (5), Input) = Input,
+         "tiny nonzero W is divided, not mapped to the origin");
+   end Batch_Values;
+
+   procedure Batch_Registration (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      --  Image-to-map fixture: u = (x - 100.25) / 800,
+      --  v = (y - 200.5) / 600; map = (200*u, 300*v)/(1 + u/4).
+      Source      : constant Points :=
+        ((100.25, 200.5), (900.25, 200.5), (900.25, 800.5), (100.25, 800.5));
+      Destination : constant Points :=
+        ((0.0, 0.0), (160.0, 0.0), (160.0, 240.0), (0.0, 300.0));
+      Transform   : constant Homography :=
+        OpenCV.Geometry.Get_Perspective_Transform (Source, Destination);
+      Features    : constant Points (31 .. 35) :=
+        ((500.25, 500.5),
+         (300.25, 350.5),
+         (700.25, 650.5),
+         (100.25, 500.5),
+         (900.25, 500.5));
+      Mapped      : constant Points :=
+        OpenCV.Geometry.Transform_Points (Transform, Features);
+   begin
+      Assert_Batch (Transform, Features);
+      for Index in Features'Range loop
+         declare
+            U : constant OpenCV.Float64_Value :=
+              (OpenCV.Float64_Value (Features (Index).X) - 100.25) / 800.0;
+            V : constant OpenCV.Float64_Value :=
+              (OpenCV.Float64_Value (Features (Index).Y) - 200.5) / 600.0;
+         begin
+            AUnit.Assertions.Assert
+              (Nearly_Equal
+                 (OpenCV.Float64_Value (Mapped (Index).X),
+                  200.0 * U / (1.0 + U / 4.0),
+                  Point_Tolerance)
+               and then Nearly_Equal
+                          (OpenCV.Float64_Value (Mapped (Index).Y),
+                           300.0 * V / (1.0 + U / 4.0),
+                           Point_Tolerance),
+               "approximate geometric projective registration expectation");
+         end;
+      end loop;
+   end Batch_Registration;
+
+   procedure Batch_Failures (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      pragma Suppress (Validity_Check);
+      function Bits_To_Float64 is new
+        Ada.Unchecked_Conversion
+          (Interfaces.Unsigned_64,
+           OpenCV.Float64_Value);
+      Transform : Homography := OpenCV.Geometry.Identity_Perspective_Transform;
+      Input     : Points (7 .. 9) := (others => (2.0, 5.0));
+      Empty     : constant Points (19 .. 8) := (others => (0.0, 0.0));
+
+      procedure Map_Input is
+         Ignored : constant Points :=
+           OpenCV.Geometry.Transform_Points (Transform, Input);
+      begin
+         null;
+      end Map_Input;
+
+      procedure Map_Empty is
+         Ignored : constant Points :=
+           OpenCV.Geometry.Transform_Points (Transform, Empty);
+      begin
+         null;
+      end Map_Empty;
+   begin
+      for Index in Input'Range loop
+         Input (Index).Y := NaN_32;
+         Assert_Raises_OpenCV_Error (Map_Input'Access, "NaN at any position");
+         Input (Index).Y := Infinity_32;
+         Assert_Raises_OpenCV_Error (Map_Input'Access, "infinite point");
+         Input (Index).Y := 5.0;
+      end loop;
+      for Kind in 1 .. 3 loop
+         Transform (3, 3) :=
+           (case Kind is
+              when 1      => Bits_To_Float64 (16#7FF8_0000_0000_0000#),
+              when 2      => Bits_To_Float64 (16#7FF0_0000_0000_0000#),
+              when others => 1.0E+270);
+         Assert_Raises_OpenCV_Error (Map_Input'Access, "bad coefficient");
+         Assert_Raises_OpenCV_Error
+           (Map_Empty'Access, "empty input still validates coefficients");
+      end loop;
+      Transform := ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 0.0, -1.0));
+      for Index in Input'Range loop
+         Input (Index).X := 1.0;
+         Assert_Raises_OpenCV_Error
+           (Map_Input'Access, "W = 0 at first, middle or last");
+         Input (Index).X := 2.0;
+      end loop;
+      Transform (3, 1) := 0.0;
+      Transform (3, 3) := 1.0E-38;
+      Input (8).Y := 10.0;
+      Assert_Raises_OpenCV_Error (Map_Input'Access, "binary32 overflow");
+      Assert_Batch (Transform, Empty);
+      Transform (3, 3) := 0.0;
+      Assert_Batch (Transform, Empty);
+   end Batch_Failures;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
+      Result.Add_Test
+        (Caller.Create
+           ("Perspective batch values and bounds", Batch_Values'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Perspective batch image-to-map registration",
+            Batch_Registration'Access));
+      Result.Add_Test
+        (Caller.Create ("Perspective batch failures", Batch_Failures'Access));
       Result.Add_Test
         (Caller.Create
            ("Get_Perspective_Transform identity for every method",

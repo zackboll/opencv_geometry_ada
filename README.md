@@ -450,6 +450,12 @@ function Transform_Point
 function Transform_Point
   (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point)
    return OpenCV.Float32_Point;
+function Transform_Points
+  (Transform : Affine_Transform_2D; Points : Float32_Point_Array)
+   return Float32_Point_Array;
+function Transform_Points
+  (Transform : Perspective_Transform_2D; Points : Float32_Point_Array)
+   return Float32_Point_Array;
 ```
 
 Transforms are Geometry-owned value matrices with 1-based indices:
@@ -486,6 +492,27 @@ perspective points that map to infinity; unlike `cv::perspectiveTransform`,
 it divides by every nonzero W. Those requirements are checked at run time,
 and within them GNATprove proves that the evaluation cannot overflow
 binary64.
+
+`Transform_Points` applies the corresponding scalar operation in Ada index
+order, with exactly equal computed coordinates. It preserves both array
+bounds (including arbitrary null ranges and `Natural'Last`-adjacent bounds),
+ordering and cardinality, and leaves the points and transform unchanged.
+Coefficients are validated before processing, even for empty input. Any
+failed point mapping raises `OpenCV_Error`; no partial result is returned.
+There are no integer-input batch overloads and no new native calls.
+
+Use these operations to map additional feature points after constructing a
+transform from point correspondences, for example subpixel image-to-map
+registration. Intermediates are binary64, but results have binary32 precision;
+geometric expectations for a transform solved from correspondences should
+usually be compared with a tolerance. Batch/scalar equivalence is exact.
+Perspective mappings divide by every nonzero W, including negative and tiny
+W, and reject zero W or output outside binary32 range. Native
+`cv::perspectiveTransform` instead maps `|W| <= FLT_EPSILON` to the origin
+and multiplies by a reciprocal. Native `cv::transform` may evaluate Float32
+points with binary32 coefficients/arithmetic; it is not the numerical
+contract of these Ada helpers. See
+[batch transform qualification](docs/batch-point-transforms.md).
 
 Image warping (`warpAffine`, `warpPerspective`) is image processing and is
 not part of this binding.

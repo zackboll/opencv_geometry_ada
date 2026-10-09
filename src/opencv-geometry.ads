@@ -956,4 +956,29 @@ package OpenCV.Geometry is
      (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point)
       return OpenCV.Float32_Point;
 
+   --  Maps Points in Ada index order using the corresponding Transform_Point
+   --  arithmetic and checks above (binary64 evaluation, binary32 results).
+   --  Coefficients are validated even for empty input. A valid empty input
+   --  retains its original null range. Bounds, order and cardinality are
+   --  preserved; neither input is modified. Any failed mapping raises
+   --  OpenCV.OpenCV_Error and no incomplete result is returned.
+   function Transform_Points
+     (Transform : Affine_Transform_2D; Points : Float32_Point_Array)
+      return Float32_Point_Array
+   with
+     Post =>
+       Transform_Points'Result'First = Points'First
+       and then Transform_Points'Result'Last = Points'Last;
+
+   --  As above, with perspective Transform_Point semantics: divide by every
+   --  nonzero W, including negative and very small W; reject W = 0 rather
+   --  than applying the native cv::perspectiveTransform epsilon policy.
+   function Transform_Points
+     (Transform : Perspective_Transform_2D; Points : Float32_Point_Array)
+      return Float32_Point_Array
+   with
+     Post =>
+       Transform_Points'Result'First = Points'First
+       and then Transform_Points'Result'Last = Points'Last;
+
 end OpenCV.Geometry;
