@@ -64,11 +64,17 @@ sets are Ada-owned integer `Contour` values (`OpenCV.Point_Array`, native
 | `invertAffineTransform` | `Invert_Affine_Transform` | Bound | A singular matrix inverts to zeros |
 | `getPerspectiveTransform` (2 overloads) | `Get_Perspective_Transform` | Partial: `DECOMP_LU`, `DECOMP_SVD`, `DECOMP_QR` | 4.12+ and 5.x check the residual and can return an SVD solution with `T (3, 3) /= 1.0` |
 
-`Transform_Point` (affine and perspective overloads) is an Ada value helper
-with no native call. It applies a transform to one point in binary64
-arithmetic, and SPARK proves that no intermediate overflows. It divides by
+`Transform_Point` and `Transform_Points` (affine and perspective overloads)
+are Ada value helpers with no native call. They apply transforms in binary64
+arithmetic, and SPARK proves that no intermediate overflows. Perspective
+evaluation divides by
 every nonzero W, unlike `cv::perspectiveTransform`, which maps
 |W| <= `FLT_EPSILON` to the origin.
+Batch operations reuse scalar arithmetic exactly, preserve both input array
+bounds and order, validate coefficients even for null arrays, and raise
+`OpenCV_Error` without returning partial results on any failed mapping.
+Only Float32 input is supported. They are not native `transform` or
+`perspectiveTransform` bindings. See [qualification](batch-point-transforms.md).
 
 ## Float32 (CV_32F) point sets
 
