@@ -46,5 +46,5 @@ do
         "$include_switch" -o "$program" "$source" \
         "$library_switch" "$geometry_library" "$core_library"
     echo "Running $program"
-    "$program"
+    timeout 60 "$program"
 done

@@ -420,7 +420,6 @@ void exercise_create_and_initialize()
 
 void exercise_float32_initialization()
 {
-#if CV_VERSION_MAJOR == 5 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 13)
     const opencv_geometry_rect_f32 fractional{-0.25f, 0.5f, 100.5f, 100.25f};
     long create_failures = 0;
     for (long step = 0;; ++step) {
@@ -486,9 +485,6 @@ void exercise_float32_initialization()
     opencv_geometry_subdiv2d_destroy(handle);
     std::printf("Float32 creation/rebuild allocation failures: %ld/%ld\n",
                 create_failures, reset_failures);
-#else
-    std::printf("Float32 fault injection: unsupported on this release\n");
-#endif
 }
 
 }

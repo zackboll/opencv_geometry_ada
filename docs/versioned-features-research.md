@@ -8,6 +8,144 @@ minEnclosingConvexPolygon is likewise **deferred at its safety gate**
 bounds for some finite input; see
 [Task 016](#task-016-minenclosingconvexpolygon-safety-gate).
 
+## Task 022: universal Float32 Subdiv2D bounds
+
+Starting main: `264c483eafaf74d1cdb7fa437c63f2d7cd499921`, freshly fetched
+after verifying PR #20 merged. No open PRs at startup. Isolated branch:
+`feature/022-portable-subdiv2d-f32`. Baseline Linux OpenCV 4.10.0/imgproc:
+525/525 AUnit tests and native allocation-failure tests passed.
+
+### Source safety gate: established
+
+Exact upstream tag checkouts inspected (not simulated version macros):
+
+| Tag | Commit | Subdiv2D module |
+| --- | --- | --- |
+| 4.6.0 | `b0dc474160e389b9c9045da5db49d03ae17c6a6b` | imgproc |
+| 4.10.0 | `71d3237a093b60a27601c20e9ee6c3e52154e8b1` | imgproc |
+| 4.11.0 | `1d3b34ddd080bbf3e3d3cec58e11038fca21dcfe` | imgproc |
+| 4.12.0 | `49486f61fb25722cbcf586b7f4320921d46fb38e` | imgproc |
+| 4.13.0 | `fe38fc608f6acb8b68953438a62305d8318f4fcd` | imgproc |
+| 4.14.0 | `0654a42e19215ef25b1d367d822f3c630447e7c7` | imgproc |
+| 5.0.0 | `40738fb16ceddb5fb3fea747585f7ce6abb0605b` | geometry |
+
+Declarations are in `modules/imgproc/include/opencv2/imgproc.hpp` or
+`modules/geometry/include/opencv2/geometry/2d.hpp`; implementations are in
+the corresponding `src/subdivision2d.cpp`. Upstream references are exact
+tags, e.g. [4.6 declarations](https://github.com/opencv/opencv/blob/4.6.0/modules/imgproc/include/opencv2/imgproc.hpp),
+[4.11 implementation](https://github.com/opencv/opencv/blob/4.11.0/modules/imgproc/src/subdivision2d.cpp),
+[4.13 initializer](https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/subdivision2d.cpp#L548-L592),
+and [5.0 implementation](https://github.com/opencv/opencv/blob/5.0.0/modules/geometry/src/subdivision2d.cpp).
+
+- All required fields, nested Vertex/QuadEdge types, constructors and methods
+  are protected or public. Nested constructors are exported. The shim uses
+  ordinary C++ derivation, not private-member access, pointer casts, layout
+  reinterpretation or cross-version object reuse. Each build must use matching
+  native headers and libraries; this is not a universal binary shim.
+- The block from `QuadEdge::QuadEdge()` up to `locate` in 4.6, 4.10, 4.11
+  and 4.12 has SHA-256
+  `b6646acba4cee0316d3e2e3f730554c41a65d2b37869fba79e0e778adf3cf654`.
+  It includes slot construction, splice, endpoint setting, newEdge/newPoint
+  and free-list handling. The newer versions retain these operations.
+- The complete Rect2f initializer block in 4.13, 4.14 and 5.0 has SHA-256
+  `97ba988da2acc45d04b68881d31c96016df10d76d44d8a5c52a44ee2510b3f50`.
+  The backport preserves its arithmetic and mutation order: clear vectors,
+  reset recentEdge/validGeometry, store bounds, create null slots, reset free
+  lists, allocate A/B/C, create AB/BC/CA, set endpoints, splice, set recentEdge.
+- After clearing storage, only four vertex and four quad-edge slots are
+  constructed. Native signed-index multiplication is bounded by these tiny
+  counts. Existing insertion/count guards remain unchanged. Vector allocation
+  can throw at each growth; no pointer escapes and C++ unwinding destroys
+  partially constructed members. Failed creation publishes null. Reset marks
+  the handle unusable before rebuilding and publishes usable only on success.
+  Recovery clears partial storage before recreating the state. Existing
+  controlled Ada ownership and last-successful bounds publication are intact.
+- Float expressions use `6.f * max(width,height)`, binary32 X+Width/Y+Height,
+  and the native A/B/C expressions without integer conversion. Finite/positive
+  fields, extent advance and finite super-triangle coordinates remain Ada
+  policy. No stricter conditioning threshold is introduced. Native integer
+  initialization is untouched: factor three through 4.11, six from 4.12.
+- Insert, Locate, Find_Nearest, edge/triangle extraction and Voronoi still
+  execute the native release's implementation. The compatibility path only
+  creates the native initial state. It does not fix existing near-degenerate
+  predicates or Find_Nearest liveness limitations; subnormal/extreme fixtures
+  test initialization/storage only. Native tests use a 60-second hard timeout.
+- Validation-boundary review: **No public semantic validation is duplicated
+  in the C++ shim.** The changed guards reject null output, bounds and handle
+  pointers. Allocation and ownership protection are not Ada semantic policy.
+
+### License and provenance
+
+The adapted initialization is from the exact 4.13.0 source above, which carries
+the Intel Open Source Computer Vision Library license, Copyright (C) 2000 Intel
+Corporation, with third-party copyrights reserved. Its copyright, conditions
+and disclaimer are retained in `cpp/subdiv2d_compat_license.hpp`. Source
+redistributions must retain them and binary redistributions must reproduce
+them in documentation or accompanying materials. Intel's name must not be
+used for endorsement without permission. The crate remains Apache-2.0.
+
+### Qualification and equivalence
+
+The AUnit suite retains 525 registered tests. Bounds cases previously skipped
+on old versions now execute; unsupported expectations are replaced by positive
+Create and semantic-rejection tests. Native capability matrix tests are
+unchanged. Coverage includes exact fractional descriptors, half-open bounds,
+binary32 collapse/advance, nonfinite/invalid bounds, subnormal/extreme storage,
+cross-mode rejection and transition, repeated Reset, native integer factors,
+duplicate insertion, navigation and identifiers, triangulation and Voronoi.
+The existing allocation campaign now tests Float32 on every release.
+
+`tests/native/subdiv2d_float32_equivalence.cpp` uses a deterministic,
+well-conditioned four-site fixture with fractional origin/dimensions. It
+checks duplicate insertion/location, nearest-site results, three triangles,
+four facets, and exactly four vertex/edge slots after repeated Reset. It
+prints hex-float super-triangle, canonical edge/triangle geometry and Voronoi
+polygons, sorting coordinates instead of demanding identical IDs/walk order.
+On 4.6, 4.10, 4.12, 4.13, 4.14 and 5.0 the complete canonical transcript is
+byte-identical, SHA-256
+`36bef2511ce50f6111898e526aede7b82f89cf111c1043e97ce804a3848b93d1`.
+No numeric tolerance is needed for this binary-grid fixture on these GNU
+builds; this observation is not a promise of cross-platform bit identity or
+equivalence for ill-conditioned arbitrary inputs.
+
+Linux qualification uses Alire 2.1.1, GNAT 16.1.0 and GPRbuild 26.0.0
+(Alire toolchain crate 26.0.1). System 4.10 uses Debian g++ 14.2.0. Exact-tag
+4.12/4.13/4.14 builds are shared Release libraries using GNU 14.2, fast math
+and LTO disabled; 5.0 uses the existing real exact-tag shared GNU build.
+Separate Geometry and Core storage prevents cross-version reuse, and `ldd`
+confirms the actual imgproc/core or geometry/core libraries.
+The 4.6 endpoint uses an isolated Debian 12 container, native packages
+`4.6.0+dfsg-12`, GNU 12.2.0, the same GNAT/Alire toolchain, and a private
+Core 0.3.0 checkout (`0e2753be8ea05fc972ec452c32b975f9e9b3912f`). Other
+matrix entries use that same published Core revision in separate build
+directories. Temporary harness-only pins/settings are not committed.
+
+| Native version/backend | Normal AUnit | Validation AUnit | Native ASan/UBSan and faults |
+| --- | --- | --- | --- |
+| 4.6.0/imgproc | 525/525 | 525/525 | Pass |
+| 4.10.0/imgproc | 525/525 | 525/525 | Pass |
+| 4.11.0/imgproc | Not run: no built library available | Not run | Not run |
+| 4.12.0/imgproc | 525/525 | 525/525 | Pass |
+| 4.13.0/imgproc | 525/525 | 525/525 | Pass |
+| 4.14.0/imgproc | 525/525 | 525/525 | Pass |
+| 5.0.0/geometry | 525/525 | 525/525 | Pass |
+
+Native tests compile the included shim and test code with
+`-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer` and warnings as
+errors. Linked OpenCV libraries are **not** sanitizer-instrumented: do not
+claim this detects every internal OpenCV memory error. Each completed native
+campaign reports zero failed checks and exercises seven Float32 creation and
+six rebuilding allocation failures, recovery, destruction, and retained
+capacity/no stale site behavior. Pathological liveness research is not rerun
+or represented as repaired by this task. GNATprove is not run: the changed
+Ada code removes a version guard in the non-SPARK foreign-object wrapper;
+packing/proof utilities are unchanged. Runtime validity/assertion profiles
+and testing, not formal proof, qualify native state.
+
+Hosted Linux/macOS CI is checked separately for the final PR head. Windows
+remains skipped on PRs by established policy; manual/main-push execution is
+required for Windows portability evidence. Pending CI is not a pass.
+
 ## Task 021: portable closest ellipse points
 
 Starting main: `05004664116fa85ac51d6a6e8ad4df7c94d3365a`.

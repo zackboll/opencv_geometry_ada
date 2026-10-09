@@ -27,8 +27,8 @@ private with OpenCV.Geometry.Internal.C_API;
 --  virtual vertices, so inserted points need not receive consecutive ids.
 --
 --  Integer bounds are available on every supported release. Float32 bounds
---  use Create_Float32 / Reset_Float32 and require OpenCV 4.13+ or 5.x; there
---  is no integer fallback. References below to Reset's invalidation and
+--  use Create_Float32 / Reset_Float32 on every supported release, without
+--  integer rounding. References below to Reset's invalidation and
 --  recovery behavior also apply to Reset_Float32.
 --
 --  Scale: OpenCV's geometric predicates use absolute tolerances near
@@ -85,9 +85,9 @@ package OpenCV.Geometry.Subdiv2D is
    --  failure publishes new bounds. Failures raise OpenCV.OpenCV_Error.
    procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect);
 
-   --  As above, but calls native Rect2f without rounding to integers. Requires
-   --  Float32_Subdivision_Bounds_Feature (OpenCV 4.13+). Unsupported takes
-   --  precedence over bounds validation and leaves Object unchanged.
+   --  As above, without rounding to integers. OpenCV 4.6 .. 4.12 uses a
+   --  private initialization backport; 4.13+ and 5.x call native Rect2f.
+   --  Is_Natively_Supported still reports native Rect2f availability only.
    --  All fields must be finite; Width and Height must be positive and their
    --  binary32 additions to X/Y must advance. Big = 6 * max(Width, Height)
    --  and X/Y +/- Big must remain finite. These conditions also guarantee a
