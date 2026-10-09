@@ -11,6 +11,11 @@ overrides those safety decisions.
 The only production Ada dependency is `opencv_core`. The public package is
 `OpenCV.Geometry` on both OpenCV versions:
 
+The supported Core constraint is `>=0.2.0 & <0.5.0`. Core 0.4.1 was
+qualified at its immutable release commit; it is not yet in the public
+Alire index. See [Core compatibility evidence](docs/core-compatibility.md)
+for exact sources, tested combinations, and platform limitations.
+
 | Native OpenCV | Header | Native implementation |
 | --- | --- | --- |
 | 4.x | `opencv2/imgproc.hpp` | `libopencv_imgproc` |
