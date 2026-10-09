@@ -7,6 +7,7 @@
 #include <opencv2/imgproc.hpp>
 #endif
 
+#include <algorithm>
 #include <cstdio>
 #include <exception>
 #include <cmath>

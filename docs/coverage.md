@@ -160,8 +160,12 @@ The Ada declarations and C ABI are stable on every supported version.
 availability, **not Ada binding coverage**. It knows the four thresholds
 below even when an operation remains deliberately unbound. For example,
 approxPolyN capability is True on 4.11+ although no Ada binding exists.
-Calling a bound optional operation on an older version raises OpenCV_Error
-with an unsupported-version diagnostic; there is no algorithm fallback.
+Older releases may use qualified private compatibility implementations for
+bound operations, as documented below for closest ellipse points and Float32
+Subdiv2D bounds. `Is_Natively_Supported` continues to report only native
+OpenCV availability, not availability through those compatibility paths.
+The native thresholds below therefore do not restrict the universal Ada
+operations; consult each binding's documented support and safety contract.
 
 | Native operation | First 4.x release | Status |
 | --- | --- | --- |
