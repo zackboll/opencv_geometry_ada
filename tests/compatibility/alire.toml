@@ -1,0 +1,12 @@
+name = "geometry_core_consumer"
+description = "Independent Geometry and exact Core 0.4.1 consumer"
+version = "0.1.0"
+licenses = "Apache-2.0"
+
+[[depends-on]]
+opencv_geometry = "*"
+opencv_core = "=0.4.1"
+
+[[pins]]
+opencv_geometry = { path = "../.." }
+opencv_core = { url = "https://github.com/zackboll/opencv_core_ada.git", commit = "386c5360ac51f2b62e522853d94290aec4ee14a0" }

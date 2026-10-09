@@ -7,7 +7,15 @@ on:
 
 jobs:
   linux-x86_64:
-    name: Linux x86_64
+    name: Linux x86_64 / Core ${{ matrix.core.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        core:
+          - version: 0.3.0
+            commit: 0e2753be8ea05fc972ec452c32b975f9e9b3912f
+          - version: 0.4.1
+            commit: 386c5360ac51f2b62e522853d94290aec4ee14a0
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -23,7 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: zackboll/opencv_core_ada
-          ref: main
+          ref: ${{ matrix.core.commit }}
           path: core
 
       - name: Verify two-checkout layout
@@ -61,6 +69,15 @@ jobs:
           pkg-config --modversion opencv4 2>/dev/null || \
           pkg-config --modversion opencv
 
+      - name: Select and verify exact Core release
+        run: |
+          test "$(git -C ../core rev-parse HEAD)" = "${{ matrix.core.commit }}"
+          alr -n pin opencv_core --use=../core
+          alr -n with --solve
+          alr -n -C tests with --solve
+          alr -n -C tests exec -- sh -c \
+            'test "$(git -C "$OPENCV_CORE_ALIRE_PREFIX" rev-parse HEAD)" = "${{ matrix.core.commit }}"'
+
       - name: Build Geometry
         run: alr -n build
 
@@ -86,6 +103,14 @@ jobs:
       - name: Run native fault-injection tests
         run: sh scripts/run_native_tests.sh
 
+      - name: Run independent Core 0.4.1 consumer
+        if: matrix.core.version == '0.4.1'
+        run: |
+          # Avoid conflicting path/URL pins in the consumer's project closure.
+          alr -n pin --unpin opencv_core
+          alr -n -C tests/compatibility run
+          alr -n pin opencv_core --use=../core
+
       # Keep this the last Linux step: the validation profile persists in
       # the tests crate's Alire settings and would change later test runs.
       - name: Run Geometry tests with validity checks
@@ -103,7 +128,15 @@ jobs:
           fi
 
   macos-arm64:
-    name: macOS ARM64
+    name: macOS ARM64 / Core ${{ matrix.core.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        core:
+          - version: 0.3.0
+            commit: 0e2753be8ea05fc972ec452c32b975f9e9b3912f
+          - version: 0.4.1
+            commit: 386c5360ac51f2b62e522853d94290aec4ee14a0
     runs-on: macos-latest
     defaults:
       run:
@@ -119,7 +152,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: zackboll/opencv_core_ada
-          ref: main
+          ref: ${{ matrix.core.commit }}
           path: core
 
       - name: Verify two-checkout layout
@@ -185,6 +218,15 @@ jobs:
           echo "=== Apple clang++ ==="
           xcrun --find clang++
           xcrun clang++ --version
+
+      - name: Select and verify exact Core release
+        run: |
+          test "$(git -C ../core rev-parse HEAD)" = "${{ matrix.core.commit }}"
+          alr -n pin opencv_core --use=../core
+          alr -n with --solve
+          alr -n -C tests with --solve
+          alr -n -C tests exec -- sh -c \
+            'test "$(git -C "$OPENCV_CORE_ALIRE_PREFIX" rev-parse HEAD)" = "${{ matrix.core.commit }}"'
 
       - name: Build Geometry
         run: alr -n build
@@ -272,7 +314,7 @@ jobs:
           fi
 
   windows-x86_64-msys2:
-    name: Windows x86_64 (MSYS2)
+    name: Windows x86_64 (MSYS2) / Core 0.4.1
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -292,7 +334,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: zackboll/opencv_core_ada
-          ref: main
+          ref: 386c5360ac51f2b62e522853d94290aec4ee14a0
           path: core
 
       - name: Verify two-checkout layout
@@ -345,6 +387,15 @@ jobs:
           echo "=== MSYS2 g++ ==="
           alr exec -- sh -c \
             'ls -l /mingw64/bin/g++.exe && /mingw64/bin/g++.exe --version'
+
+      - name: Select and verify exact Core release
+        run: |
+          test "$(git -C ../core rev-parse HEAD)" = 386c5360ac51f2b62e522853d94290aec4ee14a0
+          alr -n pin opencv_core --use=../core
+          alr -n with --solve
+          alr -n -C tests with --solve
+          alr -n -C tests exec -- sh -c \
+            'test "$(git -C "$OPENCV_CORE_ALIRE_PREFIX" rev-parse HEAD)" = 386c5360ac51f2b62e522853d94290aec4ee14a0'
 
       - name: Build Geometry
         run: alr -n build
