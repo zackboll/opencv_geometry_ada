@@ -15,7 +15,7 @@ binding proposal for a feature that is not safe.
 | Native OpenCV (development build) | 4.10.0, imgproc backend, Debian `libopencv_imgproc.so.410` |
 | `alr -n build` | passed |
 | `alr -n -C tests run` | **531/531**, 0 failed assertions, 0 errors |
-| Self-tests | `run_fit_line_3d_research.py` 8 tests OK; `run_min_enclosing_polygon_research.py` 29 checks OK; `run_risk_reassessment.py` 4 tests OK |
+| Self-tests | `run_fit_line_3d_research.py` 8 tests OK; `run_min_enclosing_polygon_research.py` 29 checks OK; `run_risk_reassessment.py` 4 tests OK (9 after the identity correction below) |
 
 Core note, recorded separately from safety: Core `main` has shared 3-D point
 types that published Core 0.4.1 lacks. That is an ownership and packaging
@@ -50,9 +50,49 @@ record. They were not repeated in Task 025.
 | 5.0.0 | `/tmp/features-008a-install500/lib/libopencv_geometry.so.500` | exact-tag build |
 | 4.14.0 / 5.x PR 30111 head | `/var/tmp/geometry-016-pr30111/install-head` | build of `01f4d0e5` |
 
-The probe prints the loaded object path and `CV_VERSION` for every case and
-the runner stores them. 4.6.0 and 4.11.0 were **not** re-run here. Their
-results below come from earlier tasks (labelled).
+4.6.0 and 4.11.0 were **not** re-run here. Their results below come from
+earlier tasks (labelled).
+
+#### Probe version identity (corrected)
+
+The historical Task 025 results below were produced by the previous probe
+version. That version printed `runtime <CV_VERSION>`, but `CV_VERSION` is a
+compile-time header macro, so the historical "runtime" field reflected the
+headers used to compile, not a runtime query. The loaded library-object path
+was also recorded for every case and remains the evidence of which library
+provided the symbol. The historical results are **not** retroactively
+claimed to have used the corrected query.
+
+The corrected probe prints separate fields: `compile` (`CV_VERSION`),
+`runtime` (`cv::getVersionString()`, answered by the linked OpenCV Core
+library), `object` (library providing the algorithm symbol) and
+`runtime_object` (library providing `getVersionString`). The runner
+parses only the leading identity block. A run is valid evidence only when
+`compile`, `runtime` and `object` are present and `compile` equals
+`runtime`; a mismatch is recorded as `identity_mismatch`, a missing field as
+`identity_missing`, a repeated field as `identity_malformed`, and each makes
+the runner exit nonzero with the case marked `valid_evidence: false`.
+
+Focused rerun with the corrected probe (benign cases only, 4 second limit,
+each in its own child). The dangerous corpus was **not** rerun.
+
+| Build | Cases | Outcome | compile / runtime | Symbol object |
+|---|---|---|---|---|
+| 4.10.0 (Debian) | `met32_unit_square`, `ict_ngon_grid_p2` returned; `apn_pentagon_3` `not_applicable` | valid evidence | 4.10.0 / 4.10.0 | `/lib/x86_64-linux-gnu/libopencv_imgproc.so.410` |
+| 4.14.0 (exact tag) | `met32_unit_square`, `apn_pentagon_3` returned | valid evidence | 4.14.0 / 4.14.0 | `/tmp/geometry021-matrix/install-4.14.0/lib/libopencv_imgproc.so.414` |
+| 5.0.0 (exact tag) | `met32_unit_square`, `ict_ngon_grid_p2`, `apn_pentagon_3` returned | valid evidence | 5.0.0 / 5.0.0 | `/tmp/features-008a-install500/lib/libopencv_geometry.so.500` |
+
+The `runtime_object` field named the matching `libopencv_core` in each
+build. 4.12.0, 4.13.0, 4.6.0 and 4.11.0 were not rerun with the corrected
+probe.
+
+A real mismatch could not be produced: the probes are linked with an rpath,
+which takes precedence over `LD_LIBRARY_PATH`. Rejection was instead shown
+with a stub probe script that printed `compile 4.14.0` and `runtime 4.12.0`
+through the real runner: the case was recorded `identity_mismatch`,
+`valid_evidence: false`, and the runner exited 2. The runner self-tests
+cover the same paths. This demonstrates the runner logic, not a naturally
+occurring mismatch.
 
 ### Source identity (SHA-256 prefixes, this task)
 
@@ -76,7 +116,7 @@ diff for `intersectConvexConvex`.
 | Feature | Outcome | One-line reason |
 |---|---|---|
 | `Fit_Line_3D` | **INSUFFICIENT_EVIDENCE** (numerics) plus a separate ownership blocker | No ordinary-input memory or liveness fault found; the arithmetic envelope through both Eigen backends is unproven |
-| `approxPolyN` | **DOCUMENTABLE_NUMERICAL_RISK** for results; memory safety **not reproduced as a fault** | Wrong but finite polygons on unit-scale input; no crash, hang or sanitizer report |
+| `approxPolyN` | Observed numerical behavior: **DOCUMENTABLE_NUMERICAL_RISK**. Overall in-process binding readiness: **INSUFFICIENT_EVIDENCE** | Wrong but finite polygons on unit-scale input; finite inputs can create NaN queue keys (Task 013) that break comparator ordering; no memory fault was observed, which does not establish safety |
 | Float32 `minEnclosingTriangle` | **ISOLATION_REQUIRED** | Hang at ordinary small scale and SIGSEGV/SIGFPE on a two-point signed-zero set; shared with the already-bound integer overload |
 | Unrestricted Float32 `intersectConvexConvex` | **UPSTREAM_FIX_REQUIRED** on 4.6/4.10; **DOCUMENTABLE_NUMERICAL_RISK** on 4.11+ | Heap corruption on valid input in 4.6/4.10 (earlier task); 4.11+ bounds writes |
 | `minEnclosingConvexPolygon` | **UPSTREAM_FIX_REQUIRED** | SIGSEGV on 14 of 33 corpus cases in 4.13.0, 4.14.0 and 5.0.0; PR 30111 head removes every crash |
@@ -102,15 +142,36 @@ Source: the earlier research in
 reports the body identical in 4.11, 4.12, 4.13 and 5.0. This task did not
 re-diff it.
 
-Assessment. The risk is wrong output, not a memory or liveness fault, in
-everything examined here. The earlier research also found NaN heap keys from non-finite
-intermediates; that is a possible ordering hazard with no memory fault
-observed. A contract needs a proof that no sentinel or NaN key is ever
-selected, and none exists. This is `DOCUMENTABLE_NUMERICAL_RISK` for
-results. It does not become a qualified subset: the unit square is already
-a counterexample, so no scale bound helps. Not safe to bind without a stated
-"result may not enclose the input" contract, which would make the
-operation of little use. Remains Deferred.
+Assessment. Two conclusions are kept separate.
+
+1. Observed numerical behavior: `DOCUMENTABLE_NUMERICAL_RISK`.
+   - Incorrect finite output is reproducible.
+   - Unit-scale input can select sentinel intersections (the unit square
+     above).
+   - A scale bound does not help, because the unit square is already a
+     counterexample.
+2. Overall synchronous in-process binding readiness:
+   `INSUFFICIENT_EVIDENCE`.
+   - Task 013 established that finite inputs can generate NaN area keys in
+     the native priority queue.
+   - The OpenCV comparator uses floating comparisons and does not provide a
+     strict weak ordering for NaN keys. That is a potential violation of the
+     C++ `priority_queue` heap precondition, which is undefined behavior
+     under the C++ library contract.
+   - No memory fault was observed in the completed probes. This is not
+     evidence of memory safety. Successful native execution without a crash
+     does not establish the absence of undefined behavior, and no
+     memory-corruption event is claimed here.
+   - The NaN-key problem arises before any output postvalidation. Checking
+     afterwards whether a NaN candidate was selected is insufficient,
+     because insertion into the heap already matters.
+   - No input contract that excludes every problematic intermediate heap
+     key has been established.
+
+The function therefore is not classified as safely documentable on the
+strength of its numerical inaccuracies alone. Binding would also need a
+stated "result may not enclose the input" contract, which would make the
+operation of little use. Coverage status remains Deferred.
 
 Unreproduced: the earlier NaN-key campaign was not rerun.
 
@@ -200,8 +261,20 @@ this feature; Task 016's ASan builds with assertions are the sanitizer
 evidence.
 
 Even after the head, many results are not minimal and some valid input raises
-(Task 016). `UPSTREAM_FIX_REQUIRED`. No qualified subset exists, because the
-smallest crash is a unit-scale square.
+(Task 016). Current practical disposition for an unrestricted native
+binding: `UPSTREAM_FIX_REQUIRED`.
+
+Subset conclusion: **no useful and sufficiently qualified safe input subset
+has yet been established.**
+
+- Unit-scale square inputs can crash for k = 3, so simple
+  coordinate-magnitude limits are insufficient.
+- The Task 016 and Task 025 corpora show multiple unsafe input families.
+- These findings do not mathematically prove that every possible restricted
+  input domain is unsafe. They show only that none has been qualified.
+- The released native implementations (4.13.0, 4.14.0, 5.0.0) remain
+  unsuitable for an unrestricted ordinary in-process Ada binding.
+- Upstream PR 30111 is not part of any certified release.
 
 ## Fit_Line_3D
 
@@ -243,19 +316,27 @@ This task did not re-measure it.
 
 Why it is not a precedent for the others:
 
-- The caller can avoid the hazard by keeping point spacing at about 0.03 or
-  more. The Float32 `minEnclosingTriangle` hang appears at a plain
+- Observed test behavior: in the fixtures, spacing of about 0.03 or more did
+  not show the failures. That value is an empirical observation from those
+  specific fixtures, not a validated universal safety threshold.
+- Documented numerical-conditioning sensitivity: Delaunay predicates lose
+  reliability as points approach collinearity or cocircularity, whatever the
+  absolute spacing.
+- Unproven: safety across arbitrary near-collinear or nearly cocircular
+  arrangements. No universal safe minimum spacing has been established.
+- Existing possibility: wrong answers, exceptions or non-return remain
+  possible in pathological cases, as the README and spec state.
+- By contrast, the Float32 `minEnclosingTriangle` hang appears at a plain
   1e-5-side square, and `minEnclosingConvexPolygon` crashes on a unit
-  square.
-- Its failures were observed and bounded by fixtures. The crashes here are
-  at unit scale, so there is no input region to document as safe.
+  square, so those do not even have a plausible empirical region.
 - The accepted risk covers a stateful `Subdiv2D`. The deferred functions
   would be stateless calls on plain arrays, where callers expect them to
   return.
 
-A numerical risk the caller can avoid is documentable. A crash or hang at
-ordinary scale is not. This supports leaving `Find_Nearest` as is. It does
-not argue for or against a different policy.
+The existing `Find_Nearest` binding is not an exception to the
+memory-safety requirements for new operations and is not a precedent for
+them. It is unchanged here and not modified by this task. This comparison
+does not argue for or against a different policy.
 
 ## Ranked opportunities
 

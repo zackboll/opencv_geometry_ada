@@ -51,6 +51,44 @@ def classify(returncode, timed_out):
     return EXIT_NAMES.get(returncode, "exit_%d" % returncode)
 
 
+IDENTITY_KEYS = ("compile", "runtime", "object")
+OPTIONAL_IDENTITY_KEYS = ("runtime_object",)
+
+
+def parse_identity(stdout):
+    """Parse the identity header printed first by the probe.
+
+    Only the leading block of identity lines counts, so later probe output
+    cannot supply or override identity. Returns a dict with the fields,
+    "status" and "valid". Only status "ok" is valid evidence:
+      ok                compile, runtime and object present, versions equal
+      identity_mismatch compile and runtime versions differ
+      identity_missing  a required field is absent or empty
+      identity_malformed a field is repeated or the header is unreadable
+    """
+    known = IDENTITY_KEYS + OPTIONAL_IDENTITY_KEYS
+    fields = {}
+    malformed = False
+    for line in stdout.splitlines():
+        key, sep, value = line.partition(" ")
+        if key not in known:
+            break
+        if key in fields:
+            malformed = True
+        fields[key] = value.strip() if sep else ""
+    result = dict(fields)
+    if malformed:
+        result["status"] = "identity_malformed"
+    elif any(not fields.get(k) for k in IDENTITY_KEYS):
+        result["status"] = "identity_missing"
+    elif fields["compile"] != fields["runtime"]:
+        result["status"] = "identity_mismatch"
+    else:
+        result["status"] = "ok"
+    result["valid"] = result["status"] == "ok"
+    return result
+
+
 def child_limits(output_bytes):
     def apply():
         os.setsid()
@@ -105,14 +143,18 @@ def run(args):
     for case in (args.case or CASES):
         r = run_case(str(Path(args.probe).resolve()), case, "",
                      args.timeout)
-        identity = [ln for ln in r["stdout"].splitlines()
-                    if ln.startswith(("object ", "runtime "))]
-        r["identity"] = identity
+        r["identity"] = parse_identity(r["stdout"])
+        r["valid_evidence"] = r["identity"]["valid"]
         results.append(r)
         print(json.dumps(r, sort_keys=True))
     if args.report:
         Path(args.report).write_text(
             "".join(json.dumps(r, sort_keys=True) + "\n" for r in results))
+    bad = [r["case"] for r in results if not r["valid_evidence"]]
+    if bad:
+        print("INVALID EVIDENCE (identity absent or mismatched): "
+              + ", ".join(bad), file=sys.stderr)
+        return 2
     return 0
 
 
@@ -131,6 +173,45 @@ class SelfTests(unittest.TestCase):
         text = SOURCE.read_text()
         for case in CASES:
             self.assertIn('"%s"' % case, text)
+
+    HEADER = ("compile 4.10.0\nruntime %s\nobject /lib/libx.so.410\n"
+              "runtime_object /lib/libcore.so.410\n")
+
+    def test_identity_fields_extracted(self):
+        ident = parse_identity(self.HEADER % "4.10.0" + "input 0\n")
+        self.assertEqual(ident["compile"], "4.10.0")
+        self.assertEqual(ident["runtime"], "4.10.0")
+        self.assertEqual(ident["object"], "/lib/libx.so.410")
+        self.assertEqual(ident["runtime_object"], "/lib/libcore.so.410")
+
+    def test_identity_match_is_valid(self):
+        ident = parse_identity(self.HEADER % "4.10.0")
+        self.assertEqual(ident["status"], "ok")
+        self.assertTrue(ident["valid"])
+
+    def test_identity_mismatch_rejected(self):
+        ident = parse_identity(self.HEADER % "4.12.0")
+        self.assertEqual(ident["status"], "identity_mismatch")
+        self.assertFalse(ident["valid"])
+
+    def test_identity_missing_or_malformed_rejected(self):
+        for text in ("", "input 0\n", "compile 4.10.0\nobject /x\n",
+                     "compile 4.10.0\nruntime 4.10.0\n",
+                     "compile 4.10.0\nruntime \nobject /x\n",
+                     "compile\nruntime\nobject /x\n",
+                     "compile 4.10.0\ncompile 4.10.0\nruntime 4.10.0\n"
+                     "object /x\n"):
+            ident = parse_identity(text)
+            self.assertFalse(ident["valid"], text)
+            self.assertNotEqual(ident["status"], "ok", text)
+        self.assertEqual(parse_identity("")["status"], "identity_missing")
+        self.assertEqual(
+            parse_identity("compile 1\ncompile 1\nruntime 1\nobject /x\n")
+            ["status"], "identity_malformed")
+
+    def test_identity_after_header_ignored(self):
+        text = "compile 4.10.0\nruntime 4.10.0\ninput 0\nobject /x\n"
+        self.assertEqual(parse_identity(text)["status"], "identity_missing")
 
     def test_timeout_and_signal_children(self):
         sleeper = run_case("/bin/sleep", "30", "", 0.5)

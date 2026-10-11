@@ -3,6 +3,8 @@
 // Cases exercise approxPolyN, Float32/integer minEnclosingTriangle and
 // intersectConvexConvex with fixed, reproducible inputs. Every input and
 // output float is printed as exact hexadecimal bits.
+// Identity lines printed first: compile (CV_VERSION macro), runtime
+// (cv::getVersionString() from the linked Core), object, runtime_object.
 // Exit: 0 returned, 10 cv::Exception, 11 std::exception, 12 other,
 //       64 usage error. A hang or signal is classified by the controller.
 #include <opencv2/core.hpp>
@@ -162,9 +164,18 @@ void identity() {
         static_cast<float (*)(cv::InputArray, cv::InputArray,
                               cv::OutputArray, bool)>(
             &cv::intersectConvexConvex));
+    // compile: header macro, fixed when this probe was compiled.
+    std::printf("compile %s\n", CV_VERSION);
+    // runtime: queried from the linked OpenCV Core implementation.
+    std::printf("runtime %s\n", cv::getVersionString().c_str());
+    // object: library that provided the algorithm symbol under test.
     if (dladdr(sym, &info) && info.dli_fname)
         std::printf("object %s\n", info.dli_fname);
-    std::printf("runtime %s\n", CV_VERSION);
+    // runtime_object: library that provided getVersionString (Core).
+    Dl_info core_info;
+    void* core_sym = reinterpret_cast<void*>(&cv::getVersionString);
+    if (dladdr(core_sym, &core_info) && core_info.dli_fname)
+        std::printf("runtime_object %s\n", core_info.dli_fname);
     std::fflush(stdout);
 }
 
