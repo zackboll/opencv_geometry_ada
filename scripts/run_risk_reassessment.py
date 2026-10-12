@@ -97,7 +97,8 @@ def child_limits(output_bytes):
     return apply
 
 
-def run_case(probe, case, env_libs, timeout, output_limit=1 << 20):
+def run_case(probe, case, env_libs, timeout, output_limit=1 << 20,
+             stderr_limit=4096):
     env = {"PATH": "/usr/bin:/bin", "LD_LIBRARY_PATH": env_libs,
            "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1",
            "UBSAN_OPTIONS": "halt_on_error=1"}
@@ -116,7 +117,7 @@ def run_case(probe, case, env_libs, timeout, output_limit=1 << 20):
         out.seek(0)
         err.seek(0)
         stdout = out.read(output_limit).decode("utf-8", "replace")
-        stderr = err.read(4096).decode("utf-8", "replace")
+        stderr = err.read(stderr_limit).decode("utf-8", "replace")
     return {"case": case, "outcome": classify(proc.returncode, timed_out),
             "returncode": proc.returncode, "seconds": round(seconds, 3),
             "stdout": stdout, "stderr": stderr}
