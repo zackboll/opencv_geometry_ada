@@ -770,8 +770,690 @@ package body Float32_Convex_Intersection_Tests is
          "nested K=6 with outer second must safely round near 2**30");
    end Coarse_Nested_Second;
 
+   --  ---------------------------------------------------------------
+   --  Intersect_Convex_Polygons_Extended_Float32 (Task 027B)
+   --  ---------------------------------------------------------------
+
+   function Extended
+     (Left, Right : Points; Nested : Boolean := True) return Intersection
+   is (OpenCV.Geometry.Intersect_Convex_Polygons_Extended_Float32
+         (Left, Right, Nested));
+
+   --  Relative comparison with a small absolute floor.
+   function Near
+     (Actual, Expected : OpenCV.Float32_Value;
+      Relative         : OpenCV.Float32_Value := 1.0E-4) return Boolean
+   is (abs (Actual - Expected) <= Relative * abs Expected + 1.0E-6);
+
+   function Box (X, Y, Side : OpenCV.Float32_Value) return Points
+   is ((X => X, Y => Y),
+       (X => X + Side, Y => Y),
+       (X => X + Side, Y => Y + Side),
+       (X => X, Y => Y + Side));
+
+   --  True when the extended function raises OpenCV_Error. Any other
+   --  exception, notably Constraint_Error, propagates and fails the test.
+   function Ext_Rejects
+     (Left, Right : Points; Nested : Boolean := True) return Boolean is
+   begin
+      declare
+         Unused : constant Intersection := Extended (Left, Right, Nested);
+         pragma Unreferenced (Unused);
+      begin
+         return False;
+      end;
+   exception
+      when OpenCV.OpenCV_Error =>
+         return True;
+   end Ext_Rejects;
+
+   Tri_A       : constant Points :=
+     ((X => 0.1, Y => 0.1), (X => 4.3, Y => 0.2), (X => 2.1, Y => 3.9));
+   Tri_B       : constant Points :=
+     ((X => 0.7, Y => -0.5), (X => 3.9, Y => 2.2), (X => -0.4, Y => 2.8));
+   Tri_Overlap : constant Points :=
+     ((X => 0.344897956, Y => 0.565306127),
+      (X => 0.496850371, Y => 0.10944882),
+      (X => 1.44918334, Y => 0.132123411),
+      (X => 3.3744657, Y => 1.75658047),
+      (X => 3.03941059, Y => 2.32008219),
+      (X => 1.38962364, Y => 2.5502851));
+
+   --  The recovered rounded integer hexagons (Exact_Difference_Spans), as
+   --  binary32 points, and the 12 vertices the private engine returns.
+   Hexagon_Left   : constant Points :=
+     ((X => -15767146.0, Y => -1608888.0),
+      (X => -2320318.0, Y => -15678251.0),
+      (X => 15750659.0, Y => 1762998.0),
+      (X => 15604050.0, Y => 2775796.0),
+      (X => 13860112.0, Y => 7686919.0),
+      (X => -4538847.0, Y => 15185200.0));
+   Hexagon_Right  : constant Points :=
+     ((X => -15767147.0, Y => -1608887.0),
+      (X => -2320318.0, Y => -15678249.0),
+      (X => 15750662.0, Y => 1762996.0),
+      (X => 15604050.0, Y => 2775793.0),
+      (X => 13860114.0, Y => 7686922.0),
+      (X => -4538847.0, Y => 15185197.0));
+   Hexagon_Result : constant Points :=
+     ((X => -10668174.0, Y => 6017608.5),
+      (X => -15767146.0, Y => -1608888.0),
+      (X => -15462922.0, Y => -1927196.75),
+      (X => -2320318.0, Y => -15678249.0),
+      (X => 2921097.75, Y => -10619485.0),
+      (X => 15750659.0, Y => 1762998.0),
+      (X => 15624296.0, Y => 2635932.75),
+      (X => 15604050.0, Y => 2775793.0),
+      (X => 15154281.0, Y => 4042394.25),
+      (X => 13860112.0, Y => 7686919.0),
+      (X => 3560384.5, Y => 11884453.0),
+      (X => -4538847.0, Y => 15185197.0));
+
+   procedure Ext_Fractional_Overlaps (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Found   : constant Intersection := Extended (Tri_A, Tri_B);
+      Left    : constant Points := Box (0.3, 0.2, 2.3);
+      Right   : constant Points := Box (1.0, 0.65, 2.3);
+      Squares : constant Intersection := Extended (Left, Right);
+      Tenths  : constant Intersection :=
+        Extended (Box (0.1, 0.1, 0.3), Box (0.2, 0.2, 0.3));
+   begin
+      AUnit.Assertions.Assert
+        (Raises (Tri_A, Tri_B, "binary grid"),
+         "the original Float32 overload must still reject off-grid input");
+      AUnit.Assertions.Assert
+        (Found.Vertex_Count = 6
+         and then Same_Vertices (Found.Vertices, Tri_Overlap)
+         and then Near (Found.Area, 4.3435187)
+         and then Found.Vertices'First = 1,
+         "fractional triangles must intersect in the expected hexagon");
+      AUnit.Assertions.Assert
+        (Squares.Vertex_Count = 4 and then Near (Squares.Area, 2.96),
+         "fractional squares must intersect in a 1.6 by 1.85 rectangle");
+      AUnit.Assertions.Assert
+        (Tenths.Vertex_Count = 4
+         and then Same_Vertices (Tenths.Vertices, Box (0.2, 0.2, 0.2))
+         and then Near (Tenths.Area, 0.04),
+         "squares near 0.1 must intersect in a 0.2 square");
+   end Ext_Fractional_Overlaps;
+
+   procedure Ext_Integer_And_Grid_Inputs (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Left  : constant Points := Support.To_Float32 (Integer_Square);
+      Right : constant Points := Support.To_Float32 (Integer_Diamond);
+   begin
+      for Nested in Boolean loop
+         AUnit.Assertions.Assert
+           (Extended (Left, Right, Nested).Area
+            = Intersect (Left, Right, Nested).Area
+            and then Same_Vertices
+                       (Extended (Left, Right, Nested).Vertices,
+                        Intersect (Left, Right, Nested).Vertices),
+            "integer-valued polygons must match the grid-restricted "
+            & "overload");
+      end loop;
+      AUnit.Assertions.Assert
+        (Same_Vertices (Extended (Square, Diamond).Vertices, Overlap)
+         and then Close (Extended (Square, Diamond).Area, Overlap_Area),
+         "power-of-two-grid polygons must give the known overlap");
+   end Ext_Integer_And_Grid_Inputs;
+
+   procedure Ext_Winding_And_Bounds (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Base       : constant Intersection := Extended (Tri_A, Tri_B);
+      Shift_A    : constant Points (10 .. 12) := Tri_A;
+      Shift_B    : constant Points (Natural'Last - 2 .. Natural'Last) := Tri_B;
+      Reversed_A : constant Points := Reversed (Tri_A);
+      Reversed_B : constant Points := Reversed (Tri_B);
+   begin
+      for Left_Reversed in Boolean loop
+         for Right_Reversed in Boolean loop
+            declare
+               Found : constant Intersection :=
+                 Extended
+                   ((if Left_Reversed then Reversed_A else Tri_A),
+                    (if Right_Reversed then Reversed_B else Tri_B));
+            begin
+               AUnit.Assertions.Assert
+                 (Found.Vertex_Count = 6
+                  and then Same_Vertices (Found.Vertices, Tri_Overlap)
+                  and then Near (Found.Area, Base.Area),
+                  "every winding combination must give the same polygon");
+            end;
+         end loop;
+      end loop;
+      AUnit.Assertions.Assert
+        (Extended (Shift_A, Shift_B) = Base,
+         "differing nonzero lower bounds must not change the result");
+   end Ext_Winding_And_Bounds;
+
+   procedure Ext_Nested_Disjoint_Contact (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Outer    : constant Points := Box (0.0, 0.0, 10.0);
+      Inner_P  : constant Points := Box (2.3, 2.3, 3.1);
+      Nested   : constant Intersection := Extended (Outer, Inner_P, True);
+      Swapped  : constant Intersection := Extended (Inner_P, Outer, True);
+      Unneeded : constant Intersection := Extended (Outer, Inner_P, False);
+      Apart    : constant Intersection :=
+        Extended (Box (0.0, 0.0, 1.0), Box (5.1, 5.1, 1.0));
+      Edge     : constant Intersection :=
+        Extended (Box (0.0, 0.0, 1.0), Box (1.0, 0.0, 1.0));
+      Corner   : constant Intersection :=
+        Extended (Box (0.0, 0.0, 1.0), Box (1.0, 1.0, 1.0));
+   begin
+      AUnit.Assertions.Assert
+        (Nested.Vertex_Count = 4
+         and then Same_Vertices (Nested.Vertices, Inner_P)
+         and then Near (Nested.Area, 9.61)
+         and then Swapped.Vertex_Count = 4
+         and then Near (Swapped.Area, 9.61),
+         "nested polygons with Handle_Nested True give the inner polygon");
+      AUnit.Assertions.Assert
+        (Unneeded.Vertex_Count = 0 and then Unneeded.Area = 0.0,
+         "nested polygons with Handle_Nested False give an empty result");
+      AUnit.Assertions.Assert
+        (Apart.Vertex_Count = 0 and then Apart.Area = 0.0,
+         "disjoint polygons give an empty result");
+      --  Contact results are raw contact points, not a polygon.
+      AUnit.Assertions.Assert
+        (Edge.Area = 0.0 and then Edge.Vertex_Count in 1 .. 3,
+         "shared-edge contact gives one to three vertices and zero area");
+      AUnit.Assertions.Assert
+        (Corner.Area = 0.0 and then Corner.Vertex_Count in 0 .. 3,
+         "vertex-only contact gives at most three vertices and zero area");
+   end Ext_Nested_Disjoint_Contact;
+
+   procedure Ext_Qualified_Shapes (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      --  A thin but well-conditioned convex sliver: 100 by 0.01.
+      Thin      : constant Points :=
+        ((X => 0.0, Y => 0.0),
+         (X => 100.0, Y => 0.0),
+         (X => 100.0, Y => 0.01),
+         (X => 0.0, Y => 0.01));
+      Thin_Hit  : constant Points :=
+        ((X => 40.0, Y => -1.0),
+         (X => 60.0, Y => -1.0),
+         (X => 60.0, Y => 1.0),
+         (X => 40.0, Y => 1.0));
+      Thin_Out  : constant Intersection := Extended (Thin, Thin_Hit);
+      Big_Left  : constant Points := Box (5.0E8, 5.0E8, 1048576.0);
+      Big_Right : constant Points := Box (5.0E8 + 524288.0, 5.0E8, 1048576.0);
+      Big_Out   : constant Intersection := Extended (Big_Left, Big_Right);
+   begin
+      AUnit.Assertions.Assert
+        (Thin_Out.Vertex_Count = 4 and then Near (Thin_Out.Area, 0.2),
+         "a thin qualified sliver must intersect in a 20 by 0.01 strip");
+      AUnit.Assertions.Assert
+        (Big_Out.Vertex_Count = 4
+         and then Near (Big_Out.Area, 524288.0 * 1048576.0),
+         "large coordinates below 2.0**30 must intersect");
+   end Ext_Qualified_Shapes;
+
+   procedure Ext_Recovered_Hexagon (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Found : constant Intersection := Extended (Hexagon_Left, Hexagon_Right);
+   begin
+      AUnit.Assertions.Assert
+        (Found.Vertex_Count = 12
+         and then Found.Vertices = Hexagon_Result
+         and then Near (Found.Area, 5.38046559E14, 1.0E-5),
+         "the recovered rounded hexagons give the known 12 vertices");
+   end Ext_Recovered_Hexagon;
+
+   procedure Ext_Invalid_Shapes (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Empty     : constant Points (1 .. 0) := (others => (X => 0.0, Y => 0.0));
+      Good      : constant Points := Box (0.0, 0.0, 1.0);
+      Star      : constant Points :=
+        ((X => 0.0, Y => 3.0),
+         (X => 1.0, Y => 1.0),
+         (X => 3.0, Y => 0.0),
+         (X => 1.0, Y => -1.0),
+         (X => 0.0, Y => -3.0),
+         (X => -1.0, Y => -1.0),
+         (X => -3.0, Y => 0.0),
+         (X => -1.0, Y => 1.0));
+      Pentagram : constant Points :=
+        ((X => 0.0, Y => 4.0),
+         (X => 2.35, Y => -3.24),
+         (X => -3.80, Y => 1.24),
+         (X => 3.80, Y => 1.24),
+         (X => -2.35, Y => -3.24));
+   begin
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Empty, Good) and then Ext_Rejects (Good, Empty),
+         "an empty polygon must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Good (1 .. 1), Good)
+         and then Ext_Rejects (Good, Good (1 .. 2)),
+         "one- and two-vertex polygons must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects
+           (((X => 0.0, Y => 0.0),
+             (X => 2.0, Y => 0.0),
+             (X => 2.0, Y => 0.0),
+             (X => 1.0, Y => 1.0)),
+            Good),
+         "duplicate vertices must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects
+           (((X => 0.0, Y => 0.0),
+             (X => 1.0, Y => 0.0),
+             (X => 2.0, Y => 0.0),
+             (X => 1.0, Y => 1.0)),
+            Good),
+         "a redundant collinear vertex must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects
+           (((X => 0.0, Y => 0.0),
+             (X => 4.0, Y => 0.0),
+             (X => 1.0, Y => 1.0),
+             (X => 0.0, Y => 4.0)),
+            Good),
+         "a concave polygon must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects
+           (((X => 0.0, Y => 0.0),
+             (X => 2.0, Y => 2.0),
+             (X => 2.0, Y => 0.0),
+             (X => 0.0, Y => 2.0)),
+            Good),
+         "a bowtie must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Star, Good)
+         and then Ext_Rejects (Good, Star)
+         and then Ext_Rejects (Pentagram, Good),
+         "self-intersecting stars must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Good & Good, Good)
+         and then Ext_Rejects (Good, Good & Good),
+         "a repeated contour traversal must be rejected");
+   end Ext_Invalid_Shapes;
+
+   procedure Ext_Left_As_Candidate (Candidate : Points) is
+      Unused : constant Intersection := Extended (Candidate, Diamond);
+      pragma Unreferenced (Unused);
+   begin
+      null;
+   end Ext_Left_As_Candidate;
+
+   procedure Ext_Right_As_Candidate (Candidate : Points) is
+      Unused : constant Intersection := Extended (Square, Candidate);
+      pragma Unreferenced (Unused);
+   begin
+      null;
+   end Ext_Right_As_Candidate;
+
+   procedure Ext_Non_Finite_And_Envelope (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Good         : constant Points := Box (0.0, 0.0, 1.0);
+      --  Binary32 spacing near 2.0**30 is 128, so use sides of 256 and more.
+      Over         : constant Points := Box (2.0**30, 0.0, 256.0);
+      --  Maximum X is exactly 2.0**30, the accepted limit.
+      Edge         : constant Points := Box (2.0**30 - 512.0, 0.0, 512.0);
+      Edge_Partner : constant Points := Box (2.0**30 - 768.0, 256.0, 512.0);
+      Neg          : constant Points := Box (-(2.0**30) - 128.0, 0.0, 256.0);
+   begin
+      Support.Assert_Rejects_Non_Finite
+        (Square, Ext_Left_As_Candidate'Access, "Extended Left");
+      Support.Assert_Rejects_Non_Finite
+        (Square, Ext_Right_As_Candidate'Access, "Extended Right");
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Over, Good) and then Ext_Rejects (Good, Neg),
+         "coordinates beyond 2.0**30 must be rejected");
+      AUnit.Assertions.Assert
+        (not Ext_Rejects (Edge, Edge_Partner),
+         "coordinates at 2.0**30 must be accepted");
+   end Ext_Non_Finite_And_Envelope;
+
+   procedure Ext_Ill_Conditioned (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Good : constant Points := Box (0.0, 0.0, 1.0);
+      --  Features far below OpenCV's 1.0E-5 absolute tolerance: a square of
+      --  side 1.0E-3 has orientations of about 1.0E-6.
+      Tiny : constant Points := Box (0.0, 0.0, 1.0E-3);
+      --  Nearly collinear: the apex is 1.0E-6 off a 100-long base.
+      Flat : constant Points :=
+        ((X => 0.0, Y => 0.0),
+         (X => 100.0, Y => 0.0),
+         (X => 50.0, Y => 1.0E-6));
+   begin
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Tiny, Good) and then Ext_Rejects (Good, Tiny),
+         "a polygon below the conditioning limit must be rejected");
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Flat, Good),
+         "a numerically ambiguous near-collinear polygon is rejected");
+   end Ext_Ill_Conditioned;
+
+   procedure Ext_Count_Rejection (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      --  4097 vertices exceeds the validator's documented limit of 4096.
+      Many : Points (1 .. 4097);
+      Good : constant Points := Box (0.0, 0.0, 1.0);
+   begin
+      for Index in Many'Range loop
+         Many (Index) := (X => OpenCV.Float32_Value (Index), Y => 0.0);
+      end loop;
+      AUnit.Assertions.Assert
+        (Ext_Rejects (Many, Good) and then Ext_Rejects (Good, Many),
+         "more than 4096 vertices must be rejected");
+   end Ext_Count_Rejection;
+
+   --  Raw C ABI of opencv_geometry_intersect_convex_convex_extended_f32.
+   procedure Ext_C_ABI_Validation (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Left   : aliased C_API.Point_F32_Array :=
+        Support.Pack (Box (0.0, 0.0, 1.0));
+      Right  : aliased C_API.Point_F32_Array :=
+        Support.Pack (Box (0.5, 0.25, 1.0));
+      Guard  : constant C_API.Point_F32 := (X => -7.0, Y => -9.0);
+      Output : aliased C_API.Point_F32_Array (0 .. 15) := (others => Guard);
+      Count  : aliased Interfaces.Integer_32 := 99;
+      Area   : aliased Interfaces.C.C_float := 99.0;
+      Status : C_API.Status;
+
+      --  True when no element of Output changed.
+      function Untouched return Boolean
+      is (for all Item of Output =>
+            Item.X = Guard.X and then Item.Y = Guard.Y);
+
+      procedure Reset is
+      begin
+         Output := (others => Guard);
+         Count := 99;
+         Area := 99.0;
+      end Reset;
+
+      function Call
+        (Left_Count, Right_Count : Interfaces.Integer_32;
+         Nested                  : Interfaces.Integer_32 := 1;
+         Capacity                : Interfaces.Integer_32 := 8)
+         return C_API.Status
+      is (C_API.Intersect_Convex_Convex_Extended_F32
+            (Left (Left'First)'Access,
+             Left_Count,
+             Right (Right'First)'Access,
+             Right_Count,
+             Nested,
+             Output (Output'First)'Access,
+             Capacity,
+             Count'Access,
+             Area'Access));
+
+      procedure Expect_Invalid (Fragment, Message : String) is
+      begin
+         AUnit.Assertions.Assert
+           (Status = C_API.Error_Invalid_Argument
+            and then Has_Message (Fragment)
+            and then Count = 0
+            and then Area = 0.0
+            and then Untouched,
+            Message);
+      end Expect_Invalid;
+   begin
+      Reset;
+      Status :=
+        C_API.Intersect_Convex_Convex_Extended_F32
+          (Left (Left'First)'Access,
+           4,
+           Right (Right'First)'Access,
+           4,
+           1,
+           Output (Output'First)'Access,
+           8,
+           null,
+           Area'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument
+         and then Has_Message ("output count")
+         and then Untouched,
+         "a null output count pointer must be rejected");
+      Reset;
+      Status :=
+        C_API.Intersect_Convex_Convex_Extended_F32
+          (Left (Left'First)'Access,
+           4,
+           Right (Right'First)'Access,
+           4,
+           1,
+           Output (Output'First)'Access,
+           8,
+           Count'Access,
+           null);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument
+         and then Has_Message ("output area")
+         and then Count = 0
+         and then Untouched,
+         "a null output area pointer must be rejected, count reset");
+      Reset;
+      Status := Call (-1, 4);
+      Expect_Invalid ("negative", "a negative left count must be rejected");
+      Reset;
+      Status := Call (4, -1);
+      Expect_Invalid ("negative", "a negative right count must be rejected");
+      Reset;
+      Status := Call (2, 4);
+      Expect_Invalid ("three vertices", "two left vertices are rejected");
+      Reset;
+      Status := Call (4, 0);
+      Expect_Invalid ("three vertices", "an empty right polygon is rejected");
+      Reset;
+      Status := Call (4, 4, Nested => 2);
+      Expect_Invalid ("nested", "an invalid nested selector is rejected");
+      Reset;
+      Status := Call (4, 4, Capacity => -1);
+      Expect_Invalid ("capacity", "a negative capacity is rejected");
+      Reset;
+      Status := Call (4097, 4);
+      Expect_Invalid ("4096", "more than 4096 vertices are rejected");
+      Reset;
+      Status := Call (Interfaces.Integer_32'Last, Interfaces.Integer_32'Last);
+      Expect_Invalid ("4096", "overflowing combined counts are rejected");
+      Reset;
+      Status :=
+        C_API.Intersect_Convex_Convex_Extended_F32
+          (null,
+           4,
+           Right (Right'First)'Access,
+           4,
+           1,
+           Output (Output'First)'Access,
+           8,
+           Count'Access,
+           Area'Access);
+      Expect_Invalid ("left polygon", "null left points are rejected");
+      Reset;
+      Status :=
+        C_API.Intersect_Convex_Convex_Extended_F32
+          (Left (Left'First)'Access,
+           4,
+           null,
+           4,
+           1,
+           Output (Output'First)'Access,
+           8,
+           Count'Access,
+           Area'Access);
+      Expect_Invalid ("right polygon", "null right points are rejected");
+      Reset;
+      Status :=
+        C_API.Intersect_Convex_Convex_Extended_F32
+          (Left (Left'First)'Access,
+           4,
+           Right (Right'First)'Access,
+           4,
+           1,
+           null,
+           8,
+           Count'Access,
+           Area'Access);
+      Expect_Invalid
+        ("output vertices", "a null output with capacity is rejected");
+      --  Polygon content, checked by the C++ layer for direct C callers.
+      declare
+         Concave   : aliased C_API.Point_F32_Array :=
+           ((X => 0.0, Y => 0.0),
+            (X => 4.0, Y => 0.0),
+            (X => 1.0, Y => 1.0),
+            (X => 0.0, Y => 4.0));
+         Repeated  : aliased C_API.Point_F32_Array :=
+           ((X => 0.0, Y => 0.0),
+            (X => 2.0, Y => 0.0),
+            (X => 2.0, Y => 0.0),
+            (X => 1.0, Y => 1.0));
+         Bowtie    : aliased C_API.Point_F32_Array :=
+           ((X => 0.0, Y => 0.0),
+            (X => 2.0, Y => 2.0),
+            (X => 2.0, Y => 0.0),
+            (X => 0.0, Y => 2.0));
+         Twice     : aliased C_API.Point_F32_Array :=
+           Support.Pack (Box (0.0, 0.0, 1.0) & Box (0.0, 0.0, 1.0));
+         Not_A_Num : aliased C_API.Point_F32_Array :=
+           ((X => 0.0, Y => 0.0),
+            (X => Support.NaN_C, Y => 0.0),
+            (X => 1.0, Y => 1.0),
+            (X => 0.0, Y => 1.0));
+         Infinite  : aliased C_API.Point_F32_Array :=
+           ((X => 0.0, Y => 0.0),
+            (X => 1.0, Y => 0.0),
+            (X => 1.0, Y => Interfaces.C.C_float'Last),
+            (X => 0.0, Y => 1.0));
+         Too_Big   : aliased C_API.Point_F32_Array :=
+           ((X => 2.0**31, Y => 0.0),
+            (X => 2.0**31 + 256.0, Y => 0.0),
+            (X => 2.0**31 + 256.0, Y => 256.0),
+            (X => 2.0**31, Y => 256.0));
+
+         procedure Try
+           (Candidate : in out C_API.Point_F32_Array;
+            Count_In  : Interfaces.Integer_32;
+            Fragment  : String;
+            Message   : String) is
+         begin
+            Reset;
+            Status :=
+              C_API.Intersect_Convex_Convex_Extended_F32
+                (Candidate (Candidate'First)'Access,
+                 Count_In,
+                 Right (Right'First)'Access,
+                 4,
+                 1,
+                 Output (Output'First)'Access,
+                 8,
+                 Count'Access,
+                 Area'Access);
+            Expect_Invalid (Fragment, Message);
+         end Try;
+      begin
+         Try (Concave, 4, "left polygon", "a concave polygon is rejected");
+         Try (Repeated, 4, "left polygon", "a repeated vertex is rejected");
+         Try (Bowtie, 4, "left polygon", "a bowtie is rejected");
+         Try (Twice, 8, "left polygon", "a repeated traversal is rejected");
+         Try (Not_A_Num, 4, "finite", "a NaN coordinate is rejected");
+         Try (Too_Big, 4, "2**30", "an out-of-envelope polygon is rejected");
+         --  FLT_MAX is finite but far outside the envelope.
+         Try (Infinite, 4, "2**30", "FLT_MAX coordinates are rejected");
+      end;
+      --  Valid input and the output-capacity boundary. Right overlaps Left
+      --  in the 0.5 by 0.75 rectangle (0.5 .. 1.0, 0.25 .. 1.0), 4 vertices.
+      Reset;
+      Status := Call (4, 4);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success
+         and then Count = 4
+         and then abs (Area - 0.375) <= 1.0E-6
+         and then (for all Index in 4 .. 15 =>
+                     Output (Index).X = Guard.X
+                     and then Output (Index).Y = Guard.Y),
+         "a valid call publishes 4 vertices and area 0.375 and writes "
+         & "nothing beyond them");
+      --  Capacity exactly 4 succeeds; 3 fails unpublished, writing nothing.
+      Reset;
+      Status := Call (4, 4, Capacity => 4);
+      AUnit.Assertions.Assert
+        (Status = C_API.Success
+         and then Count = 4
+         and then (for all Index in 4 .. 15 => Output (Index).X = Guard.X),
+         "capacity equal to the result count succeeds");
+      Reset;
+      Status := Call (4, 4, Capacity => 3);
+      Expect_Invalid
+        ("capacity", "capacity below the result count is rejected");
+      Reset;
+      Status := Call (4, 4, Capacity => 0);
+      Expect_Invalid ("capacity", "zero capacity cannot hold the result");
+      --  Disjoint input needs no capacity: zero capacity is enough.
+      declare
+         Far : aliased C_API.Point_F32_Array :=
+           Support.Pack (Box (10.0, 10.0, 1.0));
+      begin
+         Reset;
+         Status :=
+           C_API.Intersect_Convex_Convex_Extended_F32
+             (Left (Left'First)'Access,
+              4,
+              Far (Far'First)'Access,
+              4,
+              1,
+              null,
+              0,
+              Count'Access,
+              Area'Access);
+         AUnit.Assertions.Assert
+           (Status = C_API.Success and then Count = 0 and then Area = 0.0,
+            "a disjoint pair succeeds with a null buffer and zero capacity");
+      end;
+   end Ext_C_ABI_Validation;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection fractional overlaps",
+            Ext_Fractional_Overlaps'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection integer and grid inputs",
+            Ext_Integer_And_Grid_Inputs'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection winding and lower bounds",
+            Ext_Winding_And_Bounds'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection nested disjoint contact",
+            Ext_Nested_Disjoint_Contact'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection qualified shapes",
+            Ext_Qualified_Shapes'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection recovered hexagon",
+            Ext_Recovered_Hexagon'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection invalid shapes",
+            Ext_Invalid_Shapes'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection non-finite and envelope",
+            Ext_Non_Finite_And_Envelope'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection ill-conditioned",
+            Ext_Ill_Conditioned'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection vertex count limit",
+            Ext_Count_Rejection'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Extended Float32 intersection raw C ABI",
+            Ext_C_ABI_Validation'Access));
       Result.Add_Test
         (Caller.Create
            ("Float32 intersection fractional overlap",

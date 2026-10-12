@@ -300,15 +300,15 @@ bool identity(bool need_native)
         const SymbolHome& h = homes[i];
         std::printf("provider %s %s\n", h.symbol.c_str(),
                     h.path.empty() ? "?" : h.path.c_str());
-        bool good = !h.path.empty()
-            && h.base.rfind("libopencv_", 0) == 0
-            && h.base.find(suffix) != std::string::npos
+        // Exact module and exact version suffix: the resolved file name must
+        // be libopencv_<module><suffix> with nothing after the version.
+        const std::string module = i == 0 ? "core"
+            : (CV_VERSION_MAJOR >= 5 ? "geometry" : "imgproc");
+        const std::string exact = "libopencv_" + module + suffix;
+        const bool good = !h.path.empty()
+            && h.base == exact
             && h.dir == homes[0].dir
             && (!want_dir || h.dir == want_dir);
-        if (i == 0)
-            good = good && h.base.rfind("libopencv_core", 0) == 0;
-        else if (h.base.rfind("libopencv_core", 0) == 0)
-            good = false;   // algorithm symbols never come from Core
         if (!good) {
             std::printf("IDENTITY REJECTED: %s\n", h.symbol.c_str());
             ok = false;

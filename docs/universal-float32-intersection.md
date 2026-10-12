@@ -475,3 +475,194 @@ These supersede any earlier wording in this file.
    `tests/native/research/`. It is not referenced by any `.gpr`, Alire
    manifest, script or workflow, and the header is included only by the
    probe.
+
+## Task 027B: integration of `Intersect_Convex_Polygons_Extended_Float32`
+
+Status: **implemented and locally qualified on OpenCV 4.10.0; not released,
+not certified across the version matrix (Task 027C), no PR.** The research
+sections above are historical.
+
+### Interfaces
+
+Public Ada, in `OpenCV.Geometry`:
+
+```ada
+function Intersect_Convex_Polygons_Extended_Float32
+  (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
+   return Convex_Polygon_Intersection;
+```
+
+Raw C ABI (`cpp/opencv_geometry_shim.h`), imported in
+`OpenCV.Geometry.Internal.C_API` as `Intersect_Convex_Convex_Extended_F32`:
+
+```c
+opencv_geometry_status opencv_geometry_intersect_convex_convex_extended_f32(
+    const opencv_geometry_point_f32 *left_points,  int32_t left_count,
+    const opencv_geometry_point_f32 *right_points, int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices, int32_t out_capacity,
+    int32_t *out_count, float *out_area);
+```
+
+The existing integer and Float32 overloads, their exports and their
+restrictions are unchanged. No existing test expectation was edited.
+
+### Execution path and backend
+
+Ada checks at least three vertices, a safe combined count, finite
+coordinates and magnitude at most 2**30, then calls the export. The export,
+for every caller: clears the error; zeroes `*out_count` and `*out_area`;
+checks pointers, counts (3 .. 4096 each), the selector (0 or 1) and the
+capacity; copies the points to `std::vector<cv::Point2f>`; runs
+`validate_strictly_convex_f32` (`cpp/strict_convex_validation.hpp`) on each
+polygon; runs `opencv_geometry_compat::intersect_convex_convex_f32`; maps
+the status; checks the whole result (count at most `left_count +
+right_count`, area finite and nonnegative, every vertex finite and not the
+sentinel, count at most the capacity); and only then copies and publishes.
+Exceptions are translated by the existing `translate_current_exception`.
+
+The backend is the private compatibility engine on **every** OpenCV version;
+the export never calls `cv::intersectConvexConvex`. In the shim the only two
+call sites of that function are in `opencv_geometry_intersect_convex_convex`
+and `..._f32` (checked with grep), not in the extended export. The native
+calls the engine can reach are `cv::pointPolygonTest` and `cv::contourArea`
+on its nested-polygon path, with inputs inside the 2**30 envelope.
+
+### Strict convexity validation
+
+Written for this project; no upstream code. For each directed edge
+`(p[i], p[i+1])` and every other vertex `p[k]`, the orientation must be
+provably nonzero and of one sign for the whole polygon. A vertex strictly on
+one side of every edge line makes each edge line a supporting line that
+meets the vertex set only in that edge's endpoints. So every edge joins
+adjacent hull vertices, every vertex is a hull vertex, and the n distinct
+directed edges are the n hull edges in one rotational sense: a simple convex
+polygon traversed once, in either winding. Repeated vertices, redundant
+collinear vertices, concave corners, bowties, stars and repeated traversals
+give a zero or mixed-sign orientation. `cv::isContourConvex` is not used.
+
+The sign is Shewchuk's error-bounded filter for the double formula
+`(a-c)x(b-c)`: binary32 widens exactly to binary64, and a determinant larger
+than `(3 + 16 eps) eps (|detleft| + |detright|)` has a proven sign. An
+undecided case is **rejected**, never guessed. At magnitudes up to 2**30 the
+formula cannot overflow, and nonzero binary32 differences cannot underflow
+in binary64. I did not machine-check this argument; it is a paper argument
+plus the tests below.
+
+Conditioning policy: each (edge, vertex) orientation is also computed the
+way the engine's `area_sign` does, from binary32 differences, and must have
+the same sign and a magnitude above `1.0E-4` (10 times the engine's
+absolute `1.0E-5` tolerance); so must each turn between consecutive edge
+vectors. This is a **policy, not a convergence proof**. It rejects features
+below that scale (for example a square of side 1.0E-3). Orientation tests
+*between* the two polygons cannot be checked per polygon; only the engine's
+controlled non-convergence and numeric-failure statuses cover them.
+
+Cost is O(n**2) orientation evaluations per polygon, about 1.7e7 at the
+limit of 4096 vertices; larger inputs are rejected by count before any work.
+This is a **new input limit**: the older overloads accept more vertices.
+
+
+### Accepted domain, status mapping and caller obligations
+
+Each polygon: 3 to 4096 vertices; finite coordinates of magnitude at most
+2**30; simple, strictly convex, traversed once, either winding, any Ada
+lower bound; orientations above `1.0E-4`. There is no power-of-two-grid
+requirement. Output: at most `left + right` vertices, indexed `1 ..
+Vertex_Count`, in the engine's order, not normalized or deduplicated, no
+sentinel, area finite and nonnegative. Contact results can have one to three
+vertices and area 0 and need not form a polygon. A failed call raises
+`OpenCV_Error`, returns no partial result and, at the C ABI, leaves
+`*out_count` and `*out_area` at 0.
+
+Input, validation, non-convergence, numeric-failure, internal-bound and
+capacity failures return `OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT` with a
+specific message. `cv::Exception`, `std::exception` and unknown exceptions
+map to `ERROR_OPENCV`, `ERROR_STD` and `ERROR_UNKNOWN`. Ada raises
+`OpenCV_Error` for every non-success status; its range and finiteness checks
+run with validity checks suppressed, so NaN and infinities raise
+`OpenCV_Error`, not `Constraint_Error`.
+
+The export cannot discover whether a non-null pointer refers to the stated
+amount of memory. Callers must provide readable `left_count` and
+`right_count` points and a writable buffer of `out_capacity` points. The
+shim reads exactly the stated counts and writes at most `out_capacity`
+points, and nothing when the result does not fit.
+
+### Local results (OpenCV 4.10.0, g++ 14.2.0, GNAT 16.1.0)
+
+| Check | Result |
+|---|---|
+| `alr -n build` | success |
+| `alr -n -C tests run`, baseline | 531 of 531 (start of Task 027) |
+| `alr -n -C tests run`, final | **542 of 542**; 11 new AUnit tests |
+| validation profile | 542 of 542; no `Constraint_Error` |
+| release profile again | 542 of 542 |
+| `scripts/run_native_tests.sh` | all 4 native programs pass under ASan+UBSan, including the new `extended_convex_intersection.cpp` |
+| research probe, exact-identity checks | 32 of 32; sweep `accuracy_claim SUPPORTED` |
+| `gnatformat` | applied to the test file (only added lines changed); library files already conform |
+
+New AUnit coverage: fractional triangle, square and 0.1 overlaps (the old
+overload still rejects the triangles); integer-valued and power-of-two-grid
+input equal to the old overload; four winding combinations and differing
+nonzero lower bounds; nested with both selectors, disjoint, shared-edge and
+vertex contact; a thin sliver and a 5.0E8 polygon; the exact recovered
+rounded hexagon (all 12 vertices and the area); empty, one-, two-vertex,
+duplicate, collinear, concave, bowtie, star, pentagram and repeated-traversal
+input; NaN, +/-Inf and out-of-envelope coordinates; a tiny and a
+near-collinear polygon; 4097 vertices; and the raw export (null count, area,
+points and output pointers, negative and oversized counts, invalid selector,
+negative capacity, concave, repeated, bowtie, repeated traversal, NaN,
+out-of-envelope, a valid call with guard slots proving nothing is written
+beyond the result, capacity equal to and one below the count, and a disjoint
+pair with zero capacity).
+
+**Not reproduced:** a deterministic non-convergence or numeric failure from
+the production export. The 4000-pair native sweep had 0 controlled failures.
+Non-convergence was reproduced only in the research probe's chaos sweep, on
+non-convex polygons that the production validator now rejects first. So the
+status mapping for those two cases is untested at the production export.
+
+### Sanitizer coverage
+
+`extended_convex_intersection.cpp` includes the shim source and is built
+with `-fsanitize=address,undefined -fno-sanitize-recover=undefined`, so the
+export, the validator and the engine are instrumented, with exact-size heap
+buffers. It ran against (a) the system OpenCV 4.10.0 and (b) the 4.10.0
+library built with ASan/UBSan (`/var/tmp/geometry-026/install-asan-4.10.0`,
+libraries confirmed with `ldd`): no report either way. The Ada test program
+itself is not sanitizer instrumented.
+
+### Cross-version smoke results (not qualification)
+
+The same native program built against `/var/tmp/geometry-026` prefixes for
+4.11.0, 4.12.0, 4.13.0, 4.14.0 and 5.0.0 (providers confirmed with `ldd`:
+`libopencv_imgproc.so.<v>`, `libopencv_geometry.so.500` for 5.0.0) printed
+PASS, each with 4000 of 4000 sweep pairs succeeding. The Ada suite ran only
+against 4.10.0. 4.6.0 was not run: no imgproc library exists. Other Core
+releases, macOS and Windows were not run.
+
+### Research probe
+
+`convex_intersection_compat_probe.cpp` now requires the exact module
+(`imgproc` for 4.x, `geometry` for 5.x) and the exact version suffix in each
+resolved library file name, with the Core and module directories equal.
+
+### SPARK
+
+No SPARK-mode code was added or changed, and the reused helpers
+(`Is_Safe_Input_Count`, `Output_Capacity`) are unchanged. GNATprove was
+**not** rerun, so no new proof result is claimed; the recorded baseline is
+277 of 277.
+
+### Remaining Task 027C obligations
+
+1. The OpenCV 4.6 to 5.x and Core 0.3.0/0.4.1 matrix with the Ada suite;
+   4.6 needs a library build.
+2. macOS and Windows runs.
+3. The original 62/61-vertex fixture remains unrecovered.
+4. A deterministic production-export test for non-convergence and numeric
+   failure, if a reproducible input exists.
+5. Whether to relax the 4096 vertex limit with an O(N log N) validator.
+6. Native-versus-compat dispatch is deliberately not done.
+7. README, release notes and the PR.

@@ -549,6 +549,33 @@ opencv_geometry_intersect_convex_convex_f32(
     int32_t *out_count,
     float *out_area);
 
+/* Binary32 polygons on every supported OpenCV version, computed by the
+   project's private hardened copy of the OpenCV 4.11+ bounded algorithm (with
+   the 4.12+ binary64 segment expressions). The native intersectConvexConvex
+   is never called. Each polygon must have 3 to 4096 vertices, all finite with
+   magnitude at most 2^30, and be strictly convex and traversed once, in
+   either rotational direction: every vertex must lie provably and strictly
+   off every edge line of the same polygon, on one side, by an orientation
+   above 1e-4. Repeated, collinear, concave, self-intersecting and repeated
+   traversal input fails with OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT, as do
+   a non-converging or non-representable intersection and an output capacity
+   below the result count; nothing is published then and *out_count and
+   *out_area are 0. The result can have at most left_count + right_count
+   vertices. Contact results can have one to three vertices and zero area.
+   Callers must provide readable buffers of the stated counts and a writable
+   output buffer of out_capacity points; the shim cannot check that. */
+opencv_geometry_status
+opencv_geometry_intersect_convex_convex_extended_f32(
+    const opencv_geometry_point_f32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_f32 *right_points,
+    int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count,
+    float *out_area);
+
 /* Explicit rotated-rectangle intersection kinds; the shim maps OpenCV's
    RectanglesIntersectTypes to these values. */
 #define OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE    ((int32_t)0)

@@ -20,6 +20,11 @@
 #include "closest_ellipse_compat.hpp"
 #endif
 
+// Private hardened intersectConvexConvex used by the extended Float32
+// intersection on every OpenCV version. See that header for its provenance.
+#include "convex_intersection_compat.hpp"
+#include "strict_convex_validation.hpp"
+
 namespace {
 
 constexpr bool native_feature_supported(int32_t feature) noexcept
@@ -3323,6 +3328,173 @@ opencv_geometry_intersect_convex_convex_f32(
         copy_points_f32(intersection, out_vertices);
         *out_count = static_cast<int32_t>(intersection.size());
         *out_area = area;
+        return OPENCV_GEOMETRY_OK;
+    } catch (...) {
+        *out_count = 0;
+        *out_area = 0.0f;
+        return translate_current_exception();
+    }
+}
+
+// Records "<what> <side> polygon: <reason>" and returns the invalid-argument
+// status. The reason comes from the strict validator.
+static opencv_geometry_status extended_polygon_rejected(
+    const char *side,
+    opencv_geometry_compat::strict_convex_verdict verdict) noexcept
+{
+    char message[error_message_capacity];
+    std::snprintf(
+        message,
+        sizeof message,
+        "extended convex intersection %s polygon: %s",
+        side,
+        opencv_geometry_compat::strict_convex_message(verdict));
+    return invalid_argument(message);
+}
+
+opencv_geometry_status
+opencv_geometry_intersect_convex_convex_extended_f32(
+    const opencv_geometry_point_f32 *left_points,
+    int32_t left_count,
+    const opencv_geometry_point_f32 *right_points,
+    int32_t right_count,
+    int32_t handle_nested,
+    opencv_geometry_point_f32 *out_vertices,
+    int32_t out_capacity,
+    int32_t *out_count,
+    float *out_area)
+{
+    clear_error();
+    if (out_count == nullptr) {
+        return invalid_argument(
+            "null extended convex intersection output count pointer");
+    }
+    *out_count = 0;
+    if (out_area == nullptr) {
+        return invalid_argument(
+            "null extended convex intersection output area pointer");
+    }
+    *out_area = 0.0f;
+    if (left_count < 0 || right_count < 0) {
+        return invalid_argument(
+            "extended convex intersection point count must not be negative");
+    }
+    // ABI safety: a polygon needs at least three vertices, and the strict
+    // validator below indexes every vertex of each polygon.
+    if (left_count < 3 || right_count < 3) {
+        return invalid_argument(
+            "extended convex intersection requires at least three vertices "
+            "per polygon");
+    }
+    if (left_points == nullptr) {
+        return invalid_argument("null left polygon points with positive count");
+    }
+    if (right_points == nullptr) {
+        return invalid_argument(
+            "null right polygon points with positive count");
+    }
+    if (handle_nested != 0 && handle_nested != 1) {
+        return invalid_argument(
+            "extended convex intersection nested selector must be zero or "
+            "one");
+    }
+    if (out_capacity < 0) {
+        return invalid_argument(
+            "extended convex intersection output capacity must not be "
+            "negative");
+    }
+    // ABI safety: a positive capacity with a null buffer would be written
+    // if the intersection has vertices.
+    if (out_capacity > 0 && out_vertices == nullptr) {
+        return invalid_argument(
+            "null extended convex intersection output vertices with positive "
+            "capacity");
+    }
+    // ABI safety: the validator is quadratic in the vertex count, so the
+    // count is bounded before any work. Two bounded counts also cannot
+    // overflow the compatibility engine's arithmetic.
+    if (left_count > opencv_geometry_compat::strict_convex_max_vertices
+        || right_count > opencv_geometry_compat::strict_convex_max_vertices) {
+        return invalid_argument(
+            "extended convex intersection polygon has more than 4096 "
+            "vertices");
+    }
+
+    try {
+        const std::vector<cv::Point2f> left =
+            points_from_f32(left_points, left_count);
+        const std::vector<cv::Point2f> right =
+            points_from_f32(right_points, right_count);
+        // Strict convexity, finiteness and the 2**30 envelope are enforced
+        // here, for every caller of the C ABI, before the engine runs.
+        using verdict_t = opencv_geometry_compat::strict_convex_verdict;
+        const verdict_t left_verdict =
+            opencv_geometry_compat::validate_strictly_convex_f32(
+                left.data(), left_count);
+        if (left_verdict != verdict_t::ok) {
+            return extended_polygon_rejected("left", left_verdict);
+        }
+        const verdict_t right_verdict =
+            opencv_geometry_compat::validate_strictly_convex_f32(
+                right.data(), right_count);
+        if (right_verdict != verdict_t::ok) {
+            return extended_polygon_rejected("right", right_verdict);
+        }
+
+        // The hardened compatibility engine runs on every OpenCV version;
+        // the native intersectConvexConvex is never called here.
+        const opencv_geometry_compat::convex_intersection_result computed =
+            opencv_geometry_compat::intersect_convex_convex_f32(
+                left, right, handle_nested != 0);
+        using status_t = opencv_geometry_compat::convex_intersection_status;
+        if (computed.status == status_t::non_convergence) {
+            return invalid_argument(
+                "extended convex intersection did not converge");
+        }
+        if (computed.status == status_t::numeric_failure) {
+            return invalid_argument(
+                "extended convex intersection hit a non-representable "
+                "intermediate value");
+        }
+        if (computed.status != status_t::ok) {
+            return invalid_argument(
+                "extended convex intersection rejected its input or "
+                "violated an internal bound");
+        }
+
+        // Check the whole result before publishing any of it.
+        if (computed.vertices.size()
+            > static_cast<std::size_t>(left_count)
+                + static_cast<std::size_t>(right_count)) {
+            return invalid_argument(
+                "extended convex intersection produced more vertices than "
+                "the input allows");
+        }
+        if (!std::isfinite(computed.area) || computed.area < 0.0f) {
+            return invalid_argument(
+                "extended convex intersection area is not a finite "
+                "nonnegative value");
+        }
+        for (const cv::Point2f &point : computed.vertices) {
+            if (!std::isfinite(point.x) || !std::isfinite(point.y)
+                || is_convex_intersection_sentinel(point)) {
+                return invalid_argument(
+                    "extended convex intersection produced a non-finite or "
+                    "sentinel vertex");
+            }
+        }
+        // ABI safety: copying more vertices than capacity would overflow the
+        // caller-provided buffer. The count fits int32_t because it is at
+        // most left_count + right_count <= 8192.
+        if (computed.vertices.size()
+            > static_cast<std::size_t>(out_capacity)) {
+            return invalid_argument(
+                "extended convex intersection output capacity is "
+                "insufficient");
+        }
+        copy_points_f32(computed.vertices, out_vertices);
+        *out_count = static_cast<int32_t>(computed.vertices.size());
+        *out_area = computed.area;
         return OPENCV_GEOMETRY_OK;
     } catch (...) {
         *out_count = 0;

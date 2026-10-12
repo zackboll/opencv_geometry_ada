@@ -559,6 +559,41 @@ package OpenCV.Geometry is
      (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection;
 
+   --  Opt-in extension of the Float32 intersection to ordinary fractional
+   --  polygons such as coordinates near 0.1, which the overload above
+   --  rejects. It never calls OpenCV's intersectConvexConvex: on every
+   --  supported OpenCV release it runs this project's private hardened copy
+   --  of the bounded OpenCV 4.11 algorithm (with the 4.12 binary64 segment
+   --  expressions), so its behavior does not depend on the OpenCV version.
+   --  The existing overloads are unchanged.
+   --
+   --  Accepted input, for each of Left and Right (either winding, any lower
+   --  bound): 3 .. 4096 vertices; every coordinate finite with magnitude at
+   --  most 2.0**30; strictly convex and traversed once, meaning that every
+   --  other vertex lies provably strictly on one side of the line through
+   --  each edge, by an orientation above 1.0E-4 (ten times OpenCV's absolute
+   --  1.0E-5 orientation tolerance). Duplicate vertices, redundant collinear
+   --  vertices, concave polygons, bowties, stars, repeated traversals, and
+   --  polygons with features below that conditioning limit raise
+   --  OpenCV_Error. The conditioning limit is a policy, not a proof that
+   --  every accepted pair converges: an intersection that does not
+   --  converge, or that needs a value Float32 cannot represent, also raises
+   --  OpenCV_Error and returns no partial result. The result is not an exact
+   --  intersection for ill-conditioned polygons.
+   --
+   --  Nesting, contact and Handle_Nested follow the overload above. The
+   --  result has at most Left'Length + Right'Length vertices, in the order
+   --  the private implementation produces (not normalized, sorted or
+   --  deduplicated), without OpenCV's internal sentinel, with Area finite
+   --  and nonnegative. Polygons that only touch can give one, two or three
+   --  vertices and Area 0.0; those vertices are contact points and need not
+   --  form a polygon. An empty result has no vertices and Area 0.0.
+   --  Left and Right are unchanged. Strict convexity is checked by the C++
+   --  layer, so direct C ABI callers cannot bypass it.
+   function Intersect_Convex_Polygons_Extended_Float32
+     (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection;
+
    --  OpenCV's rotated-rectangle intersection classification:
    --  INTERSECT_NONE, INTERSECT_PARTIAL, and INTERSECT_FULL. OpenCV documents
    --  INTERSECT_FULL as one rectangle lying wholly within the other.

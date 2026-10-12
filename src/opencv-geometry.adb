@@ -3374,4 +3374,84 @@ package body OpenCV.Geometry is
          return To_Public_Intersection (Output, Count, Area);
       end;
    end Intersect_Convex_Polygons;
+
+   --  Raises OpenCV_Error unless every coordinate of Points is finite and of
+   --  magnitude at most 2.0**30, the envelope that keeps the cvRound inputs
+   --  of OpenCV's pointPolygonTest in range.
+   procedure Validate_Extended_Envelope
+     (Points : Float32_Point_Array; Operation : String)
+   is
+      --  Points may hold NaN or infinities; inspect them without an Ada
+      --  validity failure.
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float32_Value;
+      Limit : constant OpenCV.Float32_Value := 2.0**30;
+   begin
+      for Point of Points loop
+         if not Is_Finite_Public_Float32 (Point.X)
+           or else not Is_Finite_Public_Float32 (Point.Y)
+         then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               Operation & " requires finite point coordinates");
+         end if;
+         if abs Point.X > Limit or else abs Point.Y > Limit then
+            Ada.Exceptions.Raise_Exception
+              (OpenCV.OpenCV_Error'Identity,
+               Operation
+               & " requires coordinates of magnitude at most 2.0**30");
+         end if;
+      end loop;
+   end Validate_Extended_Envelope;
+
+   function Intersect_Convex_Polygons_Extended_Float32
+     (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
+      return Convex_Polygon_Intersection
+   is
+      Operation : constant String :=
+        "Intersect_Convex_Polygons_Extended_Float32";
+   begin
+      if Left'Length < 3 or else Right'Length < 3 then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation
+            & " requires Left and Right to have at least three vertices");
+      end if;
+
+      Validate_Intersection_Counts (Left'Length, Right'Length);
+      Validate_Extended_Envelope (Left, Operation);
+      Validate_Extended_Envelope (Right, Operation);
+      --  Strict convexity and the vertex limit are validated by the C++
+      --  layer, which cannot be bypassed by direct C ABI callers.
+      declare
+         --  To_Public_Intersection inspects the raw native area and
+         --  vertices.
+         pragma Suppress (Validity_Check);
+         Packed_Left  : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Left);
+         Packed_Right : aliased constant Internal.C_API.Point_F32_Array :=
+           Pack_Float32_Points (Right);
+         Output       : aliased Internal.C_API.Point_F32_Array :=
+           Output_Buffer
+             (Internal.Intersection.Output_Capacity
+                (Left'Length, Right'Length));
+         Count        : aliased Interfaces.Integer_32 := 0;
+         Area         : aliased Interfaces.C.C_float := 0.0;
+         Status       : Internal.C_API.Status;
+      begin
+         Status :=
+           Internal.C_API.Intersect_Convex_Convex_Extended_F32
+             (First_Point (Packed_Left),
+              Point_Count (Packed_Left),
+              First_Point (Packed_Right),
+              Point_Count (Packed_Right),
+              To_C_Boolean (Handle_Nested),
+              First_Output (Output),
+              Point_Count (Output),
+              Count'Access,
+              Area'Access);
+         Raise_On_Error (Status, Operation);
+         return To_Public_Intersection (Output, Count, Area);
+      end;
+   end Intersect_Convex_Polygons_Extended_Float32;
 end OpenCV.Geometry;
