@@ -1,0 +1,62 @@
+compile 4.13.0
+runtime 4.13.0
+object install-asan-4.13.0/lib/libopencv_imgproc.so.413
+runtime_object install-asan-4.13.0/lib/libopencv_core.so.413
+input 4
+  x=0x00000000 y=0x00000000  (0, 0)
+  x=0x3f800000 y=0x00000000  (1, 0)
+  x=0x3f800000 y=0x3f800000  (1, 1)
+  x=0x00000000 y=0x3f800000  (0, 1)
+=================================================================
+==1202663==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x508000000088 at pc 0x7faf76e0a313 bp 0x7ffc47c367b0 sp 0x7ffc47c367a8
+READ of size 8 at 0x508000000088 thread T0
+    #0 0x7faf76e0a312 in std::vector<minEnclosingConvexPolygon::Segment, std::allocator<minEnclosingConvexPolygon::Segment> >::operator[](unsigned long) /usr/include/c++/14/bits/stl_vector.h:1131
+    #1 0x7faf76e0a312 in minEnclosingConvexPolygon::Chains::findKSides(int, int, int) <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_convex_polygon.cpp:919
+    #2 0x7faf76e110a5 in findMinAreaPolygon <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_convex_polygon.cpp:999
+    #3 0x7faf76e110a5 in cv::minEnclosingConvexPolygon(cv::_InputArray const&, cv::_OutputArray const&, int) <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_convex_polygon.cpp:1051
+    #4 0x55f9375d9a76 in run <repo>/tests/native/research/upstream_reproducers/repro_d_min_enclosing_convex_polygon.cpp:152
+    #5 0x55f9375d9a76 in main <repo>/tests/native/research/upstream_reproducers/repro_d_min_enclosing_convex_polygon.cpp:171
+    #6 0x7faf6de35ca7 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7faf6de35d64 in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x55f9375d8330 in _start (<work>/p-asan-4.13.0/repro_d+0x9330) (BuildId: 75307c59f40a904ed29d3a717e09bb81e9425bb6)
+
+0x508000000088 is located 8 bytes after 96-byte region [0x508000000020,0x508000000080)
+allocated by thread T0 here:
+    #0 0x7faf7bcf5778 in operator new(unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:95
+    #1 0x7faf70e8fab6 in getTlsStorage <src>/opencv-4.13.0/modules/core/src/system.cpp:1889
+    #2 0x7faf70ecb9a1 in getTraceManagerCallOnce <src>/opencv-4.13.0/modules/core/src/trace.cpp:917
+    #3 0x7faf70ecb9a1 in cv::utils::trace::details::getTraceManager() <src>/opencv-4.13.0/modules/core/src/trace.cpp:922
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow /usr/include/c++/14/bits/stl_vector.h:1131 in std::vector<minEnclosingConvexPolygon::Segment, std::allocator<minEnclosingConvexPolygon::Segment> >::operator[](unsigned long)
+Shadow bytes around the buggy address:
+  0x507ffffffe00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x507ffffffe80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x507fffffff00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x507fffffff80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x508000000000: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x508000000080: fa[fa]fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+  0x508000000100: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd
+  0x508000000180: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+  0x508000000200: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+  0x508000000280: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+  0x508000000300: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==1202663==ABORTING

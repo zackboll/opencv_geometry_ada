@@ -1,0 +1,34 @@
+compile 4.13.0
+runtime 4.13.0
+object install-asan-4.13.0/lib/libopencv_imgproc.so.413
+runtime_object install-asan-4.13.0/lib/libopencv_core.so.413
+input 2
+  x=0x00000000 y=0x00000000  (0, 0)
+  x=0x80000000 y=0x00000000  (-0, 0)
+<src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:427:38: runtime error: division by zero
+    #0 0x7ffbb841b481 in returnMinimumAreaEnclosingTriangle <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:427
+    #1 0x7ffbb841b481 in findMinEnclosingTriangle <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:344
+    #2 0x7ffbb841b481 in findMinEnclosingTriangle <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:324
+    #3 0x7ffbb841c062 in cv::minEnclosingTriangle(cv::_InputArray const&, cv::_OutputArray const&) <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:301
+    #4 0x55d4b43a943a in run <repo>/tests/native/research/upstream_reproducers/repro_a_min_enclosing_triangle_signed_zero.cpp:101
+    #5 0x55d4b43a943a in main <repo>/tests/native/research/upstream_reproducers/repro_a_min_enclosing_triangle_signed_zero.cpp:118
+    #6 0x7ffbaf435ca7 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7ffbaf435d64 in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x55d4b43a8300 in _start (<work>/p-asan-4.13.0/repro_a+0x9300) (BuildId: 27517f09eda4d9971c07390e945688b1e600e8a0)
+
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==1295442==ERROR: AddressSanitizer: FPE on unknown address 0x7ffbb841b58b (pc 0x7ffbb841b58b bp 0x7ffcc7e2ca80 sp 0x7ffcc7e2c3d0 T0)
+    #0 0x7ffbb841b58b in returnMinimumAreaEnclosingTriangle <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:427
+    #1 0x7ffbb841b58b in findMinEnclosingTriangle <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:344
+    #2 0x7ffbb841b58b in findMinEnclosingTriangle <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:324
+    #3 0x7ffbb841c062 in cv::minEnclosingTriangle(cv::_InputArray const&, cv::_OutputArray const&) <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:301
+    #4 0x55d4b43a943a in run <repo>/tests/native/research/upstream_reproducers/repro_a_min_enclosing_triangle_signed_zero.cpp:101
+    #5 0x55d4b43a943a in main <repo>/tests/native/research/upstream_reproducers/repro_a_min_enclosing_triangle_signed_zero.cpp:118
+    #6 0x7ffbaf435ca7 in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+    #7 0x7ffbaf435d64 in __libc_start_main_impl ../csu/libc-start.c:360
+    #8 0x55d4b43a8300 in _start (<work>/p-asan-4.13.0/repro_a+0x9300) (BuildId: 27517f09eda4d9971c07390e945688b1e600e8a0)
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: FPE <src>/opencv-4.13.0/modules/imgproc/src/min_enclosing_triangle.cpp:427 in returnMinimumAreaEnclosingTriangle
+==1295442==ABORTING
