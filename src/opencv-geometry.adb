@@ -3404,6 +3404,8 @@ package body OpenCV.Geometry is
       end loop;
    end Validate_Extended_Envelope;
 
+   Maximum_Extended_Vertices : constant := 4096;
+
    function Intersect_Convex_Polygons_Extended_Float32
      (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection
@@ -3416,6 +3418,16 @@ package body OpenCV.Geometry is
            (OpenCV.OpenCV_Error'Identity,
             Operation
             & " requires Left and Right to have at least three vertices");
+      end if;
+
+      --  Preflight before any scan, packing or allocation. The C++ layer
+      --  repeats this limit independently.
+      if Left'Length > Maximum_Extended_Vertices
+        or else Right'Length > Maximum_Extended_Vertices
+      then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            Operation & " allows at most 4096 vertices per polygon");
       end if;
 
       Validate_Intersection_Counts (Left'Length, Right'Length);

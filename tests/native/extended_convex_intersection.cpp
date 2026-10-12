@@ -175,12 +175,31 @@ void arguments()
 {
     const std::vector<point> unit = box(0.0f, 0.0f, 1.0f);
     int32_t count = 7;
-    float area = 7.0f;
+    float area = 99.0f;
     std::vector<point> out(8);
     check(opencv_geometry_intersect_convex_convex_extended_f32(
               unit.data(), 4, unit.data(), 4, 1, out.data(), 8, nullptr,
-              &area) == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT,
-          "null count pointer");
+              &area) == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+              && area == 0.0f && message_has("output count"),
+          "null count pointer resets the area");
+    area = 7.0f;
+    {
+        // Ordinary validation failure and success leave both outputs right.
+        count = 5;
+        area = 5.0f;
+        check(run(unit, {{0, 0}, {1, 0}, {2, 0}, {1, 1}}, 1, 8, &count,
+                  &area) == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT
+                  && count == 0 && area == 0.0f,
+              "validation failure zeroes both outputs");
+        count = 5;
+        area = 5.0f;
+        check(run(unit, box(0.5f, 0.25f, 1.0f), 1, 8, &count, &area)
+                  == OPENCV_GEOMETRY_OK && count == 4
+                  && std::fabs(area - 0.375f) < 1e-6f,
+              "success publishes count 4 and area 0.375");
+        count = 7;
+        area = 7.0f;
+    }
     check(opencv_geometry_intersect_convex_convex_extended_f32(
               unit.data(), 4, unit.data(), 4, 1, out.data(), 8, &count,
               nullptr) == OPENCV_GEOMETRY_ERROR_INVALID_ARGUMENT

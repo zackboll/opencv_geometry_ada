@@ -3365,16 +3365,21 @@ opencv_geometry_intersect_convex_convex_extended_f32(
     float *out_area)
 {
     clear_error();
+    // Reset every writable output before rejecting a missing one.
+    if (out_count != nullptr) {
+        *out_count = 0;
+    }
+    if (out_area != nullptr) {
+        *out_area = 0.0f;
+    }
     if (out_count == nullptr) {
         return invalid_argument(
             "null extended convex intersection output count pointer");
     }
-    *out_count = 0;
     if (out_area == nullptr) {
         return invalid_argument(
             "null extended convex intersection output area pointer");
     }
-    *out_area = 0.0f;
     if (left_count < 0 || right_count < 0) {
         return invalid_argument(
             "extended convex intersection point count must not be negative");

@@ -562,14 +562,17 @@ package OpenCV.Geometry is
    --  Opt-in extension of the Float32 intersection to ordinary fractional
    --  polygons such as coordinates near 0.1, which the overload above
    --  rejects. It never calls OpenCV's intersectConvexConvex: on every
-   --  supported OpenCV release it runs this project's private hardened copy
-   --  of the bounded OpenCV 4.11 algorithm (with the 4.12 binary64 segment
-   --  expressions), so its behavior does not depend on the OpenCV version.
-   --  The existing overloads are unchanged.
+   --  supported OpenCV release it runs the same private hardened copy of the
+   --  bounded OpenCV 4.11 algorithm (with the 4.12 binary64 segment
+   --  expressions). Its nested-polygon path still calls the installed
+   --  OpenCV's pointPolygonTest and contourArea, so identical results on
+   --  every release are not yet claimed: cross-version numerical
+   --  qualification is pending. The existing overloads are unchanged.
    --
    --  Accepted input, for each of Left and Right (either winding, any lower
-   --  bound): 3 .. 4096 vertices; every coordinate finite with magnitude at
-   --  most 2.0**30; strictly convex and traversed once, meaning that every
+   --  bound): 3 .. 4096 vertices (more is rejected before any allocation);
+   --  every coordinate finite with magnitude at most 2.0**30; strictly
+   --  convex and traversed once, meaning that every
    --  other vertex lies provably strictly on one side of the line through
    --  each edge, by an orientation above 1.0E-4 (ten times OpenCV's absolute
    --  1.0E-5 orientation tolerance). Duplicate vertices, redundant collinear

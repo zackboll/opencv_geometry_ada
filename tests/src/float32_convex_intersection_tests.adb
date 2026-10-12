@@ -1139,6 +1139,42 @@ package body Float32_Convex_Intersection_Tests is
       AUnit.Assertions.Assert
         (Ext_Rejects (Many, Good) and then Ext_Rejects (Good, Many),
          "more than 4096 vertices must be rejected");
+      --  The Ada preflight runs before the coordinate scan: a NaN in the
+      --  oversized polygon must still produce the vertex-limit diagnostic,
+      --  not the finiteness one, and the C ABI message must not appear.
+      declare
+         pragma Suppress (Validity_Check);
+         Bad : Points := Many;
+      begin
+         Bad (Bad'First).X := Support.NaN_32;
+         for Side in Boolean loop
+            begin
+               declare
+                  Unused : constant Intersection :=
+                    (if Side
+                     then Extended (Bad, Good)
+                     else Extended (Good, Bad));
+                  pragma Unreferenced (Unused);
+               begin
+                  AUnit.Assertions.Assert (False, "4097 vertices accepted");
+               end;
+            exception
+               when Error : OpenCV.OpenCV_Error =>
+                  declare
+                     Text : constant String :=
+                       Ada.Exceptions.Exception_Message (Error);
+                  begin
+                     AUnit.Assertions.Assert
+                       (Ada.Strings.Fixed.Index
+                          (Text, "allows at most 4096 vertices per polygon")
+                        /= 0
+                        and then Ada.Strings.Fixed.Index (Text, "finite") = 0,
+                        "the Ada preflight must report the 4096 maximum: "
+                        & Text);
+                  end;
+            end;
+         end loop;
+      end;
    end Ext_Count_Rejection;
 
    --  Raw C ABI of opencv_geometry_intersect_convex_convex_extended_f32.
@@ -1208,8 +1244,9 @@ package body Float32_Convex_Intersection_Tests is
       AUnit.Assertions.Assert
         (Status = C_API.Error_Invalid_Argument
          and then Has_Message ("output count")
+         and then Area = 0.0
          and then Untouched,
-         "a null output count pointer must be rejected");
+         "a null output count pointer must be rejected, area reset");
       Reset;
       Status :=
         C_API.Intersect_Convex_Convex_Extended_F32

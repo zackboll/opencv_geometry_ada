@@ -528,6 +528,15 @@ and `..._f32` (checked with grep), not in the extended export. The native
 calls the engine can reach are `cv::pointPolygonTest` and `cv::contourArea`
 on its nested-polygon path, with inputs inside the 2**30 envelope.
 
+The implementation is the same on every version, but results are **not**
+claimed to be identical across versions: the nested path uses the installed
+OpenCV's functions, and cross-version numerical qualification is pending
+(Task 027C).
+
+Task 027B-R1 corrections: the export now zeroes each non-null output before
+rejecting a missing one, and the Ada function rejects more than 4096
+vertices per polygon before scanning, packing or allocating.
+
 ### Strict convexity validation
 
 Written for this project; no upstream code. For each directed edge
