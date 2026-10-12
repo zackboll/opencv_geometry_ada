@@ -739,8 +739,10 @@ which it restores the release profile. The 5.0.0 cells also load
 All cells: Geometry `0ec378f1…`, `config_ok=1`, `loaded_ok=1` (all libraries
 from the selected prefix), release `542/542` with 0 failed assertions and 0
 unexpected errors (exit 0), validation `542/542`, 0 and 0 (exit 0), native
-tests exit 0 with 3 programs passing and 0 AddressSanitizer or UBSan reports,
-0 `CONSTRAINT_ERROR` lines.
+tests exit 0 with 0 AddressSanitizer or UBSan reports, 0 `CONSTRAINT_ERROR`
+lines. Correction (Task 027C2): the CSV's `native_pass=3` counted lines
+beginning `PASS`, not successful programs. All four native programs ran in
+every cell; see [Task 027C2](#task-027c2--runner-correction-and-final-certification).
 
 | OpenCV \ Core | 0.3.0 | 0.4.1 |
 |---|---|---|
@@ -887,3 +889,106 @@ Windows MSYS2 execution (only on `main` pushes or manual dispatch); README,
 release notes and the PR; and the evidence limits above (the unrecovered
 62/61 fixture and the untested non-convergence mapping). The hosted workflow
 must also pass on the exact commit that carries this document.
+
+## Task 027C2 — runner correction and final certification
+
+### Runner failure detection
+
+Review found that `step()` in the Task 027C1 runner recorded each exit status
+and then always returned 0. A failed pin, build or test run could therefore
+still produce a row and a zero exit. The 14 historical cells were not
+affected: every cell's `summary.txt` shows `rc=0` for every step, the totals
+in the CSV were parsed from the logs, and every driver invocation exited 0.
+The runner was still unsafe as a gate.
+
+The corrected `scripts/run_linux_matrix_027c1.sh`:
+
+- Every required stage is fatal. That covers clone and checkout, the Geometry
+  and Core SHAs, pkg-config resolving the requested version, the native
+  program inventory, pin, both dependency solves, Core SHA inside Alire, the
+  build, the generated configuration, release tests and their totals,
+  library identity, each native program, the validation build, the validation
+  tests and their totals, `CONSTRAINT_ERROR` lines, sanitizer reports, and
+  profile restoration.
+- Totals must all be present and numeric. `Total Tests Run` and
+  `Successful Tests` must both equal the expected count, and failures and
+  errors must both be 0.
+- A failure logs `FAIL [stage]`, appends a `FAIL` row naming the stage, keeps
+  that stage's log and exits 1. A failed restoration of the release profile
+  is reported and recorded in the row.
+- The sanitizer scan treats grep's zero-match status as zero findings and
+  fails only on a match or an unreadable log.
+- Each run uses a fresh timestamped directory under `/var/tmp/geometry-027c2`
+  and writes `results-v2.csv`, so Task 027C1 logs and results are never
+  overwritten.
+
+### Native test counting
+
+The four programs are `closest_ellipse_equivalence`,
+`extended_convex_intersection`, `subdiv2d_fault_injection` and
+`subdiv2d_float32_equivalence`. The old runner counted output lines beginning
+`PASS`. `closest_ellipse_equivalence` prints `... ABI checks passed` instead,
+so the count was 3. The corrected runner checks that `tests/native/*.cpp` is
+exactly this set. It then builds and runs each program separately, with the
+same flags as `scripts/run_native_tests.sh`, and records `native_run` and
+`native_pass` from exit statuses. Every cell's historical `native.log` shows
+four `Running` lines, and `run_native_tests.sh` (`set -eu`) exited 0. So all
+four programs ran and succeeded in all 14 cells. The historical CSV is kept
+unchanged as the record of that run.
+
+### Runner validation
+
+`scripts/test_run_linux_matrix_027c1.sh --end-to-end` passes 30 of 30 checks
+in a temporary directory. It covers:
+
+- a successful and a failing command;
+- missing, empty, truncated and malformed AUnit logs;
+- a failed assertion, an unexpected error, and 541 tests run where 542 are
+  expected;
+- a configuration from another prefix, another version, and with the
+  OpenCV 4 module on OpenCV 5;
+- Core loaded from outside the prefix, a missing backend library, and no
+  OpenCV library loaded;
+- zero sanitizer findings (passes), an ASan report, a UBSan report, and an
+  unreadable sanitizer log;
+- a missing and an unexpected native program;
+- end to end, an unreachable Core repository (`FAIL,clone_core`, exit 1) and
+  OpenCV 4.6.0 requested with the 4.14.0 prefix (`FAIL,pkg_config`, exit 1).
+
+A real 4.6.0/Core 0.3.0 cell run with `EXPECTED_TESTS=543` also failed
+closed (`FAIL,tests_release_totals`, exit 1).
+
+Two real cells were rerun with the corrected runner on the same qualified
+source `0ec378f1…`:
+
+| OpenCV / Core | Status | Release | Validation | Native run/pass | Sanitizer | Libraries loaded from |
+|---|---|---|---|---|---|---|
+| 4.6.0 / 0.3.0 (`0e2753be…`) | PASS | 542/542, 0, 0 | 542/542, 0, 0 | 4/4 | 0 | `install-4.6.0` (core, imgproc) |
+| 5.0.0 / 0.4.1 (`386c5360…`) | PASS | 542/542, 0, 0 | 542/542, 0, 0 | 4/4 | 0 | `install-5.0.0` (core, geometry, flann) |
+
+These match the historical rows. The other 12 cells were not rerun because
+the production source is unchanged.
+
+### Source identity
+
+Compared with `0ec378f1…`, nothing has changed in `cpp/`, `src/`,
+`tests/src/`, `tests/native/*.cpp`, either `alire.toml`, the GPR files,
+`config/` or `.github/`. Task 027C1 and 027C2 changed only documentation,
+qualification scripts and research programs. The Linux matrix, the
+cross-version comparison and the GNATprove result therefore all apply to the
+source being submitted.
+
+### Evidence limits carried forward
+
+- `ORIGINAL_62_61_FIXTURE_UNRECOVERED`. The rounded-hexagon regression
+  remains.
+- The production non-convergence and numeric-failure mappings exist in source
+  and return an error without publishing outputs. Bounded campaigns found no
+  accepted input that reaches them, so they are not dynamically exercised.
+- The 4096-vertex limit and the O(n**2) validator are unchanged.
+- The Ada specification comment still says cross-version qualification is
+  "pending". It was left as is so that the production source stays identical
+  to the qualified commit. This document and the README are current.
+- Windows certifies OpenCV 5 with Core 0.4.1 only. Windows with Core 0.3.0
+  was not tested. The Windows and hosted-CI runs for the submitted head are
+  recorded in the pull request.
