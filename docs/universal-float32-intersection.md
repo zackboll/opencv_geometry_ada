@@ -675,3 +675,215 @@ No SPARK-mode code was added or changed, and the reused helpers
 5. Whether to relax the 4096 vertex limit with an O(N log N) validator.
 6. Native-versus-compat dispatch is deliberately not done.
 7. README, release notes and the PR.
+
+## Task 027C1 — Linux Exact-Tag Qualification
+
+Result: **Linux matrix qualified on Geometry source
+`0ec378f1a8927029b103cd1775c49575965649f1`.** Windows, macOS beyond hosted CI,
+and the documentation gate remain (Task 027C2). Every number below comes from
+a program that ran in this task. Logs are outside the repository
+(`/var/tmp/geometry-027c1/logs`); the matrix is `qualification-027c1-matrix.csv`.
+
+### Identity
+
+Geometry source for every cell: `0ec378f1a8927029b103cd1775c49575965649f1`
+(a fresh `git clone -s` plus `checkout` of that SHA in each cell; the SHA was
+asserted before building). Core 0.3.0 is
+`0e2753be8ea05fc972ec452c32b975f9e9b3912f` and Core 0.4.1 is
+`386c5360ac51f2b62e522853d94290aec4ee14a0`, selected with
+`alr pin opencv_core --use=../core` as in the CI workflow, and verified by the
+tests crate's `OPENCV_CORE_ALIRE_PREFIX` checkout SHA in every cell.
+Toolchain: alr 2.1.1, g++ Debian 14.2.0-19, GNAT FSF 16.1.0 (gnatprove FSF
+16.1.0, Why3 1.8.2+git).
+
+| OpenCV | Prefix | Source identity |
+|---|---|---|
+| 4.6.0 | `/var/tmp/geometry-027c1/install-4.6.0` (built in this task) | tarball sha256 `1ec1cba6…2239277`, embedded commit `b0dc4741…`, equal to the peeled `4.6.0` tag on github.com/opencv/opencv |
+| 4.10.0 | `/var/tmp/geometry-026/install-rel-4.10.0` | sha256 `b2171af5…`, commit `71d3237a093b` |
+| 4.11.0 | `/var/tmp/geometry-026/install-4.11.0` | sha256 `9a7c11f9…`, commit `31b0eeea0b44` |
+| 4.12.0 | `/var/tmp/geometry-026/install-4.12.0` | sha256 `44c106d5…`, commit `49486f61fb25` |
+| 4.13.0 | `/var/tmp/geometry-026/install-4.13.0` | sha256 `1d40ca01…`, commit `fe38fc608f6a` |
+| 4.14.0 | `/var/tmp/geometry-026/install-4.14.0` | sha256 `ee8fb9b3…`, commit `0654a42e1921` |
+| 5.0.0 | `/var/tmp/geometry-026/install-5.0.0` | sha256 `b0528f5a…`, commit `40738fb16ced` |
+
+The Task 026 prefixes were reused, not rebuilt. Their tarball hashes and
+embedded commits are as recorded on disk; I did not re-verify them against
+github. `prefix-4.6.0` under Task 026 holds only copied system headers and was
+not used. All prefixes are Release, shared, `BUILD_LIST=core,imgproc`
+(`core,imgproc,geometry` modules as built for 5.0.0), IPP off.
+
+**OpenCV 4.6.0 build:** configured with the same options as the Task 026
+builds (Ninja, Release, shared, core and imgproc only, tests, examples, docs
+and apps off), built with 16 jobs, installed to its own prefix. No OpenCV
+source was patched and no toolchain workaround was needed. Smoke result: the
+4.6.0 headers define 4.6.0; `libopencv_imgproc.so.4.6.0` resolves
+`libopencv_core.so.406` in the same prefix; the runtime version string is
+4.6.0.
+
+### Matrix procedure and cell checks
+
+`scripts/run_linux_matrix_027c1.sh <opencv> <core>` runs one cell in a fresh
+directory with `PKG_CONFIG_LIBDIR` set to the exact prefix, `PKG_CONFIG_PATH`
+unset and `LD_LIBRARY_PATH` set to the prefix library directory. It checks,
+per cell: both SHAs; the generated `config/opencv_geometry_install.gpr`
+(version, `-L` prefix, and `-lopencv_imgproc` for 4.x or `-lopencv_geometry`
+for 5.x); the shared libraries the test program actually loads
+(`LD_DEBUG=libs`, resolved with `realpath`, all required to be inside the
+prefix, with Core and the backend module present); the release-profile suite;
+`scripts/run_native_tests.sh`; and last the validation-profile suite, after
+which it restores the release profile. The 5.0.0 cells also load
+`libopencv_flann.so.5.0.0` from the same prefix.
+
+### Matrix: 14 of 14 cells
+
+All cells: Geometry `0ec378f1…`, `config_ok=1`, `loaded_ok=1` (all libraries
+from the selected prefix), release `542/542` with 0 failed assertions and 0
+unexpected errors (exit 0), validation `542/542`, 0 and 0 (exit 0), native
+tests exit 0 with 3 programs passing and 0 AddressSanitizer or UBSan reports,
+0 `CONSTRAINT_ERROR` lines.
+
+| OpenCV \ Core | 0.3.0 | 0.4.1 |
+|---|---|---|
+| 4.6.0 | pass | pass |
+| 4.10.0 | pass | pass |
+| 4.11.0 | pass | pass |
+| 4.12.0 | pass | pass |
+| 4.13.0 | pass | pass |
+| 4.14.0 | pass | pass |
+| 5.0.0 | pass | pass |
+
+The native suite built here is the one in `scripts/run_native_tests.sh`
+(closest-ellipse equivalence, Subdiv2D fault injection and equivalence, and
+the extended raw C ABI program), compiled with ASan and UBSan against the
+cell's own prefix. The sanitizer instrumentation covers the shim and the
+private headers; the OpenCV libraries of these cells are ordinary release
+builds, apart from the separate ASan/UBSan 4.10.0 library below. No failing
+cell occurred, so no comparison with `main` was needed. The independent Core
+0.4.1 consumer step of the hosted workflow (`tests/compatibility`) was not
+part of this local runner.
+
+
+### Cross-version numerical comparison
+
+`tests/native/research/extended_cross_version_compare.cpp` includes the shim
+source and runs 84 inputs, each with `Handle_Nested` true and false (168
+lines), through the **production export** against each exact-tag prefix. It
+prints the status, count, area bits, every vertex as binary32 hex in result
+order, whether the engine reached its nested path, and the area of an
+independent binary64 Sutherland-Hodgman clip. Identity lines record the
+compile version, the runtime version and the shared object providing
+`getVersionString`, `pointPolygonTest` and `contourArea`; each was the prefix's
+`libopencv_core` or `libopencv_imgproc` (`libopencv_geometry` for 5.0.0) of
+the same version. The native `intersectConvexConvex` is never called.
+
+Corpus: fractional triangles in both orders, triangles near 0.1, a fractional
+square overlap, all four winding combinations, nested polygons with the outer
+first, inner first and reversed, both nested selectors, disjoint, shared edge
+(full and partial), single-vertex contact, the recovered rounded hexagons in
+both orders, a thin 100 by 0.01 polygon, a polygon near 5e8, a polygon whose
+maximum coordinate is exactly 2**30, 24 n-gon pairs (3 to 33 vertices) and
+40 pairs with crossing boundaries.
+
+Findings:
+
+- **Exact match across all seven versions.** The 168 result lines (status,
+  count, area bits, vertex bits and order, nested-path flag, reference) are
+  byte-identical for 4.6.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0 and 5.0.0
+  (the same md5 of the body). This establishes bit-identity **over this corpus
+  on these builds**, not in general. Categories C (version-dependent nested
+  behavior) and D (different contact vertex order or count) were not observed.
+- 168 of 168 returned success; no non-convergence (E) in the corpus.
+- 26 inputs (all with `Handle_Nested` true) reached the nested path, where the
+  engine calls the installed `pointPolygonTest` and `contourArea`; they were
+  identical across versions too.
+- Against the binary64 reference, the worst relative area error over the
+  results that are non-empty or have nesting off was 5.6e-8
+  (`cross_19_32_18`); none exceeded 1e-5. The 26 nested-input results with
+  `Handle_Nested` false are empty by design while the reference area is the
+  full overlap, so they are not area errors.
+- The recovered hexagons give the same 12 vertices and area 5.38046559e14
+  (reference 5.38046573e14) on every version; thin, large and 2**30-edge cases
+  agree with the reference at binary32 rounding level.
+- Contact: shared edge returned 3 vertices, partial shared edge 2, vertex
+  contact 1, all with area 0 and the same bits on every version. They are
+  contact points, not polygons.
+- An early run misreported four nested/winding cases as errors because my
+  reference helper reversed a vector in place; I fixed the helper and reran
+  everything. The engine's output did not change.
+
+
+### 4096-vertex contract
+
+`extended_boundary_and_search.cpp boundary` drives the production export, built
+with ASan and UBSan against the ASan/UBSan 4.10.0 library, and also in release:
+
+- 3-vertex input accepted.
+- 4096-gon pairs, counterclockwise and clockwise, circumradius 300, 1000,
+  1e5 and 1e8: accepted with 4096 vertices out, 0.11 to 0.19 s per call in
+  release and about 0.2 s under ASan (the O(n**2) validator). Circumradius 5
+  and 170: rejected by the validator as below the 1e-4 conditioning limit,
+  because 4096 vertices on a small circle have tiny turns. **Acceptance of a
+  4096-gon depends on its geometry and size, not on the count alone.**
+- A 4096-gon against a triangle: accepted in 0.04 s.
+- 4097, 5000 and 100000 vertices on either side: rejected with the 4096
+  diagnostic in well under 1 ms, before any validation, with count and area 0.
+- The Ada preflight rejection of 4097 before the coordinate scan and any
+  allocation is covered by the Task 027B-R1 AUnit test (a NaN inside the
+  oversized array still gives the 4096 diagnostic), which passed in all 14
+  cells.
+
+Timing is a measurement on this machine, not a guarantee.
+
+### Non-convergence investigation
+
+Two bounded, deterministic campaigns used the production export, so strict
+validation always ran first. Neither found a failure.
+
+| Campaign | Pairs | Engine reached | Non-convergence | Numeric failure | Validator rejected |
+|---|---|---|---|---|---|
+| 6 modes: near-equal, near-parallel, 1e-1 vs 1e6 extents, near contact, 1e7 extents, near tangency | 60000 | 60000 | 0 | 0 | 0 |
+| thin rectangles (length to 1e4, width 1e-3 to 1, tilt 1e-7 to 1e-2) | 200000 | 200000 | 0 | 0 | 0 |
+
+Rerun under ASan/UBSan against the ASan/UBSan 4.10.0 library (60000 and
+100000 pairs): same outcome, no sanitizer output. **No production-domain
+reproducer was found**, so no regression test was added. The `non_convergence`
+and `numeric_failure` mappings in the export are verified only by reading the
+source and are untested at the production boundary. The validator's 1e-4
+margin may contribute, but I have not shown that, and the search is not
+exhaustive. The validator was not changed.
+
+### GNATprove
+
+Run in a disposable clone of `0ec378f1…` with Core 0.3.0 pinned and OpenCV
+4.14.0, with the invocation documented in `docs/release-0.2.0.md`:
+`alr -n -C tests exec -- gnatprove -P opencv_geometry.gpr
+--subdirs=task017-proof -j2 --level=2 --timeout=30 --checks-as-errors=on
+--output-header -u` on `opencv-geometry-internal-float32_points.adb`,
+`-convexity.adb`, `-intersection.adb`, `-transforms.adb` and
+`opencv-internal-safe_arithmetic.adb`. GNATprove FSF 16.1.0, Why3 1.8.2+git,
+exit 0: **"all checks proved (277 checks)"**: 92 flow plus 185 prover checks
+(data dependencies 47, initialization 2, run-time checks 105, assertions 43,
+functional contracts 37, termination 43), 0 unproved, 0 justified, no
+warnings. Provers used: CVC5, Z3, Alt-Ergo and trivial. This matches the
+277/277 baseline with the same scope. It covers only those five Ada units,
+not the C++ engine, the validator or the public Ada body, and no SPARK source
+changed in Task 027.
+
+### Original 62/61 reproducer
+
+`ORIGINAL_62_61_FIXTURE_UNRECOVERED`. The regular 62- and 61-gon stand-ins are
+not equivalent, and the unsafe native 4.6/4.10 path was not run. The
+rounded-hexagon fixture is preserved and passes on every version above.
+
+### Failures
+
+None. No cell, native test, proof or comparison failed, and no source
+correction was needed: the Geometry source under test is unchanged from
+`0ec378f1…`.
+
+### Remaining gates (Task 027C2)
+
+Windows MSYS2 execution (only on `main` pushes or manual dispatch); README,
+release notes and the PR; and the evidence limits above (the unrecovered
+62/61 fixture and the untested non-convergence mapping). The hosted workflow
+must also pass on the exact commit that carries this document.
