@@ -16,8 +16,10 @@
 // Sutherland-Hodgman clip, not an OpenCV call.
 #include "../../../cpp/convex_intersection_compat.hpp"
 #include <dlfcn.h>
+#include <climits>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <string>
@@ -101,6 +103,7 @@ struct Case {
     enum Kind { area_ref, count_in, safe_only, status_is } kind = area_ref;
     int lo = 0, hi = 0;
     convex_intersection_status want = convex_intersection_status::ok;
+    Poly expect;   // when non-empty: exact output vertices, in order
 };
 
 Case mk(const char* name, Poly l, Poly r, Case::Kind k = Case::area_ref,
@@ -122,28 +125,37 @@ std::vector<Case> cases()
     std::vector<Case> c;
     Poly t1{{0.1f, 0.1f}, {4.3f, 0.2f}, {2.1f, 3.9f}};
     Poly t2{{0.7f, -0.5f}, {3.9f, 2.2f}, {-0.4f, 2.8f}};
-    c.push_back(mk("tri_fractional", t1, t2));
+    // Kinds: area_ref requires status ok, a vertex count in [lo, hi] (when
+    // hi > 0), the reference area, and an output whose own shoelace area
+    // equals the reported area. count_in requires status ok, a count in
+    // [lo, hi] and area 0. safe_only accepts any controlled status except a
+    // refused write or an envelope rejection. status_is pins the status.
+    c.push_back(mk("tri_fractional", t1, t2, Case::area_ref, true, 6, 6));
     c.push_back(mk("sq_fractional", sq(0.3f, 0.2f, 2.3f),
-                   sq(1.0f, 0.65f, 2.3f)));
+                   sq(1.0f, 0.65f, 2.3f), Case::area_ref, true, 4, 4));
     c.push_back(mk("decimal_0_1_tri",
                    {{0.1f, 0.1f}, {0.3f, 0.1f}, {0.2f, 0.3f}},
-                   {{0.2f, 0.1f}, {0.4f, 0.1f}, {0.3f, 0.3f}}));
+                   {{0.2f, 0.1f}, {0.4f, 0.1f}, {0.3f, 0.3f}},
+                   Case::area_ref, true, 3, 3));
     c.push_back(mk("decimal_0_1_sq", sq(0.1f, 0.1f, 0.3f),
-                   sq(0.2f, 0.2f, 0.3f)));
+                   sq(0.2f, 0.2f, 0.3f), Case::area_ref, true, 4, 4));
     for (int w = 0; w < 4; ++w)
         c.push_back(mk(("winding_" + std::to_string(w)).c_str(),
-                       (w & 1) ? rev(t1) : t1, (w & 2) ? rev(t2) : t2));
+                       (w & 1) ? rev(t1) : t1, (w & 2) ? rev(t2) : t2,
+                       Case::area_ref, true, 6, 6));
     c.push_back(mk("disjoint_nr1", sq(0, 0, 1), sq(5, 5, 1),
                    Case::count_in, true, 0, 0));
-    c.push_back(mk("nested_true", sq(0, 0, 10), sq(2.5f, 2.5f, 3)));
+    c.push_back(mk("nested_true", sq(0, 0, 10), sq(2.5f, 2.5f, 3),
+                   Case::area_ref, true, 4, 4));
     c.push_back(mk("nested_false", sq(0, 0, 10), sq(2.5f, 2.5f, 3),
                    Case::count_in, false, 0, 0));
-    c.push_back(mk("nested_swapped", sq(2.5f, 2.5f, 3), sq(0, 0, 10)));
+    c.push_back(mk("nested_swapped", sq(2.5f, 2.5f, 3), sq(0, 0, 10),
+                   Case::area_ref, true, 4, 4));
     // n + m = 160 > 136: the native AutoBuffer is on the heap. Normal loop
     // exit with nothing written (raw 1), so the native tail runs with
     // nr == 1 and reads result0[-1], which is fp2[m-1] in the SAME block.
     c.push_back(mk("nested_heap_buffer", ngon(80, 0, 0, 100),
-                   ngon(80, 1, 2, 50, 0.01)));
+                   ngon(80, 1, 2, 50, 0.01), Case::area_ref, true, 80, 80));
     // Disjoint with non-parallel edges: the loop should end normally with
     // nothing written rather than through the separated-parallel return.
     c.push_back(mk("disjoint_normal_exit",
@@ -152,33 +164,51 @@ std::vector<Case> cases()
                    Case::count_in, true, 0, 0));
     c.push_back(mk("disjoint_normal_exit_heap", ngon(80, 0, 0, 10),
                    ngon(80, 100, 100, 10, 0.01), Case::count_in, true, 0, 0));
+    // Contact cases (area 0): the early-return path hands back its raw
+    // vertices (a shared segment, a point, ...). The exact counts below pin
+    // the observed behavior of this implementation; native 4.10 returns one
+    // more vertex because it keeps the sentinel. They are not a claim that
+    // the vertices are a meaningful polygon.
     c.push_back(mk("shared_edge", sq(0, 0, 1), sq(1, 0, 1), Case::count_in,
-                   true, 0, 3));
+                   true, 3, 3));
     c.push_back(mk("vertex_contact", sq(0, 0, 1), sq(1, 1, 1),
-                   Case::count_in, true, 0, 3));
+                   Case::count_in, true, 1, 1));
     c.push_back(mk("two_vertex_contact", sq(0, 0, 1), sq(1, 0.25f, 1),
-                   Case::count_in, true, 0, 3));
+                   Case::count_in, true, 2, 2));
     c.push_back(mk("near_parallel", {{0, 0}, {1000, 0.001f}, {0, 0.002f}},
                    {{0, 0.0005f}, {1000, 0.0015f}, {0, 0.0025f}},
-                   Case::safe_only));
+                   Case::area_ref, true, 3, 3));
+    // Geometry below the absolute 1e-5 orientation tolerance collapses to
+    // area 0 by design of the upstream predicate; native does the same.
     c.push_back(mk("tiny_coordinates", sq(1e-20f, 1e-20f, 3e-20f),
-                   sq(2e-20f, 2e-20f, 3e-20f), Case::safe_only));
+                   sq(2e-20f, 2e-20f, 3e-20f), Case::count_in, true, 0, 3));
     c.push_back(mk("subnormal_coordinates", sq(1e-44f, 1e-44f, 3e-44f),
-                   sq(2e-44f, 2e-44f, 3e-44f), Case::safe_only));
+                   sq(2e-44f, 2e-44f, 3e-44f), Case::count_in, true, 0, 3));
     c.push_back(mk("large_coordinates",
                    sq(536870912.f, 536870912.f, 1048576.f),
                    sq(536870912.f + 524288.f, 536870912.f + 262144.f,
-                      1048576.f)));
+                      1048576.f), Case::area_ref, true, 4, 4));
     c.push_back(mk("signed_zero", {{-0.f, 0.f}, {2, -0.f}, {2, 2}, {0, 2}},
-                   sq(1, 1, 2)));
+                   sq(1, 1, 2), Case::area_ref, true, 4, 4));
     c.push_back(mk("ngon_40_40", ngon(40, 0, 0, 100),
-                   ngon(40, 3, 2, 100, 0.07)));
-    c.push_back(mk("integer_hexagon_reproducer",
+                   ngon(40, 3, 2, 100, 0.07), Case::area_ref, true, 40, 80));
+    // Recovered input (AUnit Exact_Difference_Spans). Observed on 4.10.0
+    // native: 14 vertices; on 4.13.0 native and here: the 12 vertices below.
+    // The expectation is the exact compat output, status ok, count 12 and
+    // area within 1e-6 of the independent reference (observed 2.6e-8).
+    Case hex = mk("integer_hexagon_reproducer",
         {{-15767146, -1608888}, {-2320318, -15678251}, {15750659, 1762998},
          {15604050, 2775796}, {13860112, 7686919}, {-4538847, 15185200}},
         {{-15767147, -1608887}, {-2320318, -15678249}, {15750662, 1762996},
          {15604050, 2775793}, {13860114, 7686922}, {-4538847, 15185197}},
-        Case::safe_only));
+        Case::area_ref, true, 12, 12);
+    hex.expect = {{-10668174.f, 6017608.5f}, {-15767146.f, -1608888.f},
+                  {-15462922.f, -1927196.75f}, {-2320318.f, -15678249.f},
+                  {2921097.75f, -10619485.f}, {15750659.f, 1762998.f},
+                  {15624296.f, 2635932.75f}, {15604050.f, 2775793.f},
+                  {15154281.f, 4042394.25f}, {13860112.f, 7686919.f},
+                  {3560384.5f, 11884453.f}, {-4538847.f, 15185197.f}};
+    c.push_back(hex);
     // The original 62/61-vertex pair was not recorded anywhere recoverable;
     // these regular n-gons are stand-ins and do NOT reproduce it.
     c.push_back(mk("ngon_62_61_standin_r1000", ngon(62, 0, 0, 1000),
@@ -203,13 +233,88 @@ std::vector<Case> cases()
 }
 
 
-void identity()
+// Loaded-library identity. The compile-time version (headers) and the
+// runtime version (cv::getVersionString, from the loaded Core) are reported
+// separately. The library that actually provides each symbol is found with
+// dladdr and checked on its own; the version of imgproc/geometry is never
+// inferred from Core's. A mismatch returns false and the process exits 65
+// before any case runs, so evidence from a wrong library cannot be recorded.
+//
+// Checks: (1) runtime version string equals the compile-time CV_VERSION;
+// (2) cv::getVersionString comes from a libopencv_core object; (3) the
+// other symbols come from a libopencv_ object that is not Core (imgproc in
+// 4.x, geometry in 5.x); (4) each object's symlink-resolved file name ends
+// in ".so.<CV_VERSION>" (e.g. libopencv_imgproc.so.4.10.0), so the file
+// itself, not just Core, carries the expected version; (5) all objects are
+// in one directory and, when T027_EXPECT_LIBDIR is set, in that directory.
+struct SymbolHome {
+    std::string symbol, path, base, dir;
+};
+
+SymbolHome home_of(const char* symbol, const void* address)
 {
+    SymbolHome h;
+    h.symbol = symbol;
     Dl_info info{};
-    dladdr(reinterpret_cast<void*>(&cv::getVersionString), &info);
-    std::printf("compile %s runtime %s object %s\n", CV_VERSION,
-                cv::getVersionString().c_str(),
-                info.dli_fname ? info.dli_fname : "?");
+    if (address && dladdr(address, &info) && info.dli_fname) {
+        char resolved[4096];
+        h.path = realpath(info.dli_fname, resolved) ? resolved : info.dli_fname;
+        size_t slash = h.path.rfind('/');
+        h.dir = slash == std::string::npos ? "" : h.path.substr(0, slash);
+        h.base = slash == std::string::npos ? h.path : h.path.substr(slash + 1);
+    }
+    return h;
+}
+
+bool identity(bool need_native)
+{
+    using PolyTest = double (*)(cv::InputArray, cv::Point2f, bool);
+    using Area = double (*)(cv::InputArray, bool);
+    using Isect = float (*)(cv::InputArray, cv::InputArray, cv::OutputArray,
+                            bool);
+    PolyTest ppt = &cv::pointPolygonTest;
+    Area area = &cv::contourArea;
+    Isect isect = &cv::intersectConvexConvex;
+    using VerFn = cv::String (*)();
+    VerFn ver = &cv::getVersionString;
+
+    std::vector<SymbolHome> homes;
+    homes.push_back(home_of("cv::getVersionString",
+                            reinterpret_cast<const void*>(ver)));
+    homes.push_back(home_of("cv::pointPolygonTest",
+                            reinterpret_cast<const void*>(ppt)));
+    homes.push_back(home_of("cv::contourArea",
+                            reinterpret_cast<const void*>(area)));
+    if (need_native)
+        homes.push_back(home_of("cv::intersectConvexConvex",
+                                reinterpret_cast<const void*>(isect)));
+
+    const std::string runtime = cv::getVersionString();
+    std::printf("compile_version %s\nruntime_version %s\n", CV_VERSION,
+                runtime.c_str());
+    bool ok = runtime == CV_VERSION;
+    if (!ok) std::printf("IDENTITY REJECTED: runtime != compile version\n");
+    const std::string suffix = std::string(".so.") + CV_VERSION;
+    const char* want_dir = std::getenv("T027_EXPECT_LIBDIR");
+    for (size_t i = 0; i < homes.size(); ++i) {
+        const SymbolHome& h = homes[i];
+        std::printf("provider %s %s\n", h.symbol.c_str(),
+                    h.path.empty() ? "?" : h.path.c_str());
+        bool good = !h.path.empty()
+            && h.base.rfind("libopencv_", 0) == 0
+            && h.base.find(suffix) != std::string::npos
+            && h.dir == homes[0].dir
+            && (!want_dir || h.dir == want_dir);
+        if (i == 0)
+            good = good && h.base.rfind("libopencv_core", 0) == 0;
+        else if (h.base.rfind("libopencv_core", 0) == 0)
+            good = false;   // algorithm symbols never come from Core
+        if (!good) {
+            std::printf("IDENTITY REJECTED: %s\n", h.symbol.c_str());
+            ok = false;
+        }
+    }
+    return ok;
 }
 
 const char* status_name(convex_intersection_status s)
@@ -242,19 +347,47 @@ int run_compat(const Case& c)
         std::printf("  v %.9g %.9g\n", (double)r.vertices[i].x,
                     (double)r.vertices[i].y);
     if (r.status == convex_intersection_status::internal_bound) return 1;
+    const int cnt = (int)r.vertices.size();
+    auto fail = [](const char* why) {
+        std::printf("EXPECTATION FAILED: %s\n", why);
+        return 1;
+    };
     switch (c.kind) {
     case Case::status_is:
-        return r.status == c.want ? 0 : 1;
+        return r.status == c.want ? 0 : fail("status differs");
     case Case::safe_only:
+        if (r.status == convex_intersection_status::invalid_input)
+            return fail("unexpected envelope rejection");
         return 0;
     case Case::count_in:
-        return r.status == convex_intersection_status::ok
-            && (int)r.vertices.size() >= c.lo
-            && (int)r.vertices.size() <= c.hi ? 0 : 1;
+        if (r.status != convex_intersection_status::ok)
+            return fail("status not ok");
+        if (cnt < c.lo || cnt > c.hi) return fail("count out of range");
+        if (r.area != 0.f) return fail("area not zero");
+        return 0;
     case Case::area_ref: {
-        if (r.status != convex_intersection_status::ok) return 1;
+        if (r.status != convex_intersection_status::ok)
+            return fail("status not ok");
+        if (c.hi > 0 && (cnt < c.lo || cnt > c.hi))
+            return fail("count out of range");
         double tol = 2e-5 * std::max(ref, (double)r.area) + 1e-30;
-        return std::fabs((double)r.area - ref) <= tol ? 0 : 1;
+        if (std::fabs((double)r.area - ref) > tol)
+            return fail("area differs from reference");
+        // The returned polygon must itself have the reported area.
+        double own = std::fabs(signed_area(r.vertices));
+        if (std::fabs(own - (double)r.area)
+            > 2e-5 * std::max(own, (double)r.area) + 1e-30)
+            return fail("output polygon area differs from reported area");
+        if (!c.expect.empty()) {
+            if (r.vertices.size() != c.expect.size())
+                return fail("vertex count differs from expectation");
+            for (size_t i = 0; i < c.expect.size(); ++i)
+                if (r.vertices[i] != c.expect[i])
+                    return fail("vertex differs from expectation");
+            if (std::fabs((double)r.area - ref) > 1e-6 * ref)
+                return fail("hexagon area outside 1e-6");
+        }
+        return 0;
     }
     }
     return 1;
@@ -274,9 +407,16 @@ int run_native(const Case& c)
 // nearly parallel edge (0,0)-(1e3,1e-40). The binary64 denominator is about
 // 1e-31 and s about 1e37, so the unused intersection coordinate a.x + s*dx
 // is about 1e46, far beyond FLT_MAX. "segment_extreme" runs the hardened
-// function; "segment_extreme_upstream" runs the upstream cast order, which
-// is undefined behavior and is only meant to be seen under
-// -fsanitize=float-cast-overflow.
+// function, which range-tests s and t before it converts anything.
+// "segment_extreme_upstream" reproduces the upstream order (convert first)
+// for observation only. -fsanitize=float-cast-overflow covers
+// floating-point to INTEGER conversions; it does not report a double to
+// float narrowing, so a silent sanitizer run here proves nothing about that
+// cast. On this target (IEEE binary32 with infinity) the observed result is
+// +inf. Whether the C++ standard calls such a conversion undefined depends
+// on whether the target type can represent the value; this probe does not
+// rely on that question. The hardened code avoids the conversion by explicit
+// finite and range checks, which stay in place.
 int run_segment(bool upstream)
 {
     cv::Point2f a(0.f, 1e3f), b(1e9f, 1e3f), c(0.f, 0.f), d(1e3f, 1e-40f);
@@ -312,6 +452,7 @@ int run_sweep(unsigned seed, int count)
         return (double)(s >> 11) / 9007199254740992.0;
     };
     long long maxw = 0, bound = 0, nonok = 0, early = 0, nested = 0;
+    long long compared = 0, tiny_ref = 0;
     double worst = 0;
     for (int i = 0; i < count; ++i) {
         int n = 3 + (int)(next() * 70), m = 3 + (int)(next() * 70);
@@ -325,16 +466,24 @@ int run_sweep(unsigned seed, int count)
         nonok += r.status != convex_intersection_status::ok;
         early += r.diagnostics.early_return;
         nested += r.diagnostics.nested_path;
-        if (r.status == convex_intersection_status::ok && !r.diagnostics.early_return) {
-            double ref = reference_area(a, b);
-            if (ref > 1e-12)
-                worst = std::max(worst, std::fabs((double)r.area - ref) / ref);
-        }
+        // Only status-ok, non-early results enter the accuracy figure; every
+        // other outcome is counted in its own bucket and, for the accuracy
+        // claim, a non-ok status is a failure of the sweep, not a skip.
+        if (r.status != convex_intersection_status::ok) continue;
+        if (r.diagnostics.early_return) continue;
+        double ref = reference_area(a, b);
+        if (ref <= 1e-12) { ++tiny_ref; continue; }
+        ++compared;
+        worst = std::max(worst, std::fabs((double)r.area - ref) / ref);
     }
-    std::printf("sweep seed %u count %d max_writes %lld refused %lld non_ok "
-                "%lld early %lld nested %lld worst_rel_area %.3g\n", seed,
-                count, maxw, bound, nonok, early, nested, worst);
-    return bound == 0 && maxw <= 3 ? 0 : 1;
+    const bool accuracy_ok = nonok == 0 && compared > 0 && worst <= 2e-5;
+    std::printf("sweep seed %u pairs %d compared %lld non_ok %lld "
+                "early_skipped %lld tiny_ref_skipped %lld nested %lld "
+                "max_writes %lld refused %lld worst_rel_area %.3g "
+                "accuracy_claim %s\n", seed, count, compared, nonok, early,
+                tiny_ref, nested, maxw, bound, worst,
+                accuracy_ok ? "SUPPORTED" : "NOT_SUPPORTED");
+    return bound == 0 && maxw <= 3 && accuracy_ok ? 0 : 1;
 }
 
 // Chaos sweep: random NON-convex, possibly self-intersecting polygons with
@@ -386,31 +535,31 @@ int run_chaos(unsigned seed, int count)
 
 int main(int argc, char** argv)
 {
+    if (argc == 2 && std::string(argv[1]) == "list") {
+        for (auto& c : cases()) std::printf("%s\n", c.name.c_str());
+        return 0;
+    }
+    const bool native = argc == 3 && std::string(argv[1]) == "native";
     if (argc == 4 && std::string(argv[1]) == "chaos") {
-        identity();
+        if (!identity(false)) return 65;
         return run_chaos((unsigned)std::atoi(argv[2]), std::atoi(argv[3]));
     }
     if (argc == 4 && std::string(argv[1]) == "sweep") {
-        identity();
+        if (!identity(false)) return 65;
         return run_sweep((unsigned)std::atoi(argv[2]), std::atoi(argv[3]));
     }
     if (argc == 2 && std::string(argv[1]) == "segment_extreme") {
-        identity();
+        if (!identity(false)) return 65;
         return run_segment(false);
     }
     if (argc == 2 && std::string(argv[1]) == "segment_extreme_upstream") {
-        identity();
+        if (!identity(false)) return 65;
         return run_segment(true);
     }
-    auto all = cases();
-    if (argc == 2 && std::string(argv[1]) == "list") {
-        for (auto& c : all) std::printf("%s\n", c.name.c_str());
-        return 0;
-    }
-    bool native = argc == 3 && std::string(argv[1]) == "native";
     if (!native && argc != 2) return 64;
+    auto all = cases();
     const std::string want = native ? argv[2] : argv[1];
-    identity();
+    if (!identity(native)) return 65;
     for (auto& c : all) {
         if (c.name != want) continue;
         try {

@@ -1,12 +1,20 @@
 # Task 027: universal Float32 convex polygon intersection
 
-**Status: Task 027 source review (Phases 0-3) plus Task 027A: a private
-compatibility header exists and was qualified on OpenCV 4.10.0 only.** There
-is no `Intersect_Convex_Polygons_Extended_Float32`, no new C ABI export and
-no change to any production file. The header is not included by the shim.
-The sections "Native safety review" and "Obligation status" below are the
-Task 027 source review; where Task 027A tested or corrected them, the
-section "Task 027A" at the end is authoritative.
+**Status (Task 027A-R2): research prototype committed and pushed; public
+integration pending; no PR opened.** Research commit `717a4866` added the
+private compatibility header, the research probe and this document to branch
+`feature/027-universal-float32-convex-intersection`; the corrective commit
+that follows it is recorded in the branch history. The header was qualified
+on OpenCV 4.10.0 only (smoke runs on 4.11.0, 4.13.0 and 5.0.0). There is no
+`Intersect_Convex_Polygons_Extended_Float32`, no new C ABI export and no
+change to any production file. The header is not included by the shim.
+
+Reading guide: the sections from "Provenance" through "Not done" are the
+original Task 027 source review (Phases 0-3), written before anything was
+run. Where they say "probable defect", "BLOCKED" or "safety gate not
+passed", that was the state of the review at the time. They are historical.
+The sections "Task 027A" and "Review corrections" at the end are
+authoritative; the open items are listed under "Remaining obligations".
 
 ## Provenance (Phase 0)
 
@@ -108,8 +116,10 @@ build rather than trusted from this paragraph.
   allocation but depends on adjacent data. If that value equalled the
   sentinel, `nr` would become 0 and the call would return -1, reported as
   non-convergence. The layout is the same in 4.6 and 4.10.
-  **Superseded by Task 027A:** the verdict "native path excluded" and the
-  wording "probable defect" were too strong. See "Corrected indexing
+  **Superseded by Task 027A-R2:** the scenario "`nr` becomes 0 and the call
+  returns -1" is impossible, because `nr > 1` is false at `nr == 1` and
+  prevents the decrement. The verdict "native path excluded" and the
+  wording "probable defect" are withdrawn. See "Corrected indexing
   assessment" below.
 
 **D. Float32 arithmetic.**
@@ -151,28 +161,28 @@ call returns, not that the answer is correct for poorly conditioned input.
 |---|---|---|
 | A | Count/allocation | Resolved by existing bound |
 | B | Output capacity | Argued for the 4.11 form; needs a checked build |
-| C | Indexing | Probable defect in every native version; fix designed, unwritten |
-| D | Float32 arithmetic | Cast fix designed; conditioning rule unresolved |
+| C | Indexing | (historical) Superseded: no count change is possible at `nr == 1`; compat tests `k >= 1` first. See "Corrected indexing assessment" |
+| D | Float32 arithmetic | Cast fix implemented in compat; conditioning rule still unresolved |
 | E | Nested conversions | Resolved on paper with a 2**30 bound |
 | F | Sentinel | Resolved on paper with a 2**30 bound |
 | G | Termination | Argued from source; not run |
 
 ## Consequence for backend selection
 
-If C is confirmed, the 4.11+ native code does not qualify on any version,
-and the consistent choice is a hardened compatibility implementation on
-every supported release. That is a recommendation from reading, not a
-result: nothing has been implemented or compared with native output.
+(Historical.) This section assumed C was a defect that disqualifies native
+4.11+. Task 027A withdrew that premise. The native-versus-compat decision
+for 4.11+ is open and rests on the lack of a write bound before 4.11, the
+cast order, and vertex-level comparison, not on indexing.
 
 ## Not done
 
-Everything after Phase 3: the compatibility header, the C ABI, the Ada API
-and tests, isolated native probes, the reproducer re-runs, sanitizer
-builds, independent reference fixtures, GNATprove runs, the OpenCV x Core
-matrix (4.6, 4.11 to 4.13, Core 0.3.0 and 0.4.1), macOS and Windows runs,
-README and coverage updates, and the PR. Nothing is pushed and no PR
-exists. The disposition is therefore BLOCKED on remaining work, not
-READY_FOR_REVIEW, and the safety gate has not been passed.
+(Historical, as of Phase 3.) At that point nothing existed beyond this
+review. Since then the compatibility header, native probes, reference
+fixtures and 4.10 sanitizer runs were done (Task 027A). Still not done: the
+C ABI, the Ada API and tests, GNATprove runs, the OpenCV x Core matrix
+(4.6, 4.11 to 4.13, Core 0.3.0 and 0.4.1), macOS and Windows runs, README
+and coverage updates, and the PR. The safety gate for public integration
+has not been passed; see "Remaining obligations".
 
 
 ## Task 027A: private compatibility implementation
@@ -221,13 +231,27 @@ sentinel written. The last two have `n + m` above 136, so the native
 `AutoBuffer` is a heap block. The 4.10 build with an ASan/UBSan-instrumented
 OpenCV ran these native calls with no report.
 
-The only effect I found is a data-dependent comparison with `fp2[m-1]`; it
-could change a result only if that vertex equalled `(FLT_MAX, FLT_MAX)`,
-which the 2**30 envelope excludes. **This finding alone does not exclude
-the 4.11+ native path**, and the earlier statement that it does is
-withdrawn. What separates native from compat is the lack of any write bound
-in 4.6/4.10 and the cast-before-range-test order. The 4.11+ native
-decision is left to a later milestone.
+**No result change is possible at `nr == 1` (Task 027A-R2 correction).**
+The upstream statement is `if (result0[nr-2] == result0[0] && nr > 1) nr--;`.
+C++ evaluates the left operand first, so `result0[-1]` is read and compared.
+But the right operand `nr > 1` is then false, so the whole condition is
+false whatever the comparison gave, and `nr` is not decremented. The
+comparison result is discarded. My earlier text said the comparison "could
+change a result if `fp2[m-1]` equalled the sentinel"; that was wrong, and
+the "returns -1" scenario in the Phase 3 review cannot occur. Three things
+must be kept apart:
+- *Logical indexing*: `result0[-1]` is not an element of the logical result.
+  That is a code-quality defect.
+- *Pointer validity*: `result0 - 1` is `fp2 + m - 1`, a valid element
+  address of the same array object (for `m >= 2`). The pointer is valid.
+- *Allocation bounds*: the read stays inside the single `AutoBuffer` block.
+  I observed no out-of-bounds access, no uninitialized read and no
+  sanitizer report in any run, and make no claim of a fault.
+The hardened tail avoids even the harmless read by testing `k >= 1` first.
+**This finding does not exclude the 4.11+ native path**, and the earlier
+statement that it does is withdrawn. What separates native from compat is
+the lack of any write bound in 4.6/4.10 and the cast-before-range-test
+order. The 4.11+ native decision is left to a later milestone.
 
 Compat tail: it works on a copy with the sentinel dropped (`e`, `k` =
 count - 1) and tests `k >= 1 && e[k-1] == e[0]`. Upstream after its shift
@@ -294,6 +318,26 @@ Probe `convex_intersection_compat_probe.cpp`: 31 named cases, the
 `segment_extreme` case, seeded `sweep` and `chaos` runs. One process per
 case, `timeout -s KILL`, `ulimit -c 0`, output through `head`.
 
+*Task 027A-R2 changes to the probe.* (1) Identity: compile-time and
+runtime versions are printed on separate lines. `dladdr` plus `realpath`
+then finds the file that provides `cv::getVersionString`,
+`cv::pointPolygonTest`, `cv::contourArea` and, for `native` runs,
+`cv::intersectConvexConvex`. Each file must be a `libopencv_` object whose
+resolved name ends in `.so.<CV_VERSION>`, the algorithm symbols must not
+come from Core, all files must share one directory, and
+`T027_EXPECT_LIBDIR` pins that directory. Any failure prints
+`IDENTITY REJECTED` and exits 65 before any case. Checked: a wrong
+`T027_EXPECT_LIBDIR` exits 65. The imgproc/geometry identity comes from its
+own file name, not from Core. (2) Expectations: every well-formed convex
+case is `area_ref`, which now requires status ok, an exact or bounded vertex
+count, the reference area, and an output polygon whose own shoelace area
+equals the reported area. Contact and sub-tolerance cases require status
+ok, a pinned count, and area 0. The hexagon pins all 12 vertices, count 12,
+and area within 1e-6 of the reference. (3) The convex sweep reports
+`compared`, `non_ok`, `early_skipped` and `tiny_ref_skipped` separately and
+prints `accuracy_claim SUPPORTED` only if `non_ok` is 0 and at least one
+pair was compared; otherwise it exits non-zero.
+
 - Release build (g++ 14.2.0, `-O1 -Wall -Wextra -Werror`) on OpenCV 4.10.0:
   32 of 32 expectations met.
 - Compat code compiled with `-fsanitize=address,undefined,float-cast-overflow
@@ -310,8 +354,11 @@ case, `timeout -s KILL`, `ulimit -c 0`, output through `head`.
   path is reachable and controlled). Largest relative area difference from
   the independent binary64 Sutherland-Hodgman reference: 1.6e-7.
 - Smoke only: the 32 cases compiled and ran (exit 0) against 4.11.0,
-  4.13.0 and 5.0.0 with identity lines confirmed. That is not
-  qualification of those versions.
+  4.13.0 and 5.0.0 (re-run in Task 027A-R2 with the stricter expectations
+  and provider checks: 32 of 32 each; `pointPolygonTest`, `contourArea`
+  and `intersectConvexConvex` resolved to `libopencv_imgproc.so.<version>`,
+  or `libopencv_geometry.so.5.0.0` for 5.0.0). That is not qualification of
+  those versions.
 
 Compat against the independent reference, tolerance 2e-5 relative: the
 fractional triangle and square, decimal-0.1 triangle and square, all four
@@ -359,7 +406,9 @@ below, where the earlier explanation of this result is corrected.
    tolerance in `area_sign` and what convex input avoids non-convergence.
    The probe shows non-convergence is reported on non-convex input; it does
    not define the safe convex domain.
-5. Read 4.11 to 4.14 `pointPolygonTest` for the envelope claim.
+5. ~~Read 4.11 to 4.14 `pointPolygonTest` for the envelope claim.~~ Done in
+   Task 027A-R2 for the direct `cvRound` input only (see "Review
+   corrections" item 3); broader numerical qualification is not claimed.
 6. Decide native versus compat on 4.11+ from item 1.
 7. Everything in the Task 027 "Not done" list: C ABI, Ada API, AUnit
    tests, SPARK, the version and Core matrix, macOS and Windows, hosted
@@ -369,8 +418,9 @@ below, where the earlier explanation of this result is corrected.
 
 The compatibility header exists, compiles warning-free against 4.10.0, and
 met all focused expectations in release and under both sanitizer
-configurations. It is **not** ready for public integration: items 1 to 6
-are open. Nothing is committed or pushed.
+configurations. It is **not** ready for public integration: items 1 to 4
+and 6 are open. The research files are committed and pushed (`717a4866`
+and the corrective commit after it); no PR has been opened.
 
 
 ## Review corrections (Task 027A-R)
@@ -385,17 +435,19 @@ These supersede any earlier wording in this file.
    are finite, that `s` and `t` are in `[0, 1]`, and that the binary64 point
    is finite and at most `FLT_MAX` in magnitude, **before** it narrows to
    `float`. Whether the upstream `double` to `float` out-of-range cast is
-   undefined behavior depends on the C++ standard, not on any run here
-   (the standard makes an out-of-range value of that conversion undefined
-   when the type does not support infinity; IEEE binary32 does, so the
-   practical result observed was `inf`). I make no sanitizer claim about it.
-2. **`nr == 1` upstream.** The read of `result0[-1]` accesses preceding
-   **initialized** storage (`fp2[m-1]`) in the same allocation. It is an
-   invalid logical index, not an observed heap overflow, and no run
-   reported one.
+   undefined behavior is not decided here: the standard's rule depends on
+   whether the target type can represent the value, and binary32 has
+   infinity. The observed result was `inf`. I make no undefined-behavior
+   claim and no sanitizer claim about it. The explicit checks stay because
+   a silent `inf` would otherwise reach vertex output and orientation tests.
+2. **`nr == 1` upstream.** The read of `result0[-1]` is an invalid logical
+   index that lands on preceding initialized storage (`fp2[m-1]`) in the
+   same allocation. The following `nr > 1` is false, so `nr` is not changed
+   and no result can differ. It is not an observed heap overflow, and no
+   run reported one. See "Corrected indexing assessment".
 3. **The 2**30 envelope.** It protects the **direct** `cvRound` inputs of
-   `pointPolygonTest` (`cvRound(pt.x)`, `cvRound(pt.y)` on the integer
-   shortcut path). It is not a claim about other arithmetic in
+   `pointPolygonTest` (`cvRound(pt.x)`, `cvRound(pt.y)`, computed
+   unconditionally at function entry). It is not a claim about other arithmetic in
    `pointPolygonTest`, `contourArea` or the intersection loop; those are
    assessed separately above (finite checks, binary64 magnitudes) and
    remain open obligations where marked.
@@ -408,6 +460,16 @@ These supersede any earlier wording in this file.
 5. **62/61-vertex fixture.** The original pair was **not recovered**. The
    `ngon_62_61_standin_*` cases are unrelated regular polygons and do not
    reproduce, represent or substitute for it.
+   *Source inspection (Task 027A-R2).* In the fetched `geometry.cpp` of
+   4.11.0, 4.12.0, 4.13.0 and 4.14.0 the body of `cv::pointPolygonTest` is
+   byte-identical (same hash over the function), and the body in 5.0.0 is
+   identical to 4.14.0 (empty `diff` of the extracted functions). In all of
+   them the only float-to-integer conversion on the caller's point is
+   `Point ip(cvRound(pt.x), cvRound(pt.y));` (line 109 in 4.x, line 59 in
+   5.0.0), executed before the contour is looked at. The compat code calls
+   it only with vertices already inside the 2**30 envelope. This confirms
+   the direct `cvRound` behavior only; it is not a numerical qualification
+   of the rest of the function or of 4.11-4.14 and 5.0 intersection.
 6. **Research probes are not default tests.** `scripts/run_native_tests.sh`
    compiles only `tests/native/*.cpp`; the probe lives in
    `tests/native/research/`. It is not referenced by any `.gpr`, Alire
