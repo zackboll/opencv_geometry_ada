@@ -29,8 +29,9 @@
 // tests BETWEEN the two polygons cannot be checked per polygon; that is
 // covered only by the engine's own controlled non-convergence status.
 //
-// Cost: O(n**2) orientation evaluations, about 1.7e7 for n = 4096, which
-// bounds validation time to well under a second.
+// Cost: O(n**2), about 1.7e7 orientation evaluations at n = 4096.
+// Execution time depends on hardware, compiler, and input geometry.
+// This count is not a portable wall-clock bound; see qualification timings.
 #ifndef OPENCV_GEOMETRY_STRICT_CONVEX_VALIDATION_HPP
 #define OPENCV_GEOMETRY_STRICT_CONVEX_VALIDATION_HPP
 
