@@ -1,13 +1,17 @@
 # Task 027: universal Float32 convex polygon intersection
 
-**Status (Task 027A-R2): research prototype committed and pushed; public
-integration pending; no PR opened.** Research commit `717a4866` added the
-private compatibility header, the research probe and this document to branch
-`feature/027-universal-float32-convex-intersection`; the corrective commit
-that follows it is recorded in the branch history. The header was qualified
-on OpenCV 4.10.0 only (smoke runs on 4.11.0, 4.13.0 and 5.0.0). There is no
-`Intersect_Convex_Polygons_Extended_Float32`, no new C ABI export and no
-change to any production file. The header is not included by the shim.
+**Status (Task 027C3): implemented, qualified and submitted for pull-request
+review; not released.** `Intersect_Convex_Polygons_Extended_Float32` and its
+C ABI export `opencv_geometry_intersect_convex_convex_extended_f32` are
+integrated (Task 027B), qualified on Linux against seven exact-tag OpenCV
+builds with both Core versions (Task 027C1), and certified in hosted CI on
+Linux, macOS and Windows MSYS2 (Task 027C2). The final state and evidence
+limits are in the "Task 027C2" section at the end.
+
+Earlier status (Task 027A-R2, historical): research commit `717a4866` added
+the private compatibility header, the research probe and this document. At
+that point the header was qualified on OpenCV 4.10.0 only, there was no
+public operation or C ABI export, and the shim did not include the header.
 
 Reading guide: the sections from "Provenance" through "Not done" are the
 original Task 027 source review (Phases 0-3), written before anything was
@@ -971,12 +975,50 @@ the production source is unchanged.
 
 ### Source identity
 
-Compared with `0ec378f1…`, nothing has changed in `cpp/`, `src/`,
-`tests/src/`, `tests/native/*.cpp`, either `alire.toml`, the GPR files,
-`config/` or `.github/`. Task 027C1 and 027C2 changed only documentation,
-qualification scripts and research programs. The Linux matrix, the
-cross-version comparison and the GNATprove result therefore all apply to the
-source being submitted.
+Changes since the Linux-qualified commit `0ec378f1…` fall into three groups:
+
+1. Production algorithm and API source. Executable code in `cpp/` and `src/`
+   is unchanged, as are `tests/src/`, `tests/native/*.cpp`, both
+   `alire.toml` files, the GPR files and `config/`. Task 027C3 corrected two
+   stale comments, in `cpp/convex_intersection_compat.hpp` and
+   `src/opencv-geometry.ads`; the diff against `0ec378f1…` is comment-only.
+2. Qualification scripts and documentation: the corrected matrix runner, its
+   self-test, the README, `docs/coverage.md` and this document.
+3. The Windows CI workflow, `.github/workflows/cross-platform.yml`, changed
+   only to repair the MSYS2 dependency installation (see below).
+
+The Linux matrix, the cross-version comparison and the GNATprove result
+therefore all apply to the executable source being submitted.
+
+### Windows MSYS2 certification
+
+The Windows job runs only on `main` pushes and manual dispatch. Its first
+manual runs on `91f86fb…` (run 38323681853) failed in "Install MSYS2 OpenCV
+and C++ toolchain", before any Geometry build. The step ran
+`pacman -Sy --needed` on Alire's cached MSYS2, a partial upgrade: pacman
+selected `libgcc` and `libstdc++` 16.2.0-5 while the installed `cc-libs`,
+`libgfortran` and `libquadmath` required exactly 16.2.0-4. One rerun failed
+the same way, and another on a mirror download timeout. Commit `5f5bf99…`
+replaced the step with a full `pacman -Syu` (two passes, for the MSYS2
+core update), then `pacman -S --needed`, then a log of the resolved package
+versions and a `pacman -Dk` dependency check. No dependency checks were
+disabled and no packages were forced or downgraded. This was a CI
+environment correction, not a Geometry algorithm defect.
+
+Both workflows on `5f5bf99ea2b98b77bcc662344e865c0e71710079` passed:
+
+- [Manual run 38326589381](https://github.com/zackboll/opencv_geometry_ada/actions/runs/38326589381):
+  the Windows x86_64 MSYS2 job ran (not skipped) on Geometry `5f5bf99…` and
+  Core 0.4.1 `386c5360ac51f2b62e522853d94290aec4ee14a0`, with OpenCV 5.0.0
+  and MinGW GCC 16.2.0-5. The full upgrade succeeded and dependencies
+  resolved consistently. Geometry built, the shim DLL and its import library
+  were present, the DLL imports the OpenCV geometry DLL and neither Imgproc
+  nor the Core shim, and AUnit passed 542/542, including all 11 Extended
+  Float32 tests, with zero failed assertions and zero unexpected errors. Its
+  four Linux and macOS jobs also passed.
+- [Push run 38326582686](https://github.com/zackboll/opencv_geometry_ada/actions/runs/38326582686):
+  Linux x86_64 and macOS ARM64, each with Core 0.3.0 and 0.4.1, passed;
+  Windows was skipped by policy.
 
 ### Evidence limits carried forward
 
@@ -985,10 +1027,11 @@ source being submitted.
 - The production non-convergence and numeric-failure mappings exist in source
   and return an error without publishing outputs. Bounded campaigns found no
   accepted input that reaches them, so they are not dynamically exercised.
-- The 4096-vertex limit and the O(n**2) validator are unchanged.
-- The Ada specification comment still says cross-version qualification is
-  "pending". It was left as is so that the production source stays identical
-  to the qualified commit. This document and the README are current.
-- Windows certifies OpenCV 5 with Core 0.4.1 only. Windows with Core 0.3.0
-  was not tested. The Windows and hosted-CI runs for the submitted head are
+- The 4096-vertex limit and the O(n**2) validator are unchanged. The 0.11
+  to 0.19 s per 4096-gon call is a measurement on one development machine,
+  not a performance guarantee.
+- Numerical identity is established for the 168-result tested corpus on
+  seven exact-tag builds only, not for every input or future release.
+- Windows certifies OpenCV 5.0.0 with Core 0.4.1 only. Windows with Core
+  0.3.0 was not tested. The hosted-CI runs for the final submitted head are
   recorded in the pull request.

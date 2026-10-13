@@ -565,9 +565,11 @@ package OpenCV.Geometry is
    --  supported OpenCV release it runs the same private hardened copy of the
    --  bounded OpenCV 4.11 algorithm (with the 4.12 binary64 segment
    --  expressions). Its nested-polygon path still calls the installed
-   --  OpenCV's pointPolygonTest and contourArea, so identical results on
-   --  every release are not yet claimed: cross-version numerical
-   --  qualification is pending. The existing overloads are unchanged.
+   --  OpenCV's pointPolygonTest and contourArea. Seven exact-tag OpenCV
+   --  releases, 4.6.0 and 4.10.0 through 5.0.0, gave bit-identical results
+   --  on the tested corpus only; identical output on every input or on
+   --  future releases is not guaranteed. The existing overloads are
+   --  unchanged.
    --
    --  Accepted input, for each of Left and Right (either winding, any lower
    --  bound): 3 .. 4096 vertices (more is rejected before any allocation);

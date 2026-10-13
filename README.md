@@ -77,8 +77,8 @@ Operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Signed_Distance_To_Contour`, `Minimum_Enclosing_Circle`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
 `Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Fit_Line_2D`, `Box_Points`,
-`Intersect_Convex_Polygons`, `Intersect_Convex_Polygons_Extended_Float32`,
-`Intersect_Rotated_Rectangles`,
+`Intersect_Convex_Polygons`, `Intersect_Convex_Polygons_Extended_Float32`
+(new, not in the 0.2.0 release), `Intersect_Rotated_Rectangles`,
 `Get_Rotation_Matrix_2D`, `Get_Affine_Transform`, `Invert_Affine_Transform`,
 `Get_Perspective_Transform`, and `Transform_Point`. The child package
 `OpenCV.Geometry.Subdiv2D` provides planar subdivisions. Every Geometry
@@ -399,17 +399,23 @@ Result : constant OpenCV.Geometry.Convex_Polygon_Intersection :=
   ill-conditioned input can deviate from it.
 - The integer and grid-restricted Float32 overloads are unchanged.
 
-The validator costs O(n**2) per polygon, about 0.2 s at 4096 vertices on a
-current x86-64 machine.
+The validator costs O(n**2) per polygon. As a measurement on one x86-64
+development machine, not a performance guarantee, a pair of accepted
+4096-gons took 0.11 to 0.19 s per call in a release build.
 
-Task 027 qualified it on Linux against exact-tag OpenCV 4.6.0, 4.10.0,
-4.11.0, 4.12.0, 4.13.0, 4.14.0 and 5.0.0, each with Core 0.3.0 and 0.4.1. All
-14 combinations passed the 542 AUnit tests in both the release and validation
-profiles, plus the sanitizer-instrumented native tests. A 168-result
-cross-version corpus gave bit-identical results on those seven builds. That
-holds for the tested corpus only, not for every input or future release:
-the nested path depends on the installed OpenCV. Hosted CI covers macOS and
-Windows MSYS2 with OpenCV 5. See the
+This operation is new in Task 027 and is not part of the published 0.2.0
+release; it awaits pull-request review. Task 027 qualified it on Linux
+against exact-tag OpenCV 4.6.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0 and
+5.0.0, each with Core 0.3.0 and 0.4.1. All 14 combinations passed the 542
+AUnit tests in both the release and validation profiles, plus the
+sanitizer-instrumented native tests. A 168-result cross-version corpus gave
+bit-identical results on those seven builds. That holds for the tested
+corpus only, not for every input or future release: the nested path depends
+on the installed OpenCV. Hosted CI passed on macOS ARM64 with OpenCV 5 and
+Core 0.3.0 and 0.4.1. Windows MSYS2 with OpenCV 5.0.0 and Core 0.4.1 passed
+all 542 tests in a
+[manual workflow run](https://github.com/zackboll/opencv_geometry_ada/actions/runs/38326589381);
+Windows with Core 0.3.0 was not tested. See the
 [qualification record](docs/universal-float32-intersection.md#task-027c1--linux-exact-tag-qualification)
 and the [matrix results](docs/qualification-027c1-matrix.csv). The upstream
 algorithm keeps its Intel/OpenCV and Joseph O'Rourke notices in the header,

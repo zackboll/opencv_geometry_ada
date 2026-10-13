@@ -1,5 +1,7 @@
 // Private hardened compatibility implementation of cv::intersectConvexConvex
-// for CV_32F polygons. NOT exposed through the Geometry C ABI yet.
+// for CV_32F polygons. It is not exported itself. In the production library
+// its only caller is the shim's
+// opencv_geometry_intersect_convex_convex_extended_f32.
 //
 // Source: OpenCV modules/imgproc/src/geometry.cpp (modules/geometry/src in
 // 5.x), functions areaSign, between, parallelInt, intersectLineSegments,
