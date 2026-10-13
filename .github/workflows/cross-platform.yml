@@ -364,10 +364,34 @@ jobs:
         run: |
           set -eu
 
-          alr exec -- pacman -Sy --noconfirm --needed \
+          # Alire's MSYS2 comes from the Alire cache, so the packages it has
+          # already installed can predate the current package database.
+          # Refreshing with a bare -Sy and then installing is a partial
+          # upgrade and can break exact-version dependencies (for example
+          # cc-libs pinning libgcc). Upgrade the whole system instead. The
+          # first pass may update only pacman and the MSYS2 runtime, after
+          # which pacman terminates its own MSYS2 processes; that pass is
+          # therefore allowed to end nonzero. The second, fresh pass
+          # completes the upgrade and must succeed.
+          if ! alr exec -- pacman -Syu --noconfirm; then
+            echo "First MSYS2 upgrade pass ended nonzero (core update)"
+          fi
+          alr exec -- pacman -Syu --noconfirm
+
+          # The database is current after the full upgrade, so install
+          # without a separate refresh.
+          alr exec -- pacman -S --noconfirm --needed \
             mingw-w64-x86_64-opencv \
             mingw-w64-x86_64-pkg-config \
             mingw-w64-x86_64-gcc
+
+          alr exec -- pacman -Q \
+            mingw-w64-x86_64-opencv \
+            mingw-w64-x86_64-gcc \
+            mingw-w64-x86_64-libgcc \
+            mingw-w64-x86_64-libstdc++ \
+            mingw-w64-x86_64-cc-libs
+          alr exec -- pacman -Dk
 
       - name: Report OpenCV and compiler resolution
         run: |
