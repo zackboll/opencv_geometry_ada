@@ -1,0 +1,52 @@
+--  Independent mixed Ada/C++ consumer of the installed opencv_core and
+--  opencv_geometry projects. Its own C++ unit links native OpenCV itself.
+--
+--  Scenario variables:
+--    CONSUMER_CXX_FROM  "explicit" (default) uses CONSUMER_CXX as the C++
+--                       driver; "configuration" keeps the driver of the
+--                       GPR configuration (cross builds).
+--    CONSUMER_CXX       C++ driver for "explicit" (default g++).
+--    CONSUMER_OPENCV_INCLUDE  OpenCV header switch.
+--    CONSUMER_OPENCV_BACKEND  native library providing contourArea:
+--                       -lopencv_imgproc (OpenCV 4) or -lopencv_geometry
+--                       (OpenCV 5).
+with "opencv_core";
+with "opencv_geometry";
+
+project Mixed_Consumer is
+   for Languages use ("Ada", "C++");
+   for Source_Dirs use (".");
+   for Source_Files use
+     ("installed_mixed_consumer.adb",
+      "geometry_consumer_checks.ads",
+      "geometry_consumer_checks.adb",
+      "application.cpp");
+   for Main use ("installed_mixed_consumer.adb");
+   for Object_Dir use "obj-mixed";
+   for Exec_Dir use "bin";
+   for Create_Missing_Dirs use "True";
+
+   type Cxx_Source_Kind is ("explicit", "configuration");
+   Cxx_Source : Cxx_Source_Kind := external ("CONSUMER_CXX_FROM", "explicit");
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnatwa", "-gnatwe", "-Werror");
+      for Default_Switches ("C++") use
+        ("-std=c++17", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+         external ("CONSUMER_OPENCV_INCLUDE", "-I/usr/include/opencv4"));
+      case Cxx_Source is
+         when "explicit" =>
+            for Driver ("C++") use external ("CONSUMER_CXX", "g++");
+         when "configuration" =>
+            null;
+      end case;
+   end Compiler;
+
+   package Linker is
+      --  The application's own native OpenCV dependency.
+      for Linker_Options use
+        (external ("CONSUMER_OPENCV_BACKEND", "-lopencv_imgproc"),
+         "-lopencv_core",
+         "-lstdc++");
+   end Linker;
+end Mixed_Consumer;

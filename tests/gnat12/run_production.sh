@@ -15,6 +15,8 @@
 #   GNAT12_CORE_COMMIT  40-hex Core commit expected at GNAT12_CORE_ROOT
 #   GNAT12_AUNIT_ROOT   unpacked AUnit 26.0.0 sources (lib/gnat/aunit.gpr)
 #   GNAT12_SOURCE_ROOT  clean Geometry Git checkout (default: this one)
+#   GNAT12_PROFILES     optional subset of "release validation development",
+#                       in order (default: all three)
 #
 # Prints PASS on success; any failed check exits nonzero.
 set -eu
@@ -53,6 +55,17 @@ test -f "$core_root/opencv_core.gpr" || fail "not a Core checkout: $core_root"
 test -f "$aunit/lib/gnat/aunit.gpr" || fail "not AUnit sources: $aunit"
 printf '%s\n' "$core_commit" | grep -Eqx '[0-9a-f]{40}' \
     || fail "GNAT12_CORE_COMMIT is not a full commit id: $core_commit"
+profiles=${GNAT12_PROFILES:-release validation development}
+profile_count=0
+for profile in $profiles; do
+    case "$profile" in
+        release|validation|development) ;;
+        *) fail "unknown build profile: $profile" ;;
+    esac
+    profile_count=$((profile_count + 1))
+done
+test "$profile_count" -gt 0 || fail "no build profile selected"
+first_profile=${profiles%% *}
 
 # Exact, clean source identities. safe.directory is limited to the two
 # checkouts; container checkouts are often owned by another user.
@@ -137,7 +150,7 @@ check_results() {
     grep -qx 'Unexpected Errors: 0' "$run_log" || fail "errors in $run_log"
 }
 
-for profile in release validation development; do
+for profile in $profiles; do
     geometry=$work/$profile/geometry
     mkdir -p "$work/$profile"
     cp -a "$work/geometry-source" "$geometry"
@@ -181,7 +194,7 @@ done
 # Core is compiled once, by the first production build. Its one Ada 2022
 # unit proves that the language-switch scan above reads compile commands.
 grep -Eq ' -c .*-gnat2022 .*opencv-core-internal-typed_access\.adb' \
-    "$logs/release-production.log" \
+    "$logs/$first_profile-production.log" \
     || fail "Core typed-access compile command not found in the build log"
 
 # Native shim tests under AddressSanitizer and UndefinedBehaviorSanitizer,
@@ -221,4 +234,5 @@ if grep -E 'not found|undefined symbol' "$logs/executables.log"; then
 fi
 
 echo "PASS GNAT $expected_gcc production, $expected_tests/$expected_tests AUnit" \
-    "x3 profiles, native tests; Geometry $geometry_commit, Core $core_commit"
+    "in $profile_count profile(s) ($profiles), native tests;" \
+    "Geometry $geometry_commit, Core $core_commit"
