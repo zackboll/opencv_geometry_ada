@@ -1,0 +1,87 @@
+name: Debian AArch64 reference
+
+# Public Debian 12 AArch64 reference cross qualification: Core and Geometry
+# cross-built and installed, independent consumers cross-linked and
+# inspected, and emulated (qemu-user) execution of the consumers and the
+# AUnit suite. Debian's GNAT 12 cross compiler and an arm64 sysroot staged
+# from Debian packages are reference inputs only: this is not AdaCore
+# GNAT 12 or Yocto Scarthgap qualification, and emulated execution is not
+# target execution.
+
+on:
+  push:
+    branches: [main, 'feature/**', 'corrective/**', 'release/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Provisional Core 0.5.0 development candidate (Core main after #81).
+  # The release gate repeats this job against the published Core 0.5.0.
+  CORE_COMMIT: 8f1c5d0626b463c291a4d919767f7a2d77c54ba9
+
+jobs:
+  reference:
+    runs-on: ubuntu-24.04
+    container: debian:12
+    steps:
+      - name: Install git for the checkout
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git
+
+      - name: Checkout Geometry
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: geometry
+
+      - name: Checkout Core
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/opencv_core_ada
+          ref: ${{ env.CORE_COMMIT }}
+          path: core
+
+      - name: Verify exact source identities
+        run: |
+          set -eu
+          expected=${{ github.event.pull_request.head.sha || github.sha }}
+          test "$(git -c safe.directory="$PWD/geometry" -C geometry rev-parse HEAD)" = "$expected"
+          test "$(git -c safe.directory="$PWD/core" -C core rev-parse HEAD)" = "$CORE_COMMIT"
+
+      - name: Install the public cross reference tools
+        run: sh geometry/tests/cross/install_reference_tools.sh
+
+      - name: Retrieve test-only AUnit sources without selecting a compiler
+        run: |
+          set -eu
+          curl --fail --location --output /tmp/alire.zip \
+            https://github.com/alire-project/alire/releases/download/v2.1.1/alr-2.1.1-bin-x86_64-linux.zip
+          unzip -q /tmp/alire.zip -d /tmp/alire
+          mkdir -p /tmp/aunit-source
+          cd /tmp/aunit-source
+          /tmp/alire/bin/alr -n get --only aunit=26.0.0
+
+      - name: Cross-build, install, link and emulate
+        run: |
+          set -eu
+          export REFERENCE_CORE_ROOT="$PWD/core"
+          export REFERENCE_CORE_COMMIT="$CORE_COMMIT"
+          export REFERENCE_AUNIT_ROOT=$(find /tmp/aunit-source -mindepth 1 \
+            -maxdepth 1 -type d -name 'aunit_*')
+          git config --global --add safe.directory "$PWD/geometry"
+          sh geometry/tests/cross/qualify_debian_aarch64_reference.sh \
+            /evidence/run
+
+      - name: Preserve reference evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-debian-aarch64-reference
+          path: |
+            /evidence/run/logs/
+            /evidence/run/dispositions.txt
+          if-no-files-found: error
