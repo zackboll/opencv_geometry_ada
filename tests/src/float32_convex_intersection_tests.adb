@@ -959,7 +959,7 @@ package body Float32_Convex_Intersection_Tests is
         (Edge.Area = 0.0 and then Edge.Vertex_Count in 1 .. 3,
          "shared-edge contact gives one to three vertices and zero area");
       AUnit.Assertions.Assert
-        (Corner.Area = 0.0 and then Corner.Vertex_Count in 0 .. 3,
+        (Corner.Area = 0.0 and then Corner.Vertex_Count <= 3,
          "vertex-only contact gives at most three vertices and zero area");
    end Ext_Nested_Disjoint_Contact;
 

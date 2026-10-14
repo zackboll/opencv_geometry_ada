@@ -1,0 +1,90 @@
+name: GNAT 12 native production
+
+# Debian 12 with its native GNAT 12.2.0, matching runtime, GPRbuild and
+# OpenCV 4.6.0. The complete production library and C++ shim are built in
+# every Alire build profile, the complete AUnit suite runs against each,
+# and the native sanitizer and fault-injection tests run. Alire is used
+# only to fetch AUnit sources; it selects no compiler.
+
+on:
+  push:
+    branches: [main, 'feature/**', 'corrective/**', 'release/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Provisional Core 0.5.0 development candidate (Core main after #81).
+  # The release gate repeats this job against the published Core 0.5.0.
+  CORE_COMMIT: 8f1c5d0626b463c291a4d919767f7a2d77c54ba9
+
+jobs:
+  native-debian12:
+    runs-on: ubuntu-24.04
+    container: debian:12
+    steps:
+      - name: Install native compiler, matching runtime and OpenCV
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl unzip git binutils \
+            gnat-12 gprbuild g++ libopencv-dev pkg-config
+          test "$(gcc -dumpfullversion)" = 12.2.0
+          test "$(gcc -print-file-name=adalib)" = \
+            /usr/lib/gcc/x86_64-linux-gnu/12/adalib
+
+      - name: Checkout Geometry
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: geometry
+
+      - name: Checkout Core
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/opencv_core_ada
+          ref: ${{ env.CORE_COMMIT }}
+          path: core
+
+      - name: Verify exact source identities
+        run: |
+          set -eu
+          expected=${{ github.event.pull_request.head.sha || github.sha }}
+          actual=$(git -c safe.directory="$PWD/geometry" -C geometry rev-parse HEAD)
+          test "$actual" = "$expected"
+          core=$(git -c safe.directory="$PWD/core" -C core rev-parse HEAD)
+          test "$core" = "$CORE_COMMIT"
+          echo "Geometry: $actual"
+          echo "Core:     $core"
+
+      - name: Retrieve test-only AUnit sources without selecting a compiler
+        run: |
+          set -eu
+          curl --fail --location --output /tmp/alire.zip \
+            https://github.com/alire-project/alire/releases/download/v2.1.1/alr-2.1.1-bin-x86_64-linux.zip
+          unzip -q /tmp/alire.zip -d /tmp/alire
+          install -m 0755 /tmp/alire/bin/alr /usr/local/bin/alr
+          mkdir -p /tmp/aunit-source
+          cd /tmp/aunit-source
+          alr -n get --only aunit=26.0.0
+
+      - name: Compile and execute GNAT 12 production and AUnit
+        run: |
+          set -eu
+          export GNAT12_WORK=/tmp/gnat12-qualified
+          export GNAT12_CORE_ROOT="$PWD/core"
+          export GNAT12_CORE_COMMIT="$CORE_COMMIT"
+          export GNAT12_AUNIT_ROOT=$(find /tmp/aunit-source -mindepth 1 \
+            -maxdepth 1 -type d -name 'aunit_*')
+          export GNAT12_SOURCE_ROOT="$PWD/geometry"
+          sh geometry/tests/gnat12/run_production.sh
+
+      - name: Preserve production and runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-gnat12-native-production
+          path: /tmp/gnat12-qualified/logs/
+          if-no-files-found: error
