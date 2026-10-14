@@ -21,8 +21,8 @@ result does not certify the release candidate.
 | 001 | Debian 12 GNAT 12 production and runtime | `GNAT12_NATIVE_BUILD_QUALIFIED`, `GNAT12_NATIVE_RUNTIME_QUALIFIED` against provisional Core `8f1c5d0`; repeat on Core 0.5.0 |
 | 002 | Debian 12 installed consumers | `DEBIAN12_GNAT12_INSTALLED_CONSUMERS_QUALIFIED` against provisional Core `8f1c5d0`; repeat on Core 0.5.0 |
 | 003 | Isolated AArch64 cross configuration | `CROSS_CONFIGURATION_CONTROLS_QUALIFIED` (synthetic positive and negative controls; not production cross-build qualification) |
-| 004 | Debian AArch64 reference qualification | Not started |
-| 005 | AdaCore GNAT 12 / Yocto Scarthgap | `ADACORE_YOCTO_QUALIFICATION_BLOCKED` |
+| 004 | Debian AArch64 reference qualification | Reference cross build, install and consumer link PASS; emulated (qemu-user) execution PASS; target execution NOT RUN; against provisional Core `8f1c5d0` |
+| 005 | AdaCore GNAT 12 / Yocto Scarthgap | `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (inputs unavailable; external-input adapter ready) |
 | 006 | Release regression and CI matrix | Not started |
 | 007 | Release candidate 0.3.0 | Not started; blocked by 000 and 005 |
 | 008 | Tag and Alire index submission | Requires maintainer authorization |
@@ -580,3 +580,182 @@ Disposition: `CROSS_CONFIGURATION_CONTROLS_QUALIFIED`. These are synthetic
 controls of the fail-closed logic, not compiler, link or execution
 evidence. The real toolchain, sysroot, Core build and links are
 REL-003-004.
+
+Hosted: Cross configuration controls 38525930473 (push) and 38525937698
+(pull request) on `a8daedc`, 41 tests OK. GNAT 12 native production,
+installed consumers, Cross-Platform Geometry CI and documentation also
+passed on `a8daedc`.
+
+## REL-003-004: Debian AArch64 reference qualification
+
+Public reference evidence only. Debian's `gnat-12-aarch64-linux-gnu` is not
+the AdaCore GNAT 12 toolchain, the staged arm64 sysroot is not a Yocto
+Scarthgap sysroot, and emulated execution is not target execution.
+
+### Environment
+
+`tests/cross/install_reference_tools.sh`, shared by the local
+`tests/cross/Containerfile` and the hosted workflow, installs
+`gcc-aarch64-linux-gnu`, `g++-aarch64-linux-gnu`,
+`gnat-12-aarch64-linux-gnu` (all `12.2.0-14cross1`), `binutils`,
+`pkg-config`, `python3` and `qemu-user-static`. It also installs the public
+GPRbuild 26.0.0-1 x86_64 release, the one the Alire index lists for
+`gprbuild=26.0.1`, verified by its index hash `e3f27f25...`. Debian 12's
+GPRconfig 2023 does not recognize Debian's cross GNAT ("can't find a
+toolchain for ... aarch64-linux-gnu"), while GPRconfig 26 does. The
+environment contains no native `gcc`, `g++`, `gnat` or `gprbuild`; the
+script verifies that.
+
+### Steps (`tests/cross/qualify_debian_aarch64_reference.sh`)
+
+1. Sysroot: `tests/cross/prepare_debian12_sysroot.sh` downloads the
+   `libopencv-dev:arm64`, `libc6-dev:arm64`, `libstdc++-12-dev:arm64` and
+   `libgnat-12:arm64` closure and unpacks the 400 arm64 and `all` packages
+   without installing them, recording every package, version and SHA-256.
+   It also records the 18 host-architecture packages that apt adds for
+   `Multi-Arch: foreign` dependencies; none is unpacked. It applies the
+   shared-library alternatives that the packages' `postinst` would
+   register, `libblas.so.3` and `liblapack.so.3`, as recorded relative
+   links.
+2. GPR configuration: GPRconfig 26 for the Ada runtime
+   `/usr/lib/gcc-cross/aarch64-linux-gnu/12` and the explicit cross `g++`.
+3. Core 0.5.0-dev `8f1c5d0` cross-built and installed by its own
+   `scripts/cross_build_core.sh` (release profile).
+4. Geometry cross-built and installed by `scripts/cross_build_geometry.sh`
+   from REL-003-003: OpenCV 4.6.0, `imgproc` backend, both compilers
+   `GCC: (Debian 12.2.0-14) 12.2.0`, 211 GNAT 12 Core ALIs, a 363-ELF
+   loader closure and 2,869 symbol versions checked.
+5. The REL-003-002 consumers, cross-linked by
+   `tests/cross/qualify_reference_consumers.py` against the installed
+   prefixes and again after moving both. Links use `gprbuild -R`, so
+   executables carry no run path. Each executable must:
+   - be AArch64 ELF64 with the interpreter `/lib/ld-linux-aarch64.so.1`;
+   - contain only Debian cross GCC 12.2.0 code;
+   - resolve through a 22-ELF loader closure inside the sysroot, with 146
+     symbol versions the target defines;
+   - name the installed Core and Geometry archives in its link.
+6. The consumers and the complete AUnit suite, cross-built in the release
+   profile, run under `qemu-aarch64-static -L <sysroot>`.
+
+### Findings
+
+- Unpacking Debian packages runs no maintainer script, so the
+  alternatives-managed `libblas.so.3` and `liblapack.so.3` were missing
+  from the loader paths, and the consumer link failed on BLAS and LAPACK
+  symbols. A name-anywhere dependency index (Imgproc's design) accepted
+  that sysroot. The loader-semantics closure of REL-003-003 rejects it:
+  "unresolved target dependency: liblapack.so.3 ... (not on the target
+  loader's search path)". The sysroot preparation now applies the
+  alternatives explicitly.
+- GPRbuild's default consumer link embeds host run paths
+  (`/usr/lib/gcc-cross/aarch64-linux-gnu/12/adalib`, and `$ORIGIN` paths
+  into the build host's sysroot and prefixes). Target consumers are linked
+  with `-R`, and any run path fails the check.
+- The installed shim project's `Linker_Options` name the sysroot library
+  directory by absolute path. That comes from the shim project's existing
+  `Library_Search_Switch`; consumers cross-link on the host that holds the
+  same sysroot.
+- No AArch64 floating-point behavior difference surfaced: 542/542 tests
+  pass under emulation, as natively.
+
+### Evidence
+
+| Geometry commit | Where | Result |
+| --- | --- | --- |
+| `ea9c1a410e23ec05bb64dc28f993ec4ab7fd5b35` | Local Podman (`tests/cross/Containerfile`) | All steps PASS |
+| `ea9c1a4` | Hosted Debian AArch64 reference 38525933795 (push), 38525940473 (pull request) | All steps PASS; emulated AUnit 542/542 |
+
+Dispositions (reference, against provisional Core `8f1c5d0`):
+
+- `CORE_AARCH64_CROSS_BUILD_INSTALL` PASS
+- `GEOMETRY_AARCH64_CROSS_BUILD_INSTALL` PASS
+- `GEOMETRY_AARCH64_CONSUMER_LINK` PASS
+- emulated consumer execution PASS and emulated AUnit 542/542 PASS, both
+  user-mode emulation only
+- target execution NOT RUN
+
+## REL-003-005: AdaCore GNAT 12 / Yocto Scarthgap
+
+### Inputs
+
+Not available. Neither an AdaCore GNAT 12 AArch64 cross toolchain nor a
+Yocto Scarthgap sysroot exists on the qualification host (see Platform B
+above), and the maintainer confirmed on 2026-10-14 that they cannot be
+supplied now. Disposition: `ADACORE_YOCTO_QUALIFICATION_BLOCKED`. The four
+states
+`ADACORE_GNAT12_CROSS_BUILD_QUALIFIED`, `YOCTO_SCARTHGAP_SYSROOT_QUALIFIED`,
+`GEOMETRY_YOCTO_CROSS_INSTALL_QUALIFIED` and
+`GEOMETRY_YOCTO_CONSUMER_LINK_QUALIFIED` stay pending, and they block
+release certification.
+
+### External-input adapter
+
+`tests/cross/qualify_adacore_yocto.sh EVIDENCE` runs the qualification once
+the inputs exist. Its inputs:
+
+- the `scripts/cross_geometry.py` variables for the AdaCore Ada driver and
+  runtime, the target C++ compiler, the reviewed GPR configuration,
+  GPRbuild and GPRinstall, and the Scarthgap sysroot and its pkg-config
+  directories, set explicitly with no SDK script sourced;
+- `OPENCV_CROSS_YOCTO_PROVENANCE`;
+- the Core checkout, commit and AUnit sources;
+- optionally an emulator.
+
+It then:
+
+1. Checks the provenance claims against binaries with
+   `tests/cross/verify_target_claims.py`:
+   - `yocto.release` must be `scarthgap` and must match the sysroot's
+     `os-release` codename;
+   - `yocto.distro` must match its `ID`;
+   - `yocto.sysroot` must be `ENV_PREFIX`;
+   - `toolchain.vendor` must be `AdaCore` and `gnat_major` must be 12. The
+     Ada driver must report GCC 12, and `gnatls` beside it must identify
+     as GNATLS Pro, or the objects it compiles must record GNAT Pro.
+
+   Machine, image, build identity and export method are recorded as
+   unverifiable claims. A missing or contradicted claim stops the run with
+   `ADACORE_YOCTO_QUALIFICATION_BLOCKED`.
+2. Records the SHA-256 and version of the compilers and project tools, the
+   linker, the GPR configuration, `libgnat.a` and the search directories.
+3. Runs `tests/cross/qualify_target.sh`, the same pipeline as the Debian
+   reference:
+   - Core by its own cross build;
+   - Geometry by the fail-closed cross build, whose `libstdc++` symbol
+     check and loader closure apply to the Yocto sysroot;
+   - consumers cross-linked before and after relocation and inspected;
+   - the AUnit suite cross-built;
+   - optional emulation, recorded as emulation only.
+4. Prints the four states only if every claim is verified and every gate
+   passes.
+
+Interoperability: Scarthgap's own C++ compiler is a later GCC than GNAT 12.
+The fail-closed check then requires an explicit
+`OPENCV_CROSS_INDEPENDENT_TOOLCHAINS=True`, which records the difference
+and is never interoperability proof. The proof is the actual link, the
+target `libstdc++` symbol-version subset check, the loader closure with
+symbol versions, and execution where available. No C++ exception or
+native object crosses the Geometry C ABI.
+
+### Controls
+
+- Nine synthetic controls (`tests/cross/test_verify_target_claims.py`):
+  - verified claims with recorded evidence;
+  - missing claims;
+  - non-Scarthgap or contradicted codenames;
+  - distribution and sysroot mismatches;
+  - a sysroot without `os-release`;
+  - an `os-release` link escaping the sysroot;
+  - non-AdaCore toolchains;
+  - either GNAT Pro identity;
+  - GCC major 13.
+- Real data: the Debian reference now runs through `qualify_target.sh` and
+  then calls the adapter with AdaCore/Scarthgap claims about the Debian
+  inputs. The adapter must block, and it does: "the sysroot has no
+  os-release: the Yocto release claim cannot be verified" and "neither
+  gnatls nor the compiled objects identify GNAT Pro (gnatls: 'GNATLS
+  12.2.0'; objects: ['GCC: (Debian 12.2.0-14) 12.2.0'])". No qualified
+  state is printed.
+
+Local evidence on `cc40dc0`: the complete Debian reference passes through
+the shared pipeline, and the negative control is rejected as described.
