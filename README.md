@@ -8,12 +8,24 @@ Release 0.2.0 certifies the existing safe 2-D surface against exact OpenCV
 the intentionally deferred native operations. No coverage-percentage target
 overrides those safety decisions.
 
+> **Documentation:** the generated API reference, operation browser and five
+> developer guides are built by `sh scripts/generate_docs.sh` and published
+> from `main` to <https://zackboll.github.io/opencv_geometry_ada/>. The guide
+> sources are in [`docs/guides/`](docs/guides/), their compiled examples in
+> [`docs/examples/`](docs/examples/), and the tooling and comment conventions
+> in [`docs/documentation.md`](docs/documentation.md). The package
+> specifications `src/opencv-geometry.ads` and
+> `src/opencv-geometry-subdiv2d.ads` are the authoritative API contract; where
+> this README's feature notes and the specifications differ, the
+> specifications win.
+
 The only production Ada dependency is `opencv_core`. The public package is
 `OpenCV.Geometry` on both OpenCV versions:
 
 The supported Core constraint is `>=0.2.0 & <0.5.0`. Core 0.4.1 was
-qualified at its immutable release commit; it is not yet in the public
-Alire index. See [Core compatibility evidence](docs/core-compatibility.md)
+qualified at its immutable release commit, `386c536`, which is also the
+commit the public Alire community index publishes for that release. See
+[Core compatibility evidence](docs/core-compatibility.md)
 for exact sources, tested combinations, and platform limitations.
 
 | Native OpenCV | Header | Native implementation |

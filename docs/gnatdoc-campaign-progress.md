@@ -84,7 +84,8 @@ published history.
 | DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | #30 (DOC-002B branch) | Open; head `d3ec186` |
 | DOC-002D Subdiv2D topology and Voronoi | `feature/geometry-doc-002d-subdiv2d-topology` | #31 (DOC-002C branch) | Open; head `3705332`; zero warnings, 452/452 |
 | DOC-003 theme, highlighting, type links | `feature/geometry-doc-003-presentation` | #32 (DOC-002D branch) | Open; head `a03cf97` |
-| DOC-004 package- and operation-level browser | `feature/geometry-doc-004-navigation` | pending (DOC-003 branch) | Qualified locally |
+| DOC-004 package- and operation-level browser | `feature/geometry-doc-004-navigation` | #33 (DOC-003 branch) | Open; head `661ad73` |
+| DOC-005 guides and compiled examples | `feature/geometry-doc-005-guides` | pending (DOC-004 branch) | Qualified locally |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
@@ -105,7 +106,7 @@ published history.
 | Theme, highlighting, type links | Core/Imgproc DOC-003 tools | DOC-003 |
 | Searchable navigation | Imgproc operation-level browser | DOC-004; two packages |
 | Generic-instance summaries | Core `enhance_gnatdoc_instances.py` | Not applicable: no public generic instantiations or tagged types |
-| Guides and compiled examples | Imgproc DOC-005 | DOC-005 |
+| Guides and compiled examples | Imgproc DOC-005 (5 guides, 5 examples) | DOC-005: 5 guides, 5 compiled and executed examples, API links across both packages |
 
 ## Initial GNATdoc inventory (`517c804`, pinned tools)
 
@@ -166,10 +167,11 @@ Rendering facts found while building DOC-001 (input to DOC-002):
 
 ```sh
 cd /home/zboll/git/opencv/geometry-doc-campaign/geometry
-python3 -m unittest discover -s scripts -p 'test_*.py' -v
+export DOC_PYTHON=$PWD/.doc-tools/markdown/bin/python
 sh scripts/generate_docs.sh
-python3 -m unittest discover -s scripts -p 'test_validate_docs.py' -v
+"$DOC_PYTHON" -m unittest discover -s scripts -p 'test_*.py' -v
 alr exec -- gprbuild -P docs/example.gpr && obj/docs-example/example
+alr exec -- gprbuild -P docs/examples/examples.gpr
 ```
 
 ## Checkpoint log
@@ -520,16 +522,60 @@ its PR targets the DOC-003 branch.
   desktop dark search, mobile light and no-JavaScript views were inspected.
   The mobile sidebar keeps Imgproc's 30 % band and scrolls internally.
 
+### GEOMETRY-DOC-004 publication
+
+PR #33 (DOC-003 branch <- `feature/geometry-doc-004-navigation`), head
+`661ad73`; open, non-draft, auto-merge off. Hosted CI of #32 (head
+`a03cf97`) was pending at its single inspection.
+
+### GEOMETRY-DOC-005 — developer guides and compiled examples
+
+Branch `feature/geometry-doc-005-guides` from DOC-004 head `661ad73`; its PR
+targets the DOC-004 branch.
+
+- Five guides in `docs/guides/`: geometry fundamentals and contour analysis;
+  shape fitting and intersections; affine and perspective geometry; Delaunay
+  and Voronoi with Subdiv2D; compatibility, ownership and native safety. Each
+  states that the specifications are authoritative and embeds one of five
+  examples in `docs/examples/` (`examples.gpr`, `-gnat2022 -gnata -gnatwa
+  -Werror`, GNATformat-clean). Every statement was checked against the
+  declaration's own documentation; the examples assert only properties that
+  hold on every supported release, and deferred native operations appear
+  only as unbound.
+- `render_gnatdoc_guides.py` adapted from Imgproc: two-package `api:` links
+  resolved from the API browser's verified anchors, with names declared in
+  both packages rejected as ambiguous; pinned `markdown-it-py` 3.0.0 and
+  `mdurl` 0.1.2 in `docs/requirements.txt`. Validator, generator, landing
+  page (Developer Guides section), workflow (documentation virtual
+  environment, guide mutation tests, idempotent re-render, examples built
+  and run) and `docs/documentation.md` integrated.
+- README: documentation pointer with the authoritative-specification note,
+  and the stale Core-index sentence corrected (verified again on 2026-10-14:
+  `alr show opencv_core=0.4.1` resolves the community index at `386c536`).
+- Tests: 21 guide tests and 3 new generated-site validator mutations (guide
+  integrity, landing links, guide external links); 219 Python tests in the
+  documentation environment, all passing; with plain `python3` the
+  renderer-dependent tests skip.
+- `generate_docs.sh`: 0 warnings, 452/452 coverage, empty baselines, 9 HTML
+  pages validated, 5 guides; fresh regeneration and repeated enhancement
+  byte-identical; all five examples and the landing example run; ShellCheck
+  and actionlint clean.
+- Browser: the guide harness passes at 1280/390 px, light/dark, with and
+  without JavaScript (every guide from the landing page, API anchors
+  including every overload-labelled link, cross-guide links, current-page
+  marker, focus, skip link, overflow); the presentation and navigation
+  harnesses still pass. Screenshots in
+  `/home/zboll/git/opencv/geometry-doc-campaign/evidence/doc-005`; the
+  desktop light compatibility table and the mobile dark fitting guide were
+  inspected.
+
 ## Findings for the maintainers (not changed: outside documentation scope)
 
-- README says Core 0.4.1 "is not yet in the public Alire index"; on
-  2026-10-13 `alr show opencv_core` resolved `opencv_core=0.4.1` from the
-  index at commit `386c536`. Documentation-only correction candidate for
-  DOC-005.
+- None open. The README's stale Core-index sentence, recorded here during
+  DOC-004, was corrected in DOC-005 as documentation.
 
 ## Next executable task
 
-1. Commit DOC-004, push, open its PR against the DOC-003 branch; check
-   hosted CI of #32 once.
-2. DOC-005 guides and compiled examples on `feature/geometry-doc-005-guides`
-   from the DOC-004 head, then the DOC-006 final qualification.
+1. Commit DOC-005, push, open its PR against the DOC-004 branch; check
+   hosted CI of #33 once.
+2. DOC-006 independent final qualification and campaign report.
