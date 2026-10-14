@@ -1,0 +1,43 @@
+--  Debian 12 GNAT 12 qualification configuration for opencv_geometry.
+--
+--  Reproduces the Ada switch sets that Alire 2.1.1 generates for each
+--  build profile, without Alire. opencv_geometry.gpr appends -Werror.
+--  No Ada language version is forced: like the Alire configuration, the
+--  compiler default applies. tests/gnat12/run_production.sh installs
+--  this file as config/opencv_geometry_config.gpr and selects the profile
+--  with -XGEOMETRY_GNAT12_PROFILE.
+with "opencv_core.gpr";
+
+abstract project Opencv_Geometry_Config is
+
+   type Build_Profile_Kind is ("release", "validation", "development");
+   Build_Profile : Build_Profile_Kind := external ("GEOMETRY_GNAT12_PROFILE");
+
+   Style_Switches :=
+     ("-gnaty3", "-gnatya", "-gnatyA", "-gnatyB", "-gnatyb", "-gnatyc",
+      "-gnaty-d", "-gnatye", "-gnatyf", "-gnatyh", "-gnatyi", "-gnatyI",
+      "-gnatyk", "-gnatyl", "-gnatym", "-gnatyn", "-gnatyO", "-gnatyp",
+      "-gnatyr", "-gnatyS", "-gnatyt", "-gnatyu", "-gnatyx");
+
+   Ada_Compiler_Switches := ();
+
+   case Build_Profile is
+      when "release" =>
+         Ada_Compiler_Switches :=
+           ("-O3", "-gnatn", "-ffunction-sections", "-fdata-sections",
+            "-gnatW8");
+
+      when "validation" =>
+         Ada_Compiler_Switches :=
+           ("-O3", "-gnatn", "-ffunction-sections", "-fdata-sections", "-g",
+            "-gnato", "-gnatwa", "-gnatw.X", "-gnatVa", "-gnatwe", "-gnata")
+           & Style_Switches & ("-gnatW8");
+
+      when "development" =>
+         Ada_Compiler_Switches :=
+           ("-Og", "-ffunction-sections", "-fdata-sections", "-g", "-gnatwa",
+            "-gnatw.X", "-gnatVa")
+           & Style_Switches & ("-gnatW8");
+   end case;
+
+end Opencv_Geometry_Config;

@@ -1,0 +1,19 @@
+--  Debian 12 GNAT 12 qualification configuration for the AUnit harness.
+--
+--  The tests crate is the Alire root, so Alire builds it with the
+--  development switch set whatever the opencv_geometry profile is.
+--  tests.gpr appends -Werror. tests/gnat12/run_production.sh installs
+--  this file as tests/config/tests_config.gpr.
+with "aunit.gpr";
+with "opencv_geometry.gpr";
+
+abstract project Tests_Config is
+   Build_Profile := "gnat12-development";
+   Ada_Compiler_Switches :=
+     ("-Og", "-ffunction-sections", "-fdata-sections", "-g", "-gnatwa",
+      "-gnatw.X", "-gnatVa", "-gnaty3", "-gnatya", "-gnatyA", "-gnatyB",
+      "-gnatyb", "-gnatyc", "-gnaty-d", "-gnatye", "-gnatyf", "-gnatyh",
+      "-gnatyi", "-gnatyI", "-gnatyk", "-gnatyl", "-gnatym", "-gnatyn",
+      "-gnatyO", "-gnatyp", "-gnatyr", "-gnatyS", "-gnatyt", "-gnatyu",
+      "-gnatyx", "-gnatW8");
+end Tests_Config;

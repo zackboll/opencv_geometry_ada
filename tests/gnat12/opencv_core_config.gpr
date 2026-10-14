@@ -1,0 +1,11 @@
+--  Debian 12 GNAT 12 qualification configuration for opencv_core.
+--
+--  Core is built as an Alire dependency would build it: with Alire's
+--  release switch set. opencv_core.gpr adds its own -Werror and per-unit
+--  language switches. tests/gnat12/run_production.sh installs this file
+--  as config/opencv_core_config.gpr of an exported Core tree.
+abstract project OpenCV_Core_Config is
+   Build_Profile := "gnat12-release";
+   Ada_Compiler_Switches :=
+     ("-O3", "-gnatn", "-ffunction-sections", "-fdata-sections", "-gnatW8");
+end OpenCV_Core_Config;
