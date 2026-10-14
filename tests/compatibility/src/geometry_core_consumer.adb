@@ -23,5 +23,5 @@ begin
    pragma Assert (OpenCV.Core.Float64_Access.Get (Copy, 0, 0) = 1.0);
    OpenCV.Core.Float64_Access.Set (Copy, 0, 2, 5.0);
    pragma Assert (OpenCV.Core.Float64_Access.Get (Copy, 0, 2) = 5.0);
-   Ada.Text_IO.Put_Line ("PASS Geometry / Core 0.4.1 consumer");
+   Ada.Text_IO.Put_Line ("PASS Geometry / Core 0.5.0 consumer");
 end Geometry_Core_Consumer;

@@ -23,19 +23,19 @@ Required qualification versions:
 | GNAT Native | Alire `gnat_native=16.1.0`, executable GNAT 16.1.0 |
 | GPRbuild | Alire `gprbuild=26.0.1`, executable 26.0.0 (2026-04-15) |
 | GNATdoc | Alire `gnatdoc_bin=26.0.0`, executable 26.0.0 (20260415) |
-| opencv_core | 0.4.1, commit `386c5360ac51f2b62e522853d94290aec4ee14a0` |
+| opencv_core | 0.5.0, commit `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f` |
 
 Also install a supported native OpenCV development library, pkg-config, a
 C++17 compiler, a POSIX shell, Git and Python 3.9 or newer.
 
-The production manifest constrains `opencv_core` to `>=0.2.0 & <0.5.0` and
-contains no pin; Core `main` is already `0.5.0-dev`. Documentation is
-therefore generated against one exact Core release, applied as a temporary
-pin exactly as the cross-platform CI does. Never commit the pin:
+The production manifest constrains `opencv_core` to `>=0.5.0 & <0.6.0` and
+contains no pin. Documentation is generated against one exact Core release,
+the Core 0.5.0 release commit, applied as a temporary pin exactly as the
+cross-platform CI does. Never commit the pin:
 
 ```sh
 git clone https://github.com/zackboll/opencv_core_ada.git core
-git -C core checkout --detach 386c5360ac51f2b62e522853d94290aec4ee14a0
+git -C core checkout --detach f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
 git clone https://github.com/zackboll/opencv_geometry_ada.git geometry
 cd geometry
 alr -n --force toolchain --select gnat_native=16.1.0 gprbuild=26.0.1

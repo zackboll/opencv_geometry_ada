@@ -16,9 +16,8 @@ permissions:
   contents: read
 
 env:
-  # Provisional Core 0.5.0 development candidate (Core main after #81).
-  # The release gate repeats this job against the published Core 0.5.0.
-  CORE_COMMIT: 8f1c5d0626b463c291a4d919767f7a2d77c54ba9
+  # The Core 0.5.0 release commit (tag 0.5.0).
+  CORE_COMMIT: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
 
 jobs:
   native-debian12:

@@ -139,7 +139,7 @@ fi
 # ---- cell setup ------------------------------------------------------
 
 ov=${1:?opencv version, for example 4.10.0}
-core_version=${2:?core version, 0.3.0 or 0.4.1}
+core_version=${2:?core version, 0.3.0, 0.4.1 or 0.5.0}
 
 here=$(cd "$(dirname "$0")/.." && pwd)
 geometry_sha=${GEOMETRY_SHA:-$(git -C "$here" rev-parse HEAD)}
@@ -151,6 +151,7 @@ results=$work/results-v2.csv
 case "$core_version" in
     0.3.0) core_sha=0e2753be8ea05fc972ec452c32b975f9e9b3912f ;;
     0.4.1) core_sha=386c5360ac51f2b62e522853d94290aec4ee14a0 ;;
+    0.5.0) core_sha=f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f ;;
     *) echo "unknown core version $core_version" >&2; exit 64 ;;
 esac
 
