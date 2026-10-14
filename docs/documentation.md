@@ -191,6 +191,57 @@ rendered aspects, published private declarations, misplaced overload
 comments, a removed package-description rule, leaked paths and shim symbols,
 and changed examples must all be rejected.
 
+## Declaration coverage (GEOMETRY-DOC-002A)
+
+`scripts/check_doc_coverage.py` measures documentation by declaration
+identity, independently of GNATdoc's warnings. Its inventory comes from the
+visible part of `src/*.ads`, separately for each package: the package
+description; every declaration, identified by package, kind, name and, for
+subprograms, the complete normalized profile, so each overload is a separate
+item; every parameter and every function's return value; every enumeration
+literal; every record component and discriminant. It reads the native
+section of that exact declaration on its own package page, matching
+subprograms by their profile without aspects (GNATdoc 26.0.0 omits them),
+and requires:
+
+- the members GNATdoc lists to be exactly the source members, in order;
+- non-trivial text for each item: at least two words, not merely its name,
+  so an empty `@param` or a copied identifier does not count;
+- every visible-part comment block to be attached and every line of it to
+  render where it belongs: immediately preceding a declaration, or the
+  package description, which is either the last block before `package`,
+  separated from it only by blank lines (the layout both Geometry packages
+  use and GNATformat keeps), or the first block inside the package followed
+  by a blank line. Detached, trailing and markup-mangled comments fail.
+
+Undocumented items are ratcheted in `docs/gnatdoc-coverage-baseline.txt`
+exactly like warnings (`--fail-on-removed`, `--write-baseline`); attachment
+errors and member mismatches can never be baselined. `generate_docs.sh` runs
+the check after validation; `--report` prints coverage per package and per
+item kind. The inventory has 452 items: 2 package descriptions, 130
+declarations, 145 parameters, 76 function returns, 39 enumeration literals
+and 60 record components and discriminants.
+
+On the DOC-001 head the checker found 10 attachment defects: the three
+Subdiv2D section preambles ("Extraction", "Navigation", "Voronoi diagram"),
+separated by blank lines, never rendered, and seven formulas lost their
+`**` or `*` to emphasis. DOC-002A moved the preambles verbatim into the
+Subdiv2D package description and put the formulas in code spans.
+
+`scripts/check_comment_only.py BASE [TARGET]` proves that a documentation
+change altered only comments. It compares two committed revisions (`TARGET`
+defaults to `HEAD`), so the temporary Core pin in a working tree cannot
+affect it. Every Ada source under `src/` must have the same tokens at both
+revisions once comments and layout are removed, with string and character
+literals kept, so a changed declaration, default, literal, pragma or
+contract fails, as does an added or removed source. Every other file tracked
+at `BASE`, apart from `docs/`, `README.md` and `.gitignore`, must be
+byte-identical and present: the C++ shim, the tests, `alire.toml`, the
+production GPR projects, the build and configuration scripts and the
+cross-platform workflow. New documentation tooling files are allowed. It
+qualifies documentation pull requests; it is not a CI gate, because feature
+work legitimately changes declarations.
+
 ## Landing-page example
 
 The example on `docs/index.html` is `docs/example.adb`, compiled with
@@ -230,11 +281,24 @@ and a blank line between a comment and its declaration detaches the comment.
 A comment placed after a declaration documents the *next* declaration, so
 existing trailing comments must be moved when their declaration is
 documented. Use `@param`, `@return` and `@exception` with names matching the
-actual declaration. The GNATdoc 26.0.0 conventions verified by the Imgproc
-campaign (`@enum` for enumeration literals, `@field` for record components and
-discriminants, `@exception OpenCV_Error` rather than the dotted name) are
-re-verified on Geometry's sources before use. Do not change declarations or
-behavior to improve generated output.
+actual declaration; tag text may continue on the following comment lines.
+Verified on GNATdoc 26.0.0 with a scratch specification during DOC-002A:
+enumeration literals are documented in the type's leading block with `@enum`,
+record components, including discriminants and variant components, with
+`@field`, and exceptions as `@exception OpenCV_Error`, because a dotted name
+such as `OpenCV.OpenCV_Error` is split at the dot. A pair of `*` or `**`
+becomes emphasis (`2**24 .. 2**25` renders as bold "24 .. 2"), so formulas
+go in backtick code spans, which render verbatim; backslash escapes are not
+supported. Lines starting with `- ` or `* ` form bullet lists and a bare `--`
+line separates paragraphs. Because `Post` aspects are not rendered, a
+function with a postcondition states its guarantee in its `@return` text.
+Do not change declarations or behavior to improve generated output.
+
+Describe purpose, parameter ranges and validation, result representation and
+bounds, ownership, exceptions and meaningful numerical or OpenCV-version
+limitations, from the specification, implementation, tests and reviewed
+source research rather than from the C++ name. A zero warning count is not
+proof of accuracy.
 
 ## Testing the documentation tooling
 
@@ -242,6 +306,10 @@ behavior to improve generated output.
 python3 -m unittest discover -s scripts -p 'test_*.py' -v
 sh scripts/generate_docs.sh
 python3 -m unittest discover -s scripts -p 'test_validate_docs.py' -v
+python3 scripts/check_doc_coverage.py --report docs/gnatdoc-coverage-baseline.txt _site
+python3 scripts/check_comment_only.py origin/main   # committed documentation changes
+alr exec -- gnatformat --check -P opencv_geometry.gpr src/opencv-geometry.ads \
+  src/opencv-geometry-subdiv2d.ads
 alr exec -- gnatformat --check -P docs/example.gpr docs/example.adb
 alr exec -- gprbuild -P docs/example.gpr && obj/docs-example/example
 git diff --check
