@@ -18,6 +18,13 @@ from pathlib import Path
 from validate_docs import DocumentationError, validate, without_aspects
 
 ROOT = Path(__file__).resolve().parent.parent
+# Guide reconstruction in the generated-site tests needs the pinned renderer
+# (docs/requirements.txt); the synthetic fixture does not.
+try:
+    import markdown_it  # noqa: F401
+    RENDERER = True
+except ImportError:
+    RENDERER = False
 PARENT_PAGE = "a" * 64 + ".html"
 CHILD_PAGE = "b" * 64 + ".html"
 
@@ -408,8 +415,9 @@ class SyntheticSiteTest(unittest.TestCase):
         self.assertEqual(before, after)
 
 
-@unittest.skipUnless((ROOT / "_site/api/index.html").is_file(),
-                     "generated site not present; run scripts/generate_docs.sh")
+@unittest.skipUnless(RENDERER and (ROOT / "_site/api/index.html").is_file(),
+                     "needs the pinned guide renderer and a generated site; "
+                     "run scripts/generate_docs.sh with DOC_PYTHON")
 class GeneratedSiteTest(unittest.TestCase):
     """Mutations of a copy of the real generated site must be rejected."""
 
@@ -453,7 +461,28 @@ class GeneratedSiteTest(unittest.TestCase):
     def test_generated_site_is_accepted(self):
         summary = validate(self.site, ROOT)
         self.assertEqual(summary["packages"], 2)
-        self.assertEqual(summary["pages"], 4)
+        # Landing page, native index, two package pages and five guides.
+        self.assertEqual(summary["pages"], 9)
+
+    def test_tampered_guide_is_rejected(self):
+        guide = self.site / "guides/delaunay-and-voronoi.html"
+        guide.write_text(guide.read_text(encoding="utf-8").replace(
+            "not ready", "ready", 1), encoding="utf-8")
+        self.assertRejected("guide integrity")
+
+    def test_landing_page_must_link_every_guide(self):
+        landing = self.site / "index.html"
+        landing.write_text(landing.read_text(encoding="utf-8").replace(
+            'href="guides/delaunay-and-voronoi.html"', 'href="api/index.html"', 1),
+            encoding="utf-8")
+        self.assertRejected("landing page does not link to guides/delaunay-and-voronoi.html")
+
+    def test_guides_may_not_link_to_other_sites(self):
+        guide = self.site / "guides/delaunay-and-voronoi.html"
+        guide.write_text(guide.read_text(encoding="utf-8").replace(
+            "https://github.com/zackboll/opencv_geometry_ada/blob/main/",
+            "https://example.com/", 1), encoding="utf-8")
+        self.assertRejected("unapproved link in guides/delaunay-and-voronoi.html")
 
     def test_missing_stylesheet_is_rejected(self):
         (self.site / "api/gnatdoc.css").unlink()

@@ -41,7 +41,9 @@ cd geometry
 alr -n --force toolchain --select gnat_native=16.1.0 gprbuild=26.0.1
 alr -n pin opencv_core --use=../core
 alr -n with --solve
-sh scripts/generate_docs.sh
+python3 -m venv .doc-tools/markdown   # documentation-only guide renderer
+.doc-tools/markdown/bin/pip install -r docs/requirements.txt
+DOC_PYTHON=$PWD/.doc-tools/markdown/bin/python sh scripts/generate_docs.sh
 git checkout -- alire.toml   # drop the temporary pin afterwards
 ```
 
@@ -70,7 +72,8 @@ alr exec -- "$GNATDOC_PREFIX/bin/gnatdoc" -P docs_api.gpr \
   --backend html --generate public --style leading --warnings -O "$PWD/_site/api"
 python3 scripts/compare_gnatdoc_warnings.py --fail-on-removed \
   docs/gnatdoc-warning-baseline.txt obj/docs/gnatdoc.log
-python3 scripts/validate_docs.py _site
+"$DOC_PYTHON" scripts/render_gnatdoc_guides.py _site
+"$DOC_PYTHON" scripts/validate_docs.py _site
 ```
 
 `docs_api.gpr` parses `src/` with the production Ada compiler switches
@@ -412,6 +415,66 @@ search and selection through the package heading and category with visible
 focus; no page overflow; and JavaScript-disabled navigation through
 categories of both packages.
 
+## Developer guides and compiled examples (GEOMETRY-DOC-005)
+
+Five task-oriented guides, written in `docs/guides/*.md`, are rendered to
+`_site/guides/` and linked from the landing page:
+
+| Guide | Covers |
+| --- | --- |
+| `geometry-fundamentals-and-contours` | point types, area, length, moments, hulls, defects, approximation, bounding boxes, location and matching |
+| `shape-fitting-and-intersections` | rotated rectangles, ellipse and line fitting, enclosing shapes, convex polygon and rotated-rectangle intersections |
+| `affine-and-perspective-geometry` | transform values, transforms from correspondences, inversion, Ada point mapping and rotation matrices |
+| `delaunay-and-voronoi` | Subdiv2D ownership, readiness, insertion, location, identifier lifetimes, quad-edge navigation, Voronoi facets and scale |
+| `compatibility-ownership-and-safety` | release differences, native capabilities versus binding coverage, ownership, errors and native calls that may not return |
+
+Each guide states that the specifications are authoritative and embeds
+exactly one complete program from `docs/examples/`, which
+`docs/examples/examples.gpr` compiles with `-gnata -gnatwa -Werror` and the
+documentation workflow runs. The examples assert only what is portable across
+the supported OpenCV releases: areas, vertex sets, mapped points and
+tolerances, never a native starting vertex, angle convention or exact
+binary32 value where releases differ. They use well-conditioned inputs, so no
+native search that may not return is reached. Deferred native operations are
+described as unbound, never as callable.
+
+`scripts/render_gnatdoc_guides.py` (adapted from Imgproc DOC-005) renders the
+Markdown with the pinned `markdown-it-py` 3.0.0 and `mdurl` 0.1.2 of
+`docs/requirements.txt`, installed only in a documentation environment
+(`DOC_PYTHON`). Before emitting HTML it rejects raw HTML, images, fenced code
+other than `ada`, `sh` and `text`, an `ada` fence that is not byte-identical to
+one example, an example that no guide embeds, a wrong title, unapproved guide
+sources and invalid heading hierarchies. Links must be local guide headings,
+other guides, `https` pages on `github.com` or `zackboll.github.io` (no
+credentials, ports or queries), or `api:Name` / `api:Name/N` (overload N in
+source order). API links resolve to the verified native anchor of that
+declaration in either package page, taken from the API browser's entries; a
+name declared in both packages would be rejected as ambiguous. Every page
+also lists its native API entry points and links to its Markdown source.
+
+`validate_docs.py` reconstructs every guide and the guide stylesheet and
+compares bytes, allows the guides the same project websites as the landing
+page and requires the landing page to link every guide.
+`scripts/test_gnatdoc_guides.py` rejects wrong-but-existing API anchors and
+guide links, missing headings, titles, overloads and declarations, changed
+code and text, scripts, a tampered stylesheet, extra and missing pages,
+unapproved sources, fences and link targets, raw HTML, ambiguous names, and
+checks idempotent regeneration and that overloads and child-package links
+resolve to distinct, correct pages. `scripts/test_gnatdoc_guides_browser.cjs`
+(optional Playwright and Chrome) visits every guide from the landing page at
+1280 and 390 pixels, light and dark, with and without JavaScript, follows a
+sample of API anchors, including every link labelled as an overload, and
+every cross-guide link, and checks the current-page marker, focus, the skip
+link and overflow.
+
+```sh
+alr exec -- gprbuild -P docs/examples/examples.gpr
+for example in contours_and_moments fitting_and_intersections \
+    affine_and_perspective delaunay_and_voronoi compatibility_and_safety; do
+  "obj/docs-examples/$example"
+done
+```
+
 ## Landing-page example
 
 The example on `docs/index.html` is `docs/example.adb`, compiled with
@@ -428,11 +491,14 @@ obj/docs-example/example
 (including stacked documentation PRs whose base is another branch), pushes
 to `main` and manual dispatch. It checks out Geometry and the qualified Core
 commit side by side and applies the same temporary pin as the cross-platform
-workflow. Pull-request runs have only `contents: read`: they test the tooling,
-generate and validate the site, repeat the validator mutations on the
-generated site, regenerate to prove byte-identical output, compile and run the
-example, and upload the site and `gnatdoc.log` as review artifacts. They never
-configure or deploy Pages.
+workflow. It installs the guide renderer into a documentation-only virtual
+environment and runs every Python step with it. Pull-request runs have only
+`contents: read`: they test the tooling, generate and validate the site and
+guides, repeat the validator, coverage, navigation and guide mutations on the
+generated site, regenerate to prove byte-identical output and re-run every
+enhancement to prove idempotence, compile and run the landing-page and guide
+examples, and upload the site and `gnatdoc.log` as review artifacts. They
+never configure or deploy Pages.
 
 Only `refs/heads/main` runs upload a Pages artifact. A separate job that
 depends on the successful build deploys it with `pages: write`,
@@ -441,8 +507,10 @@ cancelled. Manual runs on other branches validate but cannot publish. No PAT
 or `gh-pages` branch is used. On 2026-10-13 the repository already had Pages
 configured with **Source: GitHub Actions** and a `github-pages` environment
 whose deployment branch policy allows only `main`; no deployment had been
-made, and the site URL returned 404. The first publication happens on the
-first `main` push after this workflow merges.
+made, and the site URL returned 404. The first publication followed the merge
+of GEOMETRY-DOC-001 (PR #27, merge commit `2240b06`) on 2026-10-14: its `main`
+run deployed, and the site URL then returned 200. Later phases are published
+only when they reach `main`.
 
 ## Comment convention
 
@@ -473,17 +541,21 @@ proof of accuracy.
 ## Testing the documentation tooling
 
 ```sh
-python3 -m unittest discover -s scripts -p 'test_*.py' -v
+export DOC_PYTHON=$PWD/.doc-tools/markdown/bin/python
 sh scripts/generate_docs.sh
-python3 -m unittest discover -s scripts -p 'test_validate_docs.py' -v
+"$DOC_PYTHON" -m unittest discover -s scripts -p 'test_*.py' -v
 python3 scripts/check_doc_coverage.py --report docs/gnatdoc-coverage-baseline.txt _site
 python3 scripts/check_comment_only.py origin/main   # committed documentation changes
 alr exec -- gnatformat --check -P opencv_geometry.gpr src/opencv-geometry.ads \
   src/opencv-geometry-subdiv2d.ads
 alr exec -- gnatformat --check -P docs/example.gpr docs/example.adb
+alr exec -- gnatformat --check -P docs/examples/examples.gpr
 alr exec -- gprbuild -P docs/example.gpr && obj/docs-example/example
 git diff --check
 ```
 
-The documentation tools use only the Python standard library. None of them is
-a dependency of the library or the `tests` crate.
+The tests that need a generated site, or the guide renderer, skip without
+them. Apart from the guide renderer, whose two pinned packages are installed
+only in the documentation environment, the documentation tools use only the
+Python standard library. None of them is a dependency of the library or the
+`tests` crate.

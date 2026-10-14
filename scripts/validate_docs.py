@@ -27,7 +27,13 @@ the Ada highlighting are recomputed independently, the API index must equal
 the themed native serialization, and API pages may link externally only to
 the two recomputed Core package bookmarks.
 
-Adapted from the opencv_imgproc_ada IMGPROC-DOC-001 and DOC-003 validator.
+Guides (GEOMETRY-DOC-005): the five developer guides and their stylesheet
+must equal the bytes reconstructed from the Markdown sources, the compiled
+examples and the API browser's verified anchors; they may link to the same
+project websites as the landing page, which must link to every guide.
+
+Adapted from the opencv_imgproc_ada IMGPROC-DOC-001, DOC-003 and DOC-005
+validator.
 """
 
 import argparse
@@ -49,6 +55,7 @@ from compare_gnatdoc_warnings import (
     declaration_index,
 )
 from link_gnatdoc_types import CORE_DESTINATIONS, LINK, CrossReferenceError, process
+from render_gnatdoc_guides import GUIDES
 
 ROOT = Path(__file__).resolve().parent.parent
 NATIVE_PAGE = re.compile(r"[0-9a-f]{64}\.html")
@@ -134,7 +141,9 @@ PACKAGE_DESCRIPTIONS = {
 }
 # Generated presentation files allowed beside the native output.
 ENHANCEMENT_FILES = {"api/gnatdoc-theme.css", "api/presentation.json",
-                     "api/type-crossrefs.json", "api/gnatdoc-navigation.js"}
+                     "api/type-crossrefs.json", "api/gnatdoc-navigation.js",
+                     "guides/gnatdoc-guides.css"} | {
+                         f"guides/{name}.html" for name in GUIDES}
 # The only script: the repository-owned browser, once, in the API index; its
 # exact placement and bytes are verified by check_navigation.
 APPROVED_SCRIPT = ("api/index.html", "<script src=gnatdoc-navigation.js>")
@@ -331,7 +340,8 @@ def _describe(entries):
 
 
 def _check_links(site, pages, path, page, errors, enhanced):
-    landing = path == site / "index.html"
+    # The landing page and the developer guides may link to project sites.
+    landing = path == site / "index.html" or (enhanced and path.parent == site / "guides")
     for link in page.links:
         url = urlsplit(link)
         if url.scheme or url.netloc:
@@ -479,6 +489,14 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
                           "and approved navigation")
     if enhanced:
         errors.extend(_presentation_errors(api, root, core, packages, type_links))
+        try:
+            from render_gnatdoc_guides import validate as check_guides
+            check_guides(root, site)
+        except (ValueError, OSError, ImportError) as error:
+            errors.append(f"guide integrity: {error}")
+        for name in GUIDES:
+            if landing is not None and f"guides/{name}.html" not in landing.links:
+                errors.append(f"landing page does not link to guides/{name}.html")
     sections_total = subprograms = 0
     for name, path in sorted(packages.items()):
         source = path.read_text(encoding="utf-8")
