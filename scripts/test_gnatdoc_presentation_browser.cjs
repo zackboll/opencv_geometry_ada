@@ -34,7 +34,7 @@ async function noOverflow(target, label) {
 }
 
 async function openPackage(page, name) {
-  await page.getByRole('link', {name, exact: true}).click();
+  await page.locator('#compilation-units + ul').getByRole('link', {name, exact: true}).click();
   const content = page.frame({name: 'document-content'});
   await page.frameLocator('iframe[name="document-content"]')
     .locator('h1', {hasText: new RegExp('^' + name.replace(/\./g, '\\.') + '$')})
@@ -145,7 +145,8 @@ function snippetOf(content, heading) {
     const page = await disabled.newPage();
     for (const spec of packages) {
       await page.goto(root + 'api/index.html');
-      await page.getByRole('link', {name: spec.name, exact: true}).click();
+      await page.locator('#compilation-units + ul')
+        .getByRole('link', {name: spec.name, exact: true}).click();
       await page.frameLocator('iframe').locator('h1',
         {hasText: new RegExp('^' + spec.name.replace(/\./g, '\\.') + '$')}).waitFor();
     }
