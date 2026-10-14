@@ -1,0 +1,18 @@
+--  Target toolchain probe for scripts/cross_geometry.py: an Ada main that
+--  calls a C++ unit, compiled and linked with the supplied GPR
+--  configuration. Proves the Ada and C++ drivers, the Ada runtime and the
+--  C++ link before any production source is compiled.
+project Probe is
+   for Languages use ("Ada", "C++");
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+   for Main use ("probe.adb");
+   for Create_Missing_Dirs use "True";
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnatwa", "-gnatwe");
+      for Default_Switches ("C++") use
+        ("-std=c++17", "-Wall", "-Wextra", "-Wpedantic", "-Werror");
+   end Compiler;
+end Probe;

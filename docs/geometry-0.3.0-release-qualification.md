@@ -20,7 +20,7 @@ result does not certify the release candidate.
 | 000 | Release inventory and Core prerequisite gate | `CORE_RELEASE_PREREQUISITE_PENDING` |
 | 001 | Debian 12 GNAT 12 production and runtime | `GNAT12_NATIVE_BUILD_QUALIFIED`, `GNAT12_NATIVE_RUNTIME_QUALIFIED` against provisional Core `8f1c5d0`; repeat on Core 0.5.0 |
 | 002 | Debian 12 installed consumers | `DEBIAN12_GNAT12_INSTALLED_CONSUMERS_QUALIFIED` against provisional Core `8f1c5d0`; repeat on Core 0.5.0 |
-| 003 | Isolated AArch64 cross configuration | Not started |
+| 003 | Isolated AArch64 cross configuration | `CROSS_CONFIGURATION_CONTROLS_QUALIFIED` (synthetic positive and negative controls; not production cross-build qualification) |
 | 004 | Debian AArch64 reference qualification | Not started |
 | 005 | AdaCore GNAT 12 / Yocto Scarthgap | `ADACORE_YOCTO_QUALIFICATION_BLOCKED` |
 | 006 | Release regression and CI matrix | Not started |
@@ -441,3 +441,142 @@ Core: provisional `8f1c5d0`.
 
 Disposition, as development evidence against the provisional Core:
 `DEBIAN12_GNAT12_INSTALLED_CONSUMERS_QUALIFIED`.
+
+## REL-003-003: isolated AArch64 cross configuration
+
+### Mechanism
+
+`scripts/cross_build_geometry.sh` runs `scripts/cross_geometry.py`, a
+standard-library Python tool adapted from Core's `cross_build_core.sh` and
+Imgproc's `cross_configuration.py`. Its operations are:
+
+- `check` validates every input and prints the resolved settings;
+- `--prepare WORKSPACE` exports the clean HEAD into a new workspace,
+  generates the target configuration and builds a toolchain probe;
+- `--build WORKSPACE` does `--prepare`, builds the production library and
+  C++ shim, and installs both into `WORKSPACE/install`.
+
+Inputs are explicit environment variables, with the same names as Core and
+Imgproc: `OPENCV_CROSS_TARGET`, `ENV_PREFIX` (sysroot), `OPENCV_CROSS_ADA`,
+`OPENCV_CROSS_CXX`, `OPENCV_CROSS_RUNTIME`, `OPENCV_CROSS_GPR_CONFIG`,
+`OPENCV_CROSS_GPRBUILD`, `OPENCV_CROSS_GPRINSTALL`,
+`OPENCV_CROSS_PKG_CONFIG`, `PKG_CONFIG_LIBDIR` and
+`OPENCV_CROSS_CORE_PREFIX`. The optional ones are `PKG_CONFIG_SYSROOT_DIR`
+(must equal the sysroot), `OPENCV_CROSS_READELF`, `OPENCV_CROSS_PROFILE`
+(release by default) and `OPENCV_CROSS_INDEPENDENT_TOOLCHAINS`. Compilers
+and project tools must be absolute paths. Nothing is taken from `CC`,
+`CXX` or `PATH`, and `readelf` is the only inspection tool with a PATH
+default. `PKG_CONFIG_PATH`, `CPATH`, `C_INCLUDE_PATH`,
+`CPLUS_INCLUDE_PATH`, `LIBRARY_PATH`, `GCC_EXEC_PREFIX`, `COMPILER_PATH`,
+`ADA_INCLUDE_PATH`, `ADA_OBJECTS_PATH`, `GPR_PROJECT_PATH`,
+`ADA_PROJECT_PATH` and `LD_LIBRARY_PATH` must be empty.
+
+Checks, all fail-closed:
+
+- Toolchain:
+  - an `aarch64[-vendor]-linux[-abi]` target;
+  - `-dumpmachine` of both compilers equals it;
+  - the Ada runtime is the compiler's own `adalib`, and `libgnat.a` is
+    ELF64 little-endian AArch64;
+  - the Ada and C++ compilers report the same GCC version, unless
+    `OPENCV_CROSS_INDEPENDENT_TOOLCHAINS=True` records that they differ (no
+    interoperability claim follows from that);
+  - the C++ compiler's `libstdc++` needs no `GLIBCXX`/`CXXABI` version that
+    the target lacks.
+- Sysroot and metadata:
+  - every `PKG_CONFIG_LIBDIR` entry, header tree, `-I`, `-L` and library
+    path resolves inside the sysroot, through symbolic links, with broken
+    links and cycles rejected;
+  - only `-lopencv_*`, `-lstdc++`, `-D` and `-pthread` flags are accepted;
+  - header and `pkg-config` versions agree;
+  - SONAMEs match the version;
+  - `libc` and `libstdc++` are AArch64.
+- Backend: OpenCV 4.x requires `opencv2/imgproc.hpp` and
+  `-lopencv_imgproc`, OpenCV 5.0 requires `opencv2/geometry.hpp` and
+  `-lopencv_geometry`, and other versions are rejected. Both require
+  `opencv_core`. No Ada Imgproc dependency is introduced.
+- Dependency closure: every `DT_NEEDED`, recursively, is resolved as the
+  target loader would. Lookup goes through the object's `RPATH`/`RUNPATH`
+  (with `$ORIGIN`), then the sysroot's `ld.so.conf`, then the multiarch and
+  standard directories, to an AArch64 ELF inside the sysroot. Every symbol
+  version an object needs must be defined by the library resolved for it.
+  A library that exists only outside the loader's search path is
+  unresolved; REL-003-004 found exactly that case in a real sysroot.
+- GPR configuration: it must name the target, both compilers, the runtime
+  and the C++ driver as linker. Commented text does not count.
+- Core prefix: it must be installed (`Externally_Built`) and must not
+  overlap the checkout. Every path named by its installed projects stays
+  inside the prefix or the sysroot. Its archives are AArch64, their
+  `.comment` compiler identities are a subset of the identities of probe
+  objects compiled by the supplied compilers, and every Core ALI reads
+  `V "GNAT Lib v<major>"`. This is binary evidence, not a Core-written
+  attestation; Core does not emit one.
+- Workspace:
+  - the destination must be new, absolute and canonical (a symlinked alias
+    into a protected tree is rejected), and must not overlap the checkout,
+    sysroot or Core prefix;
+  - the checkout must be clean, untracked files included;
+  - the exported tree must contain no `.ali`, `.o`, `.a` or `.so`;
+  - a generated configuration must not already exist.
+
+Generated configuration: `config/opencv_geometry_install.gpr` has the same
+variables that `scripts/configure_opencv.sh` writes natively, with
+sysroot-rooted include and library switches, the target backend library and
+the supplied C++ driver. `config/opencv_geometry_config.gpr` is the Alire
+profile switch set from REL-003-001. `--sysroot` is passed to C++ compiles
+and links on the command line; the production GPR projects are unchanged.
+
+Build checks: in every `gprbuild -v` trace, each compiler or linker is one
+of the supplied drivers, each `gnat*` tool lies beside the Ada driver with
+the target prefix, and each archiver carries the target prefix. Compiles may
+name no host include or library directory and no `x86_64` path. Every
+object and archive is AArch64 and carries only the supplied compilers'
+identities, and every ALI has the compiler's GNAT version. Installed
+projects name only paths inside the install prefix or the sysroot. The
+evidence file says `production_qualified: false`.
+
+### Synthetic controls
+
+`tests/cross/test_cross_geometry.py` has 41 negative-first tests with fake
+compilers, `readelf`, `pkg-config`, `gprbuild` and `gprinstall`. Each
+rejection must leave its inputs unmodified. They cover:
+
+- host contamination: search variables, `PKG_CONFIG_PATH`, host
+  `pkg-config` directories, host flags and libraries, `-Wl,-rpath`, host run
+  paths, and host compilers, binders, archivers or directories in the build
+  trace;
+- wrong architecture: target names, compiler targets, and X86-64, ELF32
+  or big-endian objects;
+- incompatible Core compiler identity or ALI version, and Core prefix
+  structure and imports;
+- missing headers and libraries, transitive and loader-path dependencies,
+  and undefined symbol versions;
+- incorrect metadata: versions, SONAMEs, unsupported releases, missing
+  backend libraries, and OpenCV 5 without the geometry module;
+- stale output: existing or symlinked workspaces, overlap with protected
+  trees, dirty or artifact-bearing sources;
+- sysroot symlink escapes, broken links and cycles;
+- the reviewed GPR configuration.
+
+Positive controls cover the OpenCV 4 and OpenCV 5 backends, the generated
+configuration, a complete build and install, and an explicit
+independent-toolchain record.
+
+Mutation check: seven separate mutations, each disabling one fail-closed
+check, were each detected by the suite:
+
+- the trace driver check;
+- the Core identity check;
+- symlink containment;
+- loader resolution;
+- host-variable emptiness;
+- the stale-workspace check;
+- the `libstdc++` symbol versions.
+
+`.github/workflows/cross-configuration.yml` runs the suite, `py_compile`,
+`sh -n` and ShellCheck.
+
+Disposition: `CROSS_CONFIGURATION_CONTROLS_QUALIFIED`. These are synthetic
+controls of the fail-closed logic, not compiler, link or execution
+evidence. The real toolchain, sysroot, Core build and links are
+REL-003-004.

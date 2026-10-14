@@ -1,0 +1,50 @@
+name: Cross configuration controls
+
+# Synthetic positive and negative controls of the fail-closed AArch64 cross
+# configuration (scripts/cross_geometry.py). Fake tools stand in for a
+# target toolchain: this job proves the fail-closed logic only and is not
+# compiler, link or execution evidence. The real cross build is in
+# .github/workflows/debian-aarch64-reference.yml.
+
+on:
+  push:
+    branches: [main, 'feature/**', 'corrective/**', 'release/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Geometry
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source identity
+        run: |
+          test "$(git rev-parse HEAD)" = \
+            "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Static checks
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+          python3 -m py_compile $(git ls-files 'scripts/cross_*.py' \
+            'tests/cross/*.py')
+          scripts=$(git ls-files 'scripts/cross_*.sh' 'tests/cross/*.sh')
+          for script in $scripts; do
+            sh -n "$script"
+          done
+          shellcheck -s sh $scripts
+
+      - name: Synthetic positive and negative controls
+        run: |
+          python3 -m unittest discover -s tests/cross \
+            -p 'test_cross_geometry.py' -v
+          echo "CROSS_CONFIGURATION_CONTROLS PASS (synthetic; not compiler," \
+            "link or execution evidence)"
