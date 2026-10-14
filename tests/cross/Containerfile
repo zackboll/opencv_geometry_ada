@@ -1,0 +1,6 @@
+# Local public Debian 12 AArch64 cross reference environment for
+# tests/cross/qualify_debian_aarch64_reference.sh. Build from tests/cross:
+#   podman build -f Containerfile -t <tag> tests/cross
+FROM docker.io/library/debian:12
+COPY install_reference_tools.sh /usr/local/share/install_reference_tools.sh
+RUN sh /usr/local/share/install_reference_tools.sh
