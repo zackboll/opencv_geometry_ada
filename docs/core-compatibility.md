@@ -1,5 +1,9 @@
 # Task 023: Core 0.4.x compatibility
 
+This is the historical Task 023 record. GEOMETRY-REL-003 replaced the
+constraint with `>=0.5.0 & <0.6.0`; see [Core 0.5.0](#core-050-geometry-rel-003)
+below.
+
 Baseline: `beed29fa63a3ef1bc0450d1433367e32611373a0`, the merge of
 Geometry PR #21. Qualification changes no production Ada source, C ABI,
 native algorithm, ownership model, or Geometry version (still 0.2.0).
@@ -140,3 +144,34 @@ Windows retains its main-push/manual-dispatch-only policy and now explicitly
 pins 0.4.1. It is intentionally skipped on PR and feature-branch push events.
 The exact final-head run results and actual hosted OpenCV versions belong in
 the PR review report; configuration alone is not a cross-platform pass.
+
+## Core 0.5.0 (GEOMETRY-REL-003)
+
+| Core | Immutable source commit | Qualification source |
+| --- | --- | --- |
+| 0.5.0 | `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f` (tag `0.5.0`, merge of Core PR #82) | Temporary immutable Git pin; Alire index [PR #2227](https://github.com/alire-project/alire-index/pull/2227) open at qualification time |
+
+Constraint before: `>=0.2.0 & <0.5.0`. Constraint after: `>=0.5.0 & <0.6.0`.
+
+Core 0.5.0 is the first Core release that builds with GNAT 12 (Core PRs #77
+to #81). No GNAT 12 back-port to Core 0.4.x exists. The maintainer chose to
+require Core 0.5.0, so every resolvable Geometry 0.3.0 build can satisfy the
+GNAT 12 release platform. The earlier Core 0.3.0 and 0.4.1 legs were
+removed from the cross-platform CI; their results above remain historical
+evidence for Geometry 0.2.x. A combined consumer that also requires Core
+`~0.4.x` cannot resolve with Geometry 0.3.0.
+
+Source and API evidence, Core 0.4.1 to 0.5.0:
+
+- no public declaration was removed or renamed;
+- the root `OpenCV` package adds 3-D point types only;
+- `OpenCV.Core` adds region and destination overloads;
+- the private `Mat` record gains a field, so Core must be rebuilt;
+- `Float64_Access` changes in comments only.
+
+Geometry uses `Mat`, `Create`, `Float64_Access` and the root value types,
+all unchanged. Between the development commit `8f1c5d0` and the release
+`f8aef00`, Core changes only its version, changelog, README, documentation
+and a consumer-validation script; no `src/` or `cpp/` file changes.
+Geometry needs no source change for Core 0.5.0. Qualification results are
+in [the release record](geometry-0.3.0-release-qualification.md).

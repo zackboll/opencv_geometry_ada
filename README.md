@@ -22,11 +22,13 @@ overrides those safety decisions.
 The only production Ada dependency is `opencv_core`. The public package is
 `OpenCV.Geometry` on both OpenCV versions:
 
-The supported Core constraint is `>=0.2.0 & <0.5.0`. Core 0.4.1 was
-qualified at its immutable release commit, `386c536`, which is also the
-commit the public Alire community index publishes for that release. See
+The supported Core constraint is `>=0.5.0 & <0.6.0`. Core 0.5.0 is the first
+Core release that builds with GNAT 12, and it is qualified at its immutable
+release commit, `f8aef00` (tag `0.5.0`). See
 [Core compatibility evidence](docs/core-compatibility.md)
-for exact sources, tested combinations, and platform limitations.
+for exact sources, tested combinations, and platform limitations, and
+[the 0.3.0 release qualification](docs/geometry-0.3.0-release-qualification.md)
+for the current release record.
 
 | Native OpenCV | Header | Native implementation |
 | --- | --- | --- |

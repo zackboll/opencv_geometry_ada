@@ -28,13 +28,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: geometry
-      # The qualified opencv_core 0.4.1 release commit, temporarily pinned as
-      # in the cross-platform CI; scripts/generate_docs.sh verifies it.
+      # The opencv_core 0.5.0 release commit (tag 0.5.0), temporarily
+      # pinned as in the cross-platform CI; scripts/generate_docs.sh
+      # verifies it.
       - name: Checkout Core
         uses: actions/checkout@v4
         with:
           repository: zackboll/opencv_core_ada
-          ref: 386c5360ac51f2b62e522853d94290aec4ee14a0
+          ref: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
           path: core
       - name: Record checkout identities
         run: |

@@ -36,8 +36,8 @@ alr exec -- gprbuild --version | grep -q '^GPRBUILD 26\.0\.0 (2026-04-15)' || {
 # The manifest has no Core pin, so the documentation is qualified against one
 # exact, unmodified opencv_core release checkout, temporarily pinned as in
 # the cross-platform CI (see docs/documentation.md).
-core_release=0.4.1
-core_commit=386c5360ac51f2b62e522853d94290aec4ee14a0
+core_release=0.5.0
+core_commit=f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
 # The prefix must expand inside the Alire environment, not this shell.
 # shellcheck disable=SC2016
 core=$(alr -n exec -- sh -c 'printf %s "$OPENCV_CORE_ALIRE_PREFIX"')
