@@ -175,8 +175,29 @@ sysroot. It is neither the AdaCore toolchain nor a Yocto sysroot, and
 emulation is not target execution. No result here was obtained on target
 hardware.
 
-The release-candidate results are recorded in the qualification record,
-section REL-003-007.
+Release-candidate results (section REL-003-007 of the qualification record
+has the exact commits, runs and logs):
+
+- Debian 12 GNAT 12: release, validation and development profiles, 542/542
+  AUnit tests each; four native tests under AddressSanitizer and
+  UndefinedBehaviorSanitizer; every ALI and object from GNAT/GCC 12.2.0.
+- Debian 12 installed consumers: Ada and mixed Ada/C++ consumers pass,
+  installed and relocated, with the redistribution notices verified in both
+  locations.
+- Debian AArch64 reference: Core and Geometry cross-built and installed,
+  consumers cross-linked (loader closure and symbol versions checked),
+  emulated consumers and 542/542 emulated AUnit tests. Target execution was
+  not run.
+- GNAT 16 on Linux: 542/542 in the release and validation profiles and 4/4
+  native tests with no sanitizer findings, for each of OpenCV 4.6.0, 4.10.0,
+  4.11.0, 4.12.0, 4.13.0, 4.14.0 and 5.0.0. Hosted CI: Ubuntu OpenCV 4.6.0,
+  macOS Homebrew OpenCV 5.0.0 and Windows MSYS2 OpenCV 5.0.0, 542/542 each.
+- Documentation: zero GNATdoc warnings, 452/452 public items documented,
+  site validation, and every guide example compiled and run.
+- Alire: with a candidate index that adds the Core 0.5.0 manifest under
+  review, a clean unpinned resolution builds with Debian GNAT 12 and passes
+  542/542, and the publisher dry run (build check enabled) generates the
+  0.3.0 manifest. Resolution from the public index waits for Core 0.5.0.
 
 ## Installation
 
@@ -192,7 +213,8 @@ alr build
 When this release was prepared, Core 0.5.0 was not yet indexed
 ([alire-index#2227](https://github.com/alire-project/alire-index/pull/2227)
 was open), so Geometry 0.3.0 could not be indexed either. Until then, pin
-both crates to their release commits:
+both crates to their releases. Pin Core by its full commit: Core also has a
+`release/0.5.0` branch, so Alire rejects `--commit=0.5.0` as ambiguous.
 
 ```sh
 alr with opencv_core --use=https://github.com/zackboll/opencv_core_ada.git \
