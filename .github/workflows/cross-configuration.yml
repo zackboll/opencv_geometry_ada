@@ -44,7 +44,6 @@ jobs:
 
       - name: Synthetic positive and negative controls
         run: |
-          python3 -m unittest discover -s tests/cross \
-            -p 'test_cross_geometry.py' -v
+          python3 -m unittest discover -s tests/cross -p 'test_*.py' -v
           echo "CROSS_CONFIGURATION_CONTROLS PASS (synthetic; not compiler," \
             "link or execution evidence)"
