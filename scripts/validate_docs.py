@@ -21,11 +21,21 @@ must be exactly the compiled `docs/example.adb`. Scripts, event handlers,
 duplicate IDs, internal unit names and machine-local paths are rejected.
 External URLs are not fetched. The site is never modified.
 
-Adapted from the opencv_imgproc_ada IMGPROC-DOC-001 validator.
+Presentation (GEOMETRY-DOC-003): the theme metadata, the source-backed type
+links (including child-to-parent links between the two package pages) and
+the Ada highlighting are recomputed independently, the API index must equal
+the themed native serialization, and API pages may link externally only to
+the two recomputed Core package bookmarks.
+
+Adapted from the opencv_imgproc_ada IMGPROC-DOC-001 and DOC-003 validator.
 """
 
+import argparse
 import collections
+import contextlib
 import html
+import io
+import json
 import re
 import sys
 from html.parser import HTMLParser
@@ -38,6 +48,7 @@ from compare_gnatdoc_warnings import (
     code_tokens,
     declaration_index,
 )
+from link_gnatdoc_types import CORE_DESTINATIONS, LINK, CrossReferenceError, process
 
 ROOT = Path(__file__).resolve().parent.parent
 NATIVE_PAGE = re.compile(r"[0-9a-f]{64}\.html")
@@ -120,6 +131,31 @@ RENDERED = {
 PACKAGE_DESCRIPTIONS = {
     "OpenCV.Geometry.Subdiv2D": (
         "a Subdivision must not be used by more than one task at a time",),
+}
+# Generated presentation files allowed beside the native output.
+ENHANCEMENT_FILES = {"api/gnatdoc-theme.css", "api/presentation.json",
+                     "api/type-crossrefs.json"}
+# Sanity floors for the recomputed links (measured: 167 and 96).
+MINIMUM_INTERNAL_LINKS = 150
+MINIMUM_CORE_LINKS = 90
+# (package, complete signature) -> type identities its own snippet must link,
+# including a child-to-parent link across package pages.
+TYPE_LINKS = {
+    ("OpenCV.Geometry",
+     "function Convex_Hull (Points : Contour; Orientation : Hull_Orientation "
+     ":= Counterclockwise) return Contour"): {
+        "opencv.geometry.contour", "opencv.geometry.hull_orientation"},
+    ("OpenCV.Geometry",
+     "function Get_Rotation_Matrix_2D (Center : OpenCV.Float32_Point; Angle : "
+     "OpenCV.Float64_Value; Scale : OpenCV.Float64_Value := 1.0; Units : "
+     "OpenCV.Angle_Unit := OpenCV.Degrees) return OpenCV.Core.Mat"): {
+        "opencv.float32_point", "opencv.float64_value", "opencv.angle_unit",
+        "opencv.core.mat"},
+    ("OpenCV.Geometry.Subdiv2D",
+     "procedure Insert (Object : in out Subdivision; Points : "
+     "Float32_Point_Array)"): {
+        "opencv.geometry.subdiv2d.subdivision",
+        "opencv.geometry.float32_point_array"},
 }
 
 
@@ -289,7 +325,7 @@ def _describe(entries):
     )
 
 
-def _check_links(site, pages, path, page, errors):
+def _check_links(site, pages, path, page, errors, enhanced):
     landing = path == site / "index.html"
     for link in page.links:
         url = urlsplit(link)
@@ -298,6 +334,9 @@ def _check_links(site, pages, path, page, errors):
                 link == prefix or link.startswith(prefix.rstrip("/") + "/")
                 for prefix in LANDING_DESTINATIONS
             )
+            # Package-level Core bookmarks, only as recomputed type links.
+            approved |= (enhanced and path.parent == site / "api"
+                         and link in CORE_DESTINATIONS.values())
             if not approved:
                 errors.append(f"unapproved link in {path.relative_to(site)}: {link}")
             continue
@@ -312,15 +351,57 @@ def _check_links(site, pages, path, page, errors):
                 errors.append(f"missing anchor in {path.relative_to(site)}: {link}")
 
 
+def _presentation_errors(api, root, core, packages, type_links):
+    """Independent theme, type-link and highlighting integrity checks."""
+    from install_gnatdoc_theme import check_theme
+    errors = []
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            check_theme(api)
+        process(api, root / "src", core, check=True, quiet=True,
+                minimum_internal=MINIMUM_INTERNAL_LINKS,
+                minimum_external=MINIMUM_CORE_LINKS)
+        manifest = json.loads((api / "type-crossrefs.json").read_text(encoding="utf-8"))
+        if manifest.get("highlighting") != 1:
+            errors.append("missing final Ada highlighting qualification")
+    except (CrossReferenceError, WarningComparisonError, KeyError, ValueError,
+            OSError) as error:
+        return [f"presentation integrity: {error}"]
+    # Exact entity probes supplement the full recomputation above.
+    for name, path in packages.items():
+        linked = collections.defaultdict(set)
+        for match in SECTION_RE.finditer(path.read_text(encoding="utf-8")):
+            snippet = " ".join(html.unescape(re.sub(r"<[^>]+>", "", match[3])).split())
+            for link in LINK.finditer(match[3]):
+                linked[_profile(snippet)].add(link[2])
+        for (package, signature), identities in type_links.items():
+            if package != name:
+                continue
+            for identity in sorted(identities - linked.get(_profile(signature), set())):
+                errors.append(f"missing representative type link: {signature}: {identity}")
+    return errors
+
+
 def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
-             descriptions=PACKAGE_DESCRIPTIONS):
-    """Raise DocumentationError listing every violation; return a summary."""
+             descriptions=PACKAGE_DESCRIPTIONS, core=None, enhanced=True,
+             type_links=TYPE_LINKS):
+    """Raise DocumentationError listing every violation; return a summary.
+
+    With `enhanced` (always used for publication), the theme, type links and
+    highlighting must also pass their independent integrity checks against
+    the opencv_core sources at `core` (default: the sibling `../core`).
+    """
     site = Path(site).resolve()
     root = Path(root).resolve()
+    core = root.parent / "core" if core is None else Path(core)
     errors = []
     expected = public_specifications(root)
     api = site / "api"
-    for required in (site / "index.html", api / "index.html", api / "gnatdoc.css"):
+    allowed = {"index.html", "api/index.html", "api/gnatdoc.css"}
+    if enhanced:
+        allowed |= ENHANCEMENT_FILES
+    for required in sorted(allowed):
+        required = site / required
         if not required.is_file() or required.stat().st_size == 0:
             errors.append(f"missing/empty: {required.relative_to(site)}")
     pages = {}
@@ -329,7 +410,7 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
             continue
         relative = path.relative_to(site).as_posix()
         native = path.parent == api and NATIVE_PAGE.fullmatch(path.name)
-        if relative not in ("index.html", "api/index.html", "api/gnatdoc.css") and not native:
+        if relative not in allowed and not native:
             errors.append(f"unexpected file: {relative}")
             continue
         if path.suffix == ".html":
@@ -357,7 +438,7 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
         duplicates = [i for i, n in collections.Counter(page.ids).items() if n > 1]
         for identifier in duplicates:
             errors.append(f"duplicate id in {relative}: {identifier}")
-        _check_links(site, pages, path, page, errors)
+        _check_links(site, pages, path, page, errors, enhanced)
         if LEAKS.search(" ".join(page.text)):
             errors.append(f"internal unit or machine-local path in {relative}")
     landing = pages.get(site / "index.html")
@@ -374,8 +455,14 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
             f"<li><a href={packages[name].name} target=document-content>{name}</a>"
             for name in sorted(packages, key=str.lower)
         )
-        if index.read_text(encoding="utf-8") != INDEX_START + units + INDEX_END:
+        native = INDEX_START + units + INDEX_END
+        if enhanced:
+            from install_gnatdoc_theme import themed
+            native = themed(native)
+        if index.read_text(encoding="utf-8") != native:
             errors.append("native API index does not match the pinned GNATdoc layout")
+    if enhanced:
+        errors.extend(_presentation_errors(api, root, core, packages, type_links))
     sections_total = subprograms = 0
     for name, path in sorted(packages.items()):
         source = path.read_text(encoding="utf-8")
@@ -424,11 +511,13 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
 
 
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 1:
-        raise SystemExit("usage: validate_docs.py SITE_DIRECTORY")
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("site", type=Path)
+    parser.add_argument("--core", type=Path, default=None,
+                        help="opencv_core checkout whose src/ defines Core types")
+    args = parser.parse_args(argv)
     try:
-        summary = validate(Path(argv[0]))
+        summary = validate(args.site, core=args.core)
     except DocumentationError as error:
         print(error, file=sys.stderr)
         return 1

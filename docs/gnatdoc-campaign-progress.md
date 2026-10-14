@@ -82,7 +82,8 @@ published history.
 | DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | #28 (`main`) | Open; head `9b7d334` |
 | DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | #29 (DOC-002A branch) | Open; head `426cb97`; `OpenCV.Geometry` complete |
 | DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | #30 (DOC-002B branch) | Open; head `d3ec186` |
-| DOC-002D Subdiv2D topology and Voronoi | `feature/geometry-doc-002d-subdiv2d-topology` | pending (DOC-002C branch) | Qualified locally; zero warnings, 452/452 |
+| DOC-002D Subdiv2D topology and Voronoi | `feature/geometry-doc-002d-subdiv2d-topology` | #31 (DOC-002C branch) | Open; head `3705332`; zero warnings, 452/452 |
+| DOC-003 theme, highlighting, type links | `feature/geometry-doc-003-presentation` | pending (DOC-002D branch) | Qualified locally |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
@@ -435,6 +436,49 @@ GNATformat check passes; ShellCheck clean; `git diff --check` clean;
 rendered sections inspected; negative check of the empty-baseline rule
 recorded in the PR.
 
+### GEOMETRY-DOC-002D publication
+
+PR #31 (DOC-002C branch <- `feature/geometry-doc-002d-subdiv2d-topology`),
+head `3705332`; open, non-draft, auto-merge off. Hosted CI of #30 (head
+`d3ec186`) was pending at its single inspection.
+
+### GEOMETRY-DOC-003 — theme, verified type links and Ada highlighting
+
+Branch `feature/geometry-doc-003-presentation` from DOC-002D head `3705332`;
+its PR targets the DOC-002D branch.
+
+- Imgproc's `install_gnatdoc_theme.py` and `highlight_gnatdoc_ada.py` (lexer
+  and integrity checks unchanged) and theme stylesheet; a Geometry
+  `link_gnatdoc_types.py` for two package pages: per-page integrity manifest,
+  child-to-parent links that name the parent page's actual file, a name
+  declared in both packages left unlinked, and Core types checked against
+  the gate-verified Core checkout (`--core "$core"`). Validator integration:
+  presentation files allowed, themed index, Core bookmarks as the only
+  external API links, independent recomputation and representative probes.
+  The landing page uses the theme.
+- Measured: 130 snippets in 2 pages; 167 Geometry links (4 cross-page:
+  `Float32_Point_Array` three times, `Triangle_Vertices` once) and 96 Core
+  links; 0 ambiguous; 24 Standard type marks unlinked (`Boolean`,
+  `Natural`, `Positive`). Every linked Core type (`Angle_Unit`,
+  `Float32_Point`, `Float32_Value`, `Float64_Value`, `Point_Array`, `Rect`,
+  `Rotated_Rect`, `Core.Mat`) is in the visible part of Core 0.4.1 and of
+  Core `main` `c0709f8`, which the Core site documents.
+- Tests: 29 type-link/theme/highlight tests (synthetic parent and child;
+  sabotaging the redeclared-name rule makes its test fail) and 12 new
+  generated-site validator mutations, including wrong-but-existing
+  cross-page destinations; 179 Python tests in total, all passing.
+- Fresh regeneration is byte-identical; repeating the three steps is
+  byte-identical.
+- Browser (Playwright module from `~/.npm/_npx/e41f203b7505f1fb`, Google
+  Chrome from `/usr/bin/google-chrome`, local `http.server`): 1280/390 px,
+  light/dark; landing and both package pages; Core links; native anchor;
+  cross-page link landing on `Float32_Point_Array`; focus outline; Core link
+  replacing the window; JavaScript-disabled navigation to both packages.
+  Twelve screenshots in
+  `/home/zboll/git/opencv/geometry-doc-campaign/evidence/doc-003`, of which
+  the dark desktop package page and the light mobile cross-page target were
+  inspected.
+
 ## Findings for the maintainers (not changed: outside documentation scope)
 
 - README says Core 0.4.1 "is not yet in the public Alire index"; on
@@ -444,7 +488,7 @@ recorded in the PR.
 
 ## Next executable task
 
-1. Commit DOC-002D, prove comment-only, push, open its PR against the
-   DOC-002C branch; check hosted CI of #30 once.
-2. DOC-003 presentation on `feature/geometry-doc-003-presentation` from the
-   DOC-002D head, then DOC-004 to DOC-006.
+1. Commit DOC-003, push, open its PR against the DOC-002D branch; check
+   hosted CI of #31 once.
+2. DOC-004 operation-level browser on `feature/geometry-doc-004-navigation`
+   from the DOC-003 head, then DOC-005 and DOC-006.

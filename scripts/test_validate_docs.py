@@ -7,6 +7,8 @@ a generated `_site` exists, the same rejections are also exercised on a copy
 of it. Adapted from opencv_imgproc_ada IMGPROC-DOC-001.
 """
 
+import json
+import re
 import shutil
 import tempfile
 import textwrap
@@ -117,12 +119,15 @@ LANDING = (
     '<p><a href="https://github.com/zackboll/opencv_geometry_ada">Source</a>\n'
 )
 
+# The synthetic fixture is native GNATdoc output; presentation enhancements
+# are qualified by the generated-site tests below and test_link_gnatdoc_types.
 FIXTURE_OPTIONS = {
     "declarations": {"OpenCV.Demo": ("Mode", "Run", "Count", "Limit"),
                      "OpenCV.Demo.Child": ("Object", "Reset")},
     "rendered": {("OpenCV.Demo", "procedure Run (Value : Integer)"):
                  ("Runs the demonstration.",)},
     "descriptions": {"OpenCV.Demo.Child": ("must not be shared between tasks",)},
+    "enhanced": False,
 }
 
 
@@ -365,7 +370,7 @@ class SyntheticSiteTest(unittest.TestCase):
         with self.assertRaises(DocumentationError) as caught:
             validate(self.site, self.root,
                      declarations={"OpenCV.Demo.Child": ("Object", "Absent")},
-                     rendered={}, descriptions={})
+                     rendered={}, descriptions={}, enhanced=False)
         self.assertIn("OpenCV.Demo.Child: missing representative declaration: Absent",
                       str(caught.exception))
 
@@ -373,7 +378,7 @@ class SyntheticSiteTest(unittest.TestCase):
         with self.assertRaises(DocumentationError) as caught:
             validate(self.site, self.root,
                      declarations={"OpenCV.Demo": ("Reset",)},
-                     rendered={}, descriptions={})
+                     rendered={}, descriptions={}, enhanced=False)
         self.assertIn("OpenCV.Demo: missing representative declaration: Reset",
                       str(caught.exception))
 
@@ -381,7 +386,7 @@ class SyntheticSiteTest(unittest.TestCase):
         with self.assertRaises(DocumentationError) as caught:
             validate(self.site, self.root,
                      declarations={"OpenCV.Absent": ("Run",)},
-                     rendered={}, descriptions={})
+                     rendered={}, descriptions={}, enhanced=False)
         self.assertIn("unknown package: OpenCV.Absent", str(caught.exception))
 
     def test_landing_example_must_match_compiled_example(self):
@@ -488,13 +493,102 @@ class GeneratedSiteTest(unittest.TestCase):
                     "<h2>Description</h2>" + moved)
         self.assertRejected("declaration sections differ from the public source")
 
+    def section_bounds(self, package, name, occurrence=0):
+        text = self.pages[package].read_text(encoding="utf-8")
+        starts = [m.start() for m in re.finditer(f">{name}</h4>", text)]
+        start = starts[occurrence]
+        end = text.find("<h4 ", start)
+        return text, start, len(text) if end < 0 else end
+
+    def mutate_section(self, package, name, old, new):
+        """Mutate the one section named `name` that contains `old`."""
+        text = self.pages[package].read_text(encoding="utf-8")
+        count = len(re.findall(f">{name}</h4>", text))
+        candidates = [self.section_bounds(package, name, occurrence)
+                      for occurrence in range(count)]
+        candidates = [(start, end) for _, start, end in candidates
+                      if old in text[start:end]]
+        self.assertEqual(len(candidates), 1, "mutation did not apply uniquely")
+        start, end = candidates[0]
+        body = text[start:end]
+        self.pages[package].write_text(
+            text[:start] + body.replace(old, new, 1) + text[end:], encoding="utf-8")
+
+    def anchor(self, package, name):
+        text = self.pages[package].read_text(encoding="utf-8")
+        return re.search(rf"<h4 id=([^ >]+)>{name}</h4>", text)[1]
+
     def test_modified_native_declaration_text_is_rejected(self):
-        self.mutate("OpenCV.Geometry",
-                    "function Intersect_Rotated_Rectangles\n"
-                    "  (Left, Right : OpenCV.Rotated_Rect)",
-                    "function Intersect_Rotated_Rectangles\n"
-                    "  (Left : OpenCV.Rotated_Rect)")
+        self.mutate_section("OpenCV.Geometry", "Intersect_Rotated_Rectangles",
+                            "Right", "Other")
         self.assertRejected("declaration sections differ from the public source")
+        self.assertRejected("presentation integrity: source profile not unique")
+
+    def test_wrong_but_existing_type_destination_is_rejected(self):
+        contour = self.anchor("OpenCV.Geometry", "Contour")
+        other = self.anchor("OpenCV.Geometry", "Float32_Point_Array")
+        self.mutate_section("OpenCV.Geometry", "Convex_Hull", f'href="#{contour}"',
+                            f'href="#{other}"')
+        self.assertRejected("type identity/destination/markup mismatch: Convex_Hull")
+
+    def test_wrong_but_existing_cross_page_destination_is_rejected(self):
+        page = self.pages["OpenCV.Geometry"].name
+        right = self.anchor("OpenCV.Geometry", "Float32_Point_Array")
+        wrong = self.anchor("OpenCV.Geometry", "Point_Index_Array")
+        self.mutate_section("OpenCV.Geometry.Subdiv2D", "Insert",
+                            f'href="{page}#{right}"', f'href="{page}#{wrong}"')
+        self.assertRejected("type identity/destination/markup mismatch: Insert")
+
+    def test_cross_page_link_to_own_page_is_rejected(self):
+        page = self.pages["OpenCV.Geometry"].name
+        right = self.anchor("OpenCV.Geometry", "Float32_Point_Array")
+        self.mutate_section("OpenCV.Geometry.Subdiv2D", "Insert",
+                            f'href="{page}#{right}"', f'href="#{right}"')
+        self.assertRejected("missing anchor")
+
+    def test_fabricated_core_fragment_is_rejected(self):
+        self.mutate_section("OpenCV.Geometry", "Get_Rotation_Matrix_2D",
+                            "?package=OpenCV.Core\"", "?package=OpenCV.Core#mat\"")
+        self.assertRejected("unapproved link")
+
+    def test_removed_type_link_is_rejected(self):
+        text, start, end = self.section_bounds("OpenCV.Geometry", "Convex_Hull")
+        body = re.sub(r'<a class="type-reference" href="[^"]+" '
+                      r'data-type="opencv\.geometry\.hull_orientation">'
+                      r'([^<]+)</a>', r"\1", text[start:end], count=1)
+        self.assertNotEqual(body, text[start:end])
+        self.pages["OpenCV.Geometry"].write_text(text[:start] + body + text[end:],
+                                                 encoding="utf-8")
+        self.assertRejected("type identity/destination/markup mismatch: Convex_Hull")
+
+    def test_modified_description_outside_snippets_is_rejected(self):
+        self.mutate_section("OpenCV.Geometry.Subdiv2D", "Find_Nearest",
+                            "cannot interrupt or recover", "can interrupt and recover")
+        self.assertRejected("presentation integrity")
+
+    def test_tampered_theme_asset_is_rejected(self):
+        theme = self.site / "api/gnatdoc-theme.css"
+        theme.write_text(theme.read_text(encoding="utf-8") + "body{}\n", encoding="utf-8")
+        self.assertRejected("theme asset differs from repository stylesheet")
+
+    def test_corrupted_link_manifest_is_rejected(self):
+        manifest = self.site / "api/type-crossrefs.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        entry = data["pages"][self.pages["OpenCV.Geometry.Subdiv2D"].name]
+        entry["snippets"][0] = entry["snippets"][0].replace("is", "iz", 1)
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+        self.assertRejected("presentation integrity")
+
+    def test_removed_highlighting_qualification_is_rejected(self):
+        manifest = self.site / "api/type-crossrefs.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        data["highlighting"] = 0
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+        self.assertRejected("presentation integrity")
+
+    def test_stray_presentation_file_is_rejected(self):
+        (self.site / "api/extra.js").write_text("x", encoding="utf-8")
+        self.assertRejected("unexpected file: api/extra.js")
 
     def test_removed_liveness_warning_is_rejected(self):
         self.mutate("OpenCV.Geometry.Subdiv2D",
