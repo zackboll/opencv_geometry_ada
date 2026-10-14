@@ -79,7 +79,8 @@ published history.
 | Phase | Branch | PR (base) | State |
 | --- | --- | --- | --- |
 | DOC-001 infrastructure | `feature/geometry-doc-001-gnatdoc-pages` | #27 (`main`) | Merged as `2240b06`; Pages deployed |
-| DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | pending (`main`) | Qualified locally |
+| DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | #28 (`main`) | Open; head `9b7d334` |
+| DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | pending (DOC-002A branch) | Qualified locally; `OpenCV.Geometry` complete |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
@@ -306,6 +307,54 @@ and avoid background agents, whose transcripts are written to `/tmp`. The
 stopped agents left `agents/subdiv2d/{geometry,core}` (scratch branch,
 unedited apart from the pin) and `agents/audit` (detached `82eeac7`).
 
+### GEOMETRY-DOC-002A publication
+
+PR #28 (`main` <- `feature/geometry-doc-002a-coverage-contours`), opened
+2026-10-14 with head `9b7d334`; open, non-draft, auto-merge off.
+
+### GEOMETRY-DOC-002B — capability, fitting, enclosing, intersections, transforms
+
+Branch `feature/geometry-doc-002b-fitting-transforms` from DOC-002A head
+`9b7d334`; its PR targets the DOC-002A branch.
+
+- Group B (50 declarations) documented, verified against the body, the shim
+  and exact OpenCV sources: `Native_Feature` (each literal with its native
+  function and first 4.x release, from the shim's compile-time
+  `native_feature_supported`), `Is_Natively_Supported` (native availability
+  only), both `Closest_Ellipse_Points`, both `Minimum_Area_Rectangle`, all
+  six ellipse fits, `Line_Fit_Distance` (`DIST_*` mapping),
+  `Fitted_Line_2D`, both `Fit_Line_2D`, the box types and `Box_Points`,
+  `Convex_Polygon_Intersection`, all three convex intersections, the
+  rotated-rectangle intersection types (`INTERSECT_*` mapping) and
+  operation, the enclosing circle and triangle types and operations,
+  `Get_Rotation_Matrix_2D`, the transform index, matrix and identity
+  declarations, `Get_Affine_Transform`, `Invert_Affine_Transform`,
+  `Perspective_Solve_Method` (`DECOMP_*` mapping),
+  `Get_Perspective_Transform`, and both `Transform_Point` and
+  `Transform_Points`.
+- Comments misattached to `Box_Vertex_Index`, `Enclosing_Circle`,
+  `Triangle_Vertex_Index` and `Affine_Row_Index` now document their
+  functions or matrix types; the shared Float32 ellipse-fit comment and the
+  `Closest_Ellipse_Points` comment are complemented by per-overload text.
+  The remaining four `Post` guarantees are stated in `@return`.
+- Statements added after verification: integer `Fit_Ellipse` also enforces
+  the `Integer_32'Last / 13` count limit; both convex-polygon overloads
+  require `Left'Length + Right'Length <= (Integer_32'Last - 4) / 2` for the
+  native scratch buffer; `Get_Rotation_Matrix_2D` reduces Angle modulo a full
+  turn in either unit and raises on non-finite native coefficients; the
+  Float32 `Fit_Line_2D` rejects an all-zero native direction for every
+  distance; `Box_Points` vertices are consecutive around the rectangle
+  (`RotatedRect::points` in 4.10 and 5.0 reflects pt[0] and pt[1] through
+  the center). The `Transform_Point` proof claim keeps its scope: the
+  `Internal.Transforms` arithmetic is proved (277/277 checks recorded in
+  `docs/batch-point-transforms.md`); batch bounds are runtime-checked.
+- Results: warnings 243 -> 114 (all remaining in Subdiv2D); coverage 211 ->
+  340 of 452; `OpenCV.Geometry` 307/307 items and zero warnings.
+
+Qualified locally: `sh scripts/generate_docs.sh` passes (delta 0/0,
+validator 2 / 4 / 130, coverage 340/452); all Python tests pass; GNATformat
+check passes; `git diff --check` clean; rendered sections inspected.
+
 ## Findings for the maintainers (not changed: outside documentation scope)
 
 - README says Core 0.4.1 "is not yet in the public Alire index"; on
@@ -315,8 +364,9 @@ unedited apart from the pin) and `agents/audit` (detached `82eeac7`).
 
 ## Next executable task
 
-1. Commit DOC-002A, run `check_comment_only.py 517c804 HEAD`, push, open
-   its PR against `main`, check hosted CI once.
-2. Document group B on `feature/geometry-doc-002b-fitting-transforms` from
-   the DOC-002A head.
-3. Continue with 002C and 002D, then DOC-003 to DOC-006.
+1. Commit DOC-002B, run `check_comment_only.py 517c804 HEAD`, push, open
+   its PR against the DOC-002A branch; check hosted CI of #28 once.
+2. Document Subdiv2D group C on `feature/geometry-doc-002c-subdiv2d-lifecycle`
+   from the DOC-002B head, then group D, reaching zero warnings and empty
+   baselines.
+3. DOC-003 to DOC-006.
