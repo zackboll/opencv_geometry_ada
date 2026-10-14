@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenCV Geometry Ada</title>
+<body>
+<main>
+<h1>OpenCV Geometry Ada</h1>
+<p>A thick, idiomatic Ada 2022 binding for OpenCV's computational geometry:
+contour measurement and moments, convex hulls and defects, curve
+approximation, shape matching, fitting and enclosing shapes, convex and
+rotated-rectangle intersections, affine and perspective transforms, and
+Delaunay/Voronoi planar subdivisions. It reuses the shared value types of
+<a href="https://zackboll.github.io/opencv_core_ada/">OpenCV Core Ada</a>,
+such as <code>OpenCV.Point_Array</code> and <code>OpenCV.Rotated_Rect</code>.
+The public operations are in two packages: <code>OpenCV.Geometry</code> and
+<code>OpenCV.Geometry.Subdiv2D</code>.</p>
+<p><a href="api/index.html">Generated Ada API reference</a></p>
+<p>The package specifications are the authoritative API declarations. This
+reference is generated from the <code>main</code> branch and can describe
+operations newer than the latest Alire release. The
+<a href="https://github.com/zackboll/opencv_geometry_ada/blob/main/README.md">repository README</a>
+describes the OpenCV versions exercised by CI and the per-feature
+compatibility notes.</p>
+<p>Image-processing operations such as contour extraction from images,
+filtering and warping belong to
+<a href="https://zackboll.github.io/opencv_imgproc_ada/">OpenCV Imgproc Ada</a>,
+not to this binding. On OpenCV 4 the native geometry functions live in
+OpenCV's <code>imgproc</code> library and on OpenCV 5 in its
+<code>geometry</code> library; the Ada packages are the same on both.</p>
+<h2>Build from source</h2>
+<p>Install the native OpenCV development library, pkg-config and a C++17
+compiler, then build with Alire, which resolves <code>opencv_core</code>
+from the Alire index within the manifest's supported range:</p>
+<pre>git clone https://github.com/zackboll/opencv_geometry_ada.git geometry
+cd geometry
+alr -n build</pre>
+<h2>Basic usage</h2>
+<pre>with OpenCV;
+with OpenCV.Geometry;
+
+procedure Example is
+   use type OpenCV.Float64_Value;
+   Rectangle : constant OpenCV.Geometry.Contour :=
+     [(X =&gt; 0, Y =&gt; 0), (X =&gt; 4, Y =&gt; 0), (X =&gt; 4, Y =&gt; 3), (X =&gt; 0, Y =&gt; 3)];
+   Perimeter : constant OpenCV.Float64_Value :=
+     OpenCV.Geometry.Arc_Length (Rectangle, Closed =&gt; True);
+   Hull      : constant OpenCV.Geometry.Contour :=
+     OpenCV.Geometry.Convex_Hull (Rectangle);
+begin
+   pragma Assert (OpenCV.Geometry.Contour_Area (Rectangle) = 12.0);
+   pragma Assert (Perimeter = 14.0);
+   pragma Assert (OpenCV.Geometry.Is_Convex (Rectangle));
+   pragma Assert (Hull'Length = 4);
+end Example;</pre>
+<p>A <code>Contour</code> is an Ada-owned array of integer points.
+<code>Convex_Hull</code> returns a new Ada-owned contour of hull points, and
+<code>Rectangle</code> is not modified by any of these calls.</p>
+<nav>
+<a href="https://github.com/zackboll/opencv_geometry_ada">Source repository</a> ·
+<a href="https://github.com/zackboll/opencv_geometry_ada/releases">Releases</a> ·
+<a href="https://github.com/zackboll/opencv_geometry_ada/issues">Issue tracker</a>
+</nav>
+</main>
+</body>
+</html>
