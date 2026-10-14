@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "package": "OpenCV.Geometry",
+      "categories": [
+        {
+          "id": "contours-moments",
+          "title": "Point sets, contours and moments",
+          "declarations": [
+            "Arc_Length",
+            "Compute_Moments",
+            "Contour",
+            "Contour_Area",
+            "Float32_Point_Array",
+            "Hu_Moment_Index",
+            "Hu_Moments",
+            "Hu_Moments_Result",
+            "Moments_Result"
+          ]
+        },
+        {
+          "id": "hulls-convexity",
+          "title": "Hulls, convexity and curve approximation",
+          "declarations": [
+            "Approximate_Curve",
+            "Convex_Hull",
+            "Convex_Hull_Indices",
+            "Convexity_Defect",
+            "Convexity_Defect_Array",
+            "Convexity_Defects",
+            "Hull_Orientation",
+            "Is_Convex",
+            "Point_Index_Array"
+          ]
+        },
+        {
+          "id": "shape-queries",
+          "title": "Shape matching and geometric queries",
+          "declarations": [
+            "Bounding_Rect",
+            "Contour_Point_Location",
+            "Locate_Point",
+            "Match_Shapes",
+            "Shape_Match_Method",
+            "Signed_Distance_To_Contour"
+          ]
+        },
+        {
+          "id": "fitting-enclosing",
+          "title": "Fitting and enclosing shapes",
+          "declarations": [
+            "Closest_Ellipse_Points",
+            "Enclosing_Circle",
+            "Enclosing_Triangle",
+            "Fit_Ellipse",
+            "Fit_Ellipse_AMS",
+            "Fit_Ellipse_Direct",
+            "Fit_Line_2D",
+            "Fitted_Line_2D",
+            "Line_Fit_Distance",
+            "Minimum_Area_Rectangle",
+            "Minimum_Enclosing_Circle",
+            "Minimum_Enclosing_Triangle",
+            "Triangle_Vertex_Index",
+            "Triangle_Vertices"
+          ]
+        },
+        {
+          "id": "intersections-rotated",
+          "title": "Intersections and rotated geometry",
+          "declarations": [
+            "Box_Points",
+            "Box_Vertex_Index",
+            "Box_Vertices",
+            "Convex_Polygon_Intersection",
+            "Intersect_Convex_Polygons",
+            "Intersect_Convex_Polygons_Extended_Float32",
+            "Intersect_Rotated_Rectangles",
+            "Rectangle_Intersection_Kind",
+            "Rectangle_Intersection_Vertex_Count",
+            "Rotated_Rectangle_Intersection"
+          ]
+        },
+        {
+          "id": "transforms",
+          "title": "Affine and perspective transformations",
+          "declarations": [
+            "Affine_Row_Index",
+            "Affine_Transform_2D",
+            "Get_Affine_Transform",
+            "Get_Perspective_Transform",
+            "Get_Rotation_Matrix_2D",
+            "Identity_Affine_Transform",
+            "Identity_Perspective_Transform",
+            "Invert_Affine_Transform",
+            "Perspective_Row_Index",
+            "Perspective_Solve_Method",
+            "Perspective_Transform_2D",
+            "Transform_Column_Index",
+            "Transform_Point",
+            "Transform_Points"
+          ]
+        },
+        {
+          "id": "capability",
+          "title": "Native capability and compatibility",
+          "declarations": [
+            "Is_Natively_Supported",
+            "Native_Feature"
+          ]
+        }
+      ]
+    },
+    {
+      "package": "OpenCV.Geometry.Subdiv2D",
+      "categories": [
+        {
+          "id": "subdivision-lifecycle",
+          "title": "Lifecycle and bounds",
+          "declarations": [
+            "Bounds",
+            "Bounds_Float32",
+            "Create",
+            "Create_Float32",
+            "Float32_Rectangle",
+            "Is_Ready",
+            "Reset",
+            "Reset_Float32",
+            "Subdivision"
+          ]
+        },
+        {
+          "id": "subdivision-queries",
+          "title": "Insertion and point queries",
+          "declarations": [
+            "Find_Nearest",
+            "Insert",
+            "Locate",
+            "Locate_Result",
+            "Nearest_Result",
+            "No_Vertex",
+            "Point_Location_Kind",
+            "Vertex_Id"
+          ]
+        },
+        {
+          "id": "subdivision-navigation",
+          "title": "Edge and vertex navigation",
+          "declarations": [
+            "Destination",
+            "Edge_Id",
+            "Edge_Navigation",
+            "Edge_Rotation",
+            "First_Edge",
+            "Navigate",
+            "Next_Edge",
+            "No_Edge",
+            "Origin",
+            "Rotate",
+            "Symmetric_Edge",
+            "Vertex_Point"
+          ]
+        },
+        {
+          "id": "subdivision-extraction",
+          "title": "Triangles and extraction",
+          "declarations": [
+            "Edge_Id_Array",
+            "Edge_List",
+            "Edge_Segment",
+            "Edge_Segment_Array",
+            "Leading_Edge_List",
+            "Triangle_Array",
+            "Triangle_List"
+          ]
+        },
+        {
+          "id": "subdivision-voronoi",
+          "title": "Voronoi diagrams and facets",
+          "declarations": [
+            "Facet_Points",
+            "Vertex_Id_Array",
+            "Voronoi_Diagram",
+            "Voronoi_Facet",
+            "Voronoi_Facet_Array",
+            "Voronoi_Facets"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -271,18 +271,18 @@ class SyntheticSiteTest(unittest.TestCase):
 
     def test_index_redirected_to_existing_file_is_rejected(self):
         self.rewrite("api/index.html", f"href={PARENT_PAGE}", "href=gnatdoc.css")
-        self.assertRejected("native API index does not match")
+        self.assertRejected("API index does not match")
 
     def test_index_swapped_package_targets_are_rejected(self):
         self.rewrite("api/index.html", f"href={PARENT_PAGE}", "href=SWAP")
         self.rewrite("api/index.html", f"href={CHILD_PAGE}", f"href={PARENT_PAGE}")
         self.rewrite("api/index.html", "href=SWAP", f"href={CHILD_PAGE}")
-        self.assertRejected("native API index does not match")
+        self.assertRejected("API index does not match")
 
     def test_index_target_change_is_rejected(self):
         self.rewrite("api/index.html", "target=document-content>OpenCV.Demo<",
                      "target=_blank>OpenCV.Demo<")
-        self.assertRejected("native API index does not match")
+        self.assertRejected("API index does not match")
 
     def test_removed_overload_section_is_rejected(self):
         self.rewrite(

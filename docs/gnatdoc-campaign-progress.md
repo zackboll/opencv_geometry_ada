@@ -83,7 +83,8 @@ published history.
 | DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | #29 (DOC-002A branch) | Open; head `426cb97`; `OpenCV.Geometry` complete |
 | DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | #30 (DOC-002B branch) | Open; head `d3ec186` |
 | DOC-002D Subdiv2D topology and Voronoi | `feature/geometry-doc-002d-subdiv2d-topology` | #31 (DOC-002C branch) | Open; head `3705332`; zero warnings, 452/452 |
-| DOC-003 theme, highlighting, type links | `feature/geometry-doc-003-presentation` | pending (DOC-002D branch) | Qualified locally |
+| DOC-003 theme, highlighting, type links | `feature/geometry-doc-003-presentation` | #32 (DOC-002D branch) | Open; head `a03cf97` |
+| DOC-004 package- and operation-level browser | `feature/geometry-doc-004-navigation` | pending (DOC-003 branch) | Qualified locally |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
@@ -479,6 +480,46 @@ its PR targets the DOC-002D branch.
   the dark desktop package page and the light mobile cross-page target were
   inspected.
 
+### GEOMETRY-DOC-003 publication
+
+PR #32 (DOC-002D branch <- `feature/geometry-doc-003-presentation`), head
+`a03cf97`; open, non-draft, auto-merge off. Hosted CI of #31 (head
+`3705332`, checked once): documentation `build` success (zero warnings and
+empty baselines enforced in CI), `deploy` skipped; one macOS job passed and
+the other cross-platform jobs were pending.
+
+### GEOMETRY-DOC-004 — package- and operation-level searchable browser
+
+Branch `feature/geometry-doc-004-navigation` from DOC-003 head `a03cf97`;
+its PR targets the DOC-003 branch.
+
+- `docs/api-categories.json`: reviewed manifest of 2 packages and 12
+  categories (7 + 5) covering all 106 distinct public names (130
+  declarations) exactly once, derived from the DOC-002 groups and the
+  brief's proposal, checked against both specifications at every
+  generation.
+- `enhance_gnatdoc_navigation.py`: per-package sections headed by package
+  links, categorized declaration lists with verified native anchors, kinds
+  and overload labels; hidden controls and one deferred script added only to
+  the native index; exact rebuild check; idempotent.
+  `gnatdoc-navigation.js`: case-insensitive multi-word search including the
+  package name, live status, Clear, `aria-current` selection, package
+  (`?package=`) and declaration (`?package=&op=&overload=`) bookmarks with
+  Back/Forward/reload, canonicalization that drops unknown, path-like and
+  wrong-package requests. Theme rules added for the browser.
+- Validator: the navigation script is the only allowed script, once, in the
+  index; the index must equal the rebuilt themed and augmented
+  serialization; navigation is rechecked independently.
+- Tests: 15 navigation tests (manifest errors, real-site mutations,
+  idempotency); 195 Python tests in total, all passing.
+- Browser: the navigation harness and the presentation harness (package
+  clicks scoped to the native compilation-unit list, now that package
+  headings also link) pass at 1280/390 px in light and dark, with
+  JavaScript disabled for both; screenshots in
+  `/home/zboll/git/opencv/geometry-doc-campaign/evidence/doc-004`; the
+  desktop dark search, mobile light and no-JavaScript views were inspected.
+  The mobile sidebar keeps Imgproc's 30 % band and scrolls internally.
+
 ## Findings for the maintainers (not changed: outside documentation scope)
 
 - README says Core 0.4.1 "is not yet in the public Alire index"; on
@@ -488,7 +529,7 @@ its PR targets the DOC-002D branch.
 
 ## Next executable task
 
-1. Commit DOC-003, push, open its PR against the DOC-002D branch; check
-   hosted CI of #31 once.
-2. DOC-004 operation-level browser on `feature/geometry-doc-004-navigation`
-   from the DOC-003 head, then DOC-005 and DOC-006.
+1. Commit DOC-004, push, open its PR against the DOC-003 branch; check
+   hosted CI of #32 once.
+2. DOC-005 guides and compiled examples on `feature/geometry-doc-005-guides`
+   from the DOC-004 head, then the DOC-006 final qualification.

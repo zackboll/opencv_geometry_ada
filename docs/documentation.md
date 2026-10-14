@@ -180,8 +180,9 @@ generated output, and modifies nothing:
   Core type links described below; the landing page may link only to the
   Geometry and Core repositories and the Core and Imgproc documentation
   sites.
-- Scripts, `base`/`object`/`embed`/`form` elements, `meta http-equiv`, event
-  handler attributes, duplicate IDs, internal unit names, shim symbols and
+- Scripts (except the one approved browser script in `api/index.html`),
+  `base`/`object`/`embed`/`form` elements, `meta http-equiv`, event handler
+  attributes, duplicate IDs, internal unit names, shim symbols and
   machine-local paths are rejected.
 - The landing-page example must be exactly `docs/example.adb`.
 
@@ -337,6 +338,79 @@ python3 -m http.server 8073 --bind 127.0.0.1 --directory _site
 PLAYWRIGHT_MODULE=/path/to/node_modules/playwright \
 DOC_URL=http://127.0.0.1:8073/ node scripts/test_gnatdoc_presentation_browser.cjs
 ```
+
+## Package- and operation-level API browser (GEOMETRY-DOC-004)
+
+Core's browser searches 195 packages and Imgproc's the declarations of one
+package. Geometry publishes two packages with 130 declarations, so its
+browser works per package and per declaration.
+`enhance_gnatdoc_navigation.py` changes only `api/index.html`, adding:
+
+- one hidden search control group (label, search field, Clear button and a
+  polite live status), revealed by the script;
+- a static "Public API" list in the sidebar: one section per package, headed
+  by a link to that package's page, each with collapsible `<details>`
+  categories listing every visible-part declaration. Each entry is a native
+  link to the declaration's verified anchor in the documentation frame and
+  shows its kind and, for overloads, "overload N of M"; the full profile is
+  the link title;
+- one deferred repository-owned script, `gnatdoc-navigation.js`.
+
+Entries come from the public specifications (names, kinds, profiles, overload
+order), the reviewed category manifest `docs/api-categories.json` and anchors
+discovered from source-matched native sections. The manifest lists the two
+packages in order and assigns every public declaration name of each package
+to exactly one of that package's categories (seven for `OpenCV.Geometry`:
+point sets, contours and moments; hulls, convexity and curve approximation;
+shape matching and geometric queries; fitting and enclosing shapes;
+intersections and rotated geometry; affine and perspective transformations;
+native capability and compatibility; five for `OpenCV.Geometry.Subdiv2D`:
+lifecycle and bounds; insertion and point queries; edge and vertex
+navigation; triangles and extraction; Voronoi diagrams and facets). Category
+identifiers are unique across packages; a new declaration fails generation
+until it is categorized. No filename or anchor is computed.
+
+The script provides case-insensitive search over package, name, kind,
+category title and profile (every word must match, so `subdiv2d insert`
+finds the Subdiv2D `Insert` overloads), category expansion for matches,
+hiding of a package section without matches, a count or "No matching
+declarations." in the live status, and Clear, which restores the list and
+returns focus to the field. Selecting an entry marks it with
+`aria-current="page"`, loads its anchor in the frame by replacing the
+frame's history entry, and records a bookmark such as
+`api/index.html?package=OpenCV.Geometry.Subdiv2D&op=Voronoi_Facets&overload=1`
+in the outer history; selecting a package link records
+`api/index.html?package=OpenCV.Geometry.Subdiv2D`. Back, Forward and reload
+restore the selection. Lookups ignore identifier case and canonicalize the
+URL; unknown, path-like or wrong-package requests select nothing and are
+removed from the URL. Destinations always come from the static entries and
+package links, never from query or search text. Without JavaScript the
+controls stay hidden and the categorized links, package links and tabs still
+work. Declaration pages are unchanged.
+
+Validation rebuilds the expected index from the pinned native serialization,
+the theme metadata and the recomputed entries and compares it byte for byte;
+the script bytes must equal the repository asset, and it is the only script
+allowed, once, in the index. `test_gnatdoc_navigation.py` rejects category
+manifest errors (duplicates, a category identifier reused across packages, a
+package listed twice, bad versions, empty categories), wrong-but-existing
+destinations, an entry moved to the other package, missing entries, inline
+handlers, extra scripts including one on a package page, a tampered asset, a
+redirected package heading and changed frame targets, and checks that every
+declaration has exactly one entry and that enhancement is idempotent.
+
+`scripts/test_gnatdoc_navigation_browser.cjs` (optional Playwright and
+Chrome, as above) qualifies the browser at 1280 and 390 pixels in light and
+dark: the 130 entries, 2 package sections and 12 categories; searches for
+`cOnVeX_hUlL`, `voronoi`, `subdiv2d insert`, `fit ellipse`, `perspective`,
+`nearest`, `moments`, `intersection` and `native capability`; a search
+confined to one package; overload labels, no-results and Clear; frame
+navigation to native anchors on both package pages; declaration and package
+bookmarks, Back, Forward and reload; copied case-insensitive bookmarks in a
+fresh context; unknown, path-like and wrong-package requests; keyboard
+search and selection through the package heading and category with visible
+focus; no page overflow; and JavaScript-disabled navigation through
+categories of both packages.
 
 ## Landing-page example
 
