@@ -1,46 +1,3 @@
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Subdivision: type Subdivision is limited private;: warning: entity `Subdivision` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Float32_Rectangle.X: X : OpenCV.Float32_Value : = 0.0;: warning: component `X` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Float32_Rectangle.Y: Y : OpenCV.Float32_Value : = 0.0;: warning: component `Y` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Float32_Rectangle.Width: Width : OpenCV.Float32_Value : = 0.0;: warning: component `Width` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Float32_Rectangle.Height: Height : OpenCV.Float32_Value : = 0.0;: warning: component `Height` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Vertex_Id: type Vertex_Id is range 0 .. 2**31 - 1;: warning: entity `Vertex_Id` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.No_Vertex: No_Vertex : constant Vertex_Id : = 0;: warning: entity `No_Vertex` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Edge_Id: type Edge_Id is range 0 .. 2**31 - 1;: warning: entity `Edge_Id` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.No_Edge: No_Edge : constant Edge_Id : = 0;: warning: entity `No_Edge` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Create: function Create (Bounds : OpenCV.Rect) return Subdivision;: warning: parameter `Bounds` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Create: function Create (Bounds : OpenCV.Rect) return Subdivision;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Create_Float32: function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision;: warning: parameter `Bounds` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Create_Float32: function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Reset: procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect);: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Reset: procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect);: warning: parameter `Bounds` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Reset_Float32: procedure Reset_Float32 (Object : in out Subdivision; Bounds : Float32_Rectangle);: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Reset_Float32: procedure Reset_Float32 (Object : in out Subdivision; Bounds : Float32_Rectangle);: warning: parameter `Bounds` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Is_Ready: function Is_Ready (Object : Subdivision) return Boolean;: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Is_Ready: function Is_Ready (Object : Subdivision) return Boolean;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Bounds: function Bounds (Object : Subdivision) return OpenCV.Rect;: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Bounds: function Bounds (Object : Subdivision) return OpenCV.Rect;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Bounds_Float32: function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle;: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Bounds_Float32: function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Insert: function Insert (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Vertex_Id;: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Insert: function Insert (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Vertex_Id;: warning: parameter `Point` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Insert: function Insert (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Vertex_Id;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Insert: procedure Insert (Object : in out Subdivision; Points : Float32_Point_Array);: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Insert: procedure Insert (Object : in out Subdivision; Points : Float32_Point_Array);: warning: parameter `Points` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Point_Location_Kind: type Point_Location_Kind is (Inside_Facet, On_Edge, On_Vertex);: warning: entity `Point_Location_Kind` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Point_Location_Kind.Inside_Facet: type Point_Location_Kind is (Inside_Facet, On_Edge, On_Vertex);: warning: enumeration literal `Inside_Facet` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Point_Location_Kind.On_Edge: type Point_Location_Kind is (Inside_Facet, On_Edge, On_Vertex);: warning: enumeration literal `On_Edge` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Point_Location_Kind.On_Vertex: type Point_Location_Kind is (Inside_Facet, On_Edge, On_Vertex);: warning: enumeration literal `On_Vertex` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Locate_Result.Kind: type Locate_Result (Kind : Point_Location_Kind : = Inside_Facet) is record: warning: component `Kind` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Locate_Result.Edge: Edge : Edge_Id;: warning: component `Edge` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Locate_Result.Vertex: Vertex : Vertex_Id;: warning: component `Vertex` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Locate: function Locate (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Locate_Result;: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Locate: function Locate (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Locate_Result;: warning: parameter `Point` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Locate: function Locate (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Locate_Result;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Nearest_Result.Vertex: Vertex : Vertex_Id : = No_Vertex;: warning: component `Vertex` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Nearest_Result.Point: Point : OpenCV.Float32_Point : = (X => 0.0, Y => 0.0);: warning: component `Point` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Find_Nearest: function Find_Nearest (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Nearest_Result;: warning: parameter `Object` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Find_Nearest: function Find_Nearest (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Nearest_Result;: warning: parameter `Point` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Find_Nearest: function Find_Nearest (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Nearest_Result;: warning: return value is not documented
 opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Edge_Segment.Origin: Origin : OpenCV.Float32_Point : = (X => 0.0, Y => 0.0);: warning: component `Origin` is not documented
 opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Edge_Segment.Destination: Destination : OpenCV.Float32_Point : = (X => 0.0, Y => 0.0);: warning: component `Destination` is not documented
 opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Edge_Segment_Array: type Edge_Segment_Array is array (Natural range <>) of Edge_Segment;: warning: entity `Edge_Segment_Array` is not documented
@@ -110,5 +67,3 @@ opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Voronoi_Facets: function 
 opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Voronoi_Facets: function Voronoi_Facets (Object : in out Subdivision; Sites : Vertex_Id_Array) return Voronoi_Diagram;: warning: parameter `Object` is not documented
 opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Voronoi_Facets: function Voronoi_Facets (Object : in out Subdivision; Sites : Vertex_Id_Array) return Voronoi_Diagram;: warning: parameter `Sites` is not documented
 opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Voronoi_Facets: function Voronoi_Facets (Object : in out Subdivision; Sites : Vertex_Id_Array) return Voronoi_Diagram;: warning: return value is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Finalize: procedure Finalize (Object : in out Subdivision);: warning: entity `Finalize` is not documented
-opencv-geometry-subdiv2d.ads: OpenCV.Geometry.Subdiv2D.Finalize: procedure Finalize (Object : in out Subdivision);: warning: parameter `Object` is not documented

@@ -79,9 +79,19 @@ private with OpenCV.Geometry.Internal.C_API;
 
 package OpenCV.Geometry.Subdiv2D is
 
+   --  An incremental Delaunay triangulation that exclusively owns one native
+   --  cv::Subdiv2D. It is limited, so it cannot be copied; finalization
+   --  releases the native object. A declared object is not ready until
+   --  Create, Create_Float32, Reset or Reset_Float32 succeeds. A
+   --  Subdivision must not be used by more than one task at a time, even
+   --  for query-only operations; distinct objects are independent.
    type Subdivision is limited private;
 
    --  Axis-aligned binary32 initialization descriptor, not a rotated rect.
+   --  @field X Left edge: the smallest accepted X.
+   --  @field Y Top edge: the smallest accepted Y.
+   --  @field Width Extent in X; must be positive.
+   --  @field Height Extent in Y; must be positive.
    type Float32_Rectangle is record
       X      : OpenCV.Float32_Value := 0.0;
       Y      : OpenCV.Float32_Value := 0.0;
@@ -89,20 +99,34 @@ package OpenCV.Geometry.Subdiv2D is
       Height : OpenCV.Float32_Value := 0.0;
    end record;
 
+   --  Native OpenCV vertex identifier, meaningful only for the Subdivision
+   --  that produced it (see the package description for its lifetime).
    type Vertex_Id is range 0 .. 2**31 - 1;
 
+   --  OpenCV's "no vertex" identifier, never a real vertex.
    No_Vertex : constant Vertex_Id := 0;
 
+   --  Native OpenCV directed-edge identifier, meaningful only for the
+   --  Subdivision that produced it and only until its next Insert or Reset.
    type Edge_Id is range 0 .. 2**31 - 1;
 
+   --  OpenCV's "no edge" identifier, part of its reserved null quad-edge.
    No_Edge : constant Edge_Id := 0;
 
    --  A new Subdivision holding an empty Delaunay triangulation of Bounds,
    --  as if by Reset.
+   --  @param Bounds Integer bounds, with the rules of Reset.
+   --  @return A ready subdivision without inserted points.
+   --  @exception OpenCV_Error Bounds that Reset rejects, or a native
+   --    allocation or initialization failure.
    function Create (Bounds : OpenCV.Rect) return Subdivision;
 
    --  A new subdivision as if by Reset_Float32. The distinct name preserves
    --  integer Create calls with unqualified rectangle aggregates.
+   --  @param Bounds Binary32 bounds, with the rules of Reset_Float32.
+   --  @return A ready subdivision without inserted points.
+   --  @exception OpenCV_Error Bounds that Reset_Float32 rejects, or a native
+   --    allocation or initialization failure.
    function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision;
 
    --  Discards every point and initializes Object to an empty Delaunay
@@ -115,16 +139,27 @@ package OpenCV.Geometry.Subdiv2D is
    --  finite upper limits and super-triangle coordinates. Semantic rejection
    --  leaves Object unchanged; native failure leaves it not ready. Neither
    --  failure publishes new bounds. Failures raise OpenCV.OpenCV_Error.
+   --  Every vertex and edge identifier of Object becomes invalid.
+   --  @param Object The subdivision to (re)initialize; it need not be ready.
+   --  @param Bounds Integer bounds with positive Width and Height.
+   --  @exception OpenCV_Error Bounds rejected by the rules above (Object
+   --    unchanged), or a native allocation or initialization failure (Object
+   --    not ready).
    procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect);
 
    --  As above, without rounding to integers. OpenCV 4.6 .. 4.12 uses a
    --  private initialization backport; 4.13+ and 5.x call native Rect2f.
    --  Is_Natively_Supported still reports native Rect2f availability only.
    --  All fields must be finite; Width and Height must be positive and their
-   --  binary32 additions to X/Y must advance. Big = 6 * max(Width, Height)
-   --  and X/Y +/- Big must remain finite. These conditions also guarantee a
-   --  distinguishable, nondegenerate initial super-triangle, but not good
-   --  conditioning of subsequent native geometric predicates.
+   --  binary32 additions to X/Y must advance. `Big = 6 * max (Width,
+   --  Height)` and X/Y +/- Big must remain finite. These conditions also
+   --  guarantee a distinguishable, nondegenerate initial super-triangle, but
+   --  not good conditioning of subsequent native geometric predicates.
+   --  @param Object The subdivision to (re)initialize; it need not be ready.
+   --  @param Bounds Binary32 bounds satisfying the rules above.
+   --  @exception OpenCV_Error Bounds rejected by the rules above (Object
+   --    unchanged), or a native allocation or initialization failure (Object
+   --    not ready).
    procedure Reset_Float32
      (Object : in out Subdivision; Bounds : Float32_Rectangle);
 
@@ -135,11 +170,17 @@ package OpenCV.Geometry.Subdiv2D is
    --  Reset makes such an object ready again. Every other operation on a
    --  Subdivision except the bounds queries raises OpenCV.OpenCV_Error when
    --  the object is not ready.
+   --  @param Object The subdivision to query.
+   --  @return Whether Object can be used by the other operations.
    function Is_Ready (Object : Subdivision) return Boolean;
 
    --  Original integer bounds of the last successful initialization. Raises
    --  OpenCV.OpenCV_Error when there has been none or Float32 bounds were
    --  supplied. Never silently rounds or encloses a Float32 rectangle.
+   --  @param Object The subdivision to query; it need not be ready.
+   --  @return The Bounds passed to the last successful Create or Reset.
+   --  @exception OpenCV_Error No successful initialization yet, or the last
+   --    one used Float32 bounds.
    function Bounds (Object : Subdivision) return OpenCV.Rect;
 
    --  Exact descriptor of the last successful initialization: the supplied
@@ -147,6 +188,9 @@ package OpenCV.Geometry.Subdiv2D is
    --  does. Upper limits are still computed by binary32 addition. Available
    --  on all releases, including after a failed native Reset; raises
    --  OpenCV.OpenCV_Error only when initialization has never succeeded.
+   --  @param Object The subdivision to query; it need not be ready.
+   --  @return The binary32 bounds of the last successful initialization.
+   --  @exception OpenCV_Error No initialization has succeeded yet.
    function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle;
 
    --  Inserts Point into the triangulation and returns its vertex. A point
@@ -155,7 +199,14 @@ package OpenCV.Geometry.Subdiv2D is
    --  located) returns that vertex and adds nothing. Point must be finite
    --  and inside the bounds. A point outside the bounds, or a point that
    --  OpenCV cannot locate, raises OpenCV.OpenCV_Error and leaves the
-   --  triangulation unchanged and Object ready.
+   --  triangulation unchanged and Object ready. Every edge identifier of
+   --  Object, and every Voronoi vertex, becomes invalid.
+   --  @param Object A ready subdivision.
+   --  @param Point The point to insert; finite and inside the bounds.
+   --  @return The vertex of Point, or of the existing coincident vertex.
+   --  @exception OpenCV_Error A non-finite Point, an Object that is not
+   --    ready, a point outside the bounds or that OpenCV cannot locate, or
+   --    another native failure (after which Object may be not ready).
    function Insert
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
       return Vertex_Id;
@@ -164,9 +215,21 @@ package OpenCV.Geometry.Subdiv2D is
    --  coordinate is checked for finiteness before any point is inserted. When
    --  OpenCV rejects a point, for example because it lies outside the bounds,
    --  the points before it remain inserted and OpenCV.OpenCV_Error is raised.
+   --  The insertion is therefore not atomic; the exception message names the
+   --  index of the rejected point. Vertex identifiers are not returned: use
+   --  the single-point Insert, Locate or Find_Nearest to obtain them.
+   --  @param Object A ready subdivision.
+   --  @param Points The points to insert, with any bounds; may be empty.
+   --  @exception OpenCV_Error A non-finite coordinate (before any insertion),
+   --    an Object that is not ready, or a rejected point, after which the
+   --    earlier points remain inserted.
    procedure Insert
      (Object : in out Subdivision; Points : Float32_Point_Array);
 
+   --  Classification of a located point.
+   --  @enum Inside_Facet Strictly inside a facet (PTLOC_INSIDE).
+   --  @enum On_Edge On an edge (PTLOC_ON_EDGE).
+   --  @enum On_Vertex At an existing vertex (PTLOC_VERTEX).
    type Point_Location_Kind is (Inside_Facet, On_Edge, On_Vertex);
 
    --  Where a point lies in the triangulation:
@@ -175,6 +238,10 @@ package OpenCV.Geometry.Subdiv2D is
    --    subdivision without points.
    --  - On_Edge: on Edge.
    --  - On_Vertex: at Vertex.
+   --  @field Kind The classification, which selects the component.
+   --  @field Edge For Inside_Facet, an edge with the facet on its left; for
+   --    On_Edge, the edge containing the point.
+   --  @field Vertex For On_Vertex, the vertex at the point.
    type Locate_Result (Kind : Point_Location_Kind := Inside_Facet) is record
       case Kind is
          when Inside_Facet | On_Edge =>
@@ -191,11 +258,20 @@ package OpenCV.Geometry.Subdiv2D is
    --  OpenCV.OpenCV_Error, as does a search that does not converge. Locate
    --  updates OpenCV's cached search start, so the edge reported for a point
    --  can differ between calls.
+   --  @param Object A ready subdivision; its cached search start changes.
+   --  @param Point The point to locate; finite and inside the bounds.
+   --  @return The classification with its edge, valid until the next Insert
+   --    or Reset, or its vertex, valid until the next Reset.
+   --  @exception OpenCV_Error A non-finite Point, an Object that is not
+   --    ready, a point outside the bounds, a search that does not converge,
+   --    or another native failure.
    function Locate
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
       return Locate_Result;
 
    --  An inserted vertex and its position.
+   --  @field Vertex The vertex identifier.
+   --  @field Point The vertex position, as OpenCV stores it.
    type Nearest_Result is record
       Vertex : Vertex_Id := No_Vertex;
       Point  : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
@@ -215,6 +291,16 @@ package OpenCV.Geometry.Subdiv2D is
    --  while execution is stuck inside OpenCV. Callers requiring a hard
    --  liveness or deadline guarantee must not rely on Find_Nearest for
    --  untrusted or poorly conditioned geometry.
+   --  @param Object A ready subdivision with at least one inserted point; its
+   --    Voronoi data may be recomputed.
+   --  @param Point The query point; finite and inside the bounds.
+   --  @return The vertex whose Voronoi facet contains Point, with its
+   --    position, when the native call returns. This is not proved to be the
+   --    nearest inserted vertex.
+   --  @exception OpenCV_Error A non-finite Point, an Object that is not
+   --    ready, no inserted point, OpenCV reporting no vertex, or another
+   --    native failure that returns; a call that does not return raises
+   --    nothing.
    function Find_Nearest
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
       return Nearest_Result;
@@ -390,6 +476,9 @@ private
       Bounds_Mode   : Bounds_Representation := No_Bounds;
    end record;
 
+   --  Releases the native subdivision exactly once; finalizing an object
+   --  that owns none, or finalizing again, does nothing.
+   --  @param Object The subdivision whose native object is released.
    overriding
    procedure Finalize (Object : in out Subdivision);
 
