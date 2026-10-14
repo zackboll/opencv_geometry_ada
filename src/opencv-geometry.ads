@@ -1,5 +1,42 @@
 with OpenCV.Core;
 
+--  Computational geometry on Ada-owned point sets, backed by native OpenCV:
+--  contour area, length and moments; convex hulls, hull indices and
+--  convexity defects; curve approximation, convexity tests, bounding
+--  rectangles, point location and shape matching; minimum-area rectangles
+--  and enclosing circles and triangles; ellipse and line fitting; convex
+--  polygon and rotated-rectangle intersections; and affine and perspective
+--  transforms. Planar Delaunay and Voronoi subdivisions are in the child
+--  package OpenCV.Geometry.Subdiv2D.
+--
+--  Point sets: a Contour is an OpenCV.Point_Array of integer points, passed
+--  to OpenCV as CV_32S. Overloads that take a Float32_Point_Array use
+--  OpenCV's binary32 CV_32F path without rounding to integers. Input arrays
+--  may have any bounds and are read in index order; each declaration states
+--  the bounds of its result.
+--
+--  Ownership: every operation here is a function whose inputs are not
+--  modified. Results are Ada-owned values, arrays and records; none refers
+--  to native storage. The one exception is Get_Rotation_Matrix_2D, which
+--  returns an OpenCV.Core.Mat with Core's ordinary Mat ownership.
+--
+--  Errors: input that the binding rejects, failures reported by OpenCV and
+--  non-finite native results raise OpenCV.OpenCV_Error, as each declaration
+--  describes. Where native arithmetic or memory safety requires it, an
+--  operation checks documented limits before calling OpenCV; each
+--  declaration states its own.
+--
+--  Native backend and versions: on OpenCV 4 these operations call the
+--  native imgproc library, and on OpenCV 5 the native geometry library. The
+--  Ada declarations are the same on every supported release, OpenCV 4.6 and
+--  later 4.x releases and 5.x; where native results differ between
+--  releases, the declaration says so. Is_Natively_Supported reports what
+--  the linked OpenCV provides, not what this package binds: native
+--  approxPolyN and minEnclosingConvexPolygon remain unbound, as do 3-D line
+--  fitting, the raster-image modes of moments, boundingRect and matchShapes,
+--  and Float32 enclosing triangles. Image processing, including extracting
+--  contours from images, belongs to the OpenCV Imgproc binding.
+
 package OpenCV.Geometry is
 
    --  Availability in the linked native OpenCV, NOT Ada binding coverage.
@@ -256,7 +293,7 @@ package OpenCV.Geometry is
    --  contour. After Hull is validated, a Points of at most three points or
    --  a Hull of fewer than three indices yields an empty result. Otherwise
    --  the X and Y spans of Points, Width and Height, must satisfy
-   --  Width**2 + Height**2 <= 8_388_607**2, where 8_388_607 is
+   --  `Width**2 + Height**2 <= 8_388_607**2`, where 8_388_607 is
    --  Integer_32'Last / 256: OpenCV stores Depth * 256 rounded in a signed
    --  32-bit integer, and no Depth exceeds the bounding-box diagonal. This
    --  also keeps native signed 32-bit coordinate subtraction from
@@ -448,19 +485,19 @@ package OpenCV.Geometry is
    --  distances, parameters, scalar validation, and restarts, but
    --  fitting the binary32 coordinates themselves, so subpixel positions
    --  are kept. OpenCV's L2 fit sums the coordinates in binary64 but
-   --  forms each product X*X, Y*Y, and X*Y in binary32 before summing, and
-   --  does not first subtract the mean, so points far from the origin
-   --  relative to their spread lose direction accuracy. A product above
-   --  Float32_Value'Last overflows, and when only the X or only the Y
+   --  forms each product `X*X`, `Y*Y`, and `X*Y` in binary32 before
+   --  summing, and does not first subtract the mean, so points far from the
+   --  origin relative to their spread lose direction accuracy. A product
+   --  above Float32_Value'Last overflows, and when only the X or only the Y
    --  products do, OpenCV returns a finite but wrong direction. So every
-   --  coordinate must have magnitude at most 2.0**63, which keeps the
+   --  coordinate must have magnitude at most `2.0**63`, which keeps the
    --  products finite; other sets raise OpenCV_Error. Non-finite native
    --  results, and the all-zero line with which OpenCV's robust fit starts
    --  and which it keeps when no candidate has a finite error, also raise
    --  OpenCV_Error. Points is unchanged.
    --  L2 accepts the ordinary C ABI count limit, Integer_32'Last. Robust
    --  distances (L1, L12, Fair, Welsch, Huber) require at most
-   --  Integer_32'Last / 2 points: native fitLine allocates count*2 floats
+   --  Integer_32'Last / 2 points: native fitLine allocates `count*2` floats
    --  after the L2 early return. Larger counts raise OpenCV_Error.
    function Fit_Line_2D
      (Points          : Float32_Point_Array;
@@ -504,11 +541,12 @@ package OpenCV.Geometry is
    --  raise OpenCV_Error; Is_Convex, whose result OpenCV leaves undefined
    --  for non-simple contours, may accept the latter two. OpenCV does not
    --  check any of this, and OpenCV 4.x releases before 4.11 can overflow an
-   --  internal buffer on such input. Every vertex coordinate must also lie in
-   --  -2**24 .. 2**24, where OpenCV's binary32 conversion is exact, and the X
-   --  span and the Y span of Left and Right together must each be at most
-   --  2**24, or 2**25 when every coordinate is even, so that every binary32
-   --  coordinate difference is exact too; other polygons raise OpenCV_Error.
+   --  internal buffer on such input. Every vertex coordinate must also lie
+   --  in `-2**24 .. 2**24`, where OpenCV's binary32 conversion is exact, and
+   --  the X span and the Y span of Left and Right together must each be at
+   --  most `2**24`, or `2**25` when every coordinate is even, so that every
+   --  binary32 coordinate difference is exact too; other polygons raise
+   --  OpenCV_Error.
    --  With rounded differences OpenCV's orientation tests can disagree, and
    --  OpenCV 4.6 and 4.10 can then write past their result buffer even for
    --  valid convex polygons, such as two hexagons spanning about 3.1E+7. The
@@ -538,20 +576,20 @@ package OpenCV.Geometry is
    --  heap (probed with two polygons of about 60 vertices), and 4.11 and
    --  later can report non-convergence. Accepted input therefore keeps every
    --  native test exact: for some K in -8 .. 6, every coordinate of Left and
-   --  Right must be an integer multiple of 2.0**K, and Left and Right divided
-   --  by 2.0**K must be integer polygons that the integer overload accepts,
-   --  so of magnitude at most 2.0**(24 + K) and of joint X and Y spans at
-   --  most 2.0**(24 + K), or twice that when every coordinate is a multiple
-   --  of 2.0**(K + 1). Examples are integer polygons within those limits and
-   --  polygons whose coordinates are multiples of 0.25 with magnitude and
-   --  joint spans at most 4194304.0. Other finite polygons, including most
-   --  with decimal fractions such as 0.1, raise OpenCV_Error, as do
-   --  non-finite coordinates. K >= -8 keeps every nonzero native orientation
-   --  above OpenCV's absolute 1.0E-5 tolerance, and K <= 6 keeps coordinate
-   --  magnitudes at most 2.0**30, below the 2.0**31 at which the cvRound in
-   --  OpenCV's nested-polygon test overflows.
+   --  Right must be an integer multiple of `2.0**K`, and Left and Right
+   --  divided by `2.0**K` must be integer polygons that the integer overload
+   --  accepts, so of magnitude at most `2.0**(24 + K)` and of joint X and Y
+   --  spans at most `2.0**(24 + K)`, or twice that when every coordinate is
+   --  a multiple of `2.0**(K + 1)`. Examples are integer polygons within
+   --  those limits and polygons whose coordinates are multiples of 0.25 with
+   --  magnitude and joint spans at most 4194304.0. Other finite polygons,
+   --  including most with decimal fractions such as 0.1, raise OpenCV_Error,
+   --  as do non-finite coordinates. K >= -8 keeps every nonzero native
+   --  orientation above OpenCV's absolute 1.0E-5 tolerance, and K <= 6 keeps
+   --  coordinate magnitudes at most `2.0**30`, below the `2.0**31` at which
+   --  the cvRound in OpenCV's nested-polygon test overflows.
    --  On accepted input OpenCV returns the result it computes for the
-   --  integer polygons, scaled by 2.0**K: both run the same binary32 and
+   --  integer polygons, scaled by `2.0**K`: both run the same binary32 and
    --  binary64 operations, which commute with power-of-two scaling in this
    --  range. The rule applies on every release, so that the accepted inputs
    --  do not depend on the OpenCV version. Left and Right are unchanged.
@@ -672,8 +710,8 @@ package OpenCV.Geometry is
    --  Height. Every point P therefore satisfies X <= P.X < X + Width. For
    --  integer-valued coordinates the result is the integer overload's.
    --  OpenCV converts the floors to signed 32-bit integers, which is
-   --  undefined outside -2.0**31 .. 2.0**31, so every coordinate must be
-   --  at least -2.0**31 and less than 2.0**31, and Width and Height must
+   --  undefined outside `-2.0**31 .. 2.0**31`, so every coordinate must be
+   --  at least `-2.0**31` and less than `2.0**31`, and Width and Height must
    --  not exceed Integer_32'Last; other inputs raise OpenCV_Error. Empty
    --  input returns (0, 0, 0, 0). Points is unchanged.
    function Bounding_Rect (Points : Float32_Point_Array) return OpenCV.Rect;
@@ -729,7 +767,7 @@ package OpenCV.Geometry is
    --  Query coordinates are binary32 and may be fractional. Empty
    --  contours are Outside_Contour. For nonempty Points, OpenCV rounds
    --  Query to a signed 32-bit integer point, so a Query coordinate that
-   --  is not finite, or not in -2.0**31 .. 2.0**31 (excluding 2.0**31),
+   --  is not finite, or not in `-2.0**31 .. 2.0**31` (excluding `2.0**31`),
    --  raises OpenCV_Error. Points is unchanged.
    type Contour_Point_Location is
      (Outside_Contour, On_Contour_Boundary, Inside_Contour);
@@ -758,7 +796,7 @@ package OpenCV.Geometry is
    --  of Points, computed in binary64, must each be at most
    --  Float32_Value'Last. For nonempty Points, OpenCV also rounds Query to a
    --  signed 32-bit integer point on every path, so each Query coordinate
-   --  must be at least -2.0**31 and less than 2.0**31. Other inputs raise
+   --  must be at least `-2.0**31` and less than `2.0**31`. Other inputs raise
    --  OpenCV_Error. OpenCV starts its nearest-edge search at a squared
    --  distance of FLT_MAX and cannot report a farther edge, so a distance of
    --  at least Sqrt (Float32_Value'Last), about 1.8447E+19, raises

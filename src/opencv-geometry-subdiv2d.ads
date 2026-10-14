@@ -44,6 +44,38 @@ private with OpenCV.Geometry.Internal.C_API;
 --  nearly cocircular sets may behave differently at any pairwise spacing.
 --  Scale geometry so distinct features are comfortably separated relative
 --  to OpenCV's binary32 predicates.
+--
+--  Extraction. Results are Ada-owned arrays indexed 1 .. N, in native
+--  order. Edge_List and Triangle_List contain copied values that remain
+--  valid independently of later changes to Object. Leading_Edge_List
+--  storage remains safely allocated, but its Edge_Id elements are valid
+--  only until the next Insert or Reset of Object. Each call raises
+--  OpenCV.OpenCV_Error when Object is not ready.
+--
+--  Navigation. Each operation takes identifiers produced by Object and
+--  raises OpenCV.OpenCV_Error for No_Vertex or a free vertex slot, for
+--  No_Edge or the other identifiers 1 .. 3 of OpenCV's reserved null
+--  edge, for an identifier beyond native storage, and when Object is not
+--  ready. Edges are directed. An Edge_Id names a Delaunay edge, or, after
+--  a Rotated_Edge or Reversed_Rotated_Edge rotation, its dual Voronoi edge.
+--
+--  Voronoi diagram. OpenCV computes the Voronoi diagram of the inserted
+--  points together with the three super-triangle vertices. The facet of
+--  an inserted point, its site, is the region nearer to that point than
+--  to any other of those vertices. In tested well-spaced fixtures, each
+--  facet point was nearest to its site among inserted points, up to
+--  rounding. This is not guaranteed by a minimum spacing: conditioning,
+--  including near-collinear and nearly cocircular sets, also matters.
+--  A facet whose true Voronoi region reaches beyond the super-triangle, as
+--  the region of every point on the convex hull and of some points near it
+--  does, is closed by circumcenters of triangles with a super-triangle
+--  vertex. Those lie far outside the bounds and differ between releases,
+--  because 4.12 and later, including 5.x, use a larger super-triangle.
+--
+--  Like Find_Nearest, both Voronoi_Facets functions compute Voronoi data
+--  inside Object when earlier insertions invalidated it. Each raises
+--  OpenCV.OpenCV_Error when Object is not ready; a native failure leaves
+--  Object ready.
 
 package OpenCV.Geometry.Subdiv2D is
 
@@ -187,13 +219,6 @@ package OpenCV.Geometry.Subdiv2D is
      (Object : in out Subdivision; Point : OpenCV.Float32_Point)
       return Nearest_Result;
 
-   --  Extraction. Results are Ada-owned arrays indexed 1 .. N, in native
-   --  order. Edge_List and Triangle_List contain copied values that remain
-   --  valid independently of later changes to Object. Leading_Edge_List
-   --  storage remains safely allocated, but its Edge_Id elements are valid
-   --  only until the next Insert or Reset of Object. Each call raises
-   --  OpenCV.OpenCV_Error when Object is not ready.
-
    --  A Delaunay edge as the positions of its origin and destination.
    type Edge_Segment is record
       Origin      : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
@@ -224,13 +249,6 @@ package OpenCV.Geometry.Subdiv2D is
    --  between OpenCV releases: 4.12 and later, including 5.x, use a
    --  super-triangle twice as large as earlier releases.
    function Triangle_List (Object : Subdivision) return Triangle_Array;
-
-   --  Navigation. Each operation takes identifiers produced by Object and
-   --  raises OpenCV.OpenCV_Error for No_Vertex or a free vertex slot, for
-   --  No_Edge or the other identifiers 1 .. 3 of OpenCV's reserved null
-   --  edge, for an identifier beyond native storage, and when Object is not
-   --  ready. Edges are directed. An Edge_Id names a Delaunay edge, or, after
-   --  a Rotated_Edge or Reversed_Rotated_Edge rotation, its dual Voronoi edge.
 
    --  The eight related edges of cv::Subdiv2D::getEdge. For a Delaunay edge
    --  E the quad-edge structure gives these identities, which the binding's
@@ -305,24 +323,6 @@ package OpenCV.Geometry.Subdiv2D is
    --  firstEdge), or No_Edge for a Voronoi vertex.
    function First_Edge
      (Object : Subdivision; Vertex : Vertex_Id) return Edge_Id;
-
-   --  Voronoi diagram. OpenCV computes the Voronoi diagram of the inserted
-   --  points together with the three super-triangle vertices. The facet of
-   --  an inserted point, its site, is the region nearer to that point than
-   --  to any other of those vertices. In tested well-spaced fixtures, each
-   --  facet point was nearest to its site among inserted points, up to
-   --  rounding. This is not guaranteed by a minimum spacing: conditioning,
-   --  including near-collinear and nearly cocircular sets, also matters.
-   --  A facet whose true Voronoi region reaches beyond the super-triangle,
-   --  as the region of
-   --  every point on the convex hull and of some points near it does, is
-   --  closed by circumcenters of triangles with a super-triangle vertex.
-   --  Those lie far outside the bounds and differ between releases, because
-   --  4.12 and later, including 5.x, use a larger super-triangle.
-   --
-   --  Like Find_Nearest, these functions compute Voronoi data inside Object
-   --  when earlier insertions invalidated it. Each raises OpenCV.OpenCV_Error
-   --  when Object is not ready; a native failure leaves Object ready.
 
    type Vertex_Id_Array is array (Natural range <>) of Vertex_Id;
 
