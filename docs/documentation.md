@@ -149,15 +149,16 @@ stay empty (see "Current status" below).
 `validate_docs.py` derives its expectations from `src/*.ads`, never from the
 generated output, and modifies nothing:
 
-- The site contains exactly `index.html`, `api/index.html`, `api/gnatdoc.css`
-  and one native page per public package, two in total. GNATdoc 26.0.0 names
+- The site contains exactly `index.html`, `api/index.html`, `api/gnatdoc.css`,
+  the presentation files listed below and one native page per public
+  package, two in total. GNATdoc 26.0.0 names
   package pages with 64-hex hashes; pages are identified by their actual
   `<h1>`, never by a computed filename. Any other file, an internal or Core
   package page, a duplicate or a missing public package fails.
 - `api/index.html` must equal the pinned GNATdoc 26.0.0 serialization rebuilt
-  from the discovered pages, including every `target=document-content`. Its
-  Tagged Types list is empty: `Subdivision` is tagged only in the private
-  part.
+  from the discovered pages, including every `target=document-content`, plus
+  only the approved presentation changes. Its Tagged Types list is empty:
+  `Subdivision` is tagged only in the private part.
 - Every visible-part declaration has exactly one native `h4` section of the
   same kind on its own package's page. Subprogram sections must reproduce the
   complete normalized profile, so removing, adding, altering or moving one
@@ -175,7 +176,8 @@ generated output, and modifies nothing:
   `Find_Nearest` liveness warning), and the Subdiv2D package description must
   render its task-safety rule.
 - Links must be relative and resolve inside the site, including fragments.
-  API pages have no external links; the landing page may link only to the
+  The only external links in API pages are the two recomputed package-level
+  Core type links described below; the landing page may link only to the
   Geometry and Core repositories and the Core and Imgproc documentation
   sites.
 - Scripts, `base`/`object`/`embed`/`form` elements, `meta http-equiv`, event
@@ -258,6 +260,83 @@ production GPR projects, the build and configuration scripts and the
 cross-platform workflow. New documentation tooling files are allowed. It
 qualifies documentation pull requests; it is not a CI gate, because feature
 work legitimately changes declarations.
+
+## Presentation: theme, type links and Ada highlighting (GEOMETRY-DOC-003)
+
+Adapted from Imgproc's IMGPROC-DOC-003 tooling (itself from Core's
+DOC-069/DOC-070). `generate_docs.sh` runs three deterministic, idempotent
+steps after the warning check; each verifies the previous ones before writing
+anything:
+
+1. `install_gnatdoc_theme.py` inserts one viewport `meta` and one stylesheet
+   link after GNATdoc's native stylesheet in every API page and copies
+   `docs/assets/gnatdoc-theme.css` (responsive layout, light and dark color
+   schemes, visible keyboard focus, code blocks that scroll inside themselves
+   on narrow screens; no web fonts or CDN). `api/presentation.json` records
+   every page's native HTML outside declaration snippets and the hash of the
+   native `gnatdoc.css`; any other change to that HTML or either stylesheet
+   fails.
+2. `link_gnatdoc_types.py` links type marks inside native declaration
+   snippets only: parameter, component, return, array component, subtype and
+   derived-type positions, never defaults, constraints or attributes.
+   - A Geometry type links to its own native section anchor, discovered from
+     the source-matched section of its package page. An unqualified name
+     links when exactly one visible-part declaration of that name precedes
+     the reference in the same package and no parameter or discriminant
+     shadows it. In `OpenCV.Geometry.Subdiv2D`, an unqualified name that the
+     child does not declare links to the parent's declaration on the
+     `OpenCV.Geometry` page (`Float32_Point_Array`, three times), as does the
+     qualified `OpenCV.Geometry.Triangle_Vertices`; a name declared in both
+     packages stays unlinked.
+   - `OpenCV.X` and `OpenCV.Core.X` link only when Core's `src/opencv.ads` or
+     `src/opencv-core.ads` (from the Core checkout verified by the generator's
+     gate, opencv_core 0.4.1) declares that type in the visible part of
+     exactly that package. The destination is the published Core browser's
+     package bookmark,
+     `https://zackboll.github.io/opencv_core_ada/api/index.html?package=OpenCV`
+     or `...?package=OpenCV.Core`; no declaration fragment is invented. These
+     links carry `target="_top"` and are drawn with a dashed underline. The
+     Core site documents Core `main`; every linked type exists in the visible
+     part of both releases' root packages.
+   - Standard types (`Natural`, `Positive`, `Boolean`) stay unlinked.
+   `api/type-crossrefs.json` keeps, per package page, the original snippets
+   and a hash of the page outside them; validation recomputes every link and
+   requires byte-identical snippets. The current output has 167 Geometry
+   (including 4 cross-page) and 96 Core links in 130 snippets; 24 Standard
+   type marks stay unlinked.
+3. `highlight_gnatdoc_ada.py` colors Ada keywords, numbers, strings,
+   characters, attributes, comments and operators inside snippets with flat
+   `ada-*` spans, keeps type links atomic and proves that removing the spans
+   restores the exact snippet text.
+
+`validate_docs.py` then repeats the theme, link and highlighting checks
+independently and probes representative declarations (`Convex_Hull`,
+`Get_Rotation_Matrix_2D`, the Subdiv2D batch `Insert`) for the exact type
+identities their own snippets must link. `test_link_gnatdoc_types.py` covers
+a synthetic parent-and-child fixture, and `test_validate_docs.py` mutates the
+real site: wrong-but-existing type destinations on the same page and across
+pages, a cross-page anchor moved onto the wrong page, fabricated Core
+declaration fragments, removed links, changed declaration text and
+descriptions, a tampered theme asset, corrupted or downgraded manifests and
+stray presentation files are all rejected. Repeating the three steps on a
+finished site is byte-identical.
+
+The optional real-browser harness `scripts/test_gnatdoc_presentation_browser.cjs`
+uses an externally installed Playwright module and Google Chrome (never a
+site or library dependency). At 1280 and 390 pixels in light and dark it
+checks the landing and both package pages (backgrounds, no horizontal page
+overflow, highlighting, snippets that scroll internally), that every Core link
+is an approved package bookmark opening at top level, that an internal type
+link lands on the native anchor, that the Subdiv2D link to
+`Float32_Point_Array` opens the `OpenCV.Geometry` page at that declaration,
+keyboard focus outlines, a Core link replacing the window, and native
+navigation to both packages with JavaScript disabled:
+
+```sh
+python3 -m http.server 8073 --bind 127.0.0.1 --directory _site
+PLAYWRIGHT_MODULE=/path/to/node_modules/playwright \
+DOC_URL=http://127.0.0.1:8073/ node scripts/test_gnatdoc_presentation_browser.cjs
+```
 
 ## Landing-page example
 

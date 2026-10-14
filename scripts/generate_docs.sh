@@ -72,7 +72,13 @@ echo "GNATdoc: $warnings documentation warnings (see obj/docs/gnatdoc.log)"
 python3 scripts/compare_gnatdoc_warnings.py --fail-on-removed \
     docs/gnatdoc-warning-baseline.txt obj/docs/gnatdoc.log
 cp docs/index.html _site/index.html
-python3 scripts/validate_docs.py _site
+# Presentation: theme metadata, source-backed type links, then Ada coloring.
+# Each step verifies the previous ones and records what it changed. Core
+# types are verified against the qualified Core checkout above.
+python3 scripts/install_gnatdoc_theme.py _site/api
+python3 scripts/link_gnatdoc_types.py _site/api --core "$core"
+python3 scripts/highlight_gnatdoc_ada.py _site/api --core "$core"
+python3 scripts/validate_docs.py _site --core "$core"
 # Declaration, overload and member documentation coverage, with the same ratchet.
 python3 scripts/check_doc_coverage.py --fail-on-removed \
     docs/gnatdoc-coverage-baseline.txt _site
