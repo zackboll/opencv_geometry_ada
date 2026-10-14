@@ -66,10 +66,12 @@ memory safety requires it, an operation checks documented limits, such as
 point counts and coordinate spans, before it calls OpenCV, and each
 declaration states its own.
 
-- Operations return a complete result or raise; none returns a partial
-  result. The batch [Insert](api:Insert/2) of Subdiv2D is the one
-  non-atomic operation: points before a rejected one stay inserted.
-- A failed modification can leave a subdivision not ready; only a reset
+- Functions return a complete result or raise; none returns a partial
+  result.
+- The batch [Insert](api:Insert/2) of Subdiv2D is not atomic: points before
+  a rejected one stay inserted.
+- A native failure while a subdivision is being modified, such as an
+  insertion that exhausts memory, can leave it not ready; only a reset
   recovers it.
 - [Facet_Points](api:Facet_Points) raises `Constraint_Error` for a facet
   index outside the diagram, as Ada indexing does.
