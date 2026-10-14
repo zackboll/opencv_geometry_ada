@@ -50,7 +50,10 @@ package OpenCV.Geometry is
 
    function Is_Natively_Supported (Feature : Native_Feature) return Boolean;
 
-   --  An integer contour, for integer-coordinate geometry. CV_32S points.
+   --  An integer contour or point set, for integer-coordinate geometry: an
+   --  OpenCV.Point_Array passed to OpenCV as CV_32S points in index order.
+   --  Inputs may have any bounds. Contour results are zero-based, or the
+   --  null range 1 .. 0 when empty.
    subtype Contour is OpenCV.Point_Array;
 
    --  Ada-owned sequence of binary32 points: a point set for native subpixel
@@ -95,9 +98,17 @@ package OpenCV.Geometry is
        Closest_Ellipse_Points'Result'First = Points'First
        and then Closest_Ellipse_Points'Result'Last = Points'Last;
 
-   --  Calculates the OpenCV polygon area of Points. When Oriented is False,
-   --  the result is nonnegative; otherwise it retains OpenCV's orientation
-   --  sign. Empty and degenerate contours return zero. Points is unchanged.
+   --  Calculates the OpenCV polygon area of Points with cv::contourArea.
+   --  When Oriented is False, the result is nonnegative; otherwise it
+   --  retains OpenCV's orientation sign. Empty and degenerate contours
+   --  return zero. Points is unchanged.
+   --  @param Points Polygon vertices in traversal order, with any bounds; may
+   --    be empty.
+   --  @param Oriented False for the absolute area; True for OpenCV's signed
+   --    area, whose sign depends on the traversal direction.
+   --  @return The area in binary64, as OpenCV computes it.
+   --  @exception OpenCV_Error More than Integer_32'Last points, or a failure
+   --    reported by OpenCV.
    function Contour_Area
      (Points : Contour; Oriented : Boolean := False)
       return OpenCV.Float64_Value;
@@ -105,13 +116,26 @@ package OpenCV.Geometry is
    --  Contour_Area of a Float32 point set. OpenCV accumulates the cross
    --  products of the binary32 coordinates in binary64, so the result is
    --  always finite. Points is unchanged.
+   --  @param Points Polygon vertices in traversal order, with any bounds;
+   --    every coordinate must be finite. May be empty.
+   --  @param Oriented False for the absolute area; True for OpenCV's signed
+   --    area, whose sign depends on the traversal direction.
+   --  @return The area in binary64, as OpenCV computes it.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, more than
+   --    Integer_32'Last points, or a failure reported by OpenCV.
    function Contour_Area
      (Points : Float32_Point_Array; Oriented : Boolean := False)
       return OpenCV.Float64_Value;
 
-   --  Calculates the OpenCV curve length of Points. Closed includes the
-   --  segment from the final point to the first. Empty and one-point contours
-   --  return zero. Points is unchanged.
+   --  Calculates the OpenCV curve length of Points with cv::arcLength.
+   --  Closed includes the segment from the final point to the first. Empty
+   --  and one-point contours return zero. Points is unchanged.
+   --  @param Points Curve vertices in order, with any bounds; may be empty.
+   --  @param Closed True to include the closing segment from the last point
+   --    back to the first.
+   --  @return The nonnegative length in binary64, as OpenCV computes it.
+   --  @exception OpenCV_Error More than Integer_32'Last points, or a failure
+   --    reported by OpenCV.
    function Arc_Length
      (Points : Contour; Closed : Boolean) return OpenCV.Float64_Value;
 
@@ -121,17 +145,48 @@ package OpenCV.Geometry is
    --  1.8E+19 overflows binary32 and makes the native length infinite, which
    --  raises OpenCV_Error; segment components below about 1.0E-19 lose
    --  precision as their squares underflow. Points is unchanged.
+   --  @param Points Curve vertices in order, with any bounds; every
+   --    coordinate must be finite. May be empty.
+   --  @param Closed True to include the closing segment from the last point
+   --    back to the first.
+   --  @return The nonnegative, finite length in binary64.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, more than
+   --    Integer_32'Last points, an infinite native length, or a failure
+   --    reported by OpenCV.
    function Arc_Length
      (Points : Float32_Point_Array; Closed : Boolean)
       return OpenCV.Float64_Value;
 
-   --  Spatial, central, and normalized central moments through third order
-   --  for an Ada-owned contour. For ordinary non-self-intersecting contours,
-   --  M_00 is the polygon area. A centroid, when meaningful, is
-   --  (M_10 / M_00, M_01 / M_00); callers must handle M_00 = 0.0 themselves.
-   --  Self-intersecting contours may have surprising moments because OpenCV
-   --  uses Green's formula. Empty contours return an all-zero result. Points
-   --  is unchanged.
+   --  Spatial, central, and normalized central moments through third order,
+   --  the 24 fields of cv::Moments, copied field by field. Central moments
+   --  are taken about the centroid (M_10 / M_00, M_01 / M_00), and OpenCV
+   --  defines each normalized moment as `Nu_pq = Mu_pq / M_00**(1 + (p+q)/2)`.
+   --  Every field defaults to 0.0.
+   --  @field M_00 Spatial moment m00; for an ordinary non-self-intersecting
+   --    contour, its polygon area.
+   --  @field M_10 Spatial moment m10, first order in X.
+   --  @field M_01 Spatial moment m01, first order in Y.
+   --  @field M_20 Spatial moment m20, second order in X.
+   --  @field M_11 Spatial moment m11, first order in X and in Y.
+   --  @field M_02 Spatial moment m02, second order in Y.
+   --  @field M_30 Spatial moment m30, third order in X.
+   --  @field M_21 Spatial moment m21, second order in X, first in Y.
+   --  @field M_12 Spatial moment m12, first order in X, second in Y.
+   --  @field M_03 Spatial moment m03, third order in Y.
+   --  @field Mu_20 Central moment mu20, about the centroid.
+   --  @field Mu_11 Central moment mu11, about the centroid.
+   --  @field Mu_02 Central moment mu02, about the centroid.
+   --  @field Mu_30 Central moment mu30, about the centroid.
+   --  @field Mu_21 Central moment mu21, about the centroid.
+   --  @field Mu_12 Central moment mu12, about the centroid.
+   --  @field Mu_03 Central moment mu03, about the centroid.
+   --  @field Nu_20 Normalized central moment nu20, scale invariant.
+   --  @field Nu_11 Normalized central moment nu11, scale invariant.
+   --  @field Nu_02 Normalized central moment nu02, scale invariant.
+   --  @field Nu_30 Normalized central moment nu30, scale invariant.
+   --  @field Nu_21 Normalized central moment nu21, scale invariant.
+   --  @field Nu_12 Normalized central moment nu12, scale invariant.
+   --  @field Nu_03 Normalized central moment nu03, scale invariant.
    type Moments_Result is record
       M_00 : OpenCV.Float64_Value := 0.0;
       M_10 : OpenCV.Float64_Value := 0.0;
@@ -161,45 +216,80 @@ package OpenCV.Geometry is
       Nu_03 : OpenCV.Float64_Value := 0.0;
    end record;
 
+   --  Spatial, central, and normalized central moments through third order
+   --  of the polygon Points, computed by cv::moments. For ordinary
+   --  non-self-intersecting contours, M_00 is the polygon area. A centroid,
+   --  when meaningful, is (M_10 / M_00, M_01 / M_00); callers must handle
+   --  M_00 = 0.0 themselves. Self-intersecting contours may have surprising
+   --  moments because OpenCV uses Green's formula. Empty contours return an
+   --  all-zero result. Points is unchanged.
+   --  @param Points Polygon vertices in traversal order, with any bounds; may
+   --    be empty.
+   --  @return The native moments of the polygon.
+   --  @exception OpenCV_Error More than Integer_32'Last points, or a failure
+   --    reported by OpenCV.
    function Compute_Moments (Points : Contour) return Moments_Result;
 
    --  Compute_Moments of a Float32 point set. OpenCV evaluates Green's
    --  formula in binary64 from the binary32 coordinates. When the magnitude
-   --  of OpenCV's computed doubled area is at most FLT_EPSILON (2.0**(-23)),
-   --  that is, for an absolute area of at most about 6.0E-8, every field is
-   --  0.0; an integer contour never has such a nonzero area, but a small
-   --  Float32 one can. Non-finite native moments, which extreme coordinates
-   --  can produce, for example in a self-intersecting contour whose net area
-   --  is tiny, raise OpenCV_Error. Points is unchanged.
+   --  of OpenCV's computed doubled area is at most FLT_EPSILON
+   --  (`2.0**(-23)`), that is, for an absolute area of at most about 6.0E-8,
+   --  every field is 0.0; an integer contour never has such a nonzero area,
+   --  but a small Float32 one can. Non-finite native moments, which extreme
+   --  coordinates can produce, for example in a self-intersecting contour
+   --  whose net area is tiny, raise OpenCV_Error. Points is unchanged.
+   --  @param Points Polygon vertices in traversal order, with any bounds;
+   --    every coordinate must be finite. May be empty.
+   --  @return The native moments, every field finite.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, more than
+   --    Integer_32'Last points, a non-finite native moment, or a failure
+   --    reported by OpenCV.
    function Compute_Moments
      (Points : Float32_Point_Array) return Moments_Result;
 
-   --  Seven Hu invariants of Moments in OpenCV order, indexed 1 .. 7.
-   --  The values are the raw invariants, not logarithmically transformed
-   --  Match_Shapes scores. They are invariant to translation, scale,
-   --  rotation, and reflection except the seventh, whose sign changes
-   --  under reflection. Rasterized-image transforms can differ slightly.
-   --  Compose with Compute_Moments as Hu_Moments (Compute_Moments (Points)).
-   --  Moments is unchanged. Every field of Moments must be finite: a
-   --  non-finite field, which only invalid data can hold, raises
-   --  OpenCV_Error. If native Hu computation produces a non-finite value
-   --  that cannot be represented by Float64_Value, Hu_Moments raises
-   --  OpenCV_Error.
+   --  Position of a Hu invariant: index I holds OpenCV's hu[I - 1].
    type Hu_Moment_Index is range 1 .. 7;
 
+   --  The seven Hu invariants, indexed in OpenCV order.
    type Hu_Moments_Result is array (Hu_Moment_Index) of OpenCV.Float64_Value;
 
+   --  Seven Hu invariants of Moments in OpenCV order, indexed 1 .. 7, by
+   --  cv::HuMoments. The values are the raw invariants, not logarithmically
+   --  transformed Match_Shapes scores. They are invariant to translation,
+   --  scale, rotation, and reflection except the seventh, whose sign changes
+   --  under reflection. Rasterized-image transforms can differ slightly.
+   --  Compose with Compute_Moments as Hu_Moments (Compute_Moments (Points)).
+   --  Moments is unchanged.
+   --  @param Moments Moments, normally from Compute_Moments; OpenCV uses its
+   --    normalized central moments. Every field must be finite: a
+   --    non-finite field, which only invalid data can hold, raises
+   --    OpenCV_Error.
+   --  @return The seven finite invariants.
+   --  @exception OpenCV_Error A non-finite field of Moments, a native Hu
+   --    value that is not finite and so cannot be represented by
+   --    Float64_Value, or a failure reported by OpenCV.
    function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result;
 
-   --  Convex hull of Points as an Ada-owned contour of hull points, not
-   --  source-point indices. Orientation uses OpenCV's convention: X
+   --  Orientation of a convex hull result, in OpenCV's convention: X
    --  increases rightward and Y increases upward. Image coordinates often
    --  increase Y downward, so the visual winding may appear reversed.
-   --  Empty input returns an empty contour. Points is unchanged.
-   --  More than Integer_32'Last - 2 points raise OpenCV_Error because native
-   --  convexHull computes total + 2 in signed int before stack allocation.
+   --  @enum Counterclockwise Counterclockwise order, OpenCV's default
+   --    (clockwise = false).
+   --  @enum Clockwise Clockwise order (OpenCV clockwise = true).
    type Hull_Orientation is (Counterclockwise, Clockwise);
 
+   --  Convex hull of Points as an Ada-owned contour of hull points, not
+   --  source-point indices, computed by cv::convexHull. Empty input returns
+   --  an empty contour. Points is unchanged. More than Integer_32'Last - 2
+   --  points raise OpenCV_Error because native convexHull computes total + 2
+   --  in signed int before stack allocation, and so do inputs whose native
+   --  signed 32-bit hull arithmetic would overflow.
+   --  @param Points The point set, with any bounds; may be empty.
+   --  @param Orientation Winding of the result, counterclockwise by default.
+   --  @return The hull vertices, copied from Points, in the requested
+   --    winding: zero-based, or the null range 1 .. 0 for empty input.
+   --  @exception OpenCV_Error Too many points, coordinates that would
+   --    overflow native hull arithmetic, or a failure reported by OpenCV.
    function Convex_Hull
      (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
       return Contour;
@@ -219,10 +309,21 @@ package OpenCV.Geometry is
    --  Float32_Value'Last; wider sets raise OpenCV_Error. Points is
    --  unchanged. More than Integer_32'Last - 2 points raise OpenCV_Error
    --  because native convexHull computes total + 2 in signed int.
+   --  @param Points The point set, with any bounds; every coordinate must be
+   --    finite. May be empty.
+   --  @param Orientation Winding of the result, counterclockwise by default.
+   --  @return The hull vertices in the requested winding.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, too many points,
+   --    an X or Y span above Float32_Value'Last, a non-finite native vertex,
+   --    or a failure reported by OpenCV.
    function Convex_Hull
      (Points      : Float32_Point_Array;
       Orientation : Hull_Orientation := Counterclockwise)
       return Float32_Point_Array;
+
+   --  Indices into a point set, such as a convex hull given as positions in
+   --  Points'Range.
+   type Point_Index_Array is array (Natural range <>) of Natural;
 
    --  Convex hull of Points as indices into Points. Every value is an index
    --  in Points'Range, not a native zero-based offset, so shifted and other
@@ -232,13 +333,18 @@ package OpenCV.Geometry is
    --  when possible, which holds for simple contours; a self-intersecting
    --  contour may yield a sequence that is neither. When several points
    --  share one hull vertex's coordinates, any of their indices may be
-   --  returned, and OpenCV 4.x and 5.x can choose differently. The result is
-   --  zero-based; empty input returns the null range 1 .. 0. Points is
+   --  returned, and OpenCV 4.x and 5.x can choose differently. Points is
    --  unchanged. Inputs that would overflow native integer convex-hull
    --  arithmetic raise OpenCV_Error, including more than Integer_32'Last - 2
    --  points because native convexHull computes total + 2 in signed int.
-   type Point_Index_Array is array (Natural range <>) of Natural;
-
+   --  @param Points The point set, with any bounds; may be empty.
+   --  @param Orientation Winding of the hull, counterclockwise by default.
+   --  @return The hull as indices in Points'Range, at most Points'Length of
+   --    them (the postcondition): zero-based, or the null range 1 .. 0 for
+   --    empty input.
+   --  @exception OpenCV_Error Too many points, coordinates that would
+   --    overflow native hull arithmetic, a native index outside Points, or a
+   --    failure reported by OpenCV.
    function Convex_Hull_Indices
      (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)
       return Point_Index_Array
@@ -253,8 +359,16 @@ package OpenCV.Geometry is
    --  Orientation, under the same count limit (Integer_32'Last - 2 points,
    --  due to native signed total + 2), rules for signed zeros and spans,
    --  and OpenCV 4.x and 5.x differences. Among points with equal coordinates,
-   --  any index may be returned. The result is zero-based; empty input
-   --  returns the null range 1 .. 0. Points is unchanged.
+   --  any index may be returned. Points is unchanged.
+   --  @param Points The point set, with any bounds; every coordinate must be
+   --    finite. May be empty.
+   --  @param Orientation Winding of the hull, counterclockwise by default.
+   --  @return The hull as indices in Points'Range, at most Points'Length of
+   --    them (the postcondition): zero-based, or the null range 1 .. 0 for
+   --    empty input.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, too many points,
+   --    an X or Y span above Float32_Value'Last, a native index outside
+   --    Points, or a failure reported by OpenCV.
    function Convex_Hull_Indices
      (Points      : Float32_Point_Array;
       Orientation : Hull_Orientation := Counterclockwise)
@@ -272,6 +386,14 @@ package OpenCV.Geometry is
    --  distance at OpenCV's 1/256 fixed-point resolution: the native
    --  fixed-point value divided by 256.0, which is exactly representable.
    --  Depth is nonnegative; a defect shallower than 1/512 reports 0.0.
+   --  @field Start_Index Index in Points'Range of the hull vertex where the
+   --    defect begins.
+   --  @field End_Index Index in Points'Range of the hull vertex where the
+   --    defect ends.
+   --  @field Farthest_Index Index in Points'Range of the contour point
+   --    farthest from the hull edge.
+   --  @field Depth Distance of that point from the edge's line, a multiple
+   --    of 1/256.
    type Convexity_Defect is record
       Start_Index    : Natural := 0;
       End_Index      : Natural := 0;
@@ -279,6 +401,7 @@ package OpenCV.Geometry is
       Depth          : OpenCV.Float64_Value := 0.0;
    end record;
 
+   --  Convexity defects in the order OpenCV reports them.
    type Convexity_Defect_Array is array (Natural range <>) of Convexity_Defect;
 
    --  Convexity defects of Points relative to Hull, a sequence of indices in
@@ -298,8 +421,17 @@ package OpenCV.Geometry is
    --  32-bit integer, and no Depth exceeds the bounding-box diagonal. This
    --  also keeps native signed 32-bit coordinate subtraction from
    --  overflowing. Larger spans raise OpenCV_Error before native code runs.
-   --  The result is zero-based, with the null range 1 .. 0 when empty, and
-   --  has at most Hull'Length defects. Points and Hull are unchanged.
+   --  Points and Hull are unchanged.
+   --  @param Points A simple contour, with any bounds.
+   --  @param Hull Strictly monotonic indices in Points'Range, normally
+   --    Convex_Hull_Indices (Points).
+   --  @return The defects, ordered by OpenCV, with every index in
+   --    Points'Range and at most Hull'Length defects (the postcondition):
+   --    zero-based, or the null range 1 .. 0 when there are none.
+   --  @exception OpenCV_Error A Hull index outside Points'Range, a repeated
+   --    or non-monotonic Hull, spans beyond the fixed-point depth range,
+   --    more than Integer_32'Last points, a native index outside Points, or
+   --    a failure reported by OpenCV.
    function Convexity_Defects
      (Points : Contour; Hull : Point_Index_Array) return Convexity_Defect_Array
    with
@@ -314,7 +446,15 @@ package OpenCV.Geometry is
    --  of at most three points yield an empty result. Otherwise this is
    --  Convexity_Defects (Points, Convex_Hull_Indices (Points)), except that
    --  a hull whose indices are not monotonic, which indicates that Points is
-   --  self-intersecting, raises OpenCV_Error with that diagnosis.
+   --  self-intersecting, raises OpenCV_Error with that diagnosis. Points is
+   --  unchanged.
+   --  @param Points A simple contour, with any bounds; may be empty.
+   --  @return The defects, ordered by OpenCV, with every index in
+   --    Points'Range and at most Points'Length defects (the postcondition):
+   --    zero-based, or the null range 1 .. 0 when there are none.
+   --  @exception OpenCV_Error A non-monotonic computed hull, spans beyond the
+   --    fixed-point depth range, or any failure of Convex_Hull_Indices or of
+   --    the native defect computation.
    function Convexity_Defects (Points : Contour) return Convexity_Defect_Array
    with
      Post =>
@@ -675,6 +815,15 @@ package OpenCV.Geometry is
    --  measures each point's distance to the line through a chord, while
    --  OpenCV 5.x measures it to the chord itself, so the two can keep
    --  different vertices.
+   --  @param Points Curve vertices in order, with any bounds; may be empty.
+   --  @param Epsilon Approximation accuracy, the maximum distance between
+   --    the curve and its approximation; `0.0 <= Epsilon < 1.0E30`.
+   --  @param Closed True when the curve is closed (the last vertex connects
+   --    to the first).
+   --  @return Points kept by cv::approxPolyDP, in order: zero-based, or the
+   --    null range 1 .. 0 for empty input.
+   --  @exception OpenCV_Error An Epsilon outside its range or NaN, more than
+   --    Integer_32'Last points, or a failure reported by OpenCV.
    function Approximate_Curve
      (Points : Contour; Epsilon : OpenCV.Float64_Value; Closed : Boolean)
       return Contour;
@@ -691,17 +840,33 @@ package OpenCV.Geometry is
    --  most Float32_Value'Last; wider sets raise OpenCV_Error. OpenCV 5.x
    --  also squares some differences in binary32, so beyond about 1.8E+19
    --  it can keep vertices that 4.x drops. Points is unchanged.
+   --  @param Points Curve vertices in order, with any bounds; every
+   --    coordinate must be finite. May be empty.
+   --  @param Epsilon Approximation accuracy, the maximum distance between
+   --    the curve and its approximation; `0.0 <= Epsilon < 1.0E30`.
+   --  @param Closed True when the curve is closed (the last vertex connects
+   --    to the first).
+   --  @return Points kept by OpenCV, in input order.
+   --  @exception OpenCV_Error An Epsilon outside its range or NaN, a NaN or
+   --    infinite coordinate, an X or Y span above Float32_Value'Last, more
+   --    than Integer_32'Last points, a non-finite native point, or a failure
+   --    reported by OpenCV.
    function Approximate_Curve
      (Points  : Float32_Point_Array;
       Epsilon : OpenCV.Float64_Value;
       Closed  : Boolean) return Float32_Point_Array;
 
-   --  Minimal upright axis-aligned bounding rectangle of Points. Integer
-   --  extent is inclusive, so Width = X_Max - X_Min + 1 and Height =
-   --  Y_Max - Y_Min + 1. Empty input returns (0, 0, 0, 0). Origins may be
-   --  negative because OpenCV.Rect uses signed Point_Coordinate X/Y.
-   --  Inclusive extents that cannot be represented as signed 32-bit width
-   --  or height raise OpenCV.OpenCV_Error. Points is unchanged.
+   --  Minimal upright axis-aligned bounding rectangle of Points, computed by
+   --  cv::boundingRect. Integer extent is inclusive, so Width = X_Max -
+   --  X_Min + 1 and Height = Y_Max - Y_Min + 1. Empty input returns (0, 0,
+   --  0, 0). Origins may be negative because OpenCV.Rect uses signed
+   --  Point_Coordinate X/Y. Inclusive extents that cannot be represented as
+   --  signed 32-bit width or height raise OpenCV.OpenCV_Error. Points is
+   --  unchanged.
+   --  @param Points The point set, with any bounds; may be empty.
+   --  @return The bounding rectangle, with nonnegative Width and Height.
+   --  @exception OpenCV_Error An extent beyond Integer_32'Last, more than
+   --    Integer_32'Last points, or a failure reported by OpenCV.
    function Bounding_Rect (Points : Contour) return OpenCV.Rect;
 
    --  Minimal upright integer rectangle containing a Float32 point set, as
@@ -714,13 +879,24 @@ package OpenCV.Geometry is
    --  at least `-2.0**31` and less than `2.0**31`, and Width and Height must
    --  not exceed Integer_32'Last; other inputs raise OpenCV_Error. Empty
    --  input returns (0, 0, 0, 0). Points is unchanged.
+   --  @param Points The point set, with any bounds; every coordinate must be
+   --    finite and in the range above. May be empty.
+   --  @return The integer rectangle, with nonnegative Width and Height.
+   --  @exception OpenCV_Error A NaN, infinite or out-of-range coordinate, an
+   --    extent beyond Integer_32'Last, more than Integer_32'Last points, or
+   --    a failure reported by OpenCV.
    function Bounding_Rect (Points : Float32_Point_Array) return OpenCV.Rect;
 
-   --  Tests whether Points is a convex contour. The contour is expected to
-   --  be simple (non-self-intersecting); OpenCV leaves the result for
-   --  non-simple contours undefined. Convexity does not depend on winding
-   --  direction. Empty, one-point, two-point, and collinear contours are
-   --  not convex. Points is unchanged.
+   --  Tests whether Points is a convex contour with cv::isContourConvex.
+   --  The contour is expected to be simple (non-self-intersecting); OpenCV
+   --  leaves the result for non-simple contours undefined. Convexity does
+   --  not depend on winding direction. Empty, one-point, two-point, and
+   --  collinear contours are not convex. Points is unchanged.
+   --  @param Points Contour vertices in traversal order, with any bounds;
+   --    may be empty.
+   --  @return True when OpenCV finds the contour convex.
+   --  @exception OpenCV_Error More than Integer_32'Last points, or a failure
+   --    reported by OpenCV.
    function Is_Convex (Points : Contour) return Boolean;
 
    --  Is_Convex of a Float32 point set. Unlike the integer-coordinate test,
@@ -732,21 +908,42 @@ package OpenCV.Geometry is
    --  most Float32_Value'Last and their product at most
    --  Float32_Value'Last / 2; other sets raise OpenCV_Error. Points is
    --  unchanged.
+   --  @param Points Contour vertices in traversal order, with any bounds;
+   --    every coordinate must be finite. May be empty.
+   --  @return True when OpenCV finds the contour convex.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, spans or a span
+   --    product beyond the limits above, more than Integer_32'Last points,
+   --    or a failure reported by OpenCV.
    function Is_Convex (Points : Float32_Point_Array) return Boolean;
 
-   --  Compares Left and Right using OpenCV Hu-moment matching. Lower scores
-   --  indicate more similar shapes; identical or equivalent contours
-   --  normally approach zero, though floating-point evaluation can leave
-   --  a tiny residual. Reciprocal_Log_Difference, Log_Difference, and
-   --  Relative_Log_Difference select OpenCV I1, I2, and I3. Relative
+   --  OpenCV's Hu-moment shape comparison methods. Each compares the
+   --  log-scaled Hu invariants `m = sign (h) * log |h|` of the two shapes,
+   --  A (Left) and B (Right).
+   --  @enum Reciprocal_Log_Difference CONTOURS_MATCH_I1: the sum of
+   --    `|1/mA - 1/mB|`.
+   --  @enum Log_Difference CONTOURS_MATCH_I2: the sum of `|mA - mB|`.
+   --  @enum Relative_Log_Difference CONTOURS_MATCH_I3: the largest
+   --    `|(mA - mB) / mA|`, so Left supplies the denominator.
+   type Shape_Match_Method is
+     (Reciprocal_Log_Difference, Log_Difference, Relative_Log_Difference);
+
+   --  Compares Left and Right using OpenCV Hu-moment matching
+   --  (cv::matchShapes). Lower scores indicate more similar shapes;
+   --  identical or equivalent contours normally approach zero, though
+   --  floating-point evaluation can leave a tiny residual. Relative
    --  comparison is directional: the Left contour supplies the
    --  denominator. The unused native OpenCV parameter is not exposed.
    --  Left and Right are unchanged. If native matching produces a
    --  non-finite value that cannot be represented by Float64_Value,
    --  Match_Shapes raises OpenCV_Error.
-   type Shape_Match_Method is
-     (Reciprocal_Log_Difference, Log_Difference, Relative_Log_Difference);
-
+   --  @param Left First contour, with any bounds; for
+   --    Relative_Log_Difference, the reference shape.
+   --  @param Right Second contour, with any bounds.
+   --  @param Method The comparison formula.
+   --  @return The nonnegative, finite dissimilarity score.
+   --  @exception OpenCV_Error A non-finite native score, more than
+   --    Integer_32'Last points in either contour, or a failure reported by
+   --    OpenCV.
    function Match_Shapes
      (Left, Right : Contour; Method : Shape_Match_Method)
       return OpenCV.Float64_Value;
@@ -759,30 +956,63 @@ package OpenCV.Geometry is
    --  Hu moments. OpenCV scores two sets with all-zero Hu moments 0.0, and
    --  such a set against one with a nonzero Hu moment Float64_Value'Last.
    --  Left and Right are unchanged.
+   --  @param Left First point set, with any bounds; every coordinate must be
+   --    finite. For Relative_Log_Difference, the reference shape.
+   --  @param Right Second point set, with any bounds; every coordinate must
+   --    be finite.
+   --  @param Method The comparison formula.
+   --  @return The nonnegative, finite dissimilarity score.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, non-finite
+   --    moments or Hu moments of either set, a non-finite native score, more
+   --    than Integer_32'Last points, or a failure reported by OpenCV.
    function Match_Shapes
      (Left, Right : Float32_Point_Array; Method : Shape_Match_Method)
       return OpenCV.Float64_Value;
 
-   --  Classifies Query relative to the polygon defined by Points.
-   --  Query coordinates are binary32 and may be fractional. Empty
-   --  contours are Outside_Contour. For nonempty Points, OpenCV rounds
-   --  Query to a signed 32-bit integer point, so a Query coordinate that
-   --  is not finite, or not in `-2.0**31 .. 2.0**31` (excluding `2.0**31`),
-   --  raises OpenCV_Error. Points is unchanged.
+   --  Where a query point lies relative to a polygon, as reported by
+   --  cv::pointPolygonTest without distance measurement.
+   --  @enum Outside_Contour Outside the polygon (native result -1).
+   --  @enum On_Contour_Boundary On an edge or vertex (native result 0).
+   --  @enum Inside_Contour Strictly inside the polygon (native result +1).
    type Contour_Point_Location is
      (Outside_Contour, On_Contour_Boundary, Inside_Contour);
 
+   --  Classifies Query relative to the polygon defined by Points, by
+   --  cv::pointPolygonTest. Query coordinates are binary32 and may be
+   --  fractional. Empty contours are Outside_Contour. For nonempty Points,
+   --  OpenCV rounds Query to a signed 32-bit integer point, so a Query
+   --  coordinate that is not finite, or not in `-2.0**31 .. 2.0**31`
+   --  (excluding `2.0**31`), raises OpenCV_Error. For an integer-valued
+   --  Query, OpenCV classifies in signed 32-bit integer arithmetic, and
+   --  input whose coordinate differences on the edges it examines would
+   --  overflow raises OpenCV_Error. Points is unchanged.
+   --  @param Points Polygon vertices in traversal order, with any bounds;
+   --    may be empty.
+   --  @param Query The point to classify; ignored when Points is empty.
+   --  @return The location of Query.
+   --  @exception OpenCV_Error For nonempty Points, a Query outside the
+   --    range above, overflowing native integer arithmetic, more than
+   --    Integer_32'Last points, or a failure reported by OpenCV.
    function Locate_Point
      (Points : Contour; Query : OpenCV.Float32_Point)
       return Contour_Point_Location;
 
-   --  Signed distance from Query to the nearest edge of Points.
-   --  Positive is inside, zero is on the boundary, and negative is
-   --  outside. Empty contours follow OpenCV and return the largest
-   --  finite negative Float64_Value. Points is unchanged. If native
-   --  computation produces a non-finite value that cannot be
-   --  represented by Float64_Value, Signed_Distance_To_Contour raises
-   --  OpenCV_Error.
+   --  Signed distance from Query to the nearest edge of Points, by
+   --  cv::pointPolygonTest with distance measurement. Positive is inside,
+   --  zero is on the boundary, and negative is outside. Empty contours
+   --  follow OpenCV and return the largest finite negative Float64_Value.
+   --  Points is unchanged. If native computation produces a non-finite
+   --  value that cannot be represented by Float64_Value,
+   --  Signed_Distance_To_Contour raises OpenCV_Error.
+   --  @param Points Polygon vertices in traversal order, with any bounds;
+   --    may be empty.
+   --  @param Query The point to measure; for nonempty Points, its
+   --    coordinates must be finite and in the cvRound range of Locate_Point.
+   --  @return The signed binary64 distance, or -Float64_Value'Last for empty
+   --    Points.
+   --  @exception OpenCV_Error For nonempty Points, a Query outside that
+   --    range; a non-finite native distance, more than Integer_32'Last
+   --    points, or a failure reported by OpenCV.
    function Signed_Distance_To_Contour
      (Points : Contour; Query : OpenCV.Float32_Point)
       return OpenCV.Float64_Value;
@@ -802,10 +1032,37 @@ package OpenCV.Geometry is
    --  at least Sqrt (Float32_Value'Last), about 1.8447E+19, raises
    --  OpenCV_Error rather than being clamped; integer contours cannot reach
    --  it. Points is unchanged.
+   --  @param Points Polygon vertices in traversal order, with any bounds;
+   --    every coordinate must be finite. May be empty.
+   --  @param Query The point to classify; always required to be finite.
+   --  @return The location of Query.
+   --  @exception OpenCV_Error A NaN or infinite coordinate of Points or
+   --    Query, an X or Y span above Float32_Value'Last, for nonempty Points
+   --    a Query outside the cvRound range, more than Integer_32'Last points,
+   --    or a failure reported by OpenCV.
    function Locate_Point
      (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)
       return Contour_Point_Location;
 
+   --  Signed distance from Query to the nearest edge of a Float32 polygon:
+   --  positive inside, zero on the boundary, negative outside. Points and
+   --  Query must be finite, even when Points is empty; for empty Points the
+   --  result is -Float64_Value'Last. The span and Query rules are those of
+   --  the Float32 Locate_Point above. OpenCV starts its nearest-edge search
+   --  at a squared distance of FLT_MAX and cannot report a farther edge, so
+   --  for nonempty Points a distance of at least Sqrt (Float32_Value'Last),
+   --  about 1.8447E+19, raises OpenCV_Error rather than being clamped.
+   --  Points is unchanged.
+   --  @param Points Polygon vertices in traversal order, with any bounds;
+   --    every coordinate must be finite. May be empty.
+   --  @param Query The point to measure; always required to be finite.
+   --  @return The signed binary64 distance, below the search limit in
+   --    magnitude, or -Float64_Value'Last for empty Points.
+   --  @exception OpenCV_Error A NaN or infinite coordinate of Points or
+   --    Query, an X or Y span above Float32_Value'Last, for nonempty Points
+   --    a Query outside the cvRound range or a distance at the search limit,
+   --    a non-finite native distance, more than Integer_32'Last points, or a
+   --    failure reported by OpenCV.
    function Signed_Distance_To_Contour
      (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)
       return OpenCV.Float64_Value;

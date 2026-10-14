@@ -78,7 +78,8 @@ published history.
 
 | Phase | Branch | PR (base) | State |
 | --- | --- | --- | --- |
-| DOC-001 infrastructure | `feature/geometry-doc-001-gnatdoc-pages` | pending (`main`) | Qualified locally |
+| DOC-001 infrastructure | `feature/geometry-doc-001-gnatdoc-pages` | #27 (`main`) | Merged as `2240b06`; Pages deployed |
+| DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | pending (`main`) | Qualified locally |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
@@ -234,47 +235,88 @@ baselines it reduces, and opens a stacked review PR; work then continues.
 
 ### GEOMETRY-DOC-001 publication
 
-PR #27 (`main` <- `feature/geometry-doc-001-gnatdoc-pages`), open,
-non-draft, auto-merge off; tested and pushed head `0db5455`. Hosted CI not
-yet inspected. Coverage measured on `0db5455` in a scratch worktree: 94/452
-items, with 10 attachment/rendering errors.
+PR #27 (`main` <- `feature/geometry-doc-001-gnatdoc-pages`), tested head
+`0db5455`. Hosted CI on that head (checked once): Ada API Documentation
+`build` success, `deploy` skipped (pull request); Cross-Platform Geometry CI
+Linux and macOS jobs for Core 0.3.0 and 0.4.1 success, Windows skipped by
+policy. The maintainer merged it as `2240b06`. The `main` push run 38510318686
+succeeded in `build` and `deploy`: the `github-pages` deployment for
+`2240b06` exists and `https://zackboll.github.io/opencv_geometry_ada/` serves
+the generated landing page and an index listing both packages (verified
+2026-10-14 with `curl`). Coverage measured on `0db5455` in a scratch worktree:
+94/452 items, with 10 attachment/rendering errors.
 
-### GEOMETRY-DOC-002A — in progress (session interrupted by usage limit)
+### GEOMETRY-DOC-002A — coverage checks, rendering repairs, group A
 
-Branch `feature/geometry-doc-002a-coverage-contours` from `0db5455`.
-Foundation commit `82eeac7`: `check_doc_coverage.py` (adds aspect-free
-profiles and the leading-before-`package` description layout),
-`check_comment_only.py` (compares committed revisions; Ada tokens plus
-byte-identical production files), their tests (140 Python tests in total
-pass), coverage ratchet in `generate_docs.sh` and the workflow, the Subdiv2D
-section preambles moved verbatim into its package description, seven
-formulas put in code spans, and an `OpenCV.Geometry` package description.
-Results: 359 warnings, 95/452 items, zero attachment errors;
-`check_comment_only.py 517c804 HEAD` passes; GNATformat clean.
+Branch `feature/geometry-doc-002a-coverage-contours` from `0db5455` (now in
+`main`), so its PR targets `main`.
 
-Verified with a scratch spec on GNATdoc 26.0.0: `@enum`, `@field` (also
-discriminants and variant components), multi-line `@param`, `@return`,
-`@exception Name` render; a dotted exception name splits at the dot;
-code spans keep `**`; paired `**` becomes `<strong>`; `Post` is omitted.
+- Foundation commit `82eeac7`: `check_doc_coverage.py` (Imgproc's, with
+  aspect-free profiles, the leading-before-`package` description layout and
+  per-package reporting) and `check_comment_only.py` (compares committed
+  revisions: Ada tokens plus byte-identical production files), with tests;
+  the coverage ratchet in `generate_docs.sh` and the workflow; the Subdiv2D
+  preambles moved verbatim into its package description; seven formulas in
+  code spans; a new `OpenCV.Geometry` package description.
+- Verified with a scratch specification on GNATdoc 26.0.0: `@enum`,
+  `@field` (also discriminants and variant components), multi-line
+  `@param`, `@return` and `@exception Name` render; a dotted exception name
+  splits at the dot; code spans keep `**`; paired `**` becomes `<strong>`;
+  `Post` is omitted.
+- Group A (contours and shape analysis, 36 declarations) documented,
+  verified against `src/opencv-geometry.adb`, the shim and exact OpenCV
+  4.10 sources: `Contour`, `Contour_Area`, `Arc_Length`, `Moments_Result`
+  (24 fields), `Compute_Moments`, the Hu types and `Hu_Moments`,
+  `Hull_Orientation`, `Convex_Hull`, `Point_Index_Array`,
+  `Convex_Hull_Indices`, `Convexity_Defect(_Array)`, `Convexity_Defects`,
+  `Approximate_Curve`, `Bounding_Rect`, `Is_Convex`, `Shape_Match_Method`,
+  `Match_Shapes`, `Contour_Point_Location`, `Locate_Point` and
+  `Signed_Distance_To_Contour`, every overload. The comments misattached to
+  `Hull_Orientation`, `Hu_Moment_Index`, `Point_Index_Array`,
+  `Moments_Result`, `Shape_Match_Method` and `Contour_Point_Location` now
+  document their functions, and each type has its own text. The four `Post`
+  guarantees of this group are stated in `@return`. The Float32
+  `Signed_Distance_To_Contour`, which rendered no description, has its own.
+- Additions verified in the shim and stated now: integer `Convex_Hull` also
+  rejects input whose signed 32-bit hull arithmetic would overflow (only
+  the indices overload said so); integer `Locate_Point` with an
+  integer-valued Query rejects input whose native signed 32-bit edge
+  differences would overflow (`integer_classification_path_is_safe`).
+  `Shape_Match_Method` literals are documented with the native formulas of
+  `matchcontours.cpp` (I1 and I2 sums, I3 maximum).
+- Results: warnings 359 -> 243 (243 remain, all in group B and Subdiv2D);
+  coverage 95 -> 211 of 452 items; zero attachment errors.
 
-Planned split, by inventory: 002A group A (contours and shape analysis,
-36 `OpenCV.Geometry` declarations); 002B group B (capability, fitting,
+Qualified locally: `sh scripts/generate_docs.sh` passes (delta 0/0,
+validator 2 packages / 4 pages / 130 sections, coverage 211/452); 140
+Python tests pass; GNATformat 26.0.0 check passes for both specifications;
+`git diff --check` clean; `alr -n build` (production `-gnatyM79 -Werror`)
+succeeds inside the generator; `check_comment_only.py 517c804 HEAD` run
+after commit (see the PR).
+
+Planned remaining split, by inventory: 002B group B (capability, fitting,
 enclosing, intersections, transforms, 50 declarations); 002C Subdiv2D
-lifecycle and queries (20 declarations plus private `Finalize`); 002D
-Subdiv2D topology and Voronoi (24 declarations). The full lists are in the
-agent briefs recorded in this session.
+lifecycle and queries (20 declarations plus the private `Finalize`); 002D
+Subdiv2D topology and Voronoi (24 declarations).
 
-Stopped (no results kept): a Subdiv2D drafting agent and two read-only
-auditors for groups A and B. Their isolated worktrees remain and can be
-reused or removed: `agents/subdiv2d/{geometry,core}` (branch
-`scratch/geometry-doc-002cd-subdiv2d`, pinned, unedited apart from the pin)
-and `agents/audit` (detached `82eeac7`, read only).
+Environment note (2026-10-14): `/tmp` (a 43 GB tmpfs) was full of other
+projects' evidence directories; nothing outside this campaign was deleted.
+Campaign commands use `TMPDIR=/home/zboll/git/opencv/geometry-doc-campaign/tmp`
+and avoid background agents, whose transcripts are written to `/tmp`. The
+stopped agents left `agents/subdiv2d/{geometry,core}` (scratch branch,
+unedited apart from the pin) and `agents/audit` (detached `82eeac7`).
+
+## Findings for the maintainers (not changed: outside documentation scope)
+
+- README says Core 0.4.1 "is not yet in the public Alire index"; on
+  2026-10-13 `alr show opencv_core` resolved `opencv_core=0.4.1` from the
+  index at commit `386c536`. Documentation-only correction candidate for
+  DOC-005.
 
 ## Next executable task
 
-1. Inspect PR #27 hosted CI once.
-2. Write group A comments on the DOC-002A branch, regenerate both baselines,
-   qualify (`generate_docs.sh`, all tests, `check_comment_only.py 517c804`,
-   GNATformat, `alr -n build`), commit, push, and open the DOC-002A PR
-   against `feature/geometry-doc-001-gnatdoc-pages`.
-3. Continue with 002B to 002D, then DOC-003 to DOC-006.
+1. Commit DOC-002A, run `check_comment_only.py 517c804 HEAD`, push, open
+   its PR against `main`, check hosted CI once.
+2. Document group B on `feature/geometry-doc-002b-fitting-transforms` from
+   the DOC-002A head.
+3. Continue with 002C and 002D, then DOC-003 to DOC-006.
