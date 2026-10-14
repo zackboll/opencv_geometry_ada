@@ -41,13 +41,32 @@ package OpenCV.Geometry is
 
    --  Availability in the linked native OpenCV, NOT Ada binding coverage.
    --  Approximate_Convex_Polygon and Minimum_Enclosing_Convex_Polygon remain
-   --  unbound even when supported here.
+   --  unbound even when supported here. Every feature is available natively
+   --  on OpenCV 5.x and from the 4.x release named below; earlier releases,
+   --  including 4.6 and 4.10, report all four as unsupported.
+   --  @enum Approximate_Convex_Polygon_Feature Native cv::approxPolyN, from
+   --    4.11; no Ada operation binds it.
+   --  @enum Closest_Ellipse_Points_Feature Native
+   --    cv::getClosestEllipsePoints, from 4.12. Closest_Ellipse_Points works
+   --    on every supported release regardless.
+   --  @enum Minimum_Enclosing_Convex_Polygon_Feature Native
+   --    cv::minEnclosingConvexPolygon, from 4.13; no Ada operation binds it.
+   --  @enum Float32_Subdivision_Bounds_Feature Native cv::Rect2f bounds for
+   --    cv::Subdiv2D, from 4.13. OpenCV.Geometry.Subdiv2D accepts Float32
+   --    bounds on every supported release regardless.
    type Native_Feature is
      (Approximate_Convex_Polygon_Feature,
       Closest_Ellipse_Points_Feature,
       Minimum_Enclosing_Convex_Polygon_Feature,
       Float32_Subdivision_Bounds_Feature);
 
+   --  Whether the OpenCV release this binding was built against provides
+   --  Feature natively. The answer is fixed by the native version at shim
+   --  build time; it never reports whether an Ada operation exists, and a
+   --  True result does not bind an unbound native function.
+   --  @param Feature The native capability to query.
+   --  @return True when the linked native OpenCV provides Feature.
+   --  @exception OpenCV_Error A failure reported by the shim query.
    function Is_Natively_Supported (Feature : Native_Feature) return Boolean;
 
    --  An integer contour or point set, for integer-coordinate geometry: an
@@ -82,6 +101,16 @@ package OpenCV.Geometry is
    --  Integer queries enter CV_32S and OpenCV converts them to Point2f,
    --  possibly losing low bits. Both overloads return Float32 points.
    --  Ellipse and Points are unchanged.
+   --  @param Ellipse The ellipse as the rotated rectangle in which it is
+   --    inscribed (full axis lengths, angle in degrees); every field finite,
+   --    width and height positive.
+   --  @param Points Query points, with any bounds, including a null range.
+   --  @return For each query, at the same index, its approximate closest
+   --    point on the ellipse: the result has exactly the bounds of Points
+   --    (the postcondition), and every coordinate is finite.
+   --  @exception OpenCV_Error A non-finite Ellipse field, a nonpositive
+   --    width or height, more than Integer_32'Last points, a non-finite
+   --    native point, or a failure reported by OpenCV.
    function Closest_Ellipse_Points
      (Ellipse : OpenCV.Rotated_Rect; Points : Contour)
       return Float32_Point_Array
@@ -90,6 +119,21 @@ package OpenCV.Geometry is
        Closest_Ellipse_Points'Result'First = Points'First
        and then Closest_Ellipse_Points'Result'Last = Points'Last;
 
+   --  Closest_Ellipse_Points for binary32 queries, which reach OpenCV as
+   --  CV_32F without rounding, with the same native and compatibility
+   --  implementations, Ellipse rules and empty-input result as the integer
+   --  overload. Every query coordinate must be finite. Ellipse and Points
+   --  are unchanged.
+   --  @param Ellipse The ellipse as the rotated rectangle in which it is
+   --    inscribed; every field finite, width and height positive.
+   --  @param Points Query points, with any bounds; every coordinate finite.
+   --  @return For each query, at the same index, its approximate closest
+   --    point on the ellipse: the result has exactly the bounds of Points
+   --    (the postcondition), and every coordinate is finite.
+   --  @exception OpenCV_Error A non-finite Ellipse field or query
+   --    coordinate, a nonpositive width or height, more than
+   --    Integer_32'Last points, a non-finite native point, or a failure
+   --    reported by OpenCV.
    function Closest_Ellipse_Points
      (Ellipse : OpenCV.Rotated_Rect; Points : Float32_Point_Array)
       return Float32_Point_Array
@@ -476,6 +520,12 @@ package OpenCV.Geometry is
    --  cross-version numerical equivalence is promised for degenerate cases.
    --  Points is unchanged. Inputs that would overflow native integer
    --  convex-hull arithmetic raise OpenCV_Error.
+   --  @param Points The point set, with any bounds; may be empty.
+   --  @return The native minimum-area rotated rectangle, every field finite
+   --    and Size nonnegative.
+   --  @exception OpenCV_Error Too many points or coordinates that would
+   --    overflow native hull arithmetic, a non-finite or negative native
+   --    field, or a failure reported by OpenCV.
    function Minimum_Area_Rectangle
      (Points : Contour) return OpenCV.Rotated_Rect;
 
@@ -491,6 +541,14 @@ package OpenCV.Geometry is
    --  Float32_Value'Last (sides of about 1.8E+19 and more), it computes a
    --  non-finite rectangle, which raises OpenCV_Error, as do other
    --  non-finite or negative native fields. Points is unchanged.
+   --  @param Points The point set, with any bounds; every coordinate finite.
+   --    May be empty.
+   --  @return The native minimum-area rotated rectangle, every field finite
+   --    and Size nonnegative.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, more than
+   --    Integer_32'Last / 3 points, an X or Y span above Float32_Value'Last,
+   --    a non-finite or negative native field, or a failure reported by
+   --    OpenCV.
    function Minimum_Area_Rectangle
      (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
 
@@ -512,6 +570,12 @@ package OpenCV.Geometry is
    --  singular, as for points exactly on one conic. OpenCV 4.12 and later,
    --  including 5.x, draw that perturbation from cv::theRNG, so such
    --  results need not repeat; earlier releases perturb deterministically.
+   --  @param Points At least five points, with any bounds.
+   --  @return The native rotated rectangle of the fitted ellipse.
+   --  @exception OpenCV_Error Fewer than five or more than
+   --    Integer_32'Last / 13 points (the native classic fit sizes a buffer as
+   --    `13 * n` doubles in signed 32-bit arithmetic), a non-finite or
+   --    negative native field, or a failure reported by OpenCV.
    function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect;
 
    --  Ellipse fitted to Points by cv::fitEllipseAMS, the Approximate Mean
@@ -533,6 +597,11 @@ package OpenCV.Geometry is
    --  produce a finite native result, including a zero-sized rectangle.
    --  Native failures and non-finite or negative size components raise
    --  OpenCV_Error. Points is unchanged.
+   --  @param Points At least five points, with any bounds.
+   --  @return The native rotated rectangle of the fitted ellipse.
+   --  @exception OpenCV_Error Fewer than five or more than
+   --    Integer_32'Last / 13 points, a non-finite or negative native field,
+   --    or a failure reported by OpenCV.
    function Fit_Ellipse_AMS (Points : Contour) return OpenCV.Rotated_Rect;
 
    --  Ellipse fitted to Points by cv::fitEllipseDirect, the Direct least
@@ -549,6 +618,11 @@ package OpenCV.Geometry is
    --  a finite native result, including a zero-sized rectangle. Native
    --  failures and non-finite or negative size components raise OpenCV_Error.
    --  Points is unchanged.
+   --  @param Points At least five points, with any bounds.
+   --  @return The native rotated rectangle of the fitted ellipse.
+   --  @exception OpenCV_Error Fewer than five or more than
+   --    Integer_32'Last / 13 points, a non-finite or negative native field,
+   --    or a failure reported by OpenCV.
    function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect;
 
    --  Fit_Ellipse, Fit_Ellipse_AMS, and Fit_Ellipse_Direct of a Float32
@@ -559,16 +633,43 @@ package OpenCV.Geometry is
    --  coordinates in binary32 to find their mean. An overflowing sum would
    --  hand NaN to OpenCV's solver, which without LAPACK then takes time
    --  quadratic in the number of points, so the absolute X coordinates and
-   --  the absolute Y coordinates must each sum to at most 2.0**103 (about
+   --  the absolute Y coordinates must each sum to at most `2.0**103` (about
    --  1.0E+31); larger sets raise OpenCV_Error. Native failures and
    --  non-finite or negative size components raise OpenCV_Error. Points is
    --  unchanged.
+   --  @param Points At least five points, with any bounds; every coordinate
+   --    finite, within the coordinate-sum bound.
+   --  @return The native rotated rectangle of the fitted ellipse.
+   --  @exception OpenCV_Error Fewer than five or more than
+   --    Integer_32'Last / 13 points, a NaN or infinite coordinate, a
+   --    coordinate sum beyond the bound, a non-finite or negative native
+   --    field, or a failure reported by OpenCV.
    function Fit_Ellipse
      (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
 
+   --  Fit_Ellipse_AMS of a Float32 point set, with the integer overload's
+   --  algorithm and fallbacks and the Float32 Fit_Ellipse rules for
+   --  coordinates, counts and results. Points is unchanged.
+   --  @param Points At least five points, with any bounds; every coordinate
+   --    finite, within the coordinate-sum bound.
+   --  @return The native rotated rectangle of the fitted ellipse.
+   --  @exception OpenCV_Error Fewer than five or more than
+   --    Integer_32'Last / 13 points, a NaN or infinite coordinate, a
+   --    coordinate sum beyond the bound, a non-finite or negative native
+   --    field, or a failure reported by OpenCV.
    function Fit_Ellipse_AMS
      (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
 
+   --  Fit_Ellipse_Direct of a Float32 point set, with the integer
+   --  overload's algorithm and fallbacks and the Float32 Fit_Ellipse rules
+   --  for coordinates, counts and results. Points is unchanged.
+   --  @param Points At least five points, with any bounds; every coordinate
+   --    finite, within the coordinate-sum bound.
+   --  @return The native rotated rectangle of the fitted ellipse.
+   --  @exception OpenCV_Error Fewer than five or more than
+   --    Integer_32'Last / 13 points, a NaN or infinite coordinate, a
+   --    coordinate sum beyond the bound, a non-finite or negative native
+   --    field, or a failure reported by OpenCV.
    function Fit_Ellipse_Direct
      (Points : Float32_Point_Array) return OpenCV.Rotated_Rect;
 
@@ -576,10 +677,18 @@ package OpenCV.Geometry is
    --  (total) least squares, solved in closed form as the principal axis of
    --  the points; L1, L12, Fair, Welsch, and Huber are robust M-estimators
    --  that OpenCV solves by iteratively reweighted least squares.
+   --  @enum L2 DIST_L2: orthogonal least squares, in closed form.
+   --  @enum L1 DIST_L1: robust, least absolute distances.
+   --  @enum L12 DIST_L12: robust L1-L2 estimator.
+   --  @enum Fair DIST_FAIR: robust, with constant C (default 1.3998).
+   --  @enum Welsch DIST_WELSCH: robust, with constant C (default 2.9846).
+   --  @enum Huber DIST_HUBER: robust, with constant C (default 1.345).
    type Line_Fit_Distance is (L2, L1, L12, Fair, Welsch, Huber);
 
    --  A fitted 2D line in native binary32 values. Direction is OpenCV's unit
    --  direction (vx, vy) and Point is OpenCV's point (x0, y0) on the line.
+   --  @field Direction Unit direction vector (vx, vy), with OpenCV's sign.
+   --  @field Point A point (x0, y0) on the line.
    type Fitted_Line_2D is record
       Direction : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
       Point     : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
@@ -614,6 +723,19 @@ package OpenCV.Geometry is
    --  OpenCV_Error, because OpenCV computes 2 * n in signed 32-bit
    --  arithmetic. Non-finite native results raise OpenCV_Error. Points is
    --  unchanged.
+   --  @param Points At least one point, with any bounds.
+   --  @param Distance The distance model; L2 by default.
+   --  @param Parameter Constant C of Fair, Welsch and Huber, or 0.0 for
+   --    OpenCV's default; ignored by the other distances.
+   --  @param Radius_Accuracy Early-stop threshold for changes of Point, or
+   --    0.0 for OpenCV's default 1.0; ignored by L2.
+   --  @param Angle_Accuracy Early-stop threshold, in radians, for changes of
+   --    Direction, or 0.0 for OpenCV's default 0.01; ignored by L2.
+   --  @return The fitted line, every field finite.
+   --  @exception OpenCV_Error No points, more than Integer_32'Last / 2
+   --    points, a Parameter or accuracy that is not finite, negative or above
+   --    Float32_Value'Last, a non-finite native field, or a failure reported
+   --    by OpenCV.
    function Fit_Line_2D
      (Points          : Contour;
       Distance        : Line_Fit_Distance := L2;
@@ -639,12 +761,33 @@ package OpenCV.Geometry is
    --  distances (L1, L12, Fair, Welsch, Huber) require at most
    --  Integer_32'Last / 2 points: native fitLine allocates `count*2` floats
    --  after the L2 early return. Larger counts raise OpenCV_Error.
+   --  @param Points At least one point, with any bounds; every coordinate
+   --    finite and of magnitude at most `2.0**63`.
+   --  @param Distance The distance model; L2 by default.
+   --  @param Parameter Constant C of Fair, Welsch and Huber, or 0.0 for
+   --    OpenCV's default; ignored by the other distances.
+   --  @param Radius_Accuracy Early-stop threshold for changes of Point, or
+   --    0.0 for OpenCV's default 1.0; ignored by L2.
+   --  @param Angle_Accuracy Early-stop threshold, in radians, for changes of
+   --    Direction, or 0.0 for OpenCV's default 0.01; ignored by L2.
+   --  @return The fitted line, every field finite and Direction nonzero.
+   --  @exception OpenCV_Error No points, too many points for the distance, a
+   --    NaN, infinite or too large coordinate, a Parameter or accuracy that
+   --    is not finite, negative or above Float32_Value'Last, a non-finite
+   --    native field, an all-zero native direction, or a failure reported
+   --    by OpenCV.
    function Fit_Line_2D
      (Points          : Float32_Point_Array;
       Distance        : Line_Fit_Distance := L2;
       Parameter       : OpenCV.Float64_Value := 0.0;
       Radius_Accuracy : OpenCV.Float64_Value := 0.01;
       Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D;
+
+   --  Position of a rotated-rectangle vertex in native order.
+   type Box_Vertex_Index is range 1 .. 4;
+
+   --  The four vertices of a rotated rectangle, in native order.
+   type Box_Vertices is array (Box_Vertex_Index) of OpenCV.Float32_Point;
 
    --  Converts Box to four native CV_32F rectangle vertices. Vertices are
    --  returned in the active OpenCV backend's native order without rounding,
@@ -656,10 +799,11 @@ package OpenCV.Geometry is
    --  an unrotated rectangle, for example, starts at its greatest-Y leftmost
    --  vertex. Portable callers must not depend on the starting vertex. Box
    --  is unchanged.
-   type Box_Vertex_Index is range 1 .. 4;
-
-   type Box_Vertices is array (Box_Vertex_Index) of OpenCV.Float32_Point;
-
+   --  @param Box The rotated rectangle; every field must be finite.
+   --  @return The four vertices, consecutive around the rectangle, from a
+   --    native starting vertex; every coordinate finite.
+   --  @exception OpenCV_Error A non-finite field of Box, a non-finite native
+   --    vertex, or a failure reported by OpenCV.
    function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices;
 
    --  Intersection of two convex polygons. Area is OpenCV's nonnegative
@@ -667,6 +811,9 @@ package OpenCV.Geometry is
    --  intersection polygon in native order without normalization. Vertices
    --  is indexed 1 .. Vertex_Count, because its bounds follow the
    --  discriminant. An empty intersection has Vertex_Count = 0 and Area 0.0.
+   --  @field Vertex_Count Number of intersection vertices returned.
+   --  @field Area Nonnegative, finite binary32 area of the intersection.
+   --  @field Vertices The intersection vertices, indexed 1 .. Vertex_Count.
    type Convex_Polygon_Intersection (Vertex_Count : Natural) is record
       Area     : OpenCV.Float32_Value;
       Vertices : Float32_Point_Array (1 .. Vertex_Count);
@@ -705,6 +852,19 @@ package OpenCV.Geometry is
    --  Right'Length vertices. OpenCV 4.11+ and 5.x report an intersection
    --  that did not converge with a negative area; that raises OpenCV_Error.
    --  Left and Right are unchanged.
+   --  @param Left First simple, strictly convex polygon, with any bounds and
+   --    at least three vertices in the coordinate range above.
+   --  @param Right Second polygon, with the same requirements.
+   --  @param Handle_Nested Whether a polygon strictly inside the other is
+   --    returned as the intersection (True) or gives an empty result.
+   --  @return The intersection polygon and its area, with at most
+   --    Left'Length + Right'Length vertices.
+   --  @exception OpenCV_Error Fewer than three vertices, more than
+   --    `(Integer_32'Last - 4) / 2` vertices together (the native scratch
+   --    buffer size), a polygon that is not simple and strictly convex,
+   --    coordinates or joint spans beyond the exact limits, a negative
+   --    (non-converged) or non-finite native area, a non-finite native
+   --    vertex, or a failure reported by OpenCV.
    function Intersect_Convex_Polygons
      (Left, Right : Contour; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection;
@@ -733,6 +893,18 @@ package OpenCV.Geometry is
    --  binary64 operations, which commute with power-of-two scaling in this
    --  range. The rule applies on every release, so that the accepted inputs
    --  do not depend on the OpenCV version. Left and Right are unchanged.
+   --  @param Left First polygon, with any bounds and at least three finite
+   --    vertices, on one binary grid with Right as described above.
+   --  @param Right Second polygon, with the same requirements.
+   --  @param Handle_Nested Whether a polygon strictly inside the other is
+   --    returned as the intersection (True) or gives an empty result.
+   --  @return The intersection polygon and its area, with at most
+   --    Left'Length + Right'Length vertices.
+   --  @exception OpenCV_Error Fewer than three vertices, too many vertices
+   --    together, a NaN or infinite coordinate, coordinates on no accepted
+   --    grid, scaled polygons that the integer overload would reject, a
+   --    negative (non-converged) or non-finite native area, a non-finite
+   --    native vertex, or a failure reported by OpenCV.
    function Intersect_Convex_Polygons
      (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection;
@@ -773,6 +945,18 @@ package OpenCV.Geometry is
    --  form a polygon. An empty result has no vertices and Area 0.0.
    --  Left and Right are unchanged. Strict convexity is checked by the C++
    --  layer, so direct C ABI callers cannot bypass it.
+   --  @param Left First polygon: 3 .. 4096 finite vertices of magnitude at
+   --    most `2.0**30`, strictly convex and traversed once, with any bounds.
+   --  @param Right Second polygon, with the same requirements.
+   --  @param Handle_Nested Whether a polygon strictly inside the other is
+   --    returned as the intersection (True) or gives an empty result.
+   --  @return The intersection, with at most Left'Length + Right'Length
+   --    vertices and a finite, nonnegative Area.
+   --  @exception OpenCV_Error Fewer than three or more than 4096 vertices in
+   --    either polygon, a NaN, infinite or too large coordinate, a polygon
+   --    that is not strictly convex beyond the conditioning limit, an
+   --    intersection that does not converge or needs a value binary32
+   --    cannot represent, or another failure of the private implementation.
    function Intersect_Convex_Polygons_Extended_Float32
      (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)
       return Convex_Polygon_Intersection;
@@ -780,6 +964,12 @@ package OpenCV.Geometry is
    --  OpenCV's rotated-rectangle intersection classification:
    --  INTERSECT_NONE, INTERSECT_PARTIAL, and INTERSECT_FULL. OpenCV documents
    --  INTERSECT_FULL as one rectangle lying wholly within the other.
+   --  @enum No_Intersection INTERSECT_NONE: the rectangles do not
+   --    intersect.
+   --  @enum Partial_Intersection INTERSECT_PARTIAL: a partial intersection,
+   --    neither rectangle containing the other.
+   --  @enum Full_Intersection INTERSECT_FULL: one rectangle lies wholly
+   --    within the other.
    type Rectangle_Intersection_Kind is
      (No_Intersection, Partial_Intersection, Full_Intersection);
 
@@ -787,6 +977,9 @@ package OpenCV.Geometry is
    subtype Rectangle_Intersection_Vertex_Count is Natural range 0 .. 8;
 
    --  Vertices is indexed 1 .. Vertex_Count.
+   --  @field Vertex_Count Number of intersection vertices, 0 .. 8.
+   --  @field Kind OpenCV's classification of the intersection.
+   --  @field Vertices The intersection region's vertices in native order.
    type Rotated_Rectangle_Intersection
      (Vertex_Count : Rectangle_Intersection_Vertex_Count := 0)
    is record
@@ -804,6 +997,11 @@ package OpenCV.Geometry is
    --  such near-degenerate contacts. Every Left and Right field must be
    --  finite; non-finite fields, and non-finite native vertices, raise
    --  OpenCV_Error. Left and Right are unchanged.
+   --  @param Left First rotated rectangle; every field must be finite.
+   --  @param Right Second rotated rectangle; every field must be finite.
+   --  @return The classification and at most eight intersection vertices.
+   --  @exception OpenCV_Error A non-finite field, a non-finite native vertex,
+   --    or a failure reported by OpenCV.
    function Intersect_Rotated_Rectangles
      (Left, Right : OpenCV.Rotated_Rect) return Rotated_Rectangle_Intersection;
 
@@ -1067,11 +1265,19 @@ package OpenCV.Geometry is
      (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)
       return OpenCV.Float64_Value;
 
-   --  Smallest circle enclosing Points. Center and Radius are binary32
-   --  OpenCV results, including the native EPS added to radii. Empty
-   --  contours return center (0, 0) and radius 0. One-point contours
-   --  return that point as Center and the native EPS as Radius. Points
-   --  is unchanged. Integer contours whose native signed-32-bit pair
+   --  A circle in native binary32 values.
+   --  @field Center The circle's center.
+   --  @field Radius The circle's nonnegative radius.
+   type Enclosing_Circle is record
+      Center : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
+      Radius : OpenCV.Float32_Value := 0.0;
+   end record;
+
+   --  Smallest circle enclosing Points, by cv::minEnclosingCircle. Center
+   --  and Radius are binary32 OpenCV results, including the native EPS added
+   --  to radii. Empty contours return center (0, 0) and radius 0. One-point
+   --  contours return that point as Center and the native EPS as Radius.
+   --  Points is unchanged. Integer contours whose native signed-32-bit pair
    --  addition or subtraction would overflow raise OpenCV_Error. If a
    --  native center or radius component is non-finite, or if a successful
    --  native radius is negative, Minimum_Enclosing_Circle raises
@@ -1081,11 +1287,11 @@ package OpenCV.Geometry is
    --  them: OpenCV 4.10 leaves a vertex of a triangle with sides of about 8
    --  near (10_000_000, 10_000_000) 41% of the radius outside. The native
    --  circle is returned as computed.
-   type Enclosing_Circle is record
-      Center : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
-      Radius : OpenCV.Float32_Value := 0.0;
-   end record;
-
+   --  @param Points The point set, with any bounds; may be empty.
+   --  @return The native circle, every field finite and Radius nonnegative.
+   --  @exception OpenCV_Error Coordinates whose native pair arithmetic would
+   --    overflow, a non-finite or negative native field, more than
+   --    Integer_32'Last points, or a failure reported by OpenCV.
    function Minimum_Enclosing_Circle
      (Points : Contour) return Enclosing_Circle;
 
@@ -1101,7 +1307,7 @@ package OpenCV.Geometry is
    --  points also forms binary32 products of three coordinates; when they
    --  overflow, OpenCV 4.x keeps a previous circle that misses a point. So
    --  for three or more points every coordinate must have magnitude at most
-   --  2.0**41, keeping those products finite; other such sets raise
+   --  `2.0**41`, keeping those products finite; other such sets raise
    --  OpenCV_Error. Zero, one, and two points cannot reach the three-point
    --  construction and have no such magnitude limit. Coordinates and native
    --  center/radius must still be finite for every cardinality, or raise
@@ -1110,37 +1316,56 @@ package OpenCV.Geometry is
    --  keeps the previous circle for such a collinear triple where 4.x uses
    --  the triple's farthest pair; results can therefore differ between
    --  them, in rounding or, near degeneracy, more. Points is unchanged.
+   --  @param Points The point set, with any bounds; every coordinate finite,
+   --    and of magnitude at most `2.0**41` when there are three or more.
+   --  @return The native circle, every field finite and Radius nonnegative.
+   --  @exception OpenCV_Error A NaN or infinite coordinate, a coordinate
+   --    beyond the magnitude limit, a non-finite or negative native field,
+   --    more than Integer_32'Last points, or a failure reported by OpenCV.
    function Minimum_Enclosing_Circle
      (Points : Float32_Point_Array) return Enclosing_Circle;
 
-   --  Smallest-area triangle enclosing Points. Area is OpenCV's native
-   --  double result. Vertices are the three native CV_32F triangle
-   --  vertices in native order; callers must not assume a cyclic start
-   --  or winding. Fractional and negative coordinates are preserved.
-   --  Empty input is rejected by OpenCV. One-point, two-point, collinear,
-   --  and repeated-point inputs may return repeated vertices and zero
-   --  area. Points is unchanged. Inputs that would overflow native
-   --  integer convex-hull arithmetic raise OpenCV.OpenCV_Error. If a
-   --  native area or vertex component is non-finite, or if a successful
-   --  native area is negative, Minimum_Enclosing_Triangle raises
-   --  OpenCV.OpenCV_Error. OpenCV's search loops in 4.6, 4.10, and 5.0
-   --  have no iteration bound and can fail to return for some nearly
-   --  degenerate hulls, such as the long thin quadrilateral (0, 0), (1, 0),
-   --  (100001, 1), (100000, 1), or nearly collinear vertices; the binding
-   --  cannot detect those inputs in advance. There is no Float32 overload:
-   --  binary32 point sets add more such inputs, including any hull smaller
-   --  than OpenCV's absolute tolerance, and signed zeros that make OpenCV
-   --  divide by zero.
+   --  Position of a triangle vertex in native order.
    type Triangle_Vertex_Index is range 1 .. 3;
 
+   --  The three vertices of a triangle, in native order.
    type Triangle_Vertices is
      array (Triangle_Vertex_Index) of OpenCV.Float32_Point;
 
+   --  An enclosing triangle and its area, as OpenCV computes them.
+   --  @field Area The nonnegative, finite binary64 area OpenCV reports.
+   --  @field Vertices The three binary32 vertices in native order.
    type Enclosing_Triangle is record
       Area     : OpenCV.Float64_Value := 0.0;
       Vertices : Triangle_Vertices := (others => (X => 0.0, Y => 0.0));
    end record;
 
+   --  Smallest-area triangle enclosing Points, by cv::minEnclosingTriangle.
+   --  Area is OpenCV's native double result. Vertices are the three native
+   --  CV_32F triangle vertices in native order; callers must not assume a
+   --  cyclic start or winding. Fractional and negative coordinates are
+   --  preserved. Empty input is rejected by OpenCV. One-point, two-point,
+   --  collinear, and repeated-point inputs may return repeated vertices and
+   --  zero area. Points is unchanged. Inputs that would overflow native
+   --  integer convex-hull arithmetic raise OpenCV.OpenCV_Error. If a native
+   --  area or vertex component is non-finite, or if a successful native area
+   --  is negative, Minimum_Enclosing_Triangle raises OpenCV.OpenCV_Error.
+   --
+   --  OpenCV's search loops in 4.6, 4.10, and 5.0 have no iteration bound
+   --  and can fail to return for some nearly degenerate hulls, such as the
+   --  long thin quadrilateral (0, 0), (1, 0), (100001, 1), (100000, 1), or
+   --  nearly collinear vertices; the binding cannot detect those inputs in
+   --  advance, nor interrupt a native call that does not return. There is no
+   --  Float32 overload: binary32 point sets add more such inputs, including
+   --  any hull smaller than OpenCV's absolute tolerance, and signed zeros
+   --  that make OpenCV divide by zero.
+   --  @param Points A nonempty point set, with any bounds.
+   --  @return The native triangle and its area, every value finite and the
+   --    area nonnegative, when the native search returns.
+   --  @exception OpenCV_Error Empty input or another failure reported by
+   --    OpenCV, coordinates that would overflow native hull arithmetic, more
+   --    than Integer_32'Last points, or a non-finite or negative native
+   --    value.
    function Minimum_Enclosing_Triangle
      (Points : Contour) return Enclosing_Triangle;
 
@@ -1161,33 +1386,52 @@ package OpenCV.Geometry is
    --  Mat always has Rows = 2, Columns = 3, Depth = Float64, and
    --  Channels = 1, and owns ordinary Core Mat lifetime. Contract
    --  violations and failures reported by OpenCV raise OpenCV.OpenCV_Error.
+   --  @param Center The rotation center, which maps to itself; finite.
+   --  @param Angle The rotation angle in Units, positive counter-clockwise
+   --    in OpenCV's convention; finite. It is reduced modulo a full turn in
+   --    Ada, in either unit, before the native call.
+   --  @param Scale The isotropic scale factor; finite, 1.0 by default.
+   --  @param Units Degrees (the default, as in OpenCV) or Radians.
+   --  @return A new 2x3 Float64, one-channel Mat holding the transform.
+   --  @exception OpenCV_Error A non-finite Center coordinate, Angle or
+   --    Scale, a native coefficient that is not finite, or a failure
+   --    reported by OpenCV.
    function Get_Rotation_Matrix_2D
      (Center : OpenCV.Float32_Point;
       Angle  : OpenCV.Float64_Value;
       Scale  : OpenCV.Float64_Value := 1.0;
       Units  : OpenCV.Angle_Unit := OpenCV.Degrees) return OpenCV.Core.Mat;
 
-   --  Geometry-owned transform matrices with value semantics. Indices are
-   --  1-based: Transform (R, C) is OpenCV's M (R - 1, C - 1). An affine
-   --  transform maps (X, Y) to
-   --    (T (1, 1) * X + T (1, 2) * Y + T (1, 3),
-   --     T (2, 1) * X + T (2, 2) * Y + T (2, 3)).
-   --  A perspective transform (homography) maps (X, Y) to (U / W, V / W),
-   --  where (U, V, W) is the product of T and the column (X, Y, 1).
+   --  Row index of an Affine_Transform_2D: row R is OpenCV's row R - 1.
    type Affine_Row_Index is range 1 .. 2;
+
+   --  Row index of a Perspective_Transform_2D: row R is OpenCV's row R - 1.
    type Perspective_Row_Index is range 1 .. 3;
+
+   --  Column index of a transform matrix: column C is OpenCV's column C - 1.
    type Transform_Column_Index is range 1 .. 3;
 
+   --  A Geometry-owned 2x3 affine transform with value semantics.
+   --  Transform (R, C) is OpenCV's M (R - 1, C - 1). An affine transform T
+   --  maps (X, Y) to
+   --  (`T (1, 1) * X + T (1, 2) * Y + T (1, 3)`,
+   --  `T (2, 1) * X + T (2, 2) * Y + T (2, 3)`).
    type Affine_Transform_2D is
      array (Affine_Row_Index, Transform_Column_Index) of OpenCV.Float64_Value;
 
+   --  A Geometry-owned 3x3 perspective transform (homography) with value
+   --  semantics. Transform (R, C) is OpenCV's M (R - 1, C - 1). It maps
+   --  (X, Y) to (U / W, V / W), where (U, V, W) is the product of T and the
+   --  column (X, Y, 1).
    type Perspective_Transform_2D is
      array (Perspective_Row_Index, Transform_Column_Index)
      of OpenCV.Float64_Value;
 
+   --  The affine transform that maps every point to itself.
    Identity_Affine_Transform : constant Affine_Transform_2D :=
      ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0));
 
+   --  The perspective transform that maps every point to itself.
    Identity_Perspective_Transform : constant Perspective_Transform_2D :=
      ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0));
 
@@ -1207,6 +1451,14 @@ package OpenCV.Geometry is
    --  Wrong point counts, non-finite coordinates, non-finite native
    --  coefficients, and failures reported by OpenCV raise
    --  OpenCV.OpenCV_Error.
+   --  @param Source Exactly three finite points, with any bounds.
+   --  @param Destination Exactly three finite points, paired with Source in
+   --    iteration order.
+   --  @return The native affine coefficients, every one finite; all zero
+   --    when OpenCV finds the system singular.
+   --  @exception OpenCV_Error A point count other than three, a NaN or
+   --    infinite coordinate, a non-finite native coefficient, or a failure
+   --    reported by OpenCV.
    function Get_Affine_Transform
      (Source, Destination : Float32_Point_Array) return Affine_Transform_2D;
 
@@ -1224,6 +1476,12 @@ package OpenCV.Geometry is
    --  OpenCV.OpenCV_Error.
    --  Transform is unchanged. Non-finite coefficients and failures reported
    --  by OpenCV also raise OpenCV.OpenCV_Error.
+   --  @param Transform The affine transform to invert; every coefficient
+   --    finite.
+   --  @return The native inverse coefficients, every one finite; all zero
+   --    for the singular cases above.
+   --  @exception OpenCV_Error A non-finite coefficient of Transform or of
+   --    the native inverse, or a failure reported by OpenCV.
    function Invert_Affine_Transform
      (Transform : Affine_Transform_2D) return Affine_Transform_2D;
 
@@ -1234,6 +1492,11 @@ package OpenCV.Geometry is
    --  never reports one. OpenCV's DECOMP_EIG and DECOMP_CHOLESKY assume a
    --  symmetric matrix, which this system is not, and DECOMP_NORMAL has no
    --  effect on a square system, so none of them is offered.
+   --  @enum LU_Decomposition DECOMP_LU: Gaussian elimination, OpenCV's
+   --    default solver.
+   --  @enum Singular_Value_Decomposition DECOMP_SVD: a least-squares
+   --    solution, never reported singular.
+   --  @enum QR_Decomposition DECOMP_QR: QR factorization.
    type Perspective_Solve_Method is
      (LU_Decomposition, Singular_Value_Decomposition, QR_Decomposition);
 
@@ -1263,6 +1526,15 @@ package OpenCV.Geometry is
    --  Source and Destination are unchanged. Wrong point counts, non-finite
    --  coordinates, non-finite native coefficients, and failures reported by
    --  OpenCV raise OpenCV.OpenCV_Error.
+   --  @param Source Exactly four finite points, with any bounds.
+   --  @param Destination Exactly four finite points, paired with Source in
+   --    iteration order.
+   --  @param Method The solver for the 8x8 system; LU by default.
+   --  @return The native homography coefficients, every one finite, as
+   --    described above.
+   --  @exception OpenCV_Error A point count other than four, a NaN or
+   --    infinite coordinate, a non-finite native coefficient, or a failure
+   --    reported by OpenCV.
    function Get_Perspective_Transform
      (Source, Destination : Float32_Point_Array;
       Method              : Perspective_Solve_Method := LU_Decomposition)
@@ -1275,6 +1547,12 @@ package OpenCV.Geometry is
    --  These requirements are checked at run time, and within them SPARK
    --  proves that no binary64 intermediate overflows. Violations, and
    --  results outside binary32 range, raise OpenCV.OpenCV_Error.
+   --  @param Transform The affine transform; every coefficient finite, of
+   --    magnitude at most 1.0E+269.
+   --  @param Point The point to map; finite.
+   --  @return The mapped point, rounded to binary32.
+   --  @exception OpenCV_Error A non-finite Point, a coefficient that is not
+   --    finite or exceeds the bound, or a result outside binary32 range.
    function Transform_Point
      (Transform : Affine_Transform_2D; Point : OpenCV.Float32_Point)
       return OpenCV.Float32_Point;
@@ -1287,6 +1565,13 @@ package OpenCV.Geometry is
    --  results outside binary32 range raise OpenCV.OpenCV_Error. Unlike
    --  cv::perspectiveTransform, which maps a point with |W| <= FLT_EPSILON
    --  to the origin and multiplies by 1 / W, this divides by every nonzero W.
+   --  @param Transform The homography; every coefficient finite, of
+   --    magnitude at most 1.0E+269.
+   --  @param Point The point to map; finite.
+   --  @return The mapped point (U / W, V / W), rounded to binary32.
+   --  @exception OpenCV_Error A non-finite Point, a coefficient that is not
+   --    finite or exceeds the bound, W = 0.0, or a result outside binary32
+   --    range.
    function Transform_Point
      (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point)
       return OpenCV.Float32_Point;
@@ -1297,6 +1582,13 @@ package OpenCV.Geometry is
    --  retains its original null range. Bounds, order and cardinality are
    --  preserved; neither input is modified. Any failed mapping raises
    --  OpenCV.OpenCV_Error and no incomplete result is returned.
+   --  @param Transform The affine transform; every coefficient finite, of
+   --    magnitude at most 1.0E+269, checked even when Points is empty.
+   --  @param Points The points to map, with any bounds; each finite.
+   --  @return The mapped points at the same indices: exactly the bounds of
+   --    Points (the postcondition).
+   --  @exception OpenCV_Error An invalid coefficient, or any point whose
+   --    mapping Transform_Point would reject; no partial result is returned.
    function Transform_Points
      (Transform : Affine_Transform_2D; Points : Float32_Point_Array)
       return Float32_Point_Array
@@ -1308,6 +1600,14 @@ package OpenCV.Geometry is
    --  As above, with perspective Transform_Point semantics: divide by every
    --  nonzero W, including negative and very small W; reject W = 0 rather
    --  than applying the native cv::perspectiveTransform epsilon policy.
+   --  @param Transform The homography; every coefficient finite, of
+   --    magnitude at most 1.0E+269, checked even when Points is empty.
+   --  @param Points The points to map, with any bounds; each finite.
+   --  @return The mapped points at the same indices: exactly the bounds of
+   --    Points (the postcondition).
+   --  @exception OpenCV_Error An invalid coefficient, or any point whose
+   --    mapping Transform_Point would reject, including W = 0.0; no partial
+   --    result is returned.
    function Transform_Points
      (Transform : Perspective_Transform_2D; Points : Float32_Point_Array)
       return Float32_Point_Array
