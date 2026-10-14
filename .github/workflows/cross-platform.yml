@@ -106,8 +106,11 @@ jobs:
       - name: Run independent Core 0.5.0 consumer
         if: matrix.core.version == '0.5.0'
         run: |
-          # Avoid conflicting path/URL pins in the consumer's project closure.
-          alr -n pin --unpin opencv_core
+          # Avoid conflicting path/URL pins in the consumer's project closure:
+          # drop the temporary path pin by restoring the manifest. `alr pin
+          # --unpin` would have to solve without the pin, which fails while
+          # Core 0.5.0 is not in the community index.
+          git checkout -- alire.toml
           alr -n -C tests/compatibility run
           alr -n pin opencv_core --use=../core
 
