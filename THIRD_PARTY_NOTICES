@@ -1,0 +1,173 @@
+opencv_geometry third-party notices
+===================================
+
+opencv_geometry is licensed under the Apache License, Version 2.0. The
+license text is in the file LICENSE, which is installed beside this file
+(share/doc/opencv_geometry/ in an installed prefix).
+
+The C++ shim (libopencv_geometry_shim, built from cpp/) contains private
+compatibility code adapted from OpenCV and from code that OpenCV credits.
+That code is compiled into the shim library, and GPRinstall also installs
+the shim source opencv_geometry_shim.cpp. Which of the adapted code a
+given shim library contains depends on the OpenCV version it was built
+against; this file covers every build.
+
+Keep this file with every source or binary redistribution of
+opencv_geometry. Each notice below is reproduced exactly as it appears in
+the upstream file named for it: nothing between a BEGIN line and its END
+line has been changed. Upstream files are identified by Git tag and Git
+blob identifier.
+
+
+1. OpenCV (https://github.com/opencv/opencv)
+--------------------------------------------
+
+Shipped code adapted from OpenCV:
+
+  cpp/closest_ellipse_compat.hpp
+    solveFast and getClosestEllipsePoints, from OpenCV 4.12.0
+    modules/imgproc/src/shapedescr.cpp
+    (blob f2de38168a70949a5eaadfac718774a5a01b17a7).
+
+  cpp/convex_intersection_compat.hpp
+    areaSign, between, parallelInt, intersectLineSegments, inOut, advance,
+    addSharedSeg, intersectConvexConvex_ and the post-processing of
+    intersectConvexConvex, from OpenCV modules/imgproc/src/geometry.cpp at
+    4.11.0 (blob eed9ff3c5ce6c84642ee3ffe3d0b2f6244e8d7b9) and
+    4.12.0 (blob c7a52b2f4605c86d95c25d9d7431c81ccc07092e).
+
+  cpp/opencv_geometry_shim.cpp, initialize_float32_compat
+    initDelaunay(Rect2f), from OpenCV 4.13.0
+    modules/imgproc/src/subdivision2d.cpp
+    (blob 78432f456dc537d8b8a7bb30ef07448c11703e56).
+
+OpenCV 4.5.0 and later are distributed under the Apache License,
+Version 2.0. The OpenCV 4.12.0 LICENSE file
+(blob d645695673349e3947e8e5ae42332d0ac3164cd7) is identical to this
+package's LICENSE file.
+
+Each of the OpenCV source files above begins with this notice:
+
+----- BEGIN OpenCV source file notice (Intel License Agreement) -----
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                        Intel License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of Intel Corporation may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+----- END OpenCV source file notice (Intel License Agreement) -----
+
+OpenCV's COPYRIGHT file at 4.13.0
+(blob 23eb02ef0874e894bcc6592b0d03713afa964871). The file at 4.11.0 and
+4.12.0 (blob 6b0b6882f6fac0d85e5571959bcd273e9fe7e68b) has the same lines
+without "Copyright (C) 2023-2025, OpenCV AI, all rights reserved.".
+
+----- BEGIN OpenCV COPYRIGHT -----
+Copyright (C) 2000-2022, Intel Corporation, all rights reserved.
+Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+Copyright (C) 2009-2016, NVIDIA Corporation, all rights reserved.
+Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
+Copyright (C) 2015-2023, OpenCV Foundation, all rights reserved.
+Copyright (C) 2008-2016, Itseez Inc., all rights reserved.
+Copyright (C) 2019-2023, Xperience AI, all rights reserved.
+Copyright (C) 2019-2022, Shenzhen Institute of Artificial Intelligence and Robotics for Society, all rights reserved.
+Copyright (C) 2022-2023, Southern University of Science And Technology, all rights reserved.
+Copyright (C) 2023-2025, OpenCV AI, all rights reserved.
+
+Third party copyrights are property of their respective owners.
+----- END OpenCV COPYRIGHT -----
+
+
+2. Joseph O'Rourke, "Computational Geometry in C"
+-------------------------------------------------
+
+The convex-polygon intersection in cpp/convex_intersection_compat.hpp is
+adapted from OpenCV's adaptation of Joseph O'Rourke's code. OpenCV
+modules/imgproc/src/geometry.cpp, at 4.11.0 and 4.12.0, carries this
+notice:
+
+----- BEGIN Joseph O'Rourke notice -----
+/*
+ This code is described in "Computational Geometry in C" (Second Edition),
+ Chapter 7.  It is not written to be comprehensible without the
+ explanation in that book.
+
+ Written by Joseph O'Rourke.
+ Last modified: December 1997
+ Questions to orourke@cs.smith.edu.
+ --------------------------------------------------------------------
+ This code is Copyright 1997 by Joseph O'Rourke.  It may be freely
+ redistributed in its entirety provided that this copyright notice is
+ not removed.
+ --------------------------------------------------------------------
+ */
+----- END Joseph O'Rourke notice -----
+
+
+3. Carl Chatfield, "A Simple Method for Distance to Ellipse"
+------------------------------------------------------------
+
+solve_fast in cpp/closest_ellipse_compat.hpp is OpenCV's solveFast, which
+OpenCV attributes to ellipse_trig_free.py in
+https://github.com/0xfaded/ellipse_demo and which translates that function
+line for line. That repository's LICENSE file at commit
+a420f76942092f06c822c45db5d5fedd10224bc9
+(blob f163f2381bc1ecf4768995e0d1ce04d65bc3f288):
+
+----- BEGIN MIT License (0xfaded/ellipse_demo) -----
+MIT License
+
+Copyright (c) 2017 Carl Chatfield
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+----- END MIT License (0xfaded/ellipse_demo) -----

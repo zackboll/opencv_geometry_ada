@@ -34,7 +34,8 @@
 //      and reports a non-finite intermediate instead of deciding on NaN.
 //   5. Non-convergence and numeric failure are returned as a status.
 //
-// Retained upstream notices follow.
+// The upstream notices follow verbatim; THIRD_PARTY_NOTICES reproduces them
+// for binary redistributions. OpenCV's file header:
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -76,17 +77,21 @@
 //
 //M*/
 //
-//  The convex-polygon intersection below is described in "Computational
-//  Geometry in C" (Second Edition), Chapter 7.
-//
-//  Written by Joseph O'Rourke.
-//  Last modified: December 1997
-//  Questions to orourke@cs.smith.edu.
-//  --------------------------------------------------------------------
-//  This code is Copyright 1997 by Joseph O'Rourke.  It may be freely
-//  redistributed in its entirety provided that this copyright notice is
-//  not removed.
-//  --------------------------------------------------------------------
+// Joseph O'Rourke's notice, from the same OpenCV file:
+/*
+ This code is described in "Computational Geometry in C" (Second Edition),
+ Chapter 7.  It is not written to be comprehensible without the
+ explanation in that book.
+
+ Written by Joseph O'Rourke.
+ Last modified: December 1997
+ Questions to orourke@cs.smith.edu.
+ --------------------------------------------------------------------
+ This code is Copyright 1997 by Joseph O'Rourke.  It may be freely
+ redistributed in its entirety provided that this copyright notice is
+ not removed.
+ --------------------------------------------------------------------
+ */
 
 #ifndef OPENCV_GEOMETRY_CONVEX_INTERSECTION_COMPAT_HPP
 #define OPENCV_GEOMETRY_CONVEX_INTERSECTION_COMPAT_HPP
