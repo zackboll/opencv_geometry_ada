@@ -232,8 +232,49 @@ baselines it reduces, and opens a stacked review PR; work then continues.
 5. **GEOMETRY-DOC-005** — guides and compiled examples.
 6. **GEOMETRY-DOC-006** — independent final qualification.
 
+### GEOMETRY-DOC-001 publication
+
+PR #27 (`main` <- `feature/geometry-doc-001-gnatdoc-pages`), open,
+non-draft, auto-merge off; tested and pushed head `0db5455`. Hosted CI not
+yet inspected. Coverage measured on `0db5455` in a scratch worktree: 94/452
+items, with 10 attachment/rendering errors.
+
+### GEOMETRY-DOC-002A — in progress (session interrupted by usage limit)
+
+Branch `feature/geometry-doc-002a-coverage-contours` from `0db5455`.
+Foundation commit `82eeac7`: `check_doc_coverage.py` (adds aspect-free
+profiles and the leading-before-`package` description layout),
+`check_comment_only.py` (compares committed revisions; Ada tokens plus
+byte-identical production files), their tests (140 Python tests in total
+pass), coverage ratchet in `generate_docs.sh` and the workflow, the Subdiv2D
+section preambles moved verbatim into its package description, seven
+formulas put in code spans, and an `OpenCV.Geometry` package description.
+Results: 359 warnings, 95/452 items, zero attachment errors;
+`check_comment_only.py 517c804 HEAD` passes; GNATformat clean.
+
+Verified with a scratch spec on GNATdoc 26.0.0: `@enum`, `@field` (also
+discriminants and variant components), multi-line `@param`, `@return`,
+`@exception Name` render; a dotted exception name splits at the dot;
+code spans keep `**`; paired `**` becomes `<strong>`; `Post` is omitted.
+
+Planned split, by inventory: 002A group A (contours and shape analysis,
+36 `OpenCV.Geometry` declarations); 002B group B (capability, fitting,
+enclosing, intersections, transforms, 50 declarations); 002C Subdiv2D
+lifecycle and queries (20 declarations plus private `Finalize`); 002D
+Subdiv2D topology and Voronoi (24 declarations). The full lists are in the
+agent briefs recorded in this session.
+
+Stopped (no results kept): a Subdiv2D drafting agent and two read-only
+auditors for groups A and B. Their isolated worktrees remain and can be
+reused or removed: `agents/subdiv2d/{geometry,core}` (branch
+`scratch/geometry-doc-002cd-subdiv2d`, pinned, unedited apart from the pin)
+and `agents/audit` (detached `82eeac7`, read only).
+
 ## Next executable task
 
-Commit DOC-001, push the branch, open its PR against `main`, record the PR
-and tested head here in the next phase's checkpoint, inspect hosted CI once,
-and start DOC-002 from the DOC-001 head.
+1. Inspect PR #27 hosted CI once.
+2. Write group A comments on the DOC-002A branch, regenerate both baselines,
+   qualify (`generate_docs.sh`, all tests, `check_comment_only.py 517c804`,
+   GNATformat, `alr -n build`), commit, push, and open the DOC-002A PR
+   against `feature/geometry-doc-001-gnatdoc-pages`.
+3. Continue with 002B to 002D, then DOC-003 to DOC-006.
