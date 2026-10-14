@@ -17,14 +17,14 @@ result does not certify the release candidate.
 
 | Phase | Subject | Disposition |
 | --- | --- | --- |
-| 000 | Release inventory and Core prerequisite gate | `CORE_RELEASE_PREREQUISITE_PENDING` |
-| 001 | Debian 12 GNAT 12 production and runtime | `GNAT12_NATIVE_BUILD_QUALIFIED`, `GNAT12_NATIVE_RUNTIME_QUALIFIED` against provisional Core `8f1c5d0`; repeat on Core 0.5.0 |
-| 002 | Debian 12 installed consumers | `DEBIAN12_GNAT12_INSTALLED_CONSUMERS_QUALIFIED` against provisional Core `8f1c5d0`; repeat on Core 0.5.0 |
+| 000 | Release inventory and Core prerequisite gate | `CORE_RELEASE_PREREQUISITE_PENDING`: Core 0.5.0 is released (tag `0.5.0` = `f8aef00`), but its Alire index PR #2227 is open |
+| 001 | Debian 12 GNAT 12 production and runtime | `GNAT12_NATIVE_BUILD_QUALIFIED`, `GNAT12_NATIVE_RUNTIME_QUALIFIED`; requalified against Core 0.5.0 `f8aef00` in REL-003-006 |
+| 002 | Debian 12 installed consumers | `DEBIAN12_GNAT12_INSTALLED_CONSUMERS_QUALIFIED`; requalified against Core 0.5.0 `f8aef00` in REL-003-006 |
 | 003 | Isolated AArch64 cross configuration | `CROSS_CONFIGURATION_CONTROLS_QUALIFIED` (synthetic positive and negative controls; not production cross-build qualification) |
-| 004 | Debian AArch64 reference qualification | Reference cross build, install and consumer link PASS; emulated (qemu-user) execution PASS; target execution NOT RUN; against provisional Core `8f1c5d0` |
+| 004 | Debian AArch64 reference qualification | Reference cross build, install and consumer link PASS; emulated (qemu-user) execution PASS; target execution NOT RUN; requalified against Core 0.5.0 `f8aef00` in REL-003-006 |
 | 005 | AdaCore GNAT 12 / Yocto Scarthgap | `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (inputs unavailable; external-input adapter ready) |
-| 006 | Release regression and CI matrix | Not started |
-| 007 | Release candidate 0.3.0 | Not started; blocked by 000 and 005 |
+| 006 | Release regression and CI matrix | Core 0.5.0 bound and pins reconciled; every available gate PASS against Core 0.5.0; the AdaCore/Yocto gate remains blocked |
+| 007 | Release candidate 0.3.0 | Not started: blocked by 005 (Platform B) and by 000 (Core 0.5.0 not yet indexed) |
 | 008 | Tag and Alire index submission | Requires maintainer authorization |
 
 ## Source identities
@@ -759,3 +759,164 @@ native object crosses the Geometry C ABI.
 
 Local evidence on `cc40dc0`: the complete Debian reference passes through
 the shared pipeline, and the negative control is rejected as described.
+
+## REL-003-006: release regression and CI matrix
+
+### Core bound
+
+On 2026-10-14 the maintainer chose `opencv_core >=0.5.0 & <0.6.0`. That is
+the decision REL-003-000 deferred to REL-003-007, taken in this phase so
+that the regression matrix runs against the bound that will ship.
+
+Rationale:
+
+- Core 0.5.0 is the first Core release that builds with GNAT 12, and no
+  0.4.x back-port exists.
+- A range that still admitted Core 0.3.0 or 0.4.x would let Alire resolve
+  Geometry 0.3.0 to a Core that cannot build on the GNAT 12 release
+  platform.
+
+Consequences:
+
+- A combined consumer that also requires Core `~0.4.x` cannot resolve with
+  Geometry 0.3.0.
+- Geometry needs no source change (see `docs/core-compatibility.md`).
+- The Geometry version stays 0.2.0 until REL-003-007.
+
+### Pin reconciliation
+
+Commit `c7aca1d` moves every row of the Core 0.4.1 reference audit, and
+the development-commit pins of REL-003-001 to REL-003-004, to the Core 0.5.0
+release commit `f8aef00`:
+
+| Location | Before | After |
+| --- | --- | --- |
+| `alire.toml` | `>=0.2.0 & <0.5.0` | `>=0.5.0 & <0.6.0` |
+| `.github/workflows/cross-platform.yml` | Linux and macOS legs at Core 0.3.0 and 0.4.1; Windows at `386c536` | One Core 0.5.0 leg at `f8aef00` on Linux, macOS and Windows, each asserting the actual Alire dependency checkout |
+| `gnat12-production.yml`, `debian12-installed-consumers.yml`, `debian-aarch64-reference.yml` | Development commit `8f1c5d0` | `f8aef00` |
+| `documentation.yml`, `scripts/generate_docs.sh` | 0.4.1 at `386c536` | 0.5.0 at `f8aef00` |
+| `tests/compatibility/alire.toml` and its consumer | `=0.4.1`, Git pin `386c536` | `=0.5.0`, Git pin `f8aef00` |
+| `scripts/run_linux_matrix_027c1.sh` | Core 0.3.0 and 0.4.1 | Adds Core 0.5.0 at `f8aef00` |
+| `README.md`, `docs/documentation.md` | Core 0.4.1 constraint and reproduction | Core 0.5.0 |
+| `docs/core-compatibility.md` | Task 023 record | New Core 0.5.0 section; the historical 0.3.0 and 0.4.1 evidence is unchanged |
+
+The production manifest contains no pin. The workflow pins are temporary
+and are applied inside the job. The independent compatibility consumer
+keeps its exact-commit pin outside the production dependency graph.
+
+### Consumer-step finding and correction
+
+On `c7aca1d` the hosted Linux job failed at "Run independent Core 0.5.0
+consumer" (runs 38527680055, 38527685136 and 38527747584). macOS, Windows
+and every earlier Linux step passed.
+
+`alr pin --unpin opencv_core` must solve without the path pin. While Core
+0.5.0 is absent from the community index, that solve finds no
+`opencv_core >=0.5.0`. In non-interactive mode Alire then declines and
+leaves the path pin in place, and the consumer fails with conflicting path
+and URL pins for `opencv_core`.
+
+Correction (`0cb3ed1`): restore `alire.toml` with Git, as
+`docs/documentation.md` already does. The consumer then resolves Core only
+through its own exact-commit pin. The same step passed locally before the
+push ("PASS Geometry / Core 0.5.0 consumer") and on every hosted run below.
+
+### Local evidence
+
+Geometry `c7aca1d484fbf0835a43dc9a3b39ee0961b5e20b`, Core
+`f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f`. The commit `0cb3ed1` changes
+only the cross-platform workflow step above, so these results also apply
+to it.
+
+| Gate | Inputs | Result |
+| --- | --- | --- |
+| Debian 12 GNAT 12 production (REL-003-001 job) | Debian 12 mirror image, GNAT 12.2.0, OpenCV 4.6.0, AUnit 26.0.0 | PASS: 542/542 in the release, validation and development profiles; native tests |
+| Debian 12 installed consumers (REL-003-002 job) | Same image, Podman 5.4.2 | PASS: prepare; Ada and mixed consumers, installed and relocated |
+| Debian AArch64 reference (REL-003-004 job) | `tests/cross/Containerfile` image | `CORE_AARCH64_CROSS_BUILD_INSTALL` PASS at `f8aef00`; Geometry cross build, install and consumer link PASS; emulated consumers and AUnit 542/542 PASS (emulation only); target execution NOT RUN; AdaCore/Scarthgap claims on the Debian inputs REJECTED (negative control) |
+
+GNAT 16 Linux matrix (`scripts/run_linux_matrix_027c1.sh <opencv> 0.5.0`,
+Alire `gnat_native` 16.1.0). Each cell is a separate checkout. The release
+and validation suites both run, followed by the native sanitizer tests, and
+the release profile is restored at the end:
+
+| Native OpenCV | Release | Validation | Native | Sanitizer findings |
+| --- | --- | --- | --- | --- |
+| 4.6.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.10.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.11.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.12.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.13.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.14.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 5.0.0 | 542/542 | 542/542 | 4/4 | 0 |
+
+### Hosted evidence
+
+| Geometry commit | Run | Result |
+| --- | --- | --- |
+| `c7aca1d` | GNAT 12 native production 38527680013 (push), 38527685031 (pull request) | PASS |
+| `c7aca1d` | Debian 12 installed consumers 38527680072, 38527685294 | PASS |
+| `c7aca1d` | Debian AArch64 reference 38527680056, 38527685126 | PASS |
+| `c7aca1d` | Cross configuration controls 38527680194, 38527685205; documentation 38527684971 | PASS |
+| `c7aca1d` | Cross-Platform Geometry CI 38527680055, 38527685136, 38527747584 (dispatch) | FAIL at the Linux consumer step only; macOS PASS; Windows PASS in the dispatch |
+| `0cb3ed1dbfedddfb10fbd9c61e29744aeadca249` | GNAT 12 native production 38528963670 (push), 38528969562 (pull request) | PASS |
+| `0cb3ed1` | Debian 12 installed consumers 38528963723, 38528969545 | PASS |
+| `0cb3ed1` | Debian AArch64 reference 38528963711, 38528969508 | PASS |
+| `0cb3ed1` | Cross configuration controls 38528963767, 38528969525 | PASS |
+| `0cb3ed1` | Ada API Documentation 38528969506 | PASS: 452/452 items documented, against Core `f8aef00` |
+| `0cb3ed1` | Cross-Platform Geometry CI 38528963720 (push), 38528969509 (pull request) | PASS on Linux and macOS; Windows skipped by policy |
+| `0cb3ed1` | Cross-Platform Geometry CI 38528968404 (dispatch) | PASS on Linux, macOS and Windows |
+
+Hosted versions in dispatch 38528968404, all with the Alire dependency
+checkout asserted at `f8aef00`:
+
+| Job | Native OpenCV | Results |
+| --- | --- | --- |
+| Linux x86_64 (Ubuntu 24.04) | 4.6.0 | 542/542 normal and validation; native tests; "PASS Geometry / Core 0.5.0 consumer" |
+| macOS ARM64 (Homebrew) | 5.0.0 | 542/542 |
+| Windows x86_64 (MSYS2 `mingw-w64-x86_64-opencv` 5.0.0-6) | 5.0.0 | 542/542 |
+
+### License review
+
+- The compatibility code derived from OpenCV keeps its notices:
+  - the Intel License Agreement text in `cpp/closest_ellipse_compat.hpp`,
+    `cpp/convex_intersection_compat.hpp` and
+    `cpp/subdiv2d_compat_license.hpp`;
+  - Joseph O'Rourke's notice for the convex intersection.
+- Binary redistributions must reproduce these notices.
+- The installed GPRinstall prefixes contain no license or notice file. The
+  REL-003-006 consumer payload has none in either prefix.
+- `opencv_geometry.gpr` declares `for Artifacts (".") use ("share");`, but
+  the repository has no `share` directory, so nothing is installed.
+
+Proposed for REL-003-007, not implemented here: install `LICENSE` and a
+notices file (the Intel and O'Rourke texts) into the Geometry prefix, and
+let the installed-consumer check require them.
+
+### Release readiness
+
+The release candidate (REL-003-007) is not started. Two prerequisites are
+outside this campaign's control:
+
+1. Platform B: `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (REL-003-005). The
+   inputs are unavailable and the maintainer chose to keep the gate
+   blocked.
+2. Core 0.5.0 indexing: Alire index PR #2227 is open. Until it merges, no
+   unpinned Geometry build can resolve, and Geometry 0.3.0 cannot be
+   submitted.
+
+Publication (REL-003-008) also needs explicit maintainer authorization.
+
+Once both prerequisites are met, on the exact release-candidate commit:
+
+1. Run `tests/cross/qualify_adacore_yocto.sh EVIDENCE` with the AdaCore
+   GNAT 12 cross toolchain, the Scarthgap sysroot and
+   `OPENCV_CROSS_YOCTO_PROVENANCE`. All four Platform B states must be
+   printed.
+2. After #2227 merges, resolve Core 0.5.0 from the index without a pin and
+   repeat the cross-platform and documentation jobs on that resolution.
+3. Bump the Geometry version to 0.3.0. Add the release notes and the
+   README support statement. Install the notices proposed above and extend
+   the installed-consumer check to require them.
+4. Repeat every gate in this document on the release-candidate commit.
+   Then run `alr publish` as a dry run only; the tag and the index
+   submission wait for REL-003-008 authorization.
