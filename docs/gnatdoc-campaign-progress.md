@@ -80,7 +80,8 @@ published history.
 | --- | --- | --- | --- |
 | DOC-001 infrastructure | `feature/geometry-doc-001-gnatdoc-pages` | #27 (`main`) | Merged as `2240b06`; Pages deployed |
 | DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | #28 (`main`) | Open; head `9b7d334` |
-| DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | pending (DOC-002A branch) | Qualified locally; `OpenCV.Geometry` complete |
+| DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | #29 (DOC-002A branch) | Open; head `426cb97`; `OpenCV.Geometry` complete |
+| DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | pending (DOC-002B branch) | Qualified locally |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
@@ -355,6 +356,47 @@ Qualified locally: `sh scripts/generate_docs.sh` passes (delta 0/0,
 validator 2 / 4 / 130, coverage 340/452); all Python tests pass; GNATformat
 check passes; `git diff --check` clean; rendered sections inspected.
 
+### GEOMETRY-DOC-002B publication
+
+PR #29 (DOC-002A branch <- `feature/geometry-doc-002b-fitting-transforms`),
+head `426cb97`; open, non-draft, auto-merge off. Hosted CI of #28 (head
+`9b7d334`, checked once): documentation `build` success, `deploy` skipped;
+cross-platform Linux and macOS jobs for Core 0.3.0 and 0.4.1 success,
+Windows skipped by policy.
+
+### GEOMETRY-DOC-002C — Subdiv2D lifecycle, bounds, insertion and queries
+
+Branch `feature/geometry-doc-002c-subdiv2d-lifecycle` from DOC-002B head
+`426cb97`; its PR targets the DOC-002B branch. The Subdiv2D drafting agent
+stopped in the earlier session produced nothing; this phase was written
+directly, verified against `src/opencv-geometry-subdiv2d.adb`.
+
+- Documented (20 visible declarations and the private `Finalize`):
+  `Subdivision` (exclusive native ownership, readiness, and the rule that it
+  must not be used by more than one task at a time), `Float32_Rectangle`,
+  `Vertex_Id`, `No_Vertex`, `Edge_Id`, `No_Edge`, `Create`,
+  `Create_Float32`, `Reset`, `Reset_Float32`, `Is_Ready`, `Bounds`,
+  `Bounds_Float32`, both `Insert` overloads, `Point_Location_Kind`,
+  `Locate_Result` (discriminant and variant components), `Locate`,
+  `Nearest_Result`, `Find_Nearest`; private `Finalize` (idempotent release,
+  not published).
+- Verified in the body: semantic bounds rejection precedes any change; a
+  failed native creation leaves no handle; `Bounds` and `Bounds_Float32`
+  keep the last successful initialization; batch `Insert` checks every
+  coordinate before inserting, inserts in chunks of 4096, is not atomic and
+  names the rejected index; `Locate` maps `PTLOC_OUTSIDE_RECT` and location
+  errors to `OpenCV_Error`; `Find_Nearest` rejects a nonpositive native
+  vertex. The `Find_Nearest` liveness warning is unchanged, and its
+  `@return` and `@exception` state that a call that does not return raises
+  nothing; no convergence guarantee is claimed.
+- Results: warnings 114 -> 69 (all remaining in group D); coverage 340 ->
+  383 of 452; Subdiv2D 76/145.
+
+Qualified locally: `sh scripts/generate_docs.sh` passes (delta 0/0,
+validator 2 / 4 / 130, coverage 383/452); 140 Python tests pass; GNATformat
+check passes; `git diff --check` clean; rendered `Subdivision` and
+`Locate_Result` sections inspected.
+
 ## Findings for the maintainers (not changed: outside documentation scope)
 
 - README says Core 0.4.1 "is not yet in the public Alire index"; on
@@ -364,9 +406,9 @@ check passes; `git diff --check` clean; rendered sections inspected.
 
 ## Next executable task
 
-1. Commit DOC-002B, run `check_comment_only.py 517c804 HEAD`, push, open
-   its PR against the DOC-002A branch; check hosted CI of #28 once.
-2. Document Subdiv2D group C on `feature/geometry-doc-002c-subdiv2d-lifecycle`
-   from the DOC-002B head, then group D, reaching zero warnings and empty
-   baselines.
+1. Commit DOC-002C, prove comment-only, push, open its PR against the
+   DOC-002B branch; check hosted CI of #29 once.
+2. Document Subdiv2D group D on `feature/geometry-doc-002d-subdiv2d-topology`
+   from the DOC-002C head, reaching zero warnings and full coverage, and
+   enforce empty baselines.
 3. DOC-003 to DOC-006.
