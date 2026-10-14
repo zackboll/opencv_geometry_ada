@@ -18,7 +18,7 @@ result does not certify the release candidate.
 | Phase | Subject | Disposition |
 | --- | --- | --- |
 | 000 | Release inventory and Core prerequisite gate | `CORE_RELEASE_PREREQUISITE_PENDING` |
-| 001 | Debian 12 GNAT 12 production and runtime | Not started |
+| 001 | Debian 12 GNAT 12 production and runtime | `GNAT12_NATIVE_BUILD_QUALIFIED`, `GNAT12_NATIVE_RUNTIME_QUALIFIED` against provisional Core `8f1c5d0`; repeat on Core 0.5.0 |
 | 002 | Debian 12 installed consumers | Not started |
 | 003 | Isolated AArch64 cross configuration | Not started |
 | 004 | Debian AArch64 reference qualification | Not started |
@@ -255,3 +255,105 @@ Results:
 
 This diagnosis is not a qualification result. REL-003-001 repeats it with
 checked-in tooling, all production profiles and a negative-first test.
+
+## REL-003-001: Debian 12 GNAT 12 production and runtime
+
+### Tooling
+
+`tests/gnat12/run_production.sh` qualifies the complete production library
+and C++ shim with Debian 12's native compiler, independent of Alire
+toolchain selection. It:
+
+- requires clean Geometry and Core Git checkouts, the Core one at the exact
+  commit given in `GNAT12_CORE_COMMIT`, and exports both with `git archive`
+  into a fresh workspace that must contain no prebuilt `.ali`, `.o`, `.a`
+  or `.so` file;
+- requires `gcc` and `g++` 12.2.0 for `x86_64-linux-gnu`, the
+  `/usr/lib/gcc/x86_64-linux-gnu/12/adalib` runtime and OpenCV 4.6.0;
+- builds Core with Alire's release switch set, as an Alire dependency is
+  built, and Geometry in each Alire build profile (release, validation,
+  development), using `tests/gnat12/*_config.gpr`, which reproduce
+  Alire 2.1.1's generated switch sets without forcing an Ada version;
+- requires the OpenCV 4 `imgproc` backend, `-lopencv_imgproc` and
+  `-lopencv_core`, and the Linux `Static_PIC` shim;
+- fails on any warning in a build log, and on any language-version switch
+  other than Core's documented per-unit Ada 2022 typed-access body (whose
+  presence proves that the scan reads compile commands);
+- builds the AUnit harness (the tests crate is always an Alire root, so
+  it uses the development set) and requires 542 registered tests, 542
+  successful, 0 failed assertions and 0 unexpected errors per profile;
+- runs the four native C++ tests under AddressSanitizer and
+  UndefinedBehaviorSanitizer, including Subdiv2D allocation-failure
+  injection, and requires every one to run;
+- requires every ALI to read `V "GNAT Lib v12"`, every object and archive
+  to carry only `GCC: (Debian 12.2.0-14+deb12u1) 12.2.0`, and the test
+  executables to have no unresolved dependency.
+
+`.github/workflows/gnat12-production.yml` runs it on `debian:12` with the
+packages `ca-certificates curl unzip git binutils gnat-12 gprbuild g++
+libopencv-dev pkg-config`. Alire 2.1.1 only fetches AUnit 26.0.0 sources
+(`alr -n get --only aunit=26.0.0`); it selects no compiler.
+
+### GNATprove and GNATcov in the tests crate
+
+`tests/alire.toml` depends on `aunit ^26.0.0`, `gnatprove ^16.1.0` and
+`gnatcov ^26.2.1`. None of the three declares a compiler dependency
+(`alr show`), so they do not themselves select GNAT 16; the toolchain is
+whatever `alr toolchain` selects. Their binary archives provide only
+`bin/gnatprove` and `bin/gnatcov`, which shadow no compiler. The GNAT 12
+qualification does not use `tests/alire.toml` at all: it builds
+`tests/tests.gpr` directly with AUnit from source, so proof and coverage
+tooling stays out of the mandatory GNAT 12 path.
+
+### Finding and correction (negative first)
+
+GNAT 12 with `-gnatwa -gnatVa` reports, for
+`Corner.Vertex_Count in 0 .. 3` on a `Natural` discriminant,
+`float32_convex_intersection_tests.adb:962:60: warning: lower bound check
+only fails if it is invalid [-gnatwc]`; the harness treats warnings as
+errors. GNAT 16 does not report it. The failed unit then also prints 21
+`opencv-internal-c_api.ads` size errors. These are a cascade: GNAT checks
+those deferred size conditions only after back-end annotation, which does
+not happen once a unit has failed. Any compile error in a client of
+`OpenCV.Core` shows the same cascade under GNAT 12 (it reappeared during
+REL-003-002 consumer development for an unrelated error). It is noisy but
+harmless, and is recorded here for Core.
+
+Correction: the equivalent `Corner.Vertex_Count <= 3`. No production
+source changes; the shim is unchanged.
+
+### Evidence
+
+Core: provisional `8f1c5d0626b463c291a4d919767f7a2d77c54ba9`. Packages:
+`gnat-12`, `gcc-12`, `g++-12`, `libgnat-12` `12.2.0-14+deb12u1`,
+`gprbuild` `2023.0.0-3`, `libopencv-dev` `4.6.0+dfsg-12`. AUnit 26.0.0.
+
+| Geometry commit | Where | Result |
+| --- | --- | --- |
+| `862eec46e445d96cb929e420d098c2355e649b31` (tooling only) | Local mirror image | FAIL as expected: release-profile production library and shim built without warnings; the AUnit harness failed on the `-gnatwc` warning and its cascade |
+| `862eec4` | Hosted run 38521130562 (push) | FAIL as expected, same warning in the uploaded log |
+| `618ee6dc933e2e6012e290171a56a710e089a436` (correction) | Local mirror image | PASS: 3 profiles × 542/542, 4/4 native tests, 639 GNAT 12 ALIs, 391 objects and archives all from Debian GCC 12.2.0 |
+| `618ee6d` | Hosted runs 38521249165 (push), 38521253403 (pull request) | PASS: 3 × 542/542, 647 compiler records all Debian GCC 12.2.0 |
+| `618ee6d` | Hosted Cross-Platform Geometry CI 38521249151, 38521253392 (GNAT 16) | PASS; the correction is neutral under GNAT 16 |
+
+Local command (mirror of the hosted job, image built from the same package
+list; the workspace and sources are separate mounts):
+
+```sh
+podman run --rm \
+  -v "$GEOMETRY_CLONE:/sources/geometry:ro" \
+  -v "$CORE_CLONE:/sources/core:ro" \
+  -v "$AUNIT_26_SOURCES:/sources/aunit:ro" \
+  -v "$EVIDENCE/work:/work" \
+  -e GNAT12_WORK=/work/gnat12-qualified \
+  -e GNAT12_CORE_ROOT=/sources/core \
+  -e GNAT12_CORE_COMMIT=8f1c5d0626b463c291a4d919767f7a2d77c54ba9 \
+  -e GNAT12_AUNIT_ROOT=/sources/aunit \
+  -e GNAT12_SOURCE_ROOT=/sources/geometry \
+  "$DEBIAN12_GNAT12_IMAGE" sh /sources/geometry/tests/gnat12/run_production.sh
+```
+
+Dispositions, as development evidence against the provisional Core:
+`GNAT12_NATIVE_BUILD_QUALIFIED` and `GNAT12_NATIVE_RUNTIME_QUALIFIED`. The
+release gate repeats this job against the published Core 0.5.0 and the
+release-candidate commit.
