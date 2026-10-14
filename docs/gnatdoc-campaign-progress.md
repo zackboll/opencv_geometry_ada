@@ -79,34 +79,39 @@ published history.
 | Phase | Branch | PR (base) | State |
 | --- | --- | --- | --- |
 | DOC-001 infrastructure | `feature/geometry-doc-001-gnatdoc-pages` | #27 (`main`) | Merged as `2240b06`; Pages deployed |
-| DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | #28 (`main`) | Open; head `9b7d334` |
-| DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | #29 (DOC-002A branch) | Open; head `426cb97`; `OpenCV.Geometry` complete |
-| DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | #30 (DOC-002B branch) | Open; head `d3ec186` |
-| DOC-002D Subdiv2D topology and Voronoi | `feature/geometry-doc-002d-subdiv2d-topology` | #31 (DOC-002C branch) | Open; head `3705332`; zero warnings, 452/452 |
-| DOC-003 theme, highlighting, type links | `feature/geometry-doc-003-presentation` | #32 (DOC-002D branch) | Open; head `a03cf97` |
-| DOC-004 package- and operation-level browser | `feature/geometry-doc-004-navigation` | #33 (DOC-003 branch) | Open; head `661ad73` |
-| DOC-005 guides and compiled examples | `feature/geometry-doc-005-guides` | pending (DOC-004 branch) | Qualified locally |
+| DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | #28 (`main`) | Merged as `96bbb8c` |
+| DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | #29 (retargeted to `main`) | Merged as `9204299` |
+| DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | #30 (retargeted to `main`) | Merged as `7c6c3dc` |
+| DOC-002D Subdiv2D topology and Voronoi | `feature/geometry-doc-002d-subdiv2d-topology` | #31 (retargeted to `main`) | Merged as `74898b6`; zero warnings, 452/452 |
+| DOC-003 theme, highlighting, type links | `feature/geometry-doc-003-presentation` | #32 (retargeted to `main`) | Merged as `d96b674` |
+| DOC-004 package- and operation-level browser | `feature/geometry-doc-004-navigation` | #33 (retargeted to `main`) | Merged as `d262045`; deployed |
+| DOC-005 guides and compiled examples | `feature/geometry-doc-005-guides` | #34 (retargeted to `main`) | Open; head `999cec2` |
+| DOC-006 final qualification | `feature/geometry-doc-006-final-qualification` | pending (DOC-005 branch) | Qualified locally |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
-| Capability | Reference | Geometry after DOC-001 |
+Final state after DOC-006 (the DOC-001 column of earlier revisions is
+superseded):
+
+| Capability | Reference | Geometry at campaign end |
 | --- | --- | --- |
 | Pinned generation with version gates | `scripts/generate_docs.sh` | Adapted; Core identity gate (exact commit, own checkout, clean) instead of a `../core` existence check |
 | Public/internal GPR split | `docs_api.gpr`, `docs_internal.gpr` | Adapted; production switches plus `-Werror` in both |
 | Partial-generation detection | `generate_docs.sh` grep | Same |
 | Declaration-identity warning comparator | Imgproc `compare_gnatdoc_warnings.py` (36 tests) | Imgproc's plus the multi-line discriminant header fix (41 tests) |
-| Warning baseline | Imgproc/Core empty (0) | 360 identities (target 0) |
-| Site validator | Imgproc `validate_docs.py` | Two packages, per-package probes, aspect-free profiles, package-description probes |
-| Validator mutation tests | Imgproc `test_validate_docs.py` | 53 tests (40 synthetic parent/child, 13 generated site) |
-| Landing page | `docs/index.html` | Unstyled until DOC-003 |
+| Warning baseline | Imgproc/Core empty (0) | Empty (360 at the start), and generation fails if it is not |
+| Declaration coverage | Imgproc `check_doc_coverage.py` | 452/452 (94 at the start); empty baseline enforced (32 tests) |
+| Comment-only proof | Imgproc `check_comment_only.py` | Same rules (14 tests); every phase passes against `517c804` |
+| Site validator | Imgproc `validate_docs.py` | Two packages, per-package probes, aspect-free profiles, package descriptions, presentation, navigation and guide reconstruction (66 tests: synthetic parent/child and generated site) |
+| Landing page | `docs/index.html` | Themed; API button, Developer Guides section |
 | Compiled landing example | `docs/example.*`, run in CI | Same |
-| PR artifact, diagnostics, main-only Pages | `.github/workflows/documentation.yml` | Adapted to Geometry's pinned Core layout |
-| Deterministic regeneration check | CI `diff -r` | Same |
-| Coverage and comment-only checkers | Imgproc `check_doc_coverage.py`, `check_comment_only.py` | DOC-002 |
-| Theme, highlighting, type links | Core/Imgproc DOC-003 tools | DOC-003 |
-| Searchable navigation | Imgproc operation-level browser | DOC-004; two packages |
+| PR artifact, diagnostics, main-only Pages | `.github/workflows/documentation.yml` | Adapted to Geometry's pinned Core layout; deployed from `main` |
+| Deterministic regeneration and idempotence | CI `diff -r` | Same, including guide re-rendering |
+| Theme, highlighting, type links | Core/Imgproc DOC-003 tools | Two pages, child-to-parent links, Core links checked against the gated Core (29 tests) |
+| Searchable navigation | Imgproc operation-level browser | Package- and operation-level: 2 packages, 12 categories, 130 declarations (16 tests) |
 | Generic-instance summaries | Core `enhance_gnatdoc_instances.py` | Not applicable: no public generic instantiations or tagged types |
-| Guides and compiled examples | Imgproc DOC-005 (5 guides, 5 examples) | DOC-005: 5 guides, 5 compiled and executed examples, API links across both packages |
+| Guides and compiled examples | Imgproc DOC-005 (5 guides, 5 examples) | 5 guides, 5 compiled examples run in CI and on 7 OpenCV releases, API links across both packages (21 tests) |
+| Browser qualification | Playwright harnesses | Presentation, navigation and guides (optional, local) |
 
 ## Initial GNATdoc inventory (`517c804`, pinned tools)
 
@@ -229,7 +234,10 @@ Known limitations:
 Each step branches from the previous phase's verified head, rewrites the
 baselines it reduces, and opens a stacked review PR; work then continues.
 
-1. **GEOMETRY-DOC-001** — infrastructure (this checkpoint).
+All six steps are complete; see the checkpoint log and the final
+qualification below.
+
+1. **GEOMETRY-DOC-001** — infrastructure.
 2. **GEOMETRY-DOC-002** — coverage and comment-only checkers, then complete
    declaration-by-declaration documentation of both packages, split by the
    actual inventory (contours and shape analysis; fitting, enclosing and
@@ -512,8 +520,9 @@ its PR targets the DOC-003 branch.
 - Validator: the navigation script is the only allowed script, once, in the
   index; the index must equal the rebuilt themed and augmented
   serialization; navigation is rechecked independently.
-- Tests: 15 navigation tests (manifest errors, real-site mutations,
-  idempotency); 195 Python tests in total, all passing.
+- Tests: 16 navigation tests (manifest errors, real-site mutations,
+  idempotency; corrected from 15 during the DOC-006 audit); 195 Python tests
+  in total, all passing.
 - Browser: the navigation harness and the presentation harness (package
   clicks scoped to the native compilation-unit list, now that package
   headings also link) pass at 1280/390 px in light and dark, with
@@ -569,13 +578,82 @@ targets the DOC-004 branch.
   desktop light compatibility table and the mobile dark fitting guide were
   inspected.
 
+### GEOMETRY-DOC-005 publication
+
+PR #34 (head `999cec2`), opened against the DOC-004 branch; open,
+non-draft, auto-merge off. Hosted CI of #33 (head `661ad73`, checked once):
+documentation `build` success, `deploy` skipped; Linux and macOS jobs for
+Core 0.3.0 and 0.4.1 success; Windows skipped by policy. GitHub state was
+then reconciled: the maintainer had merged #28 to #33 into `main` (each
+child retargeted to `main`; final merge `d262045`), so #34 was retargeted
+to `main` through the REST API (`gh pr edit` fails on the deprecated
+Projects classic field) and its body updated. It is the single commit
+`999cec2` on `main`. Hosted CI of #34 was pending at its single
+inspection.
+
+### GEOMETRY-DOC-006 — independent final qualification
+
+Branch `feature/geometry-doc-006-final-qualification` from DOC-005 head
+`999cec2`.
+
+- Independent regeneration: fresh detached worktrees of Geometry
+  `999cec2` and Core `386c536` in a different directory, a newly created
+  renderer environment (`pip freeze`: exactly `markdown-it-py==3.0.0`,
+  `mdurl==0.1.2`) and the gated GNATdoc 26.0.0. Result: 0 warnings, delta
+  0/0, 452/452 coverage, empty baselines, 9 HTML pages and 130 sections
+  validated, 5 guides verified, and a `_site` (15 files) byte-identical to
+  the campaign worktree's, so the output depends on neither path nor
+  environment.
+- Library regression check on that worktree: `alr -n -C tests run` — 542
+  run, 542 successful, 0 failed assertions, 0 unexpected errors;
+  `sh scripts/run_native_tests.sh` — PASS. Equal to Gate 0.
+- `check_comment_only.py 517c804 999cec2`: only Ada comments,
+  documentation and new documentation tooling changed in the whole
+  campaign.
+- Cross-release examples: in isolated clones of `999cec2` with Core
+  `386c536` and `PKG_CONFIG_LIBDIR`/`LD_LIBRARY_PATH` pinned to exact local
+  prefixes, the landing example and all five guide examples compiled and
+  passed their assertions on OpenCV 4.6.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0
+  and 5.0.0 (`libopencv_geometry` on 5.0.0), as well as on the system
+  4.10.0; `ldd` confirmed each prefix. Documentation CI uses Ubuntu 24.04's
+  4.6.
+- Tests: 219 Python tests in the documentation environment (comparator 41,
+  coverage 32, comment-only 14, type links 29, navigation 16, validator 66,
+  guides 21); the presentation, navigation and guide browser harnesses pass
+  on the independent site and after the corrections below; screenshots in
+  `/home/zboll/git/opencv/geometry-doc-campaign/evidence/doc-006`.
+- Adversarial semantic review of the five guides against every cited
+  declaration, correcting four overstatements:
+  - the `Locate_Point` query range is half-open (`2.0**31` excluded);
+  - `Bounding_Rect`'s inclusive formula is the integer overload's, and the
+    Float32 overload applies it to floors;
+  - results refer to no native storage except the rotation-matrix `Mat`;
+  - single-point Subdiv2D modifications that fail natively can also leave
+    the object not ready, so the batch `Insert` is not the only non-atomic
+    case.
+  `docs/documentation.md` now gives `517c804` as the comment-only base and
+  explains why `origin/main` reports already merged tooling.
+- Pages (checked once): the `main` run 38516035211 for `d262045` succeeded
+  and deployed to `github-pages`; the site serves the themed landing page,
+  the API browser (`api/gnatdoc-navigation.js` 200) and both packages. The
+  guides return 404 until #34 merges.
+- Cleanup: the campaign's scratch worktrees (`agents/audit`,
+  `agents/subdiv2d/{geometry,core}`, `final/{geometry,core}`, each holding
+  only the temporary pin), the unpushed `scratch/geometry-doc-002cd-subdiv2d`
+  branch (`82eeac7`, contained in `main`) and the cross-release clones were
+  removed. The campaign worktree and its Core worktree remain; no other
+  worktree was touched.
+
 ## Findings for the maintainers (not changed: outside documentation scope)
 
-- None open. The README's stale Core-index sentence, recorded here during
-  DOC-004, was corrected in DOC-005 as documentation.
+- No production defect was found. The README's stale Core-index sentence,
+  recorded during DOC-004, was corrected in DOC-005 as documentation.
+- `gh pr edit` fails in this environment because GitHub's GraphQL API
+  rejects the deprecated Projects classic field; base changes use
+  `gh api -X PATCH repos/zackboll/opencv_geometry_ada/pulls/N -f base=main`.
 
 ## Next executable task
 
-1. Commit DOC-005, push, open its PR against the DOC-004 branch; check
-   hosted CI of #33 once.
-2. DOC-006 independent final qualification and campaign report.
+None: the campaign is at the review handoff. Merge #34, then the DOC-006
+PR (retarget it to `main` after #34 merges); each `main` push redeploys
+Pages.

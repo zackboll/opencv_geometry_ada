@@ -545,7 +545,7 @@ export DOC_PYTHON=$PWD/.doc-tools/markdown/bin/python
 sh scripts/generate_docs.sh
 "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_*.py' -v
 python3 scripts/check_doc_coverage.py --report docs/gnatdoc-coverage-baseline.txt _site
-python3 scripts/check_comment_only.py origin/main   # committed documentation changes
+python3 scripts/check_comment_only.py 517c804   # committed documentation changes
 alr exec -- gnatformat --check -P opencv_geometry.gpr src/opencv-geometry.ads \
   src/opencv-geometry-subdiv2d.ads
 alr exec -- gnatformat --check -P docs/example.gpr docs/example.adb
@@ -553,6 +553,14 @@ alr exec -- gnatformat --check -P docs/examples/examples.gpr
 alr exec -- gprbuild -P docs/example.gpr && obj/docs-example/example
 git diff --check
 ```
+
+`check_comment_only.py` accepts changes only to `src/` comments, `docs/`,
+`README.md`, `.gitignore` and files added since its base revision. Its base
+must therefore predate the documentation tooling being changed: `517c804`,
+the `main` commit before this campaign, qualifies every campaign phase. With
+`origin/main` as the base, edits to already merged documentation tooling
+(the scripts and the documentation workflow) are reported as production
+changes and must be reviewed by hand.
 
 The tests that need a generated site, or the guide renderer, skip without
 them. Apart from the guide renderer, whose two pinned packages are installed

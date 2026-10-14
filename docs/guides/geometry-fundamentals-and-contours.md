@@ -26,7 +26,9 @@ operations have one overload of each.
 - Orientation follows OpenCV: X increases to the right and Y upward. Image
   coordinates usually point Y downward, so a winding can look reversed on
   screen.
-- Inputs are never modified and results are Ada-owned values.
+- Inputs are never modified, and results are Ada-owned values that refer to
+  no native storage; the one exception in `OpenCV.Geometry` is the rotation
+  matrix, an `OpenCV.Core.Mat`.
 
 ## Area, length and moments
 
@@ -66,13 +68,15 @@ vertices.
 
 ## Bounding boxes, location and matching
 
-[Bounding_Rect](api:Bounding_Rect) returns an upright `OpenCV.Rect` with
-inclusive integer extent: `Width = X_Max - X_Min + 1`.
+[Bounding_Rect](api:Bounding_Rect) returns an upright `OpenCV.Rect`. For
+integer points its extent is inclusive, `Width = X_Max - X_Min + 1`; the
+[Float32 overload](api:Bounding_Rect/2) applies the same formula to the
+floors of the extreme coordinates.
 [Locate_Point](api:Locate_Point) classifies a query as inside, outside or on
 the boundary, and [Signed_Distance_To_Contour](api:Signed_Distance_To_Contour)
 returns the signed distance to the nearest edge (positive inside). For a
-nonempty contour OpenCV rounds the query to a signed 32-bit point, so query
-coordinates must lie in `-2.0**31 .. 2.0**31`.
+nonempty contour OpenCV rounds the query to a signed 32-bit point, so each
+query coordinate must be at least `-2.0**31` and less than `2.0**31`.
 
 [Match_Shapes](api:Match_Shapes) compares two contours through their Hu
 invariants with one of the three [Shape_Match_Method](api:Shape_Match_Method)
