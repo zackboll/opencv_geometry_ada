@@ -5,9 +5,10 @@ records, for every phase, the exact sources, commands, compiler and runtime
 identities, native OpenCV version, disposition and unresolved blockers.
 
 Nothing in this document authorizes a tag, a GitHub release or an Alire
-index submission. Publication (REL-003-008) needs every mandatory gate to
-pass on the exact release-candidate commit and explicit maintainer
-authorization.
+index submission. Publication (REL-003-008) needs every mandatory gate of the
+[2026-10-14 release policy](#maintainer-decision-2026-10-14-release-without-adacoreyocto-qualification)
+to pass on the exact release-candidate commit, and the maintainer's own
+review and merge of the release-candidate pull request.
 
 A result applies only to the exact source revisions it names. A Core result
 at one commit does not certify another Core commit, and a development-branch
@@ -22,10 +23,78 @@ result does not certify the release candidate.
 | 002 | Debian 12 installed consumers | `DEBIAN12_GNAT12_INSTALLED_CONSUMERS_QUALIFIED`; requalified against Core 0.5.0 `f8aef00` in REL-003-006 |
 | 003 | Isolated AArch64 cross configuration | `CROSS_CONFIGURATION_CONTROLS_QUALIFIED` (synthetic positive and negative controls; not production cross-build qualification) |
 | 004 | Debian AArch64 reference qualification | Reference cross build, install and consumer link PASS; emulated (qemu-user) execution PASS; target execution NOT RUN; requalified against Core 0.5.0 `f8aef00` in REL-003-006 |
-| 005 | AdaCore GNAT 12 / Yocto Scarthgap | `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (inputs unavailable; external-input adapter ready) |
-| 006 | Release regression and CI matrix | Core 0.5.0 bound and pins reconciled; every available gate PASS against Core 0.5.0; the AdaCore/Yocto gate remains blocked |
-| 007 | Release candidate 0.3.0 | Not started: blocked by 005 (Platform B) and by 000 (Core 0.5.0 not yet indexed) |
-| 008 | Tag and Alire index submission | Requires maintainer authorization |
+| 005 | AdaCore GNAT 12 / Yocto Scarthgap | Never satisfied: `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (inputs unavailable; external-input adapter ready). For 0.3.0: `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED` (maintainer decision, 2026-10-14) |
+| 006 | Release regression and CI matrix | Core 0.5.0 bound and pins reconciled; every available gate PASS against Core 0.5.0; the AdaCore/Yocto gate remained blocked |
+| 007 | Release candidate 0.3.0 | In progress on `release/opencv-geometry-0.3.0`: notices installed, version 0.3.0; results below |
+| 008 | Tag and Alire index submission | After the maintainer merges the release-candidate PR; the Alire submission also waits for Core 0.5.0 to be indexed |
+
+## Maintainer decision (2026-10-14): release without AdaCore/Yocto qualification
+
+On 2026-10-14 the maintainer decided that `opencv_geometry` 0.3.0 may ship
+on the existing Debian and cross-platform evidence, without actual AdaCore
+GNAT 12 or Yocto Scarthgap validation. The maintainer will run that testing
+independently and may publish a later corrective release.
+
+This decision supersedes the mandatory AdaCore GNAT 12 / Yocto Scarthgap
+(Platform B) acceptance gate that REL-003-000 to REL-003-006 defined. It
+does not change their record: the original qualification requirement was
+**not satisfied**. Neither input was ever available, REL-003-005 ended with
+`ADACORE_YOCTO_QUALIFICATION_BLOCKED`, and none of
+`ADACORE_GNAT12_CROSS_BUILD_QUALIFIED`, `YOCTO_SCARTHGAP_SYSROOT_QUALIFIED`,
+`GEOMETRY_YOCTO_CROSS_INSTALL_QUALIFIED` or
+`GEOMETRY_YOCTO_CONSUMER_LINK_QUALIFIED` was ever established.
+
+AdaCore/Yocto qualification disposition for 0.3.0:
+
+**`DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`**
+
+Deferred testing is not successful testing. This disposition is not PASS,
+and no release text may present AdaCore GNAT 12 or Yocto Scarthgap as a
+tested or supported configuration of 0.3.0. The Debian AArch64 reference
+uses Debian's cross GNAT 12 and a Debian arm64 sysroot; it substitutes for
+neither.
+
+### Mandatory release gates for 0.3.0
+
+Each must pass on the exact release-candidate commit with Core 0.5.0
+(`f8aef00`):
+
+1. Debian 12 x86_64 GNAT 12 production and runtime (REL-003-001 job).
+2. Debian 12 independent installed consumers (REL-003-002 job), now
+   including the installed redistribution notices.
+3. Debian AArch64 reference cross-build, install and consumer-link
+   qualification (REL-003-004 job).
+4. The existing Linux, macOS and Windows regression qualification
+   (REL-003-006 matrix and hosted workflows).
+5. GNATdoc generation and documentation completeness: zero warnings and
+   452/452 documented public items, guide examples and site validation.
+6. License and distribution packaging checks.
+7. Immutable release-source qualification: exact commit and tree
+   identities, a clean source export, and no production path pins.
+8. A valid Alire manifest and dependency resolution.
+
+Outside the 0.3.0 release scope: execution on target hardware, and AdaCore
+or Yocto certification of any kind.
+
+### Post-release validation and corrective releases
+
+1. After the `0.3.0` tag exists, the maintainer runs
+   `tests/cross/qualify_adacore_yocto.sh EVIDENCE` (REL-003-005) on a clean
+   checkout of that tag, with Core 0.5.0, the AdaCore GNAT 12 AArch64 cross
+   toolchain, the Scarthgap sysroot and `OPENCV_CROSS_YOCTO_PROVENANCE`. The
+   result counts only if all four Platform B states are printed. Target
+   execution, if hardware is available, is recorded separately.
+2. The outcome, pass or fail, is recorded on `main` with the exact tag,
+   Core, toolchain and sysroot identities. The `0.3.0` tag, its commit and
+   its Alire manifest are never moved or rewritten.
+3. A defect that admits a compatible correction is fixed in `0.3.1`: a
+   branch from the `0.3.0` tag, narrowly scoped changes, a regression test
+   for each defect, every mandatory gate above repeated on the 0.3.1
+   candidate, and the AdaCore/Yocto adapter run on that candidate. A
+   correction that needs an incompatible API change waits for 0.4.0.
+4. Only a release whose own candidate passed that gate may describe AdaCore
+   GNAT 12 / Yocto Scarthgap as tested, and then only for the exact
+   configuration recorded.
 
 ## Source identities
 
@@ -688,6 +757,11 @@ states
 `GEOMETRY_YOCTO_CONSUMER_LINK_QUALIFIED` stay pending, and they block
 release certification.
 
+Later on 2026-10-14 the maintainer removed this gate from the 0.3.0 release
+([maintainer decision](#maintainer-decision-2026-10-14-release-without-adacoreyocto-qualification)).
+The four states remain unestablished; the 0.3.0 disposition is
+`DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`.
+
 ### External-input adapter
 
 `tests/cross/qualify_adacore_yocto.sh EVIDENCE` runs the qualification once
@@ -894,6 +968,11 @@ let the installed-consumer check require them.
 
 ### Release readiness
 
+Superseded in part by the
+[2026-10-14 maintainer decision](#maintainer-decision-2026-10-14-release-without-adacoreyocto-qualification):
+Platform B no longer blocks 0.3.0, while Core 0.5.0 indexing still blocks
+the Alire submission. The text below is the record as of REL-003-006.
+
 The release candidate (REL-003-007) is not started. Two prerequisites are
 outside this campaign's control:
 
@@ -920,3 +999,137 @@ Once both prerequisites are met, on the exact release-candidate commit:
 4. Repeat every gate in this document on the release-candidate commit.
    Then run `alr publish` as a dry run only; the tag and the index
    submission wait for REL-003-008 authorization.
+
+## REL-003-007: release candidate 0.3.0
+
+### Starting state
+
+Recorded 2026-10-14 after fetching Geometry, Core and the Alire index.
+
+| Item | Finding |
+| --- | --- |
+| Geometry PRs #36 to #42 | All merged by the maintainer on 2026-10-14. `main` is `9142e9c3134ded907204ae0304acc28ab602b7a9`, the merge of #42 |
+| Core tag `0.5.0` | Tag object `8f962690b3b25eafcb6c7e7363a6d097a3c22366`, commit `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f` |
+| Geometry Core constraint | `opencv_core = ">=0.5.0 & <0.6.0"`; `alire.toml` has no pin |
+| Alire index PR [#2227](https://github.com/alire-project/alire-index/pull/2227), "Add opencv_core 0.5.0" | Open, review required, all 22 checks successful. Head `d4766195c226e4952fe78fb23d19f9b99684b870`; its only file is `index/op/opencv_core/opencv_core-0.5.0.toml` (SHA-256 `9895bc0265d856b74f489be4c69cb8988f07e5b3c05fce3571bf48fe312e3dfa`), origin commit `f8aef00` |
+| Alire community index `stable-1.4.0` | `e88e083eaa59c7781622475a1ac769dd33afe16e`: Core 0.1.0 to 0.4.1 and Geometry 0.1.0 and 0.2.0; no Core 0.5.0 |
+| Geometry 0.3.0 tag or release PR | None |
+
+The release branch `release/opencv-geometry-0.3.0` starts at `origin/main`
+`9142e9c` in its own worktree. No other worktree or branch was changed.
+
+### Distribution notices
+
+Finding (REL-003-006): no installed prefix carried a license or notice.
+
+Review against the upstream sources, fetched by tag and checked by Git
+blob identity:
+
+- OpenCV's 40-line Intel License Agreement file header is byte-identical
+  in 4.11.0 and 4.12.0 `modules/imgproc/src/geometry.cpp`, 4.12.0
+  `shapedescr.cpp`, 4.13.0 `subdivision2d.cpp` and 5.0.0
+  `modules/geometry/src/shapedescr.cpp`.
+  `cpp/convex_intersection_compat.hpp` carried it verbatim. The headers
+  `cpp/closest_ellipse_compat.hpp` and `cpp/subdiv2d_compat_license.hpp`
+  carried a reworded and rewrapped text: no "IMPORTANT: READ BEFORE ..."
+  preamble, and "Redistributions" for "Redistribution's".
+- Joseph O'Rourke's notice: the copyright lines were verbatim, the preamble
+  above them reworded.
+- New finding: OpenCV's `solveFast`, copied as `solve_fast`, translates
+  `ellipse_trig_free.py` of
+  [0xfaded/ellipse_demo](https://github.com/0xfaded/ellipse_demo) line for
+  line, and OpenCV's source cites that file. The repository is
+  MIT-licensed, "Copyright (c) 2017 Carl Chatfield" (`LICENSE` blob
+  `f163f238` at commit `a420f769`). No Geometry file carried that license.
+- OpenCV 4.5.0 and later are Apache-2.0. OpenCV 4.12.0's `LICENSE` (blob
+  `d6456956`) is byte-identical to Geometry's `LICENSE`. OpenCV has no
+  `NOTICE` file at 4.11.0, 4.12.0, 4.13.0 or 5.0.0, but has a `COPYRIGHT`
+  file.
+- GPRinstall installs the shim's C++ body,
+  `include/opencv_geometry_shim/opencv_geometry_shim.cpp`, which contains
+  the adapted Subdiv2D initialization. The `.hpp` headers are not installed;
+  under the default C++ naming they are not GPR sources.
+
+Correction (commit `250942c4416cf0026fbc4a9b02fc35899470f8b9`):
+
+- `THIRD_PARTY_NOTICES` names each piece of adapted code and its upstream
+  file (tag and blob), and reproduces verbatim, between BEGIN and END lines:
+  the Intel License Agreement header, OpenCV's 4.13.0 `COPYRIGHT` file
+  (the 4.11.0 and 4.12.0 file lacks only the "OpenCV AI" line), O'Rourke's
+  notice and the ellipse_demo MIT License. It states that OpenCV's
+  Apache-2.0 text is the same as `LICENSE`.
+- The three C++ headers now carry the upstream notices verbatim, the
+  closest-ellipse header also the MIT License as `//` comments. These are
+  comment-only changes.
+- `opencv_geometry.gpr` declares
+  `Required_Artifacts ("share/doc/opencv_geometry") use ("LICENSE",
+  "THIRD_PARTY_NOTICES")`. A probe with Debian 12's GPRinstall 2023
+  ("GPRINSTALL Pro 18.0w") showed that it installs both files with relative
+  manifest entries, and fails with exit status 7 ("file does not exist") if
+  one is missing. No path is written into the installed projects, so the
+  prefix stays relocatable.
+- `tests/installed_consumers/check_notices.sh` fails unless `LICENSE` is
+  the Apache-2.0 text, every BEGIN/END block occurs exactly once with the
+  SHA-256 of its upstream text, the C++ headers contain those blocks
+  verbatim, and each given prefix holds byte-identical copies.
+  `test_check_notices.sh` runs it on one unmodified case, which must pass,
+  and 15 mutations, which must each be rejected for the intended reason:
+  altered or missing lines in each block, duplicate and unclosed blocks,
+  paraphrased or missing notices in each header, a changed `LICENSE`, and
+  missing or stale installed copies.
+- `prepare.sh` runs those controls, then the check on the Geometry prefix,
+  and records the installed digests in the payload. `consume.sh` requires
+  the same digests in the installed and relocated prefixes, without
+  sources. The AArch64 reference consumer step
+  (`qualify_reference_consumers.py`) runs the check on its installed and
+  relocated Geometry prefixes, and so will the AdaCore/Yocto adapter, which
+  shares that pipeline.
+
+Pinned upstream digests:
+
+| Block | Upstream text | SHA-256 |
+| --- | --- | --- |
+| `LICENSE` | Apache License 2.0; OpenCV 4.12.0 `LICENSE` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` |
+| Intel License Agreement | Lines 1 to 40 of the OpenCV files above | `07088edcd6834f7c52694c468a0d591ad1acd77867849434b92de57a27f78c87` |
+| OpenCV `COPYRIGHT` | 4.13.0, blob `23eb02ef` | `854538f426422b0f989a5e5b7641e5943753d10ef29ea54901dcd36039e43f58` |
+| O'Rourke notice | Lines 256 to 269 of 4.11.0 and 4.12.0 `geometry.cpp` | `e9e841991f22b00d685e286179165f877314a8301e428f4e79a7de7c25829987` |
+| MIT License | 0xfaded/ellipse_demo `LICENSE` at `a420f769` | `d1f3530a0383628c968e495e1793f7c279917506ff9ccf977594b2d97bcfc757` |
+
+Not changed: `licenses = "Apache-2.0"` in `alire.toml` names the crate's own
+license. Whether to declare an SPDX expression that also covers the
+third-party code is left to the maintainer, because it changes published
+index metadata. Outside this release: the installed Core 0.5.0 prefix
+carries no license file either; that is Core packaging. This review records
+engineering checks of notice obligations; it is not legal advice.
+
+Development evidence on `250942c` (Core `f8aef00`), local:
+
+- Debian 12 installed consumers PASS: 16/16 notice controls, notice check
+  on the prepared prefix, and the recorded digests present in the installed
+  and relocated prefixes (`LICENSE` `cfc7749b...`, `THIRD_PARTY_NOTICES`
+  `9d1fc46a...`).
+- Debian AArch64 reference PASS, with the notice check passing on the
+  cross-installed prefix before and after relocation; emulated AUnit
+  542/542; the AdaCore/Yocto claims on Debian inputs rejected as before.
+
+### Version and documentation
+
+- `alire.toml`: version `0.3.0`. The Core constraint is unchanged and the
+  manifest has no pin.
+- `docs/release-0.3.0.md`: the release notes.
+- `README.md`: release summary, AdaCore/Yocto disposition, installation
+  and redistribution notices.
+- `docs/coverage.md`: the extended Float32 intersection is released.
+
+### Release-candidate qualification
+
+Pending: the mandatory gates run on the release-candidate commit, and their
+results are recorded here.
+
+### Alire publisher preflight
+
+Pending.
+
+### Dispositions
+
+Pending.
