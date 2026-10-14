@@ -81,7 +81,8 @@ published history.
 | DOC-001 infrastructure | `feature/geometry-doc-001-gnatdoc-pages` | #27 (`main`) | Merged as `2240b06`; Pages deployed |
 | DOC-002A coverage, repairs, group A | `feature/geometry-doc-002a-coverage-contours` | #28 (`main`) | Open; head `9b7d334` |
 | DOC-002B group B fitting, enclosing, transforms | `feature/geometry-doc-002b-fitting-transforms` | #29 (DOC-002A branch) | Open; head `426cb97`; `OpenCV.Geometry` complete |
-| DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | pending (DOC-002B branch) | Qualified locally |
+| DOC-002C Subdiv2D lifecycle and queries | `feature/geometry-doc-002c-subdiv2d-lifecycle` | #30 (DOC-002B branch) | Open; head `d3ec186` |
+| DOC-002D Subdiv2D topology and Voronoi | `feature/geometry-doc-002d-subdiv2d-topology` | pending (DOC-002C branch) | Qualified locally; zero warnings, 452/452 |
 
 ## Feature-parity matrix (Core `c0709f8`, Imgproc `19ce364` versus Geometry)
 
@@ -397,6 +398,43 @@ validator 2 / 4 / 130, coverage 383/452); 140 Python tests pass; GNATformat
 check passes; `git diff --check` clean; rendered `Subdivision` and
 `Locate_Result` sections inspected.
 
+### GEOMETRY-DOC-002C publication
+
+PR #30 (DOC-002B branch <- `feature/geometry-doc-002c-subdiv2d-lifecycle`),
+head `d3ec186`; open, non-draft, auto-merge off. Hosted CI of #29 (head
+`426cb97`) was still pending at its single inspection.
+
+### GEOMETRY-DOC-002D — Subdiv2D topology, extraction and Voronoi
+
+Branch `feature/geometry-doc-002d-subdiv2d-topology` from DOC-002C head
+`d3ec186`; its PR targets the DOC-002C branch.
+
+- Documented (24 declarations), verified against the body: `Edge_Segment`,
+  `Edge_Segment_Array`, `Edge_Id_Array`, `Triangle_Array`, `Edge_List`,
+  `Leading_Edge_List` (Ada-owned array, identifiers valid only until the
+  next Insert or Reset), `Triangle_List`, `Edge_Navigation` (each literal
+  with its `getEdge` constant and the tested quad-edge identities),
+  `Edge_Rotation`, `Navigate`, `Next_Edge`, `Rotate`, `Symmetric_Edge`
+  (identifiers below 4 are rejected in Ada), `Origin` and `Destination`
+  (separate comments; No_Vertex cases kept), `Vertex_Point`, `First_Edge`,
+  `Vertex_Id_Array`, `Voronoi_Facet`, `Voronoi_Facet_Array`,
+  `Voronoi_Diagram`, `Facet_Points` (`Constraint_Error` for out-of-range
+  input), and both `Voronoi_Facets` (sites checked before any native
+  computation; empty Sites give an empty diagram; the facet slices are
+  verified to be consecutive, nonempty and covering).
+- `generate_docs.sh` now fails if either baseline records any identity
+  ("documentation baselines must stay empty"), as Imgproc's does.
+- **Phase 2 acceptance reached:** zero GNATdoc warnings and 452/452 items
+  documented (`OpenCV.Geometry` 307/307, `OpenCV.Geometry.Subdiv2D`
+  145/145); both baselines empty.
+- Results: warnings 69 -> 0; coverage 383 -> 452 of 452.
+
+Qualified locally: `sh scripts/generate_docs.sh` passes (0 warnings, delta
+0/0, validator 2 / 4 / 130, coverage 452/452); 140 Python tests pass;
+GNATformat check passes; ShellCheck clean; `git diff --check` clean;
+rendered sections inspected; negative check of the empty-baseline rule
+recorded in the PR.
+
 ## Findings for the maintainers (not changed: outside documentation scope)
 
 - README says Core 0.4.1 "is not yet in the public Alire index"; on
@@ -406,9 +444,7 @@ check passes; `git diff --check` clean; rendered `Subdivision` and
 
 ## Next executable task
 
-1. Commit DOC-002C, prove comment-only, push, open its PR against the
-   DOC-002B branch; check hosted CI of #29 once.
-2. Document Subdiv2D group D on `feature/geometry-doc-002d-subdiv2d-topology`
-   from the DOC-002C head, reaching zero warnings and full coverage, and
-   enforce empty baselines.
-3. DOC-003 to DOC-006.
+1. Commit DOC-002D, prove comment-only, push, open its PR against the
+   DOC-002C branch; check hosted CI of #30 once.
+2. DOC-003 presentation on `feature/geometry-doc-003-presentation` from the
+   DOC-002D head, then DOC-004 to DOC-006.

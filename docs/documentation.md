@@ -138,9 +138,11 @@ python3 scripts/compare_gnatdoc_warnings.py --write-baseline \
 
 Never replace it with a raw log, and never rewrite it to accept new warnings.
 Do not silence a warning with `@exclude`, an empty comment or a changed
-generator invocation. The initial baseline records 360 warnings (246 in
-`OpenCV.Geometry`, 114 in `OpenCV.Geometry.Subdiv2D`, of which 2 concern the
-private-part `Finalize` override, which GNATdoc checks but does not publish).
+generator invocation. The initial baseline recorded 360 warnings (246 in
+`OpenCV.Geometry`, 114 in `OpenCV.Geometry.Subdiv2D`, of which 2 concerned
+the private-part `Finalize` override, which GNATdoc checks but does not
+publish). GEOMETRY-DOC-002D reached zero, and the baseline is now required to
+stay empty (see "Current status" below).
 
 ## Site validation
 
@@ -227,6 +229,21 @@ Subdiv2D section preambles ("Extraction", "Navigation", "Voronoi diagram"),
 separated by blank lines, never rendered, and seven formulas lost their
 `**` or `*` to emphasis. DOC-002A moved the preambles verbatim into the
 Subdiv2D package description and put the formulas in code spans.
+
+### Current status: zero warnings, complete coverage
+
+Since GEOMETRY-DOC-002D, GNATdoc reports zero warnings and all 452 items are
+documented: both package descriptions, 130 declarations (76 functions, 3
+procedures, 45 types, 2 subtypes, 4 constants), 145 parameters, 76 function
+returns, 39 enumeration literals and 60 components and discriminants, in
+`OpenCV.Geometry` (307) and `OpenCV.Geometry.Subdiv2D` (145). Both baselines
+are empty and `generate_docs.sh` fails if either records an identity again,
+so a new public declaration must be documented completely in the same
+change. Neither the zero count nor full coverage proves that every statement
+is correct; the per-phase records in the campaign progress file list what
+was verified against the body, the shim and exact OpenCV sources, the
+statements added after that verification, and the findings for the
+maintainers.
 
 `scripts/check_comment_only.py BASE [TARGET]` proves that a documentation
 change altered only comments. It compares two committed revisions (`TARGET`

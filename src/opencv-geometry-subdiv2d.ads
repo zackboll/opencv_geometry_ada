@@ -306,27 +306,44 @@ package OpenCV.Geometry.Subdiv2D is
       return Nearest_Result;
 
    --  A Delaunay edge as the positions of its origin and destination.
+   --  @field Origin Position of the edge's origin vertex.
+   --  @field Destination Position of the edge's destination vertex.
    type Edge_Segment is record
       Origin      : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
       Destination : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
    end record;
 
+   --  Copied Delaunay edges, as returned by Edge_List.
    type Edge_Segment_Array is array (Natural range <>) of Edge_Segment;
 
+   --  Edge identifiers, as returned by Leading_Edge_List; each is valid only
+   --  until the next Insert or Reset of the subdivision that produced it.
    type Edge_Id_Array is array (Natural range <>) of Edge_Id;
 
+   --  Copied triangles, as returned by Triangle_List.
    type Triangle_Array is
      array (Natural range <>) of OpenCV.Geometry.Triangle_Vertices;
 
    --  Every Delaunay edge once, as by cv::Subdiv2D::getEdgeList. The list
    --  includes edges to the super-triangle vertices, whose positions lie
    --  outside the bounds, but not the super-triangle's own three edges.
+   --  @param Object A ready subdivision.
+   --  @return The edges in native order, indexed 1 .. N, as copied values
+   --    that stay valid after later changes to Object.
+   --  @exception OpenCV_Error An Object that is not ready, an invalid native
+   --    count, or another native failure.
    function Edge_List (Object : Subdivision) return Edge_Segment_Array;
 
    --  One edge of every triangular facet, as by getLeadingEdgeList, with the
    --  facet on its left, so three Next_Around_Left steps return to it. The
    --  facets include those with super-triangle vertices and the facet outside
    --  the super-triangle.
+   --  @param Object A ready subdivision.
+   --  @return The leading edges in native order, indexed 1 .. N. The array
+   --    is Ada-owned, but its identifiers are valid only until the next
+   --    Insert or Reset of Object.
+   --  @exception OpenCV_Error An Object that is not ready, an invalid native
+   --    count or edge, or another native failure.
    function Leading_Edge_List (Object : Subdivision) return Edge_Id_Array;
 
    --  Every triangle whose three vertices all lie in the half-open bounds, as
@@ -334,6 +351,11 @@ package OpenCV.Geometry.Subdiv2D is
    --  excluded. Near the convex hull the reported triangles can differ
    --  between OpenCV releases: 4.12 and later, including 5.x, use a
    --  super-triangle twice as large as earlier releases.
+   --  @param Object A ready subdivision.
+   --  @return The triangles in native order, indexed 1 .. N, as copied
+   --    vertex positions that stay valid after later changes to Object.
+   --  @exception OpenCV_Error An Object that is not ready, an invalid native
+   --    count, or another native failure.
    function Triangle_List (Object : Subdivision) return Triangle_Array;
 
    --  The eight related edges of cv::Subdiv2D::getEdge. For a Delaunay edge
@@ -348,6 +370,23 @@ package OpenCV.Geometry.Subdiv2D is
    --  - Next_Around_Right (NEXT_AROUND_RIGHT, eRnext) and
    --    Previous_Around_Left (PREV_AROUND_LEFT) end at E's origin;
    --  - each Next choice and the matching Previous choice undo each other.
+   --  @enum Next_Around_Origin NEXT_AROUND_ORG (eOnext): the next edge
+   --    around E's origin, sharing that origin.
+   --  @enum Next_Around_Destination NEXT_AROUND_DST (eDnext): the next edge
+   --    around E's destination, sharing that destination.
+   --  @enum Previous_Around_Origin PREV_AROUND_ORG: the previous edge around
+   --    E's origin; it undoes Next_Around_Origin.
+   --  @enum Previous_Around_Destination PREV_AROUND_DST: the previous edge
+   --    around E's destination; it undoes Next_Around_Destination.
+   --  @enum Next_Around_Left NEXT_AROUND_LEFT (eLnext): the next edge
+   --    around E's left facet, starting at E's destination.
+   --  @enum Next_Around_Right NEXT_AROUND_RIGHT (eRnext): the next edge
+   --    around E's right facet, ending at E's origin.
+   --  @enum Previous_Around_Left PREV_AROUND_LEFT: the previous edge around
+   --    E's left facet, ending at E's origin; it undoes Next_Around_Left.
+   --  @enum Previous_Around_Right PREV_AROUND_RIGHT: the previous edge
+   --    around E's right facet, starting at E's destination; it undoes
+   --    Next_Around_Right.
    type Edge_Navigation is
      (Next_Around_Origin,
       Next_Around_Destination,
@@ -363,25 +402,51 @@ package OpenCV.Geometry.Subdiv2D is
    --  from the facet on E's right to the facet on its left, Reversed_Edge E
    --  with origin and destination swapped, and Reversed_Rotated_Edge the
    --  reversed dual. Four Rotated_Edge rotations return E.
+   --  @enum Same_Edge The edge E itself.
+   --  @enum Rotated_Edge The dual edge of E (OpenCV's eRot).
+   --  @enum Reversed_Edge E with origin and destination swapped, as by
+   --    symEdge.
+   --  @enum Reversed_Rotated_Edge The reversed dual edge of E.
    type Edge_Rotation is
      (Same_Edge, Rotated_Edge, Reversed_Edge, Reversed_Rotated_Edge);
 
    --  The edge related to Edge by Direction, as by getEdge.
+   --  @param Object A ready subdivision.
+   --  @param Edge An edge identifier produced by Object, at least 4.
+   --  @param Direction The related edge to select.
+   --  @return The related edge, valid until the next Insert or Reset.
+   --  @exception OpenCV_Error An identifier of the reserved null edge, one
+   --    beyond native storage, an Object that is not ready, OpenCV
+   --    returning no edge, or another native failure.
    function Navigate
      (Object : Subdivision; Edge : Edge_Id; Direction : Edge_Navigation)
       return Edge_Id;
 
    --  The next edge around Edge's origin, as by nextEdge; the same as
    --  Navigate (Object, Edge, Next_Around_Origin).
+   --  @param Object A ready subdivision.
+   --  @param Edge An edge identifier produced by Object, at least 4.
+   --  @return The next edge around the origin, valid until the next Insert
+   --    or Reset.
+   --  @exception OpenCV_Error As for Navigate.
    function Next_Edge (Object : Subdivision; Edge : Edge_Id) return Edge_Id;
 
    --  The edge of Edge's quad-edge selected by Rotation, as by rotateEdge.
+   --  @param Object A ready subdivision.
+   --  @param Edge An edge identifier produced by Object, at least 4.
+   --  @param Rotation Which of the four quad-edge members to return.
+   --  @return The selected edge, valid until the next Insert or Reset.
+   --  @exception OpenCV_Error As for Navigate.
    function Rotate
      (Object : Subdivision; Edge : Edge_Id; Rotation : Edge_Rotation)
       return Edge_Id;
 
    --  Edge with origin and destination swapped, as by symEdge; the same as
    --  Rotate (Object, Edge, Reversed_Edge).
+   --  @param Object A ready subdivision.
+   --  @param Edge An edge identifier produced by Object, at least 4.
+   --  @return The reversed edge, valid until the next Insert or Reset.
+   --  @exception OpenCV_Error As for Navigate.
    function Symmetric_Edge
      (Object : Subdivision; Edge : Edge_Id) return Edge_Id;
 
@@ -393,8 +458,20 @@ package OpenCV.Geometry.Subdiv2D is
    --  gives no Voronoi vertex: the facet outside the super-triangle, so one
    --  end of the dual of each super-triangle edge, and a degenerate facet
    --  whose circumcenter OpenCV cannot represent.
+   --  @param Object A ready subdivision.
+   --  @param Edge An edge identifier produced by Object, at least 4.
+   --  @return The origin vertex of Edge, or No_Vertex as described above.
+   --  @exception OpenCV_Error An identifier of the reserved null edge, one
+   --    beyond native storage, an Object that is not ready, an invalid
+   --    native vertex, or another native failure.
    function Origin (Object : Subdivision; Edge : Edge_Id) return Vertex_Id;
 
+   --  The destination vertex of Edge, as by edgeDst, with the same meaning
+   --  for dual Voronoi edges and the same No_Vertex cases as Origin.
+   --  @param Object A ready subdivision.
+   --  @param Edge An edge identifier produced by Object, at least 4.
+   --  @return The destination vertex of Edge, or No_Vertex as for Origin.
+   --  @exception OpenCV_Error As for Origin.
    function Destination
      (Object : Subdivision; Edge : Edge_Id) return Vertex_Id;
 
@@ -402,14 +479,26 @@ package OpenCV.Geometry.Subdiv2D is
    --  super-triangle vertices (identifiers 1 .. 3, outside the bounds), or a
    --  Voronoi vertex. Voronoi vertex positions are meaningful only until
    --  the next Insert.
+   --  @param Object A ready subdivision.
+   --  @param Vertex An occupied vertex slot of Object; not No_Vertex.
+   --  @return The vertex position, as OpenCV stores it.
+   --  @exception OpenCV_Error No_Vertex, a free slot, an identifier beyond
+   --    native storage, an Object that is not ready, or another native
+   --    failure.
    function Vertex_Point
      (Object : Subdivision; Vertex : Vertex_Id) return OpenCV.Float32_Point;
 
    --  An edge whose origin is Vertex, as recorded by OpenCV (getVertex's
    --  firstEdge), or No_Edge for a Voronoi vertex.
+   --  @param Object A ready subdivision.
+   --  @param Vertex An occupied vertex slot of Object; not No_Vertex.
+   --  @return An edge leaving Vertex, valid until the next Insert or Reset,
+   --    or No_Edge.
+   --  @exception OpenCV_Error As for Vertex_Point, or an invalid native edge.
    function First_Edge
      (Object : Subdivision; Vertex : Vertex_Id) return Edge_Id;
 
+   --  Vertex identifiers, such as the Sites of a Voronoi_Facets request.
    type Vertex_Id_Array is array (Natural range <>) of Vertex_Id;
 
    --  One facet of a Voronoi_Diagram: Site, its position Site_Point (OpenCV's
@@ -425,6 +514,13 @@ package OpenCV.Geometry.Subdiv2D is
    --  OpenCV then reports the origin (0.0, 0.0) in place of each missing
    --  vertex, and the polygon keeps those placeholder points, so an
    --  incomplete polygon is not the true facet.
+   --  @field Site The inserted point's vertex identifier.
+   --  @field Site_Point The site's position, OpenCV's facet center.
+   --  @field First Index in the diagram's Points of the polygon's first point.
+   --  @field Last Index in the diagram's Points of the polygon's last point;
+   --    at least First in a returned diagram.
+   --  @field Complete False when the polygon holds placeholder points for
+   --    Voronoi vertices that OpenCV failed to create.
    type Voronoi_Facet is record
       Site       : Vertex_Id := No_Vertex;
       Site_Point : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);
@@ -433,11 +529,19 @@ package OpenCV.Geometry.Subdiv2D is
       Complete   : Boolean := True;
    end record;
 
+   --  The facets of a Voronoi_Diagram, in diagram order.
    type Voronoi_Facet_Array is array (Natural range <>) of Voronoi_Facet;
 
    --  Facets indexed 1 .. Facet_Count and their points indexed
    --  1 .. Point_Count. The facet polygons are consecutive, nonempty slices
-   --  of Points that follow facet order and together cover Points.
+   --  of Points that follow facet order and together cover Points. The
+   --  diagram is an Ada-owned copy; its Site identifiers follow the
+   --  Vertex_Id lifetime rules, and positions near the super-triangle
+   --  depend on the OpenCV release.
+   --  @field Facet_Count Number of facets.
+   --  @field Point_Count Total number of polygon points of all facets.
+   --  @field Facets The facets, indexed 1 .. Facet_Count.
+   --  @field Points All facet polygons, concatenated in facet order.
    type Voronoi_Diagram (Facet_Count, Point_Count : Natural) is record
       Facets : Voronoi_Facet_Array (1 .. Facet_Count);
       Points : Float32_Point_Array (1 .. Point_Count);
@@ -445,12 +549,23 @@ package OpenCV.Geometry.Subdiv2D is
 
    --  The polygon of Diagram.Facets (Index), indexed 1 .. N. Raises
    --  Constraint_Error when Index or that facet's slice lies outside Diagram.
+   --  @param Diagram A Voronoi diagram, normally from Voronoi_Facets.
+   --  @param Index A facet index in 1 .. Diagram.Facet_Count.
+   --  @return A copy of that facet's polygon, indexed 1 .. N.
+   --  @exception Constraint_Error Index outside Diagram.Facets, or a facet
+   --    slice outside Diagram.Points (only in a diagram not built by
+   --    Voronoi_Facets).
    function Facet_Points
      (Diagram : Voronoi_Diagram; Index : Positive) return Float32_Point_Array;
 
    --  The facet of every inserted point, once each and in increasing Site
    --  order, as by cv::Subdiv2D::getVoronoiFacetList for every vertex. An
    --  object without inserted points gives an empty diagram.
+   --  @param Object A ready subdivision; its Voronoi data may be recomputed.
+   --  @return The diagram of every inserted point's facet.
+   --  @exception OpenCV_Error An Object that is not ready, an inconsistent
+   --    native result, or another native failure; Object stays ready after
+   --    a native failure.
    function Voronoi_Facets
      (Object : in out Subdivision) return Voronoi_Diagram;
 
@@ -461,6 +576,13 @@ package OpenCV.Geometry.Subdiv2D is
    --  native storage raise OpenCV.OpenCV_Error. Unlike OpenCV, which treats
    --  an empty index list as every vertex, empty Sites give an empty
    --  diagram.
+   --  @param Object A ready subdivision; its Voronoi data may be recomputed.
+   --  @param Sites Vertices of inserted points, with any bounds; may repeat.
+   --  @return The facets of Sites in order, one per element.
+   --  @exception OpenCV_Error A Sites element that is not an inserted point's
+   --    vertex (checked before any native computation), an Object that is
+   --    not ready, an inconsistent native result, or another native failure;
+   --    Object stays ready after a native failure.
    function Voronoi_Facets
      (Object : in out Subdivision; Sites : Vertex_Id_Array)
       return Voronoi_Diagram;
