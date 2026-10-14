@@ -1,0 +1,134 @@
+name: Debian 12 installed consumers
+
+# Two-stage installed-consumer qualification with Debian 12's native
+# GNAT 12.2.0. The prepare job builds and tests the exact revisions and
+# installs Core and Geometry into two clean prefixes. The consume job runs
+# in a fresh container with no checkout and no Alire; it builds, runs and
+# inspects independent Ada and mixed Ada/C++ consumers through the
+# installed projects, before and after moving both prefixes.
+
+on:
+  push:
+    branches: [main, 'feature/**', 'corrective/**', 'release/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Provisional Core 0.5.0 development candidate (Core main after #81).
+  # The release gate repeats this job against the published Core 0.5.0.
+  CORE_COMMIT: 8f1c5d0626b463c291a4d919767f7a2d77c54ba9
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    container: debian:12
+    steps:
+      - name: Install native compiler, matching runtime and OpenCV
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl unzip git binutils \
+            gnat-12 gprbuild g++ libopencv-dev pkg-config
+
+      - name: Checkout Geometry
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: geometry
+
+      - name: Checkout Core
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/opencv_core_ada
+          ref: ${{ env.CORE_COMMIT }}
+          path: core
+
+      - name: Verify exact source identities
+        run: |
+          set -eu
+          expected=${{ github.event.pull_request.head.sha || github.sha }}
+          test "$(git -c safe.directory="$PWD/geometry" -C geometry rev-parse HEAD)" = "$expected"
+          test "$(git -c safe.directory="$PWD/core" -C core rev-parse HEAD)" = "$CORE_COMMIT"
+
+      - name: Retrieve test-only AUnit sources without selecting a compiler
+        run: |
+          set -eu
+          curl --fail --location --output /tmp/alire.zip \
+            https://github.com/alire-project/alire/releases/download/v2.1.1/alr-2.1.1-bin-x86_64-linux.zip
+          unzip -q /tmp/alire.zip -d /tmp/alire
+          install -m 0755 /tmp/alire/bin/alr /usr/local/bin/alr
+          mkdir -p /tmp/aunit-source
+          cd /tmp/aunit-source
+          alr -n get --only aunit=26.0.0
+
+      - name: Build, test and install Core and Geometry
+        run: |
+          set -eu
+          export GNAT12_SOURCE_ROOT="$PWD/geometry"
+          export GNAT12_CORE_ROOT="$PWD/core"
+          export GNAT12_CORE_COMMIT="$CORE_COMMIT"
+          export GNAT12_AUNIT_ROOT=$(find /tmp/aunit-source -mindepth 1 \
+            -maxdepth 1 -type d -name 'aunit_*')
+          export GNAT12_WORK=/evidence/work
+          export CONSUMER_PAYLOAD=/evidence/payload
+          export CONSUMER_LOGS=/evidence/prepare-logs
+          sh geometry/tests/installed_consumers/prepare.sh
+          tar -C /evidence -cf /evidence/payload.tar payload
+
+      - name: Preserve preparation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-debian12-consumer-preparation
+          path: /evidence/prepare-logs/
+          if-no-files-found: error
+
+      - name: Hand the installed payload to the consumer stage
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-debian12-consumer-payload
+          path: /evidence/payload.tar
+          if-no-files-found: error
+
+  consume:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    container: debian:12
+    steps:
+      - name: Install native compiler, matching runtime and OpenCV only
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            binutils gnat-12 gprbuild g++ libopencv-dev pkg-config
+
+      - name: Receive the installed payload
+        uses: actions/download-artifact@v4
+        with:
+          name: geometry-debian12-consumer-payload
+          path: /artifact
+
+      - name: Verify the consumer environment has no checkout or Alire
+        run: |
+          set -eu
+          test -z "$(ls -A "$GITHUB_WORKSPACE")"
+          if command -v alr; then exit 1; fi
+          if command -v git; then exit 1; fi
+
+      - name: Build, run and relocate independent consumers
+        run: |
+          set -eu
+          mkdir -p /evidence
+          tar -C /evidence -xf /artifact/payload.tar
+          sh /evidence/payload/consume.sh /evidence/payload \
+            /evidence/consumer-logs
+
+      - name: Preserve consumer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-debian12-consumer-evidence
+          path: /evidence/consumer-logs/
+          if-no-files-found: error

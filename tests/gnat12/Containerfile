@@ -1,0 +1,10 @@
+# Local Debian 12 native GNAT 12 qualification environment. It installs the
+# same packages as .github/workflows/gnat12-production.yml and
+# .github/workflows/debian12-installed-consumers.yml. It contains no Alire;
+# AUnit sources are supplied from outside.
+FROM docker.io/library/debian:12
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl unzip git binutils \
+      gnat-12 gprbuild g++ libopencv-dev pkg-config \
+ && rm -rf /var/lib/apt/lists/*
