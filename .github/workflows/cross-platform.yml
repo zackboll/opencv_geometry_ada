@@ -204,6 +204,146 @@ jobs:
 
           echo "PKG_CONFIG_PATH=${pkg_path}" >> "$GITHUB_ENV"
 
+      # GNAT 16.1.0 links with its own bundled ld, which rejects the .tbd
+      # stubs of the macOS 27 SDK (target arm64e.x1; see
+      # https://github.com/alire-project/GNAT-FSF-builds/issues/112). Runner
+      # images with Command Line Tools 27 make that SDK the GNAT driver's
+      # default sysroot. Every later GNAT compile and link therefore uses the
+      # active Xcode's macOS 26.x SDK, through SDKROOT (which the GCC driver
+      # takes as its sysroot) and LIBRARY_PATH. There is no fallback: the
+      # job fails if no compatible SDK is installed.
+      - name: Select macOS SDK for the GNAT linker
+        run: |
+          set -eu
+
+          echo "=== Xcode and Command Line Tools ==="
+          developer_dir=$(xcode-select -p)
+          echo "xcode-select: ${developer_dir}"
+          xcodebuild -version
+          pkgutil --pkg-info=com.apple.pkg.CLTools_Executables || true
+
+          echo "=== Installed macOS SDKs ==="
+          xcodebuild -showsdks | grep -i 'macos' || true
+          ls -l /Library/Developer/CommandLineTools/SDKs || true
+          clt_libsystem=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libSystem.tbd
+          if [ -f "${clt_libsystem}" ]; then
+            echo "Command Line Tools libSystem.tbd lists arm64e.x1:" \
+              "$(grep -c 'arm64e\.x1' "${clt_libsystem}" || true) line(s)"
+          fi
+
+          sdk=$(xcrun --sdk macosx --show-sdk-path)
+          sdk_version=$(xcrun --sdk macosx --show-sdk-version)
+          echo "Active Xcode macOS SDK: ${sdk} (${sdk_version})"
+
+          case "${sdk}" in
+            "${developer_dir}"/Platforms/MacOSX.platform/Developer/SDKs/*)
+              ;;
+            *)
+              echo "error: xcrun did not resolve a macOS SDK inside the selected Xcode (${developer_dir}): ${sdk}" >&2
+              exit 1
+              ;;
+          esac
+
+          case "${sdk_version}" in
+            26.*)
+              ;;
+            *)
+              echo "error: macOS SDK ${sdk_version} is not a 26.x SDK; GNAT 16.1.0's bundled linker cannot read newer SDK stubs" >&2
+              exit 1
+              ;;
+          esac
+
+          libsystem="${sdk}/usr/lib/libSystem.tbd"
+          if [ ! -f "${libsystem}" ]; then
+            echo "error: ${libsystem} is missing" >&2
+            exit 1
+          fi
+          sed -n '1,8p' "${libsystem}"
+          if grep -q 'arm64e\.x1' "${libsystem}"; then
+            echo "error: ${libsystem} lists arm64e.x1, which GNAT 16.1.0's bundled linker rejects" >&2
+            exit 1
+          fi
+
+          echo "SDKROOT=${sdk}" >> "$GITHUB_ENV"
+          echo "LIBRARY_PATH=${sdk}/usr/lib" >> "$GITHUB_ENV"
+
+      - name: Verify the GNAT linker with the selected SDK
+        run: |
+          set -eu
+
+          # Fails unless the linker trace shows libSystem loaded from the
+          # selected SDK, with no Command Line Tools SDK file and no
+          # rejected stub.
+          check_link_trace() {
+            if grep -nE 'malformed file|unknown architecture' "$1"; then
+              echo "error: the linker rejected an SDK stub" >&2
+              return 1
+            fi
+            if ! grep -F "${SDKROOT}/usr/lib/libSystem" "$1"; then
+              echo "error: the linker trace does not show libSystem from ${SDKROOT}" >&2
+              return 1
+            fi
+            if grep -n '/Library/Developer/CommandLineTools/SDKs/' "$1"; then
+              echo "error: the linker loaded a Command Line Tools SDK file" >&2
+              return 1
+            fi
+          }
+
+          probe_root="${RUNNER_TEMP}/gnat-sdk-probe"
+          rm -rf "${probe_root}"
+          mkdir -p "${probe_root}"
+          cd "${probe_root}"
+          alr -n -q init --bin sdk_probe >/dev/null
+          cd sdk_probe
+          cat > src/sdk_probe.adb <<'EOF'
+          with Ada.Command_Line;
+          with Ada.Numerics.Long_Elementary_Functions;
+          with Ada.Text_IO;
+
+          procedure Sdk_Probe is
+             use Ada.Numerics.Long_Elementary_Functions;
+             X : constant Long_Float :=
+               Long_Float (Ada.Command_Line.Argument_Count) + 0.5;
+          begin
+             Ada.Text_IO.Put_Line ("linked: sin =" & Long_Float'Image (Sin (X)));
+          end Sdk_Probe;
+          EOF
+
+          echo "=== GNAT toolchain ==="
+          alr -n exec -- gnat --version | head -1
+          alr -n exec -- gprbuild --version | head -1
+          gnat_ld=$(alr -n exec -- gcc -print-prog-name=ld)
+          echo "GNAT linker: ${gnat_ld}"
+          "${gnat_ld}" -v 2>&1 | head -2 || true
+          echo "GNAT sysroot without SDKROOT:" \
+            "$(env -u SDKROOT -u LIBRARY_PATH alr -n exec -- gcc -print-sysroot)"
+          echo "GNAT sysroot with SDKROOT: $(alr -n exec -- gcc -print-sysroot)"
+
+          # Control: the same link with the GNAT driver's default sysroot.
+          # Its result classifies this runner image and does not fail the job.
+          echo "=== Control: GNAT default sysroot ==="
+          default_log="${RUNNER_TEMP}/sdk-probe-default.log"
+          if env -u SDKROOT -u LIBRARY_PATH \
+            alr -n build -- -f -largs -Wl,-t > "${default_log}" 2>&1
+          then
+            echo "::notice title=macOS SDK control::The GNAT default sysroot links on this runner image; it does not show GNAT-FSF-builds#112"
+          else
+            echo "::notice title=macOS SDK control::The GNAT default sysroot fails to link on this runner image (GNAT-FSF-builds#112)"
+          fi
+          grep -nE 'libSystem|malformed file|unknown architecture|arm64e' "${default_log}" || true
+
+          echo "=== GNAT link with ${SDKROOT} ==="
+          selected_log="${RUNNER_TEMP}/sdk-probe-selected.log"
+          if ! alr -n build -- -f -largs -Wl,-t > "${selected_log}" 2>&1; then
+            cat "${selected_log}"
+            echo "error: a minimal Ada program does not link with ${SDKROOT}" >&2
+            exit 1
+          fi
+          check_link_trace "${selected_log}"
+          ./bin/sdk_probe
+          otool -l bin/sdk_probe | grep -A4 LC_BUILD_VERSION
+          otool -L bin/sdk_probe
+
       - name: Report OpenCV and C++ compilers
         run: |
           set -eu
@@ -300,6 +440,33 @@ jobs:
             echo "error: Geometry shim dylib depends on libstdc++" >&2
             exit 1
           fi
+
+      # The AUnit test executable is the link that GNAT-FSF-builds#112
+      # breaks. Link it with a linker trace and require libSystem from the
+      # selected SDK before running the suite.
+      - name: Link Geometry tests against the selected SDK
+        run: |
+          set -eu
+          link_log="${RUNNER_TEMP}/geometry-tests-link.log"
+          if ! alr -n -C tests build -- -largs -Wl,-t > "${link_log}" 2>&1; then
+            cat "${link_log}"
+            echo "error: the Geometry tests do not link with ${SDKROOT}" >&2
+            exit 1
+          fi
+          if grep -nE 'malformed file|unknown architecture' "${link_log}"; then
+            echo "error: the linker rejected an SDK stub" >&2
+            exit 1
+          fi
+          if ! grep -F "${SDKROOT}/usr/lib/libSystem" "${link_log}"; then
+            cat "${link_log}"
+            echo "error: the linker trace does not show libSystem from ${SDKROOT}" >&2
+            exit 1
+          fi
+          if grep -n '/Library/Developer/CommandLineTools/SDKs/' "${link_log}"; then
+            echo "error: the linker loaded a Command Line Tools SDK file" >&2
+            exit 1
+          fi
+          otool -l tests/bin/tests | grep -A4 LC_BUILD_VERSION
 
       - name: Run Geometry tests
         run: |
