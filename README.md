@@ -3,10 +3,21 @@
 Thick Ada binding to OpenCV Geometry, published as `opencv_geometry`.
 Repository: https://github.com/zackboll/opencv_geometry_ada
 
-Release 0.2.0 certifies the existing safe 2-D surface against exact OpenCV
-4.14.0. See the [release notes and evidence](docs/release-0.2.0.md), including
-the intentionally deferred native operations. No coverage-percentage target
-overrides those safety decisions.
+Release 0.3.0 adds batch point transforms and an opt-in hardened Float32
+convex intersection, makes closest-ellipse points and Float32 Subdiv2D bounds
+available on every supported OpenCV release, requires `opencv_core` 0.5.0 and
+builds with Debian 12's GNAT 12. See the
+[0.3.0 release notes](docs/release-0.3.0.md), including the intentionally
+deferred native operations and [installation](#installation); the
+[0.2.0 release notes](docs/release-0.2.0.md) record the previous release. No
+coverage-percentage target overrides those safety decisions.
+
+> **Not qualified: AdaCore GNAT 12 and Yocto Scarthgap.** By maintainer
+> decision, 0.3.0 ships without testing in that environment; its disposition
+> is `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`. The Debian AArch64
+> reference (Debian's cross GNAT 12, a Debian arm64 sysroot and user-mode
+> emulation) is reference evidence only, not support for either. See
+> [the release notes](docs/release-0.3.0.md#deferred-adacore-gnat-12--yocto-scarthgap-testing).
 
 > **Documentation:** the generated API reference, operation browser and five
 > developer guides are built by `sh scripts/generate_docs.sh` and published
@@ -78,9 +89,11 @@ Empty input returns the same null range without a native call on every version.
 The backport preserves the three iterations, rotation, semiaxis swapping,
 integer conversion and numerical failure behavior. See the
 [Task 021 qualification](docs/versioned-features-research.md#task-021-portable-closest-ellipse-points).
-The backport's retained upstream license is in
-[`cpp/closest_ellipse_compat.hpp`](cpp/closest_ellipse_compat.hpp); binary
-redistributions must reproduce that notice, conditions and disclaimer.
+The backport's upstream notices, OpenCV's Intel License Agreement header and
+the MIT License of the code OpenCV's `solveFast` translates, are retained
+verbatim in [`cpp/closest_ellipse_compat.hpp`](cpp/closest_ellipse_compat.hpp)
+and [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES); binary redistributions must
+reproduce them.
 Configuration searches pkg-config packages `opencv5`, `opencv4`, then `opencv`,
 reports the actual version/backend and generates the install GPR configuration.
 
@@ -92,9 +105,10 @@ Operations: `Contour_Area`, `Arc_Length`, `Compute_Moments`,
 `Minimum_Enclosing_Triangle`, `Minimum_Area_Rectangle`, `Fit_Ellipse`,
 `Fit_Ellipse_AMS`, `Fit_Ellipse_Direct`, `Fit_Line_2D`, `Box_Points`,
 `Intersect_Convex_Polygons`, `Intersect_Convex_Polygons_Extended_Float32`
-(new, not in the 0.2.0 release), `Intersect_Rotated_Rectangles`,
+(new in 0.3.0), `Intersect_Rotated_Rectangles`,
 `Get_Rotation_Matrix_2D`, `Get_Affine_Transform`, `Invert_Affine_Transform`,
-`Get_Perspective_Transform`, and `Transform_Point`. The child package
+`Get_Perspective_Transform`, `Transform_Point`, and `Transform_Points` (new in
+0.3.0). The child package
 `OpenCV.Geometry.Subdiv2D` provides planar subdivisions. Every Geometry
 operation common to OpenCV 4.6, 4.10, and 5.0 has a thick binding, some for
 only a subset of the native modes; `docs/coverage.md` maps each native
@@ -417,8 +431,7 @@ The validator costs O(n**2) per polygon. As a measurement on one x86-64
 development machine, not a performance guarantee, a pair of accepted
 4096-gons took 0.11 to 0.19 s per call in a release build.
 
-This operation is new in Task 027 and is not part of the published 0.2.0
-release; it awaits pull-request review. Task 027 qualified it on Linux
+This operation is new in 0.3.0. Task 027 first qualified it on Linux
 against exact-tag OpenCV 4.6.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0 and
 5.0.0, each with Core 0.3.0 and 0.4.1. All 14 combinations passed the 542
 AUnit tests in both the release and validation profiles, plus the
@@ -431,9 +444,12 @@ all 542 tests in a
 [manual workflow run](https://github.com/zackboll/opencv_geometry_ada/actions/runs/38326589381);
 Windows with Core 0.3.0 was not tested. See the
 [qualification record](docs/universal-float32-intersection.md#task-027c1--linux-exact-tag-qualification)
-and the [matrix results](docs/qualification-027c1-matrix.csv). The upstream
-algorithm keeps its Intel/OpenCV and Joseph O'Rourke notices in the header,
-and binary redistributions must reproduce them.
+and the [matrix results](docs/qualification-027c1-matrix.csv). The
+[0.3.0 release qualification](docs/geometry-0.3.0-release-qualification.md)
+repeated the seven Linux builds with Core 0.5.0. The upstream
+algorithm's Intel/OpenCV and Joseph O'Rourke notices are retained verbatim in
+the header and in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES), and binary
+redistributions must reproduce them.
 
 `Intersect_Rotated_Rectangles` returns `No_Intersection`,
 `Partial_Intersection`, or `Full_Intersection` (OpenCV `INTERSECT_NONE`,
@@ -814,6 +830,32 @@ site pairing at run time; the facet contents themselves are OpenCV's and are
 covered by tests, including nearest-site checks in well-spaced fixtures;
 nothing here is proved by GNATprove.
 
+## Installation
+
+The Alire crate is `opencv_geometry`; it depends on `opencv_core
+>=0.5.0 & <0.6.0`. Once Core 0.5.0 and Geometry 0.3.0 are in the Alire
+community index:
+
+```sh
+alr with opencv_geometry^0.3.0
+```
+
+When 0.3.0 was prepared, Core 0.5.0 was still under index review
+([alire-index#2227](https://github.com/alire-project/alire-index/pull/2227)),
+so neither release could be resolved from the index. Until both are
+indexed, pin them to their release commits; the
+[release notes](docs/release-0.3.0.md#installation) give the commands.
+
+Debian 12's native GNAT 12.2.0 (`gnat-12`, `gprbuild`) is qualified on
+x86_64, and Alire can select it as an external toolchain; the release notes
+give the command and the exact scope.
+
+Without Alire, build and install with GPRinstall: `opencv_geometry_shim.gpr`,
+then `opencv_geometry.gpr`, into one prefix. The qualified sequence is
+[`tests/installed_consumers/prepare.sh`](tests/installed_consumers/prepare.sh).
+The prefix receives `share/doc/opencv_geometry/LICENSE` and
+`THIRD_PARTY_NOTICES`; keep both with any redistribution.
+
 ## Development
 
 Place Core at `/home/zboll/git/opencv/core` alongside this repository at
@@ -829,4 +871,7 @@ alr -n -C tests run
 Cross-platform CI validates Ubuntu OpenCV 4 and Homebrew OpenCV 5 on pull
 requests and pushes. MSYS2 OpenCV 5 runs after a push/merge to `main` or
 on manual dispatch, not as a PR gate. CI checks native shim dependencies.
-Licensed under Apache-2.0.
+
+Licensed under Apache-2.0 ([`LICENSE`](LICENSE)). The C++ shim contains
+compatibility code adapted from OpenCV and code it credits; their notices are
+in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).

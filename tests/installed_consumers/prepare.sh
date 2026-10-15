@@ -9,7 +9,8 @@
 #   3. builds Geometry from a fresh export against the installed Core only;
 #   4. installs Geometry into a second clean prefix without reinstalling
 #      Core;
-#   5. verifies the installed projects, ALIs, libraries and dependencies;
+#   5. verifies the installed projects, ALIs, libraries, dependencies and
+#      redistribution notices;
 #   6. stages the two prefixes, the consumer sources and consume.sh in the
 #      payload for the separate consumer stage.
 #
@@ -49,6 +50,9 @@ GNAT12_SOURCE_ROOT=$root GNAT12_PROFILES=release \
     sh "$here/../gnat12/run_production.sh"
 mkdir -p "$logs"
 cp -a "$work/logs" "$logs/production"
+# Positive and negative controls of the notice check used in step 5.
+sh "$here/test_check_notices.sh" "$root" > "$logs/notice-controls.log" 2>&1 \
+    || fail "notice check controls failed; see $logs/notice-controls.log"
 
 unset GPR_PROJECT_PATH ADA_PROJECT_PATH ADA_INCLUDE_PATH ADA_OBJECTS_PATH
 unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH GCC_EXEC_PREFIX
@@ -115,10 +119,17 @@ for file in \
     "$geometry_prefix/include/opencv_geometry/opencv-geometry-subdiv2d.ads" \
     "$geometry_prefix/lib/opencv_geometry/libopencv_geometry_ada.a" \
     "$geometry_prefix/lib/opencv_geometry/opencv-geometry.ali" \
-    "$geometry_prefix/lib/opencv_geometry_shim/libopencv_geometry_shim.a"
+    "$geometry_prefix/lib/opencv_geometry_shim/libopencv_geometry_shim.a" \
+    "$geometry_prefix/share/doc/opencv_geometry/LICENSE" \
+    "$geometry_prefix/share/doc/opencv_geometry/THIRD_PARTY_NOTICES"
 do
     test -f "$file" || fail "missing installed file: $file"
 done
+# Redistribution notices: verbatim upstream text in the installed-from
+# export, and byte-identical copies in the Geometry prefix.
+sh "$here/check_notices.sh" "$build" "$geometry_prefix" \
+    > "$logs/notices.log" 2>&1 \
+    || fail "redistribution notice check failed; see $logs/notices.log"
 if find "$core_prefix" -name '*geometry*' | grep .; then
     fail "Geometry content installed into the Core prefix"
 fi
@@ -178,6 +189,9 @@ cp "$here/ada_consumer.gpr" "$here/mixed_consumer.gpr" \
     "$here/installed_mixed_consumer.adb" "$here/application.cpp" \
     "$payload/consumers/"
 cp "$here/consume.sh" "$payload/consume.sh"
+(cd "$payload" && sha256sum geometry-prefix/share/doc/opencv_geometry/LICENSE \
+    geometry-prefix/share/doc/opencv_geometry/THIRD_PARTY_NOTICES) \
+    > "$payload/notices.sha256"
 {
     echo "geometry: $(git -c "safe.directory=$root" -C "$root" rev-parse HEAD)"
     echo "core: ${GNAT12_CORE_COMMIT}"

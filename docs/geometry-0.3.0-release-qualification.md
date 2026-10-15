@@ -5,9 +5,10 @@ records, for every phase, the exact sources, commands, compiler and runtime
 identities, native OpenCV version, disposition and unresolved blockers.
 
 Nothing in this document authorizes a tag, a GitHub release or an Alire
-index submission. Publication (REL-003-008) needs every mandatory gate to
-pass on the exact release-candidate commit and explicit maintainer
-authorization.
+index submission. Publication (REL-003-008) needs every mandatory gate of the
+[2026-10-14 release policy](#maintainer-decision-2026-10-14-release-without-adacoreyocto-qualification)
+to pass on the exact release-candidate commit, and the maintainer's own
+review and merge of the release-candidate pull request.
 
 A result applies only to the exact source revisions it names. A Core result
 at one commit does not certify another Core commit, and a development-branch
@@ -22,10 +23,78 @@ result does not certify the release candidate.
 | 002 | Debian 12 installed consumers | `DEBIAN12_GNAT12_INSTALLED_CONSUMERS_QUALIFIED`; requalified against Core 0.5.0 `f8aef00` in REL-003-006 |
 | 003 | Isolated AArch64 cross configuration | `CROSS_CONFIGURATION_CONTROLS_QUALIFIED` (synthetic positive and negative controls; not production cross-build qualification) |
 | 004 | Debian AArch64 reference qualification | Reference cross build, install and consumer link PASS; emulated (qemu-user) execution PASS; target execution NOT RUN; requalified against Core 0.5.0 `f8aef00` in REL-003-006 |
-| 005 | AdaCore GNAT 12 / Yocto Scarthgap | `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (inputs unavailable; external-input adapter ready) |
-| 006 | Release regression and CI matrix | Core 0.5.0 bound and pins reconciled; every available gate PASS against Core 0.5.0; the AdaCore/Yocto gate remains blocked |
-| 007 | Release candidate 0.3.0 | Not started: blocked by 005 (Platform B) and by 000 (Core 0.5.0 not yet indexed) |
-| 008 | Tag and Alire index submission | Requires maintainer authorization |
+| 005 | AdaCore GNAT 12 / Yocto Scarthgap | Never satisfied: `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (inputs unavailable; external-input adapter ready). For 0.3.0: `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED` (maintainer decision, 2026-10-14) |
+| 006 | Release regression and CI matrix | Core 0.5.0 bound and pins reconciled; every available gate PASS against Core 0.5.0; the AdaCore/Yocto gate remained blocked |
+| 007 | Release candidate 0.3.0 | Candidate `4902b76`: all eight mandatory gates PASS (`GEOMETRY_0_3_0_SOURCE_RELEASE_READY` for that commit; the release PR head is requalified, see below). Alire: `CORE_INDEX_PENDING`. AdaCore/Yocto: `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED` |
+| 008 | Tag and Alire index submission | After the maintainer merges the release-candidate PR; the Alire submission also waits for Core 0.5.0 to be indexed |
+
+## Maintainer decision (2026-10-14): release without AdaCore/Yocto qualification
+
+On 2026-10-14 the maintainer decided that `opencv_geometry` 0.3.0 may ship
+on the existing Debian and cross-platform evidence, without actual AdaCore
+GNAT 12 or Yocto Scarthgap validation. The maintainer will run that testing
+independently and may publish a later corrective release.
+
+This decision supersedes the mandatory AdaCore GNAT 12 / Yocto Scarthgap
+(Platform B) acceptance gate that REL-003-000 to REL-003-006 defined. It
+does not change their record: the original qualification requirement was
+**not satisfied**. Neither input was ever available, REL-003-005 ended with
+`ADACORE_YOCTO_QUALIFICATION_BLOCKED`, and none of
+`ADACORE_GNAT12_CROSS_BUILD_QUALIFIED`, `YOCTO_SCARTHGAP_SYSROOT_QUALIFIED`,
+`GEOMETRY_YOCTO_CROSS_INSTALL_QUALIFIED` or
+`GEOMETRY_YOCTO_CONSUMER_LINK_QUALIFIED` was ever established.
+
+AdaCore/Yocto qualification disposition for 0.3.0:
+
+**`DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`**
+
+Deferred testing is not successful testing. This disposition is not PASS,
+and no release text may present AdaCore GNAT 12 or Yocto Scarthgap as a
+tested or supported configuration of 0.3.0. The Debian AArch64 reference
+uses Debian's cross GNAT 12 and a Debian arm64 sysroot; it substitutes for
+neither.
+
+### Mandatory release gates for 0.3.0
+
+Each must pass on the exact release-candidate commit with Core 0.5.0
+(`f8aef00`):
+
+1. Debian 12 x86_64 GNAT 12 production and runtime (REL-003-001 job).
+2. Debian 12 independent installed consumers (REL-003-002 job), now
+   including the installed redistribution notices.
+3. Debian AArch64 reference cross-build, install and consumer-link
+   qualification (REL-003-004 job).
+4. The existing Linux, macOS and Windows regression qualification
+   (REL-003-006 matrix and hosted workflows).
+5. GNATdoc generation and documentation completeness: zero warnings and
+   452/452 documented public items, guide examples and site validation.
+6. License and distribution packaging checks.
+7. Immutable release-source qualification: exact commit and tree
+   identities, a clean source export, and no production path pins.
+8. A valid Alire manifest and dependency resolution.
+
+Outside the 0.3.0 release scope: execution on target hardware, and AdaCore
+or Yocto certification of any kind.
+
+### Post-release validation and corrective releases
+
+1. After the `0.3.0` tag exists, the maintainer runs
+   `tests/cross/qualify_adacore_yocto.sh EVIDENCE` (REL-003-005) on a clean
+   checkout of that tag, with Core 0.5.0, the AdaCore GNAT 12 AArch64 cross
+   toolchain, the Scarthgap sysroot and `OPENCV_CROSS_YOCTO_PROVENANCE`. The
+   result counts only if all four Platform B states are printed. Target
+   execution, if hardware is available, is recorded separately.
+2. The outcome, pass or fail, is recorded on `main` with the exact tag,
+   Core, toolchain and sysroot identities. The `0.3.0` tag, its commit and
+   its Alire manifest are never moved or rewritten.
+3. A defect that admits a compatible correction is fixed in `0.3.1`: a
+   branch from the `0.3.0` tag, narrowly scoped changes, a regression test
+   for each defect, every mandatory gate above repeated on the 0.3.1
+   candidate, and the AdaCore/Yocto adapter run on that candidate. A
+   correction that needs an incompatible API change waits for 0.4.0.
+4. Only a release whose own candidate passed that gate may describe AdaCore
+   GNAT 12 / Yocto Scarthgap as tested, and then only for the exact
+   configuration recorded.
 
 ## Source identities
 
@@ -688,6 +757,11 @@ states
 `GEOMETRY_YOCTO_CONSUMER_LINK_QUALIFIED` stay pending, and they block
 release certification.
 
+Later on 2026-10-14 the maintainer removed this gate from the 0.3.0 release
+([maintainer decision](#maintainer-decision-2026-10-14-release-without-adacoreyocto-qualification)).
+The four states remain unestablished; the 0.3.0 disposition is
+`DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`.
+
 ### External-input adapter
 
 `tests/cross/qualify_adacore_yocto.sh EVIDENCE` runs the qualification once
@@ -894,6 +968,11 @@ let the installed-consumer check require them.
 
 ### Release readiness
 
+Superseded in part by the
+[2026-10-14 maintainer decision](#maintainer-decision-2026-10-14-release-without-adacoreyocto-qualification):
+Platform B no longer blocks 0.3.0, while Core 0.5.0 indexing still blocks
+the Alire submission. The text below is the record as of REL-003-006.
+
 The release candidate (REL-003-007) is not started. Two prerequisites are
 outside this campaign's control:
 
@@ -920,3 +999,313 @@ Once both prerequisites are met, on the exact release-candidate commit:
 4. Repeat every gate in this document on the release-candidate commit.
    Then run `alr publish` as a dry run only; the tag and the index
    submission wait for REL-003-008 authorization.
+
+## REL-003-007: release candidate 0.3.0
+
+### Starting state
+
+Recorded 2026-10-14 after fetching Geometry, Core and the Alire index.
+
+| Item | Finding |
+| --- | --- |
+| Geometry PRs #36 to #42 | All merged by the maintainer on 2026-10-14. `main` is `9142e9c3134ded907204ae0304acc28ab602b7a9`, the merge of #42 |
+| Core tag `0.5.0` | Tag object `8f962690b3b25eafcb6c7e7363a6d097a3c22366`, commit `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f` |
+| Geometry Core constraint | `opencv_core = ">=0.5.0 & <0.6.0"`; `alire.toml` has no pin |
+| Alire index PR [#2227](https://github.com/alire-project/alire-index/pull/2227), "Add opencv_core 0.5.0" | Open, review required, all 22 checks successful. Head `d4766195c226e4952fe78fb23d19f9b99684b870`; its only file is `index/op/opencv_core/opencv_core-0.5.0.toml` (SHA-256 `9895bc0265d856b74f489be4c69cb8988f07e5b3c05fce3571bf48fe312e3dfa`), origin commit `f8aef00` |
+| Alire community index `stable-1.4.0` | `e88e083eaa59c7781622475a1ac769dd33afe16e`: Core 0.1.0 to 0.4.1 and Geometry 0.1.0 and 0.2.0; no Core 0.5.0 |
+| Geometry 0.3.0 tag or release PR | None |
+
+The release branch `release/opencv-geometry-0.3.0` starts at `origin/main`
+`9142e9c` in its own worktree. No other worktree or branch was changed.
+
+### Distribution notices
+
+Finding (REL-003-006): no installed prefix carried a license or notice.
+
+Review against the upstream sources, fetched by tag and checked by Git
+blob identity:
+
+- OpenCV's 40-line Intel License Agreement file header is byte-identical
+  in 4.11.0 and 4.12.0 `modules/imgproc/src/geometry.cpp`, 4.12.0
+  `shapedescr.cpp`, 4.13.0 `subdivision2d.cpp` and 5.0.0
+  `modules/geometry/src/shapedescr.cpp`.
+  `cpp/convex_intersection_compat.hpp` carried it verbatim. The headers
+  `cpp/closest_ellipse_compat.hpp` and `cpp/subdiv2d_compat_license.hpp`
+  carried a reworded and rewrapped text: no "IMPORTANT: READ BEFORE ..."
+  preamble, and "Redistributions" for "Redistribution's".
+- Joseph O'Rourke's notice: the copyright lines were verbatim, the preamble
+  above them reworded.
+- New finding: OpenCV's `solveFast`, copied as `solve_fast`, translates
+  `ellipse_trig_free.py` of
+  [0xfaded/ellipse_demo](https://github.com/0xfaded/ellipse_demo) line for
+  line, and OpenCV's source cites that file. The repository is
+  MIT-licensed, "Copyright (c) 2017 Carl Chatfield" (`LICENSE` blob
+  `f163f238` at commit `a420f769`). No Geometry file carried that license.
+- OpenCV 4.5.0 and later are Apache-2.0. OpenCV 4.12.0's `LICENSE` (blob
+  `d6456956`) is byte-identical to Geometry's `LICENSE`. OpenCV has no
+  `NOTICE` file at 4.11.0, 4.12.0, 4.13.0 or 5.0.0, but has a `COPYRIGHT`
+  file.
+- GPRinstall installs the shim's C++ body,
+  `include/opencv_geometry_shim/opencv_geometry_shim.cpp`, which contains
+  the adapted Subdiv2D initialization. The `.hpp` headers are not installed;
+  under the default C++ naming they are not GPR sources.
+
+Correction (commit `250942c4416cf0026fbc4a9b02fc35899470f8b9`):
+
+- `THIRD_PARTY_NOTICES` names each piece of adapted code and its upstream
+  file (tag and blob), and reproduces verbatim, between BEGIN and END lines:
+  the Intel License Agreement header, OpenCV's 4.13.0 `COPYRIGHT` file
+  (the 4.11.0 and 4.12.0 file lacks only the "OpenCV AI" line), O'Rourke's
+  notice and the ellipse_demo MIT License. It states that OpenCV's
+  Apache-2.0 text is the same as `LICENSE`.
+- The three C++ headers now carry the upstream notices verbatim, the
+  closest-ellipse header also the MIT License as `//` comments. These are
+  comment-only changes.
+- `opencv_geometry.gpr` declares
+  `Required_Artifacts ("share/doc/opencv_geometry") use ("LICENSE",
+  "THIRD_PARTY_NOTICES")`. A probe with Debian 12's GPRinstall 2023
+  ("GPRINSTALL Pro 18.0w") showed that it installs both files with relative
+  manifest entries, and fails with exit status 7 ("file does not exist") if
+  one is missing. No path is written into the installed projects, so the
+  prefix stays relocatable.
+- `tests/installed_consumers/check_notices.sh` fails unless `LICENSE` is
+  the Apache-2.0 text, every BEGIN/END block occurs exactly once with the
+  SHA-256 of its upstream text, the C++ headers contain those blocks
+  verbatim, and each given prefix holds byte-identical copies.
+  `test_check_notices.sh` runs it on one unmodified case, which must pass,
+  and 15 mutations, which must each be rejected for the intended reason:
+  altered or missing lines in each block, duplicate and unclosed blocks,
+  paraphrased or missing notices in each header, a changed `LICENSE`, and
+  missing or stale installed copies.
+- `prepare.sh` runs those controls, then the check on the Geometry prefix,
+  and records the installed digests in the payload. `consume.sh` requires
+  the same digests in the installed and relocated prefixes, without
+  sources. The AArch64 reference consumer step
+  (`qualify_reference_consumers.py`) runs the check on its installed and
+  relocated Geometry prefixes, and so will the AdaCore/Yocto adapter, which
+  shares that pipeline.
+
+Pinned upstream digests:
+
+| Block | Upstream text | SHA-256 |
+| --- | --- | --- |
+| `LICENSE` | Apache License 2.0; OpenCV 4.12.0 `LICENSE` | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` |
+| Intel License Agreement | Lines 1 to 40 of the OpenCV files above | `07088edcd6834f7c52694c468a0d591ad1acd77867849434b92de57a27f78c87` |
+| OpenCV `COPYRIGHT` | 4.13.0, blob `23eb02ef` | `854538f426422b0f989a5e5b7641e5943753d10ef29ea54901dcd36039e43f58` |
+| O'Rourke notice | Lines 256 to 269 of 4.11.0 and 4.12.0 `geometry.cpp` | `e9e841991f22b00d685e286179165f877314a8301e428f4e79a7de7c25829987` |
+| MIT License | 0xfaded/ellipse_demo `LICENSE` at `a420f769` | `d1f3530a0383628c968e495e1793f7c279917506ff9ccf977594b2d97bcfc757` |
+
+Not changed: `licenses = "Apache-2.0"` in `alire.toml` names the crate's own
+license. Whether to declare an SPDX expression that also covers the
+third-party code is left to the maintainer, because it changes published
+index metadata. Outside this release: the installed Core 0.5.0 prefix
+carries no license file either; that is Core packaging. This review records
+engineering checks of notice obligations; it is not legal advice.
+
+Development evidence on `250942c` (Core `f8aef00`), local:
+
+- Debian 12 installed consumers PASS: 16/16 notice controls, notice check
+  on the prepared prefix, and the recorded digests present in the installed
+  and relocated prefixes (`LICENSE` `cfc7749b...`, `THIRD_PARTY_NOTICES`
+  `9d1fc46a...`).
+- Debian AArch64 reference PASS, with the notice check passing on the
+  cross-installed prefix before and after relocation; emulated AUnit
+  542/542; the AdaCore/Yocto claims on Debian inputs rejected as before.
+
+### Version and documentation
+
+- `alire.toml`: version `0.3.0`. The Core constraint is unchanged and the
+  manifest has no pin.
+- `docs/release-0.3.0.md`: the release notes.
+- `README.md`: release summary, AdaCore/Yocto disposition, installation
+  and redistribution notices.
+- `docs/coverage.md`: the extended Float32 intersection is released.
+
+### Release-candidate qualification
+
+Candidate: commit `4902b762cb0b398c96b624c77171c758c81ca328`, tree
+`362e8bce8f2c0f886470e026abd2f1f1ac969aeb`, with Core 0.5.0 `f8aef00`. Every
+result in this section is for that exact commit. The next commit records
+these results and changes only this document and the release notes. It is
+requalified with the same gates, and because a commit cannot record its own
+identity, its results are recorded in the release pull request.
+
+Local evidence (Debian 13 x86_64 host, Podman 5.4.2; each gate starts from a
+fresh clone at the exact commit):
+
+| Gate | Environment | Result |
+| --- | --- | --- |
+| 1. Debian 12 GNAT 12 production and runtime | Image `bcc5eba3` from `tests/gnat12/Containerfile`: GNAT 12.2.0-14+deb12u1, GPRbuild 2023.0.0-3, OpenCV 4.6.0, AUnit 26.0.0 | PASS. Release, validation and development: 542/542 each, 0 failed assertions, 0 unexpected errors. Four native tests under ASan/UBSan, including Subdiv2D fault injection. 639 ALIs, all GNAT 12; 647 compiler records, all `GCC: (Debian 12.2.0-14+deb12u1) 12.2.0` |
+| 2. Debian 12 installed consumers | Same image, two containers | PASS. 16/16 notice controls; notice check on the Geometry prefix; Ada and mixed Ada/C++ consumers built, run and inspected, installed and relocated, without sources or Alire; `LICENSE` and `THIRD_PARTY_NOTICES` present with the verified digests in both prefix locations |
+| 3. Debian AArch64 reference | Image `101ea653` from `tests/cross/Containerfile` | PASS. Core and Geometry cross-built and installed (10 Geometry compilations; 16 AArch64 objects; 20 ALIs). Ada and mixed consumers cross-linked, installed and relocated: 22-ELF loader closure, 146 symbol versions. Notice check PASS on both prefix locations. Emulated consumers PASS; emulated AUnit 542/542 (user-mode emulation only). Target execution NOT RUN. AdaCore/Scarthgap claims on the Debian inputs REJECTED (negative control) |
+| 4. GNAT 16 regression matrix | `scripts/run_linux_matrix_027c1.sh <opencv> 0.5.0`; Alire `gnat_native` 16.1.0, GPRbuild 26.0.1; exact-tag OpenCV prefixes | PASS, table below |
+| 5. Documentation | Local mirror of `documentation.yml`: GNATdoc 26.0.0, markdown-it-py 3.0.0, Alire `gnat_native` 16.1.0 | PASS. 0 GNATdoc warnings (delta 0 added, 0 removed); 452/452 items documented; warning-comparison, validator, coverage, comment-only and type-link unit tests; site validation, coverage, navigation and guide tests; deterministic regeneration and idempotent enhancement; the landing-page example and five guide examples compiled and run |
+| 6. License and distribution packaging | `check_notices.sh` and its controls (gates 2, 3 and 7) | PASS, see [Distribution notices](#distribution-notices) |
+| 7. Immutable release source | `git archive --prefix=opencv_geometry-0.3.0/` of the commit | PASS. 269 entries, SHA-256 `7905aa4ff8043a75fdf9495db12a89044b17effadb7a3943973a370bdc395c1d`. No build output or generated configuration. `LICENSE`, `THIRD_PARTY_NOTICES`, both GPR projects and the release notes present. Manifest version 0.3.0 with the Core constraint and no pin. Notice check PASS on the export. No proprietary toolchain or sysroot path |
+| 8. Alire manifest and resolution | See [Alire publisher preflight](#alire-publisher-preflight) | PASS against the candidate index; public-index resolution pending |
+
+GNAT 16 Linux matrix, Core 0.5.0 `f8aef00`, Geometry `4902b76`:
+
+| Native OpenCV | Release | Validation | Native | Sanitizer findings |
+| --- | --- | --- | --- | --- |
+| 4.6.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.10.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.11.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.12.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.13.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 4.14.0 | 542/542 | 542/542 | 4/4 | 0 |
+| 5.0.0 | 542/542 | 542/542 | 4/4 | 0 |
+
+Hosted evidence on `4902b76` (push to `release/opencv-geometry-0.3.0`, and a
+manual dispatch):
+
+| Run | Result |
+| --- | --- |
+| GNAT 12 native production 38653802256 | PASS: three profiles, 542/542 each, native tests |
+| Debian 12 installed consumers 38653802237 | PASS: "independent Ada and mixed Ada/C++ consumers and redistribution notices, installed and relocated, without sources or Alire" |
+| Debian AArch64 reference 38653802202 | PASS, as locally; emulated AUnit 542/542; target execution NOT RUN |
+| Cross configuration controls 38653802207 | PASS: 50 synthetic tests |
+| Cross-Platform Geometry CI 38653802205 (push) | PASS on Linux and macOS; Windows skipped by policy |
+| Cross-Platform Geometry CI 38653885087 (dispatch) | PASS: Linux x86_64, Ubuntu 24.04, OpenCV 4.6.0: 542/542 normal and validation, native tests, "PASS Geometry / Core 0.5.0 consumer". macOS ARM64, Homebrew OpenCV 5.0.0: 542/542. Windows x86_64, MSYS2 `mingw-w64-x86_64-opencv` 5.0.0-6: 542/542 |
+
+The Ada API Documentation workflow runs only for pull requests and on
+`main`; its hosted result is recorded in the release pull request.
+
+Engineering note: the first local attempts of the documentation and Alire
+preflight runners stopped on defects in those runner scripts (a missing
+execute bit, `head` under `pipefail`, a nonexistent settings directory, a
+read-only index copy for `alr index --check`, `alr` not on `PATH` for the
+publisher, and a missing `use type` clause in the preflight's own smoke
+program). None involved the candidate; every recorded result is from a
+complete rerun.
+
+### Alire publisher preflight
+
+Core 0.5.0 is not in the Alire community index: alire-index #2227 is
+open, and `stable-1.4.0` (`e88e083e`) ends at Core 0.4.1. Public-index
+resolution is therefore pending, and nothing below is public-index evidence.
+
+Environment: the gate 1 image (Debian 12, GNAT 12.2.0, Debian GPRbuild
+2023, OpenCV 4.6.0); the official Alire 2.1.1 binary (`alr` SHA-256
+`2e2b8de009b793ad2aed10096e162649bbcc5b0711e3c21785ebe8a1261c5d64`, from
+`alr-2.1.1-bin-x86_64-linux.zip`, SHA-256
+`09c66bcd8c35dd4b97b72c3d9b76e44caa6964a2db35aba069f396f00f1f64c7`);
+isolated Alire settings and home directories.
+
+- A. Candidate index. `stable-1.4.0` `e88e083e` plus the exact #2227
+  manifest (SHA-256 `9895bc02...`), with the community index disabled.
+  `alr index --check` found no issues. Toolchain: `gnat_external` 12.2.0
+  (`/usr/bin/gnat`) and `gprbuild` 18.0.0, which is how Alire reports Debian's
+  GPRbuild 2023. A clean `git archive` export, with no pin, lock file or
+  configuration, resolved `opencv_core=0.5.0` (origin `git`, commit `f8aef00`
+  according to the index manifest), `opencv=4.6.0` and `pkg_config=1.8.1`
+  (system). Geometry built in the development, release and validation
+  profiles. The tests crate resolved AUnit, GNATprove and GNATcov and passed
+  542/542 in the development (`alr run`), release and validation profiles.
+  The native sanitizer tests passed, and all 503 ALIs read
+  `V "GNAT Lib v12"`.
+- B. Publisher dry run: `alr publish --skip-submit
+  https://github.com/zackboll/opencv_geometry_ada.git 4902b76...`, with the
+  build check enabled, a disk-backed `TMPDIR` and the candidate-index
+  settings. The origin was verified (Git, trusted host github.com), the
+  sources were deployed from GitHub, and the build check passed with Core
+  0.5.0 from the candidate index and Debian GNAT 12. The generated manifest
+  has version 0.3.0, `opencv_core = ">=0.5.0 & <0.6.0"`, no pin, and origin
+  `commit = "4902b762..."`, `url =
+  "git+https://github.com/zackboll/opencv_geometry_ada.git"` (SHA-256
+  `26d6dc63...`). The manifest to submit is generated from the merged commit
+  in REL-003-008.
+- C. Pre-index installation path, public community index only: a new crate
+  ran `alr with opencv_core --use=https://github.com/zackboll/opencv_core_ada.git
+  --commit=f8aef00...` and `alr with opencv_geometry --use=... --commit=4902b76...`,
+  then built with Debian GNAT 12 and ran a `Contour_Area` program. Finding:
+  `--commit=0.5.0` fails for Core with "Reference is ambiguous: /0.5.0",
+  because Core also has a branch `release/0.5.0`, and Alire does not accept
+  `refs/tags/0.5.0`. The release notes therefore pin Core by full commit. An
+  unambiguous tag name works: `--commit=0.2.0` for Geometry froze the pin at
+  the annotated tag object `39821543...`, which resolves to the 0.2.0
+  commit.
+- D. Control: a clean unpinned `alr update` against the public community
+  index alone leaves the solution incomplete, "opencv_core >=0.5.0 & <0.6.0
+  (missing:unavailable)". In non-interactive mode Alire still exits 0, so the
+  solution, not the exit status, is the evidence.
+
+`GEOMETRY_0_3_0_ALIRE_READY` needs clean public-index resolution and a
+publisher run against the public index; both wait for #2227.
+
+### Dispositions
+
+For candidate `4902b76`:
+
+- `SOURCE_RELEASE_READY` (`GEOMETRY_0_3_0_SOURCE_RELEASE_READY`): all eight
+  mandatory gates PASS. The disposition for the release pull request's head
+  is stated in the pull request after its own requalification.
+- `CORE_INDEX_PENDING`: Core 0.5.0 is not yet indexed (#2227 open), so
+  `GEOMETRY_0_3_0_ALIRE_READY` is not reached. The manifest, candidate-index
+  resolution and publisher dry run are ready for submission.
+- `ADACORE_YOCTO_DEFERRED_BY_MAINTAINER`: `DEFERRED_BY_MAINTAINER — NOT YET
+  QUALIFIED`. Not tested, not PASS.
+- Target hardware execution: NOT RUN (outside the 0.3.0 scope).
+
+Merging, tagging and the index submission wait for the maintainer's review
+of the release pull request.
+
+## REL-003-008: publication handoff (after the maintainer merges)
+
+Nothing here runs before the maintainer has reviewed and merged the
+release-candidate pull request. Do not move an existing tag or rewrite a
+published commit; a correction after tagging is 0.3.1.
+
+1. Verify the merge and the merged tree. `RC_HEAD` and `RC_TREE` are the
+   commit and tree of the release pull request's requalified head, as
+   recorded in that pull request.
+
+   ```sh
+   gh pr view "$RELEASE_PR" --json state,mergeCommit --jq '.state, .mergeCommit.oid'
+   git fetch origin --tags
+   MERGED=$(gh pr view "$RELEASE_PR" --json mergeCommit --jq .mergeCommit.oid)
+   test "$(git rev-parse "$MERGED^{tree}")" = "$RC_TREE"
+   test -z "$(git ls-remote origin 'refs/tags/0.3.0*')"
+   ```
+
+   If the merged tree differs from `RC_TREE` (for example, `main` moved
+   before the merge), review `git diff "$RC_HEAD" "$MERGED"`. Any change
+   outside documentation reruns the affected gates on `MERGED` before
+   tagging.
+
+2. Tag the merged commit and verify it:
+
+   ```sh
+   git tag -a 0.3.0 "$MERGED" -m "opencv_geometry 0.3.0"
+   git push origin refs/tags/0.3.0
+   test "$(git ls-remote origin 'refs/tags/0.3.0^{}' | cut -f1)" = "$MERGED"
+   ```
+
+3. Generate the index manifest from that immutable commit, with a
+   disk-backed temporary directory and the build check enabled:
+
+   ```sh
+   TMPDIR="$PUBLISH_TMPDIR" alr -n publish --skip-submit \
+     https://github.com/zackboll/opencv_geometry_ada.git "$MERGED"
+   ```
+
+   Until Core 0.5.0 is indexed, the build check can resolve only against a
+   candidate index that adds the exact alire-index#2227 manifest (as in the
+   preflight above); record which index was used.
+
+4. Verify the generated `opencv_geometry-0.3.0.toml`: `version = "0.3.0"`,
+   `opencv_core = ">=0.5.0 & <0.6.0"`, `[origin]` `commit = "$MERGED"` and
+   `url = "git+https://github.com/zackboll/opencv_geometry_ada.git"`, no pin
+   or path. Record its SHA-256.
+
+5. After alire-index#2227 merges: in the maintainer's index fork, branch
+   from upstream `stable-1.4.0`, add the manifest as
+   `index/op/opencv_geometry/opencv_geometry-0.3.0.toml`, run
+   `alr index --check` in isolated settings against that checkout, push, and
+   open the index pull request against `stable-1.4.0`. Leave it open for
+   independent review with auto-merge disabled.
+
+6. After the index pull request merges: with fresh Alire settings and only
+   the community index, `alr get opencv_geometry=0.3.0` (or a new crate
+   with `alr with opencv_geometry=0.3.0`), build it, and run the test suite.
+   Only then is `GEOMETRY_0_3_0_ALIRE_READY` reported as published.

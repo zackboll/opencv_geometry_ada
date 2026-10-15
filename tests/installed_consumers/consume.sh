@@ -7,7 +7,9 @@
 # share/gpr directories. Independent Ada and mixed Ada/C++ consumers are
 # built with plain gprbuild, run, and inspected; then both prefixes are
 # moved to new, longer paths and the consumers are rebuilt from fresh
-# object directories and checked again. Installed files are never edited.
+# object directories and checked again. The Geometry prefix must carry the
+# verified redistribution notices in both places. Installed files are never
+# edited.
 #
 # usage: consume.sh PAYLOAD LOGS
 #   PAYLOAD  directory written by prepare.sh
@@ -96,6 +98,19 @@ for mode in installed relocated; do
         "$core/share/gpr" "$geometry/share/gpr"; then
         fail "installed project files name an absolute prefix"
     fi
+    # The redistribution notices travel with the Geometry prefix:
+    # byte-identical to the copies prepare.sh verified against the sources.
+    for name in LICENSE THIRD_PARTY_NOTICES; do
+        notice=$geometry/share/doc/opencv_geometry/$name
+        test -f "$notice" || fail "$mode Geometry prefix lacks $name"
+        expected=$(awk -v path="geometry-prefix/share/doc/opencv_geometry/$name" \
+            '$2 == path { print $1 }' "$payload/notices.sha256")
+        test -n "$expected" || fail "no verified digest recorded for $name"
+        actual=$(sha256sum < "$notice" | cut -d ' ' -f 1)
+        test "$actual" = "$expected" \
+            || fail "$mode $name differs from the verified notice"
+        echo "$actual  $notice" >> "$logs/$mode-notices.log"
+    done
 
     run=$payload/run-$mode
     mkdir -p "$run"
@@ -176,5 +191,5 @@ for mode in installed relocated; do
     cd "$payload"
 done
 
-echo "PASS independent Ada and mixed Ada/C++ consumers, installed and" \
-    "relocated, without sources or Alire"
+echo "PASS independent Ada and mixed Ada/C++ consumers and redistribution" \
+    "notices, installed and relocated, without sources or Alire"

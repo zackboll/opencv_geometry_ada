@@ -7,7 +7,9 @@ against installed Core and Geometry prefixes only, and without any run path
 (gprbuild -R). Each executable must be an AArch64 ELF for the target loader,
 contain only code from the supplied compilers or the target's own startup
 files, have every dependency resolved as the target loader would inside the
-sysroot, and need only symbol versions the target defines.
+sysroot, and need only symbol versions the target defines. The Geometry
+prefix must carry the checkout's verified redistribution notices
+(tests/installed_consumers/check_notices.sh).
 
 With --emulator, each executable is also run under that user-mode emulator
 with the sysroot as its root. That is emulated reference execution, not
@@ -67,6 +69,14 @@ def qualify(settings, core, geometry, work, logs, emulator):
                 f"not an installed prefix: {prefix}")
     work.mkdir(parents=True)
     logs.mkdir(parents=True)
+    # The Geometry prefix must carry this checkout's redistribution
+    # notices, wherever the prefix currently is.
+    notices = subprocess.run(
+        ["sh", str(sources / "check_notices.sh"), str(ROOT), str(geometry)],
+        capture_output=True, text=True)
+    (logs / "notices.log").write_text(notices.stdout + notices.stderr)
+    require(notices.returncode == 0,
+            f"redistribution notices:\n{notices.stdout}{notices.stderr}")
     for source in sources.iterdir():
         if source.suffix in [".ads", ".adb", ".gpr", ".cpp"]:
             shutil.copy(source, work / source.name)

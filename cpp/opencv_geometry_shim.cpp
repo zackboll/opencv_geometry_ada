@@ -3661,7 +3661,8 @@ public:
 private:
 #if CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 13
     // Adapted from OpenCV 4.13.0 subdivision2d.cpp, initDelaunay(Rect2f).
-    // The retained upstream license is in subdiv2d_compat_license.hpp.
+    // Its upstream notice is retained verbatim in
+    // subdiv2d_compat_license.hpp and in THIRD_PARTY_NOTICES.
     // Only initialization is backported; all triangulation stays native.
     void initialize_float32_compat(cv::Rect2f rect)
     {

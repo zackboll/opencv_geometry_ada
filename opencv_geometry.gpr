@@ -82,6 +82,10 @@ project Opencv_Geometry is
 
    package Install is
       for Artifacts (".") use ("share");
+      --  Redistribution notices for this library and for the third-party
+      --  code in the C++ shim. GPRinstall fails if either is missing.
+      for Required_Artifacts ("share/doc/opencv_geometry") use
+        ("LICENSE", "THIRD_PARTY_NOTICES");
    end Install;
 
 end Opencv_Geometry;
