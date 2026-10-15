@@ -26,7 +26,7 @@ result does not certify the release candidate.
 | 005 | AdaCore GNAT 12 / Yocto Scarthgap | Never satisfied: `ADACORE_YOCTO_QUALIFICATION_BLOCKED` (inputs unavailable; external-input adapter ready). For 0.3.0: `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED` (maintainer decision, 2026-10-14) |
 | 006 | Release regression and CI matrix | Core 0.5.0 bound and pins reconciled; every available gate PASS against Core 0.5.0; the AdaCore/Yocto gate remained blocked |
 | 007 | Release candidate 0.3.0 | Candidate `4902b76`: all eight mandatory gates PASS (`GEOMETRY_0_3_0_SOURCE_RELEASE_READY` for that commit; the release PR head is requalified, see below). Alire: `CORE_INDEX_PENDING`. AdaCore/Yocto: `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED` |
-| 008 | Tag and Alire index submission | After the maintainer merges the release-candidate PR; the Alire submission also waits for Core 0.5.0 to be indexed |
+| 008 | Tag and Alire index submission | Release PR #43 merged as `ea21d35` (tree `8cd24fbd`, as qualified). The post-merge macOS ARM64 job failed after a runner-image change, so the status was `RELEASE_BLOCKED` before tagging and no tag was created. The CI-only correction R1 (below) passes on the previously failing image. The tag waits for the correction's merge and its post-merge checks. The Alire submission also waits for Core 0.5.0 to be indexed |
 
 ## Maintainer decision (2026-10-14): release without AdaCore/Yocto qualification
 
@@ -1273,6 +1273,10 @@ published commit; a correction after tagging is 0.3.1.
    outside documentation reruns the affected gates on `MERGED` before
    tagging.
 
+   After [REL-003-008-R1](#rel-003-008-r1-macos-gnat-linker-correction),
+   the commit to tag is the merge of the corrective pull request, not
+   `ea21d35`. See the revised steps there.
+
 2. Tag the merged commit and verify it:
 
    ```sh
@@ -1309,3 +1313,157 @@ published commit; a correction after tagging is 0.3.1.
    the community index, `alr get opencv_geometry=0.3.0` (or a new crate
    with `alr with opencv_geometry=0.3.0`), build it, and run the test suite.
    Only then is `GEOMETRY_0_3_0_ALIRE_READY` reported as published.
+
+## REL-003-008: post-merge verification of the release merge
+
+Recorded 2026-10-15 (UTC) after fetching Geometry, Core and the Alire index.
+
+| Item | Finding |
+| --- | --- |
+| Release PR #43 | Merged by the maintainer at 2026-10-15T00:31:26Z. Head `dafcae0201e1f22d6586a51038f2b7beef71318d`; auto-merge never enabled |
+| Merge commit | `ea21d35021eed7d00a4a2c675a81dfabad69174b` (parents `9142e9c` and `dafcae0`), equal to `origin/main` |
+| Merged tree | `8cd24fbd4e14c40c86697a6f0408cbd137c7e8e1`, identical to the qualified candidate (`git diff dafcae0 ea21d35` is empty) |
+| `alire.toml` | `version = "0.3.0"`; `opencv_core = ">=0.5.0 & <0.6.0"`; no pin |
+| Tag `0.3.0` | Absent locally and on `origin` |
+| Core tag `0.5.0` | Unchanged: tag object `8f962690b3b25eafcb6c7e7363a6d097a3c22366`, commit `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f` |
+| alire-index #2227 | Open, review required, head `d4766195c226e4952fe78fb23d19f9b99684b870`; manifest unchanged (SHA-256 `9895bc02...`) |
+
+Post-merge push runs on `ea21d35`:
+
+| Workflow | Run | Result |
+| --- | --- | --- |
+| GNAT 12 native production | 38660509868 | PASS |
+| Debian 12 installed consumers | 38660509888 | PASS |
+| Debian AArch64 reference | 38660509922 | PASS |
+| Cross configuration controls | 38660509928 | PASS |
+| Ada API Documentation | 38660509879 | PASS |
+| Cross-Platform Geometry CI | 38660509892 | **FAIL**: Linux x86_64 PASS, Windows x86_64 (MSYS2) PASS, macOS ARM64 (job 116180377061) FAIL at "Run Geometry tests" |
+
+Disposition: `RELEASE_BLOCKED` before tagging. No tag was created.
+
+## REL-003-008-R1: macOS GNAT linker correction
+
+### Classification
+
+The macOS ARM64 job failed when linking the AUnit test executable, not in a
+test. The library, the shim and every compilation succeeded. The same tree
+had passed macOS in the release PR's runs.
+
+| | Earlier passing jobs (116167068240, 116163590198 on `dafcae0`) | Failing job 116180377061 on `ea21d35` |
+| --- | --- | --- |
+| Runner image | `macos-26-arm64` 20260907.0351.1 | `macos-26-arm64` 20261013.0424.1, a release still marked prerelease (rolling out) |
+| Xcode (`xcode-select`) | Xcode 26.6 (17F113), the default | Same |
+| Command Line Tools | 26.6.0.0.1781586589 | 27.0.0.0.1788430756 |
+| Command Line Tools `SDKs/MacOSX.sdk` | `MacOSX26.5.sdk` | `MacOSX27.0.sdk`. Its `usr/lib/libSystem.tbd` targets include `arm64e.x1-macos` and `arm64e.x1-maccatalyst` |
+| Xcode macOS SDK | `MacOSX26.5.sdk` (26.5), used by the Apple clang++ shim build | Same |
+| GNAT and GPRbuild | Alire `gnat_native` 16.1.0 and `gprbuild` 26.0.1 (which reports `GPRBUILD 26.0.0 (2026-04-15)`) | Same |
+| Linker used by the GNAT link | GNAT's bundled `libexec/gcc/aarch64-apple-darwin24.6.0/16.1.0/ld`, `ld-classic` (ld64-957.1) | Same |
+| GNAT default sysroot | `/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk` | Same path, now SDK 27 |
+| Test link | Succeeds | `ld: warning: ignoring file /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libSystem.tbd, malformed file`, then `libSystem.tbd:4:20: error: unknown architecture` at `arm64e.x1-macos, arm64e.x1-maccatalyst ]`. Every libSystem symbol was undefined (`_malloc`, `_memcpy`, `_sin`, `_pthread_*`, ...): `ld: symbol(s) not found for architecture arm64` |
+
+The image and Command Line Tools versions come from the job logs and the
+runner-images readme of each image. The default sysroot, the linker identity
+and the SDK contents come from the R1 jobs below, which ran on both images.
+
+This is the same failure as
+[alire-project/GNAT-FSF-builds#112](https://github.com/alire-project/GNAT-FSF-builds/issues/112)
+(open): the same bundled linker path, rejection of the SDK 27 `arm64e.x1`
+target, and gnat_native 16.1.0 named as affected. The cause is a change in
+the hosted toolchain environment. No source, test or ABI defect is
+involved.
+
+### Correction
+
+Commit `db2eb7a45456af9663fa67905baa5d52319145ab` changes only
+`.github/workflows/cross-platform.yml`, and only the macOS ARM64 job:
+
+- **Select macOS SDK for the GNAT linker.** Takes the active Xcode's macOS
+  SDK from `xcrun --sdk macosx --show-sdk-path` and its version from
+  `--show-sdk-version`. It fails closed unless the SDK is inside the
+  selected Xcode, is 26.x, and has a `usr/lib/libSystem.tbd` that does not
+  list `arm64e.x1`. It then writes `SDKROOT` (which the GCC driver takes as
+  its sysroot) and `LIBRARY_PATH=$SDKROOT/usr/lib` to `$GITHUB_ENV` for all
+  later steps. It also records Xcode, the Command Line Tools, the installed
+  SDKs and whether the Command Line Tools `libSystem.tbd` lists
+  `arm64e.x1`.
+- **Verify the GNAT linker with the selected SDK.** Records the GNAT,
+  GPRbuild and linker identities and the sysroot with and without
+  `SDKROOT`. It builds a minimal Ada program (Ada.Text_IO and
+  Long_Elementary_Functions) with Alire's GNAT 16.1.0 twice:
+  - **Control**, with `SDKROOT` and `LIBRARY_PATH` removed. The result is
+    recorded as a notice and classifies the image; it does not fail the
+    job.
+  - **Selected SDK**, under `-Wl,-t`. The link must succeed, the trace must
+    show `libSystem` from `$SDKROOT`, and no stub may be rejected or loaded
+    from a Command Line Tools SDK. The program is then run.
+- **Link Geometry tests against the selected SDK.** Runs `alr -n -C tests
+  build -- -largs -Wl,-t`, the GPRbuild/AUnit link that failed, with the
+  same trace checks. It then records the executable's `LC_BUILD_VERSION`.
+  The unchanged "Run Geometry tests" step follows.
+
+No Ada, C++, test, AUnit count, ABI, version, dependency constraint or other
+job changed. The `-B` workaround (Xcode's own linker) from the upstream issue
+was not needed, because selecting the SDK corrects the actual test link.
+
+### Hosted qualification of `db2eb7a`
+
+Every macOS ARM64 job on `db2eb7a`:
+
+| Run, attempt (event) | Job | Image (Command Line Tools) | Control: GNAT default sysroot | Selected SDK | AUnit |
+| --- | --- | --- | --- | --- | --- |
+| 38668649562, 1 (push) | 116206297580 | 20260907.0351.1 (26.6) | Links: image not affected | `libSystem.tbd` from Xcode `MacOSX26.5.sdk` | 542/542 |
+| 38669158002, 1 (pull request) | 116207899873 | 20260907.0351.1 (26.6) | Links: image not affected | Same | 542/542 |
+| 38669160988, 1 (dispatch) | 116207910478 | 20260907.0351.1 (26.6) | Links: image not affected | Same | 542/542 |
+| **38669158002, 2 (pull request, macOS job rerun)** | **116209105612** | **20261013.0424.1 (27.0)** | **Fails: `libSystem.tbd, malformed file` / `unknown architecture` at `arm64e.x1-macos`** (CLT `libSystem.tbd` lists `arm64e.x1` on 132 lines) | Probe program and the Geometry test executable both load `/Applications/Xcode_26.6.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk/usr/lib/libSystem.tbd`; `LC_BUILD_VERSION` sdk 26.5 | **542/542**, 0 failed assertions, 0 unexpected errors |
+
+Only the last row qualifies the correction. In that job, on the image that
+failed after the merge, the control reproduces the post-merge error and
+the selected SDK repairs the real test link. The rows on the older image
+show only that the change does not regress there.
+
+Other required gates on `db2eb7a`:
+
+| Run | Result |
+| --- | --- |
+| GNAT 12 native production 38669157995 (pull request) | PASS: GNAT 12.2.0 production, 542/542 in release, validation and development, native tests |
+| Debian 12 installed consumers 38669157974 (pull request) | PASS: prepare 542/542 (release); "independent Ada and mixed Ada/C++ consumers and redistribution notices, installed and relocated, without sources or Alire" |
+| Debian AArch64 reference 38669157962 (pull request) | PASS: cross build, install and consumer links; emulated AUnit 542/542; target execution NOT RUN; AdaCore/Yocto claims on Debian inputs REJECTED |
+| Cross configuration controls 38669158064 (pull request) | PASS: 50 tests |
+| Ada API Documentation 38669157957 (pull request) | PASS: 0 GNATdoc warnings (delta 0 added, 0 removed); coverage 452/452 |
+| Cross-Platform Linux x86_64 (jobs 116207900109 and 116207910327) | PASS: OpenCV 4.6.0, 542/542 normal and validation, native tests, Core 0.5.0 consumer |
+| Cross-Platform Windows x86_64 MSYS2 (dispatch 38669160988, job 116207910557) | PASS: `mingw-w64-x86_64-opencv` 5.0.0-6, 542/542 |
+
+### Release reconciliation
+
+The correction changes the Git tree of the commit to be tagged. The
+qualification of tree `8cd24fbd` (PR #43) does not certify the new tree.
+Outside `.github/` and this record, the source is unchanged from `ea21d35`.
+The tag still goes on a commit qualified on its own: the corrective pull
+request's head, then its merge commit. This record is the head's last
+commit; because a commit cannot record its own identity, the head's runs
+are reported in the corrective pull request.
+
+Revised steps for the tag:
+
+1. After the maintainer merges the corrective pull request, verify the
+   merge, its tree against the head tree recorded in that pull request
+   (`R1_TREE`), and the absence of the tag:
+
+   ```sh
+   git fetch origin --tags
+   MERGED=$(gh pr view "$R1_PR" --json mergeCommit --jq .mergeCommit.oid)
+   test "$(git rev-parse "$MERGED^{tree}")" = "$R1_TREE"
+   test -z "$(git ls-remote origin 'refs/tags/0.3.0*')"
+   ```
+
+2. Wait for every post-merge push workflow on `MERGED` to pass: GNAT 12
+   native production, Debian 12 installed consumers, Debian AArch64
+   reference, cross configuration controls, Ada API Documentation, and
+   Cross-Platform Geometry CI with Linux, macOS ARM64 and the main-only
+   Windows job. Record the macOS job's image and its control result. A
+   pass on the older image is acceptable for the merge commit only because
+   the correction was already qualified on the failing image (above).
+
+3. Continue with steps 2 to 6 of
+   [REL-003-008](#rel-003-008-publication-handoff-after-the-maintainer-merges),
+   using this `MERGED`.
