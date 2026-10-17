@@ -29,10 +29,15 @@ link, wrong existing symbol, fabricated fragment or altered target fails.
 Internal Geometry and child-to-parent native cross-links are unchanged.
 
 Documentation CI generates an immutable Phase 1 Core browser fixture from
-`dace47d8730323d27b9920145ceda498888ff12e` in a separate checkout and runs
+`ccc2190f9bf0712d65a2b9d2983cde7ce68b4bae` in a separate checkout and runs
 the cross-repository, presentation and native navigation browser suites with
 documentation-only Playwright 1.64.1/Chromium. This fixture is not used for
 Geometry's Ada dependency or its qualified source-resolution checkout.
+This corrective Core HEAD passed hosted documentation qualification in
+[Core run 39002320052](https://github.com/zackboll/opencv_core_ada/actions/runs/39002320052)
+before the fixture pin was updated. It is reviewed independently in
+[Core PR #86](https://github.com/zackboll/opencv_core_ada/pull/86), a follow-up
+because PR #85 was already merged before this investigation.
 
 Publication order matters: deploy the Core symbol-router PR before deploying
 these Geometry links. The source-only generation checkout remains Core 0.5.0;
@@ -55,6 +60,22 @@ return to Geometry. Geometry's current API does not reference Size: its exact
 URL is tested in the linker fixture and as a direct browser deep link, without
 adding a synthetic production declaration. Existing presentation/navigation suites continue
 to qualify internal cross-links and package search independently.
+
+For CORE-GEOMETRY-DOC-XLINK-R1, the original cross-origin Forward failure was
+reproduced against both generated sites with Playwright 1.64.1 and Chromium
+156.0.8078.4. The outer symbol, iframe fragment and declaration were correct,
+but native history restoration left the iframe at scroll offset zero even
+after load/pageshow: one captured Rect target was at 8124.55 pixels in a
+900-pixel viewport. This was Core's URL-only restoration defect, not a missing
+link or a need for a longer test timeout. Core's corrective router explicitly
+reveals the verified declaration after load and history/pageshow restoration.
+
+The viewport assertion and 15-second timeouts are unchanged. The suite also
+checks fresh-tab declaration visibility at desktop/mobile sizes. `DOC_EVIDENCE`
+selects the screenshot/diagnostic directory; `DOC_TRACE=1` records load,
+pageshow, popstate and native-fragment events with URL, target, rectangle,
+scroll offset, viewport and history state. CI uploads those records and
+Forward-navigation screenshots even when a browser assertion fails.
 
 Required qualification versions:
 

@@ -107,7 +107,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: zackboll/opencv_core_ada
-          ref: dace47d8730323d27b9920145ceda498888ff12e
+          ref: ccc2190f9bf0712d65a2b9d2983cde7ce68b4bae
           path: core-navigation
       - name: Generate actual Core browser fixture
         working-directory: core-navigation
@@ -122,6 +122,8 @@ jobs:
           export CHROME=$(node -e 'console.log(require(process.env.PLAYWRIGHT_MODULE).chromium.executablePath())')
           export DOC_URL=http://127.0.0.1:8073/
           export CORE_DOC_URL=http://127.0.0.1:8074/
+          export DOC_EVIDENCE=${{ github.workspace }}/geometry/obj/docs/browser
+          export DOC_TRACE=1
           python3 -m http.server 8073 --bind 127.0.0.1 --directory _site &
           geometry_server=$!
           python3 -m http.server 8074 --bind 127.0.0.1 --directory ../core-navigation/_site &
@@ -132,6 +134,13 @@ jobs:
           node scripts/test_core_type_links_browser.cjs
           node scripts/test_gnatdoc_presentation_browser.cjs
           node scripts/test_gnatdoc_navigation_browser.cjs
+      - name: Upload cross-repository browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: declaration-navigation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: geometry/obj/docs/browser/
+          if-no-files-found: warn
       - name: Upload review artifact
         uses: actions/upload-artifact@v4
         with:
