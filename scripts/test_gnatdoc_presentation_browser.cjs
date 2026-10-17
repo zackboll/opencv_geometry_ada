@@ -16,7 +16,7 @@ const root = process.env.DOC_URL || 'http://127.0.0.1:8073/';
 const evidence = process.env.DOC_EVIDENCE ||
   path.join(os.tmpdir(), 'geometry-doc-003-screenshots');
 const chrome = process.env.CHROME || '/usr/bin/google-chrome';
-const core = 'https://zackboll.github.io/opencv_core_ada/api/index.html?package=';
+const core = 'https://zackboll.github.io/opencv_core_ada/api/index.html?symbol=';
 fs.mkdirSync(evidence, {recursive: true});
 
 const background = {light: 'rgb(255, 255, 255)', dark: 'rgb(20, 27, 38)'};
@@ -76,12 +76,13 @@ function snippetOf(content, heading) {
           .backgroundColor), background[colorScheme]);
         assert.ok(await content.locator('.ada-keyword').count() >= spec.keywords,
                   `${spec.name}: highlighting`);
-        // Every Core link is a verified package-level bookmark opening at top level.
+        // Every Core link carries its exact qualified declaration identity.
         const external = await content.locator('a.type-reference[target="_top"]')
-          .evaluateAll(links => links.map(a => a.getAttribute('href')));
+          .evaluateAll(links => links.map(a => ({href: a.getAttribute('href'), identity: a.dataset.type})));
         assert.ok(external.length >= spec.core, `${spec.name}: ${external.length} Core links`);
-        for (const href of external) {
-          assert.ok(href === core + 'OpenCV' || href === core + 'OpenCV.Core', href);
+        for (const {href, identity} of external) {
+          assert.ok(href.startsWith(core), href);
+          assert.equal(href.slice(core.length).toLowerCase(), identity);
         }
         // Long declarations scroll inside their own block.
         const snippetOverflow = await content.locator('pre.ada-code-snippet').evaluateAll(
@@ -136,7 +137,7 @@ function snippetOf(content, heading) {
       const coreLink = snippetOf(content, 'Get_Rotation_Matrix_2D')
         .locator('a.type-reference[data-type="opencv.core.mat"]').first();
       await Promise.all([page.waitForURL(/opencv_core_ada/), coreLink.click()]);
-      assert.equal(new URL(page.url()).searchParams.get('package'), 'OpenCV.Core');
+      assert.equal(new URL(page.url()).searchParams.get('symbol'), 'OpenCV.Core.Mat');
       assert.deepEqual(errors, []);
       await context.close();
     }

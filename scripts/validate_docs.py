@@ -25,7 +25,7 @@ Presentation (GEOMETRY-DOC-003): the theme metadata, the source-backed type
 links (including child-to-parent links between the two package pages) and
 the Ada highlighting are recomputed independently, the API index must equal
 the themed native serialization, and API pages may link externally only to
-the two recomputed Core package bookmarks.
+the recomputed, source-verified Core declaration bookmarks.
 
 Guides (GEOMETRY-DOC-005): the five developer guides and their stylesheet
 must equal the bytes reconstructed from the Markdown sources, the compiled
@@ -54,7 +54,7 @@ from compare_gnatdoc_warnings import (
     code_tokens,
     declaration_index,
 )
-from link_gnatdoc_types import CORE_DESTINATIONS, LINK, CrossReferenceError, process
+from link_gnatdoc_types import LINK, CrossReferenceError, core_types, process
 from render_gnatdoc_guides import GUIDES
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -339,7 +339,7 @@ def _describe(entries):
     )
 
 
-def _check_links(site, pages, path, page, errors, enhanced):
+def _check_links(site, pages, path, page, errors, enhanced, core_destinations):
     # The landing page and the developer guides may link to project sites.
     landing = path == site / "index.html" or (enhanced and path.parent == site / "guides")
     for link in page.links:
@@ -349,9 +349,9 @@ def _check_links(site, pages, path, page, errors, enhanced):
                 link == prefix or link.startswith(prefix.rstrip("/") + "/")
                 for prefix in LANDING_DESTINATIONS
             )
-            # Package-level Core bookmarks, only as recomputed type links.
+            # Exact declaration bookmarks, independently verified from Core source.
             approved |= (enhanced and path.parent == site / "api"
-                         and link in CORE_DESTINATIONS.values())
+                         and link in core_destinations)
             if not approved:
                 errors.append(f"unapproved link in {path.relative_to(site)}: {link}")
             continue
@@ -433,6 +433,12 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
         if path.suffix == ".html":
             pages[path.resolve()] = Page(path)
     packages = {}
+    core_destinations = set()
+    if enhanced:
+        try:
+            core_destinations = set(core_types(core).values())
+        except (CrossReferenceError, WarningComparisonError, OSError) as error:
+            errors.append(f"Core declaration integrity: {error}")
     for path, page in pages.items():
         if path.parent != api or path.name == "index.html":
             continue
@@ -459,7 +465,7 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
         duplicates = [i for i, n in collections.Counter(page.ids).items() if n > 1]
         for identifier in duplicates:
             errors.append(f"duplicate id in {relative}: {identifier}")
-        _check_links(site, pages, path, page, errors, enhanced)
+        _check_links(site, pages, path, page, errors, enhanced, core_destinations)
         if LEAKS.search(" ".join(page.text)):
             errors.append(f"internal unit or machine-local path in {relative}")
     landing = pages.get(site / "index.html")

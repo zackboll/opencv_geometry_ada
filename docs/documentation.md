@@ -15,6 +15,68 @@ the remaining roadmap are kept in
 
 ## Reproduce on Linux — pinned generation environment
 
+### Cross-repository declaration bookmarks
+
+Core references now use stable, fully qualified symbol URLs, for example
+`https://zackboll.github.io/opencv_core_ada/api/index.html?symbol=OpenCV.Rect`.
+The linker verifies the exact owning package and unique public type/subtype
+declaration against the qualified Core source checkout. It preserves source
+spelling in the URL and records the case-insensitive identity in `data-type`.
+No generated Core filenames or native anchor hashes are embedded in Geometry.
+Core's API browser resolves that symbol to the actual declaration. The final
+Geometry validator recomputes every identity and destination; a package-only
+link, wrong existing symbol, fabricated fragment or altered target fails.
+Internal Geometry and child-to-parent native cross-links are unchanged.
+
+Documentation CI generates an immutable Phase 1 Core browser fixture from
+`ccc2190f9bf0712d65a2b9d2983cde7ce68b4bae` in a separate checkout and runs
+the cross-repository, presentation and native navigation browser suites with
+documentation-only Playwright 1.64.1/Chromium. This fixture is not used for
+Geometry's Ada dependency or its qualified source-resolution checkout.
+This corrective Core HEAD passed hosted documentation qualification in
+[Core run 39002320052](https://github.com/zackboll/opencv_core_ada/actions/runs/39002320052)
+before the fixture pin was updated. It is reviewed independently in
+[Core PR #86](https://github.com/zackboll/opencv_core_ada/pull/86), a follow-up
+because PR #85 was already merged before this investigation.
+
+Publication order matters: deploy the Core symbol-router PR before deploying
+these Geometry links. The source-only generation checkout remains Core 0.5.0;
+the symbol-router is a documentation feature, not an Ada dependency upgrade.
+The cross-repository browser test uses the actual generated Phase 1 Core site,
+not a stub. To test local artifacts, serve Core and Geometry separately and run:
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/node_modules/playwright \
+  DOC_URL=http://127.0.0.1:18762/ CORE_DOC_URL=http://127.0.0.1:18761/ \
+  node scripts/test_core_type_links_browser.cjs
+```
+
+The browser requests the production Core URLs; `CORE_DOC_URL` routes their
+responses to the real local artifact, retaining the cross-origin navigation and
+top-level browsing behavior. Omit it to test published Core after deployment.
+The test clicks Rect, Angle_Unit and Mat, asserts the actual target declaration
+and visible scroll position, then checks reload and Back/Forward, including
+return to Geometry. Geometry's current API does not reference Size: its exact
+URL is tested in the linker fixture and as a direct browser deep link, without
+adding a synthetic production declaration. Existing presentation/navigation suites continue
+to qualify internal cross-links and package search independently.
+
+For CORE-GEOMETRY-DOC-XLINK-R1, the original cross-origin Forward failure was
+reproduced against both generated sites with Playwright 1.64.1 and Chromium
+156.0.8078.4. The outer symbol, iframe fragment and declaration were correct,
+but native history restoration left the iframe at scroll offset zero even
+after load/pageshow: one captured Rect target was at 8124.55 pixels in a
+900-pixel viewport. This was Core's URL-only restoration defect, not a missing
+link or a need for a longer test timeout. Core's corrective router explicitly
+reveals the verified declaration after load and history/pageshow restoration.
+
+The viewport assertion and 15-second timeouts are unchanged. The suite also
+checks fresh-tab declaration visibility at desktop/mobile sizes. `DOC_EVIDENCE`
+selects the screenshot/diagnostic directory; `DOC_TRACE=1` records load,
+pageshow, popstate and native-fragment events with URL, target, rectangle,
+scroll offset, viewport and history state. CI uploads those records and
+Forward-navigation screenshots even when a browser assertion fails.
+
 Required qualification versions:
 
 | Tool | Release / executable version |
@@ -294,14 +356,14 @@ anything:
      packages stays unlinked.
    - `OpenCV.X` and `OpenCV.Core.X` link only when Core's `src/opencv.ads` or
      `src/opencv-core.ads` (from the Core checkout verified by the generator's
-     gate, opencv_core 0.4.1) declares that type in the visible part of
-     exactly that package. The destination is the published Core browser's
-     package bookmark,
-     `https://zackboll.github.io/opencv_core_ada/api/index.html?package=OpenCV`
-     or `...?package=OpenCV.Core`; no declaration fragment is invented. These
+      gate, opencv_core 0.5.0) declares that type uniquely in the visible part
+      of exactly that package. The destination is the published Core browser's
+      stable declaration bookmark, for example
+      `https://zackboll.github.io/opencv_core_ada/api/index.html?symbol=OpenCV.Rect`
+      or `...?symbol=OpenCV.Core.Mat`; no native fragment is invented. These
      links carry `target="_top"` and are drawn with a dashed underline. The
-     Core site documents Core `main`; every linked type exists in the visible
-     part of both releases' root packages.
+      Core site documents Core `main`; its source-backed symbol router discovers
+      the generated page and actual declaration anchor.
    - Standard types (`Natural`, `Positive`, `Boolean`) stay unlinked.
    `api/type-crossrefs.json` keeps, per package page, the original snippets
    and a hash of the page outside them; validation recomputes every link and

@@ -20,8 +20,9 @@ constraints and attributes are never linked.
 - A Core type (`OpenCV.X` or `OpenCV.Core.X`) links only when the Core
   specification at `--core` declares that type in the visible part of that
   exact package. The destination is the published Core browser's
-  package-level bookmark (`api/index.html?package=...`), the only stable
-  destination its navigation supports; no declaration fragment is invented.
+  declaration-level bookmark (`api/index.html?symbol=OpenCV.Type_Name`).
+  Core resolves the qualified symbol to its verified native declaration;
+  no generated filename or declaration fragment is invented here.
   These links open at the top level, outside the documentation frame.
 - Standard and other names stay unlinked.
 
@@ -49,10 +50,6 @@ CORE_SITE = "https://zackboll.github.io/opencv_core_ada/api/index.html"
 CORE_PACKAGES = {
     "opencv": ("opencv.ads", "OpenCV"),
     "opencv.core": ("opencv-core.ads", "OpenCV.Core"),
-}
-CORE_DESTINATIONS = {
-    identity: f"{CORE_SITE}?package={name}"
-    for identity, (_, name) in CORE_PACKAGES.items()
 }
 
 
@@ -126,17 +123,22 @@ def visible_declarations(path):
 
 
 def core_types(core_root):
-    """Visible-part type and subtype names of each linked Core package."""
+    """Exact qualified public identities -> stable Core declaration URLs."""
     result = {}
-    for identity, (filename, _) in CORE_PACKAGES.items():
+    for identity, (filename, canonical) in CORE_PACKAGES.items():
         path = core_root / "src" / filename
         require(path.is_file(), f"missing Core specification: {path}")
         package, _, declarations = visible_declarations(path)
         require(package == identity, f"unexpected Core package in {filename}")
-        result[identity] = {
-            d["name"].lower() for d in declarations
-            if d["scope"].lower() == f"{identity}.{d['name'].lower()}"
-            and d["signature"].split()[0] in ("type", "subtype")}
+        for d in declarations:
+            qualified = f"{canonical}.{d['name']}"
+            symbol = qualified.lower()
+            if (d["scope"].lower() != symbol or
+                    d["signature"].split()[0].lower() not in ("type", "subtype")):
+                continue
+            require(re.fullmatch(NAME, qualified), 'invalid Core symbol identity')
+            require(symbol not in result, f'ambiguous Core symbol: {symbol}')
+            result[symbol] = f"{CORE_SITE}?symbol={qualified}"
     return result
 
 
@@ -277,8 +279,8 @@ def resolve(name, declaration, package, sources, pages, targets, core):
             return ((identity, _destination(identity, owner, current, pages, targets),
                      'linked')
                     if identity in targets else (None, None, 'unsupported'))
-        if owner in CORE_DESTINATIONS and simple in core[owner]:
-            return name, CORE_DESTINATIONS[owner], 'external'
+        if name in core:
+            return name, core[name], 'external'
         return None, None, 'unsupported'
     full = "\n".join(package.lines[declaration["start"] - 1:declaration["end"]])
     shadows = set()
@@ -434,7 +436,7 @@ def process(api, source_root=ROOT / "src", core_root=ROOT.parent / "core",
     if not quiet:
         total = sum(len(found) for found in sections.values())
         print(f"Type cross-references: {total} snippets in {len(pages)} pages; "
-              f"{counts['linked']} Geometry and {counts['external']} Core package links; "
+              f"{counts['linked']} Geometry and {counts['external']} Core declaration links; "
               f"{counts['ambiguous']} ambiguous and {counts['unsupported']} unsupported "
               f"names left unlinked" + ("; highlighting verified" if colored or highlight else ""))
     return counts, families
