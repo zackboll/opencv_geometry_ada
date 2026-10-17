@@ -50,7 +50,7 @@ source. A prior campaign or a passing parent commit is not candidate proof.
 | Installed consumers / both Core versions | Ada and mixed Ada/C++, installed and relocated, independent environment | PASS at preflight SHA below |
 | GNAT Pro 25.2 / Scarthgap / Core 0.5.1 | Fresh builds, install, ABI/provenance/ALI checks; consumers and 542/542 under QEMU | PASS at preflight SHA below |
 | Debian AArch64 reference | Fresh cross builds, installed/relocated consumers, 542/542 under QEMU | PASS at preflight SHA below |
-| OpenCV compatibility | Existing 4.x and 5.0 matrix, both Core versions | PENDING |
+| OpenCV compatibility | Existing 4.x and 5.0 matrix, both Core versions | PASS at preflight SHA below |
 | GNATdoc | 452/452, zero warnings, links/navigation/search, five guides/examples, deterministic generation | PASS at preflight SHA below |
 | Alire | Fresh root, test actions, indexed Core 0.5.0 and temporary source-pinned consumers | PASS at preflight SHA below |
 | Source archive | Exact committed source, inventory, archive and manifest hashes, no generated/private material | PASS at preflight SHA below; final archive required |
@@ -124,6 +124,16 @@ Ada/mixed consumers linked and ran installed and relocated. The full suite
 passed 542/542 under user-mode QEMU, zero failures/errors, exit 0. Real-data
 negative controls rejected AdaCore/Yocto claims about Debian inputs.
 This is not GNAT Pro 25.2 or Scarthgap evidence.
+
+### Native OpenCV compatibility
+
+The established Linux matrix runner passed all **14 cells** at the preflight
+SHA: OpenCV 4.6.0, 4.10.0, 4.11.0, 4.12.0, 4.13.0, 4.14.0 and 5.0.0,
+each against immutable Core 0.5.0 and 0.5.1. Every cell passed 542/542 in
+release and validation, four native sanitizer/fault tests, exact loaded
+OpenCV library checks, zero sanitizer reports, and release-profile restoration.
+OpenCV 4 selected native imgproc; OpenCV 5 selected native geometry, without
+loading imgproc. No tolerance, validity check or ownership policy changed.
 
 ### Documentation and Alire
 
