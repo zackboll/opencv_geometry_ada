@@ -101,7 +101,7 @@ def verify(installer, sdk):
     banner = cross.run([gnatls, "--version"]).splitlines()[0]
     cross.require(banner.startswith("GNATLS Pro 25.2 "),
                   "matching GNATLS does not identify Pro 25.2")
-    cpp = cross.probe_identity(cxx, "c++", settings["readelf"])
+    cpp = cross.probe_identity(cxx, "c++", settings["readelf"], verify_elf=True)
     for identity in [*settings["ada_probe"]["identities"], *cpp]:
         cross.require("for GNAT Pro 25.2 " in identity,
                       "object does not identify matching GNAT Pro 25.2")

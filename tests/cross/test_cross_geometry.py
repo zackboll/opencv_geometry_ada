@@ -441,6 +441,27 @@ class CrossGeometryTests(unittest.TestCase):
         self.override("*/identity_probe.o", machine="X86-64")
         self.reject("not ELF64 little-endian AArch64", require_core=False)
 
+    def test_probe_wrong_source_or_unidentified_compiler(self):
+        original = cross.run
+        with patch.object(cross, "run", wraps=cross.run) as command:
+            def foreign(args, **kwargs):
+                result = original(args, **kwargs)
+                if "--RTS=" + str(self.runtime) in args:
+                    (Path(kwargs["cwd"]) / "identity_probe.ali").write_text(
+                        'V "GNAT Lib v12"\nU foreign%b foreign.adb 1234\n')
+                return result
+            command.side_effect = foreign
+            self.reject("controlled source")
+        self.override("*/identity_probe.o", comment=[])
+        self.reject("no compiler identity")
+
+    def test_probe_hashes_are_repeatable_and_changed_compiler_is_detectable(self):
+        first = self.check()["ada_probe"]
+        self.assertEqual(first, self.check()["ada_probe"])
+        Path(self.ada).write_text(Path(self.ada).read_text() + "\n# new compiler\n")
+        self.assertNotEqual(first["compiler_sha256"],
+                            self.check()["ada_probe"]["compiler_sha256"])
+
     def test_mixed_geometry_alis_are_rejected(self):
         work = self.run_workspace("--build", self.base / "work")
         (work / "obj/stale.ali").write_text('V "GNAT Lib v25"\n')

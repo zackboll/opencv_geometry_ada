@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import tarfile
 import tempfile
+import copy
 import unittest
 from unittest.mock import patch
 
@@ -85,6 +86,40 @@ class SDKIdentityTests(unittest.TestCase):
         (self.sdk / "conf/local.conf").write_text('MACHINE = "qemux86-64"\n')
         with self.assertRaisesRegex(claims.cross.ConfigurationError, "metadata"):
             self.verify()
+
+
+class Compiler25IdentityTests(unittest.TestCase):
+    def test_wrong_versions_foreign_or_mixed_compilers_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            ada = base / "aarch64-linux-gnu-gcc"
+            cxx = base / "aarch64-linux-gnu-g++"
+            ada.touch()
+            cxx.touch()
+            identity = "GCC: (GNU) 13.3.1 (for GNAT Pro 25.2 20250603)"
+            settings = dict(ada_version="13.3.1", cxx_version="13.3.1",
+                            ada=str(ada), cxx=str(cxx), readelf="readelf",
+                            runtime=temp, ali_signature='V "GNAT Lib v25"',
+                            sysroot=temp, ada_probe=dict(identities=[identity]))
+            cases = [
+                (dict(ada_version="12.2.0"), "GNATLS Pro 25.2 (build)",
+                 {identity}, "GCC 13.3.1"),
+                ({}, "GNATLS Pro 23.2 (build)", {identity}, "Pro 25.2"),
+                ({}, "GNATLS Pro 25.2 (build)", {"GCC: foreign"}, "matching GNAT"),
+                ({}, "GNATLS Pro 25.2 (build)",
+                 {identity.replace("20250603", "20250604")}, "identities differ"),
+                (dict(cxx="/usr/bin/c++"), "GNATLS Pro 25.2 (build)",
+                 {identity}, "invalid target|different compiler")]
+            for changes, banner, cpp, message in cases:
+                current = copy.deepcopy(settings)
+                current.update(changes)
+                with self.subTest(changes=changes, banner=banner, cpp=cpp), \
+                        patch.object(claims.cross, "validate", return_value=current), \
+                        patch.object(claims.cross, "matching_gnatls", return_value=ada), \
+                        patch.object(claims.cross, "run", return_value=banner), \
+                        patch.object(claims.cross, "probe_identity", return_value=cpp), \
+                        self.assertRaisesRegex(claims.cross.ConfigurationError, message):
+                    claims.verify(base / "unused.sh", base)
 
 
 if __name__ == "__main__":

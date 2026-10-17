@@ -154,6 +154,9 @@ python3 "$root/scripts/cross_geometry.py" --verify-built \
 python3 "$root/scripts/cross_geometry.py" --verify-built \
     "$cross_evidence" "$evidence/aunit" > "$logs/aunit-library-identity.json" \
     2> "$logs/aunit-library-identity.err" || fail "AUnit library object/ALI mismatch"
+python3 "$root/scripts/cross_geometry.py" --verify-executable \
+    "$cross_evidence" "$work/tests/bin/tests" > "$logs/aunit-executable-abi.json" \
+    2> "$logs/aunit-executable-abi.err" || fail "AUnit executable ABI mismatch"
 echo "GEOMETRY_AARCH64_AUNIT_CROSS_BUILD PASS" >> "$dispositions"
 if [ -z "$emulator" ]; then
     {

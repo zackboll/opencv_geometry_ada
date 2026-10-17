@@ -278,7 +278,7 @@ def check_alis(root, signature):
     return len(alis)
 
 
-def probe_identity(compiler, language, readelf):
+def probe_identity(compiler, language, readelf, verify_elf=False):
     """The .comment identity of an object compiled by compiler."""
     with tempfile.TemporaryDirectory(prefix="geometry-cross-probe.") as temp:
         directory = Path(temp)
@@ -291,9 +291,29 @@ def probe_identity(compiler, language, readelf):
             source.write_text("int identity_probe() { return 0; }\n")
         run([compiler, "-c", source.name, "-o", "identity_probe.o"],
             cwd=directory)
+        if verify_elf:
+            elf(directory / "identity_probe.o", readelf)
         identity = comments(directory / "identity_probe.o", readelf)
     require(identity, f"compiler records no identity: {compiler}")
     return identity
+
+
+def check_executable(path, settings):
+    """A linked test must be target-only and load only sysroot libraries."""
+    readelf = settings["readelf"]
+    sysroot = Path(settings["sysroot"])
+    elf(path, readelf)
+    headers = run([readelf, "-l", path])
+    interpreter = re.search(r"Requesting program interpreter: ([^\]]+)\]", headers)
+    require(interpreter, "target executable has no program interpreter")
+    loader = resolved(sysroot / interpreter[1].lstrip("/"), [sysroot])
+    dynamic = run([readelf, "-d", path])
+    require(not re.search(r"\((?:RPATH|RUNPATH)\)", dynamic),
+            "target executable has an unqualified run path")
+    closure = dependency_closure([path, loader], sysroot, readelf,
+                                 settings["target"], [Path(path).parent])
+    return dict(interpreter=interpreter[1], closure=closure,
+                symbol_versions_checked=check_versions(closure, readelf))
 
 
 def loader_directories(sysroot, target):
@@ -621,7 +641,7 @@ def validate(require_core=True):
         runtime_identity=runtime_evidence, ada_probe=ada_probe,
         ali_signature=ada_probe["signature"],
         identities=sorted(set(ada_probe["identities"])
-                          | probe_identity(cxx, "c++", readelf)),
+                           | probe_identity(cxx, "c++", readelf, verify_elf=True)),
         production_qualified=False)
     if require_core:
         settings.update(core_prefix(settings))
@@ -892,11 +912,15 @@ def main(arguments):
         runtime = Path(settings["runtime"])
         runtime_identity(settings["ada"], runtime)
         fresh = probe_ada(settings["ada"], runtime, settings["readelf"])
-        require(all(fresh[key] == settings["ada_probe"][key]
-                    for key in fresh if key != "ali_sha256"),
+        require(fresh == settings["ada_probe"],
                 "compiler/runtime/probe identity changed since build")
         print(json.dumps(check_outputs(Path(arguments[2]), settings),
                          sort_keys=True))
+        return
+    if len(arguments) == 3 and arguments[0] == "--verify-executable":
+        settings = json.loads(Path(arguments[1]).read_text())
+        print(json.dumps(check_executable(Path(arguments[2]), settings),
+                         indent=2, sort_keys=True))
         return
     if arguments == ["check"]:
         print(json.dumps(validate(), indent=2, sort_keys=True))
