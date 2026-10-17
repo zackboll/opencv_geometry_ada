@@ -132,6 +132,9 @@ echo "GEOMETRY_AARCH64_CONSUMER_LINK PASS (Ada and mixed; installed and" \
 cp -a "$aunit" "$evidence/aunit"
 mkdir -p "$work/tests/config"
 cp "$work/tests/gnat12/tests_config.gpr" "$work/tests/config/"
+if [ "${QUALIFY_TRACK:-}" = adacore25 ]; then
+    cp "$here/../adacore25/tests_config.gpr" "$work/tests/config/"
+fi
 (
     cd "$work"
     GPR_PROJECT_PATH="$relocated/core-prefix-b/share/gpr:$evidence/aunit/lib/gnat:$work" \
@@ -145,6 +148,12 @@ if grep -n 'warning:' "$logs/aunit-cross-build.log"; then
 fi
 "$readelf" -h "$work/tests/bin/tests" | grep -q 'Machine:.*AArch64' \
     || fail "the AUnit executable is not AArch64"
+python3 "$root/scripts/cross_geometry.py" --verify-built \
+    "$cross_evidence" "$work" > "$logs/aunit-object-identity.json" \
+    2> "$logs/aunit-object-identity.err" || fail "AUnit object/ALI mismatch"
+python3 "$root/scripts/cross_geometry.py" --verify-built \
+    "$cross_evidence" "$evidence/aunit" > "$logs/aunit-library-identity.json" \
+    2> "$logs/aunit-library-identity.err" || fail "AUnit library object/ALI mismatch"
 echo "GEOMETRY_AARCH64_AUNIT_CROSS_BUILD PASS" >> "$dispositions"
 if [ -z "$emulator" ]; then
     {
