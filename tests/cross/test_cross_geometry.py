@@ -490,6 +490,8 @@ class CrossGeometryTests(unittest.TestCase):
                         .is_file())
         self.assertEqual((work / "source-revision.txt").read_text().strip(),
                          evidence["source_sha"])
+        self.assertNotIn('with "opencv_core.gpr";',
+                         (work / "config/opencv_geometry_config.gpr").read_text())
 
     def test_independent_toolchains_require_explicit_opt_in(self):
         self.compilers[Path(self.cxx).name]["version"] = "13.3.0"

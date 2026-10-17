@@ -823,8 +823,14 @@ def workspace(mode, destination, settings):
     require(not install_config.exists(), "stale target configuration")
     install_config.parent.mkdir(exist_ok=True)
     install_config.write_text(configuration(settings))
-    shutil.copyfile(work / "tests/gnat12/opencv_geometry_config.gpr",
-                    work / "config/opencv_geometry_config.gpr")
+    # The switch-only abstract project must be a leaf. Its unused Core
+    # import makes GPRinstall Pro retain a dangling config import in both
+    # installed projects (and pulls Core's shim into Geometry's shim).
+    # Keep the GNAT 12 switch policy intact; remove only that unused import
+    # in the exported cross-build configuration, never installed metadata.
+    config_text = (work / "tests/gnat12/opencv_geometry_config.gpr").read_text()
+    (work / "config/opencv_geometry_config.gpr").write_text(
+        config_text.replace('with "opencv_core.gpr";\n', ''))
     shutil.copyfile(settings["config"], work / "config/target.cgpr")
     evidence = dict(settings, source_sha=revision, profile=profile,
                     qualification="CROSS_CONFIGURATION_ONLY")
