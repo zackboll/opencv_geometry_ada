@@ -577,8 +577,18 @@ class GeneratedSiteTest(unittest.TestCase):
 
     def test_fabricated_core_fragment_is_rejected(self):
         self.mutate_section("OpenCV.Geometry", "Get_Rotation_Matrix_2D",
-                            "?package=OpenCV.Core\"", "?package=OpenCV.Core#mat\"")
+                            "?symbol=OpenCV.Core.Mat\"", "?symbol=OpenCV.Core.Mat#mat\"")
         self.assertRejected("unapproved link")
+
+    def test_core_package_only_link_is_rejected(self):
+        self.mutate_section("OpenCV.Geometry", "Get_Rotation_Matrix_2D",
+                            "?symbol=OpenCV.Core.Mat\"", "?package=OpenCV.Core\"")
+        self.assertRejected("unapproved link")
+
+    def test_wrong_existing_core_symbol_is_rejected(self):
+        self.mutate_section("OpenCV.Geometry", "Get_Rotation_Matrix_2D",
+                            "?symbol=OpenCV.Core.Mat\"", "?symbol=OpenCV.Rect\"")
+        self.assertRejected("type identity/destination/markup mismatch")
 
     def test_removed_type_link_is_rejected(self):
         text, start, end = self.section_bounds("OpenCV.Geometry", "Convex_Hull")

@@ -15,6 +15,47 @@ the remaining roadmap are kept in
 
 ## Reproduce on Linux — pinned generation environment
 
+### Cross-repository declaration bookmarks
+
+Core references now use stable, fully qualified symbol URLs, for example
+`https://zackboll.github.io/opencv_core_ada/api/index.html?symbol=OpenCV.Rect`.
+The linker verifies the exact owning package and unique public type/subtype
+declaration against the qualified Core source checkout. It preserves source
+spelling in the URL and records the case-insensitive identity in `data-type`.
+No generated Core filenames or native anchor hashes are embedded in Geometry.
+Core's API browser resolves that symbol to the actual declaration. The final
+Geometry validator recomputes every identity and destination; a package-only
+link, wrong existing symbol, fabricated fragment or altered target fails.
+Internal Geometry and child-to-parent native cross-links are unchanged.
+
+Documentation CI generates an immutable Phase 1 Core browser fixture from
+`dace47d8730323d27b9920145ceda498888ff12e` in a separate checkout and runs
+the cross-repository, presentation and native navigation browser suites with
+documentation-only Playwright 1.64.1/Chromium. This fixture is not used for
+Geometry's Ada dependency or its qualified source-resolution checkout.
+
+Publication order matters: deploy the Core symbol-router PR before deploying
+these Geometry links. The source-only generation checkout remains Core 0.5.0;
+the symbol-router is a documentation feature, not an Ada dependency upgrade.
+The cross-repository browser test uses the actual generated Phase 1 Core site,
+not a stub. To test local artifacts, serve Core and Geometry separately and run:
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/node_modules/playwright \
+  DOC_URL=http://127.0.0.1:18762/ CORE_DOC_URL=http://127.0.0.1:18761/ \
+  node scripts/test_core_type_links_browser.cjs
+```
+
+The browser requests the production Core URLs; `CORE_DOC_URL` routes their
+responses to the real local artifact, retaining the cross-origin navigation and
+top-level browsing behavior. Omit it to test published Core after deployment.
+The test clicks Rect, Angle_Unit and Mat, asserts the actual target declaration
+and visible scroll position, then checks reload and Back/Forward, including
+return to Geometry. Geometry's current API does not reference Size: its exact
+URL is tested in the linker fixture and as a direct browser deep link, without
+adding a synthetic production declaration. Existing presentation/navigation suites continue
+to qualify internal cross-links and package search independently.
+
 Required qualification versions:
 
 | Tool | Release / executable version |
@@ -294,14 +335,14 @@ anything:
      packages stays unlinked.
    - `OpenCV.X` and `OpenCV.Core.X` link only when Core's `src/opencv.ads` or
      `src/opencv-core.ads` (from the Core checkout verified by the generator's
-     gate, opencv_core 0.4.1) declares that type in the visible part of
-     exactly that package. The destination is the published Core browser's
-     package bookmark,
-     `https://zackboll.github.io/opencv_core_ada/api/index.html?package=OpenCV`
-     or `...?package=OpenCV.Core`; no declaration fragment is invented. These
+      gate, opencv_core 0.5.0) declares that type uniquely in the visible part
+      of exactly that package. The destination is the published Core browser's
+      stable declaration bookmark, for example
+      `https://zackboll.github.io/opencv_core_ada/api/index.html?symbol=OpenCV.Rect`
+      or `...?symbol=OpenCV.Core.Mat`; no native fragment is invented. These
      links carry `target="_top"` and are drawn with a dashed underline. The
-     Core site documents Core `main`; every linked type exists in the visible
-     part of both releases' root packages.
+      Core site documents Core `main`; its source-backed symbol router discovers
+      the generated page and actual declaration anchor.
    - Standard types (`Natural`, `Positive`, `Boolean`) stay unlinked.
    `api/type-crossrefs.json` keeps, per package page, the original snippets
    and a hash of the page outside them; validation recomputes every link and

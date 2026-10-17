@@ -101,6 +101,37 @@ jobs:
               affine_and_perspective delaunay_and_voronoi compatibility_and_safety; do
             "obj/docs-examples/$example"
           done
+      # Documentation-only Phase 1 fixture, not Geometry's Ada dependency.
+      # Keep the production/source-resolution Core 0.5.0 checkout above intact.
+      - name: Checkout immutable Core declaration-router documentation fixture
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/opencv_core_ada
+          ref: dace47d8730323d27b9920145ceda498888ff12e
+          path: core-navigation
+      - name: Generate actual Core browser fixture
+        working-directory: core-navigation
+        env:
+          GNATDOC_PREFIX: ${{ github.workspace }}/geometry/.doc-tools/gnatdoc-26.0.0
+        run: sh scripts/generate_docs.sh
+      - name: Qualify cross-repository declaration navigation in Chromium
+        run: |
+          npm install --prefix /tmp/doc-browser --no-package-lock playwright@1.64.1
+          /tmp/doc-browser/node_modules/.bin/playwright install --with-deps chromium
+          export PLAYWRIGHT_MODULE=/tmp/doc-browser/node_modules/playwright
+          export CHROME=$(node -e 'console.log(require(process.env.PLAYWRIGHT_MODULE).chromium.executablePath())')
+          export DOC_URL=http://127.0.0.1:8073/
+          export CORE_DOC_URL=http://127.0.0.1:8074/
+          python3 -m http.server 8073 --bind 127.0.0.1 --directory _site &
+          geometry_server=$!
+          python3 -m http.server 8074 --bind 127.0.0.1 --directory ../core-navigation/_site &
+          core_server=$!
+          trap 'kill "$geometry_server" "$core_server"' EXIT
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 "$DOC_URL" --output /dev/null
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 "$CORE_DOC_URL" --output /dev/null
+          node scripts/test_core_type_links_browser.cjs
+          node scripts/test_gnatdoc_presentation_browser.cjs
+          node scripts/test_gnatdoc_navigation_browser.cjs
       - name: Upload review artifact
         uses: actions/upload-artifact@v4
         with:

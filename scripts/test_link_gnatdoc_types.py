@@ -16,8 +16,11 @@ from pathlib import Path
 
 from highlight_gnatdoc_ada import highlight, strip_highlighting
 from install_gnatdoc_theme import NATIVE, check_theme, install
-from link_gnatdoc_types import (CORE_DESTINATIONS, LINK, CrossReferenceError,
-                                process)
+from link_gnatdoc_types import (CORE_SITE, LINK, CrossReferenceError,
+                                core_types, process)
+
+CORE_LINKS = {name.lower(): f"{CORE_SITE}?symbol={name}" for name in
+              ('OpenCV.Size', 'OpenCV.Rect', 'OpenCV.Angle_Unit', 'OpenCV.Core.Mat')}
 
 PAGE = "e" * 64 + ".html"
 CHILD_PAGE = "f" * 64 + ".html"
@@ -153,6 +156,29 @@ class Fixture(unittest.TestCase):
 
 
 class TypeLinkTest(Fixture):
+    def test_exact_core_package_and_type_identities(self):
+        self.edit(self.core / 'src/opencv.ads', '   type Size',
+                  '   type Rect is record\n      X : Integer;\n'
+                  '   end record;\n   type Size')
+        targets = core_types(self.core)
+        self.assertEqual(targets, CORE_LINKS)
+        self.assertNotIn('opencv.core.size', targets)
+        self.assertNotIn('opencv.mat', targets)
+        self.assertNotIn('opencv.core.handle', targets)
+
+    def test_ambiguous_core_symbol_is_rejected(self):
+        self.edit(self.core / 'src/opencv.ads', '   type Angle_Unit',
+                  '   subtype Angle_Unit is Integer;\n   type Angle_Unit')
+        with self.assertRaisesRegex(CrossReferenceError, 'ambiguous Core symbol'):
+            self.link()
+
+    def test_package_only_and_wrong_existing_core_symbol_are_rejected(self):
+        self.link()
+        original = self.page.read_text()
+        for wrong in (CORE_SITE + '?package=OpenCV.Core', CORE_LINKS['opencv.size']):
+            self.page.write_text(original.replace(CORE_LINKS['opencv.core.mat'], wrong))
+            self.assertCheckFails('type identity/destination/markup mismatch')
+
     def test_links_local_and_core_types_only(self):
         counts, families = self.link()
         self.assertEqual(counts["linked"], 10)
@@ -161,9 +187,9 @@ class TypeLinkTest(Fixture):
         self.assertIn(f'<a class="type-reference" href="#{ANCHORS["Mode"]}" '
                       'data-type="opencv.demo.mode">Mode</a>', run)
         self.assertIn('<a class="type-reference" href="'
-                      + CORE_DESTINATIONS["opencv.core"] +
+                      + CORE_LINKS["opencv.core.mat"] +
                       '" data-type="opencv.core.mat" target="_top">OpenCV.Core.Mat</a>', run)
-        self.assertIn('href="' + CORE_DESTINATIONS["opencv"] +
+        self.assertIn('href="' + CORE_LINKS["opencv.size"] +
                       '" data-type="opencv.size" target="_top">OpenCV.Size</a>', run)
         self.assertIn('data-type="opencv.demo.pair">Pair</a>', self.section("Pair_Array"))
         self.assertIn('data-type="opencv.demo.count">Count</a>', self.section("Make"))
@@ -235,8 +261,8 @@ class TypeLinkTest(Fixture):
 
     def test_fabricated_core_fragment_is_rejected(self):
         self.link()
-        self.edit(self.page, CORE_DESTINATIONS["opencv.core"] + '"',
-                  CORE_DESTINATIONS["opencv.core"] + '#mat"')
+        self.edit(self.page, CORE_LINKS["opencv.core.mat"] + '"',
+                  CORE_LINKS["opencv.core.mat"] + '#mat"')
         self.assertCheckFails("type identity/destination/markup mismatch")
 
     def test_removed_core_type_is_rejected(self):
@@ -360,7 +386,7 @@ class HighlightTest(unittest.TestCase):
             self.assert_token(operator, 'operator', operator)
 
     def test_links_with_top_target_stay_atomic(self):
-        link = ('<a class="type-reference" href="' + CORE_DESTINATIONS["opencv.core"] +
+        link = ('<a class="type-reference" href="' + CORE_LINKS["opencv.core.mat"] +
                 '" data-type="opencv.core.mat" target="_top">OpenCV.Core.Mat</a>')
         output = highlight('function F return ' + link)
         self.assertEqual([m[0] for m in LINK.finditer(output)], [link])
