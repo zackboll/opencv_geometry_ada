@@ -67,7 +67,7 @@ no target dependency guard was relaxed. Failed attempts were retained.
 ## Recorded integrated results
 
 Core main and corrected Geometry commit
-`9e36e14ae4e1f801455a750c1c3795c4710b3bce` completed:
+`3c2b2cfbbf1633a13ce78e3b1f8b82cf97ddd313` completed:
 
 | Gate | Result |
 |---|---|
@@ -83,10 +83,11 @@ Core main and corrected Geometry commit
 | Geometry AUnit QEMU run | **542/542**, 0 failed assertions, 0 unexpected errors |
 | Geometry/test object and ALI checks | PASS: 59 ALIs, 55 objects |
 | AUnit library object and ALI checks | PASS: 46 ALIs, 24 objects |
+| AUnit executable loader/dependency/symbol checks | PASS |
 | Target hardware | NOT TESTED |
 
-The exact build commits and evidence are recorded privately; later tooling
-hardening is revalidated separately. Synthetic controls do not count as
+The exact build commits and evidence are recorded privately. **67 synthetic
+controls passed**, including the unchanged GNAT 12 claim tests. Synthetic controls do not count as
 target execution. The Core full unit suite is not part of these 542 Geometry
 tests. No hardware qualification is inferred from QEMU.
 
