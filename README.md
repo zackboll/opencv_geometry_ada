@@ -3,7 +3,13 @@
 Thick Ada binding to OpenCV Geometry, published as `opencv_geometry`.
 Repository: https://github.com/zackboll/opencv_geometry_ada
 
-Release 0.3.0 adds batch point transforms and an opt-in hardened Float32
+Release candidate 0.3.1 is a compatibility-preserving tooling and platform
+qualification patch. Its production Ada and C++ trees are identical to
+0.3.0. See the [0.3.1 release notes](docs/release-0.3.1.md) and
+[candidate qualification record](docs/geometry-0.3.1-release-qualification.md)
+for exact sources, results and outstanding release gates.
+
+Release 0.3.0 added batch point transforms and an opt-in hardened Float32
 convex intersection, makes closest-ellipse points and Float32 Subdiv2D bounds
 available on every supported OpenCV release, requires `opencv_core` 0.5.0 and
 builds with Debian 12's GNAT 12. See the
@@ -12,12 +18,15 @@ deferred native operations and [installation](#installation); the
 [0.2.0 release notes](docs/release-0.2.0.md) record the previous release. No
 coverage-percentage target overrides those safety decisions.
 
-> **Not qualified: AdaCore GNAT 12 and Yocto Scarthgap.** By maintainer
-> decision, 0.3.0 ships without testing in that environment; its disposition
-> is `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`. The Debian AArch64
-> reference (Debian's cross GNAT 12, a Debian arm64 sysroot and user-mode
-> emulation) is reference evidence only, not support for either. See
-> [the release notes](docs/release-0.3.0.md#deferred-adacore-gnat-12--yocto-scarthgap-testing).
+> **AdaCore GNAT 12 remains NOT TESTED.** The separate GNAT Pro 25.2 track
+> has qualified the specifically tested AArch64 Scarthgap 5.0 environment
+> with OpenCV 4.9.0, including 542/542 Geometry tests under QEMU; see
+> [the scoped qualification](docs/adacore25-scarthgap-qualification.md).
+> That evidence does not qualify AdaCore GNAT 12, other SDKs, or hardware.
+> **Target hardware: NOT TESTED.** The 0.3.1 candidate requires fresh
+> qualification at its own committed source. The original 0.3.0 disposition
+> remains `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`; see
+> [its historical release notes](docs/release-0.3.0.md#deferred-adacore-gnat-12--yocto-scarthgap-testing).
 
 > **Documentation:** the generated API reference, operation browser and five
 > developer guides are built by `sh scripts/generate_docs.sh` and published
@@ -37,9 +46,15 @@ The supported Core constraint is `>=0.5.0 & <0.6.0`. Core 0.5.0 is the first
 Core release that builds with GNAT 12, and it is qualified at its immutable
 release commit, `f8aef00` (tag `0.5.0`). See
 [Core compatibility evidence](docs/core-compatibility.md)
-for exact sources, tested combinations, and platform limitations, and
-[the 0.3.0 release qualification](docs/geometry-0.3.0-release-qualification.md)
-for the current release record.
+for exact sources, tested combinations, and platform limitations. Core 0.5.0
+remains supported on previously qualified platforms. Core 0.5.1 is the
+preferred corrected tooling release for GNAT Pro 25.2 / Scarthgap, not a
+new global minimum. Its community-index acceptance must be checked
+separately from its published source tag. The
+[0.3.1 qualification](docs/geometry-0.3.1-release-qualification.md) is the
+current candidate record; the
+[0.3.0 qualification](docs/geometry-0.3.0-release-qualification.md) remains
+historical evidence.
 
 | Native OpenCV | Header | Native implementation |
 | --- | --- | --- |

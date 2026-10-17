@@ -12,10 +12,12 @@ jobs:
       fail-fast: false
       matrix:
         # The manifest requires opencv_core >=0.5.0 & <0.6.0: the Core 0.5.0
-        # release commit (tag 0.5.0).
+        # minimum and corrected tooling releases, by immutable source commit.
         core:
           - version: 0.5.0
             commit: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
+          - version: 0.5.1
+            commit: 64d8a60b59acfe4334045280e430c4774b5cad89
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -138,6 +140,8 @@ jobs:
         core:
           - version: 0.5.0
             commit: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
+          - version: 0.5.1
+            commit: 64d8a60b59acfe4334045280e430c4774b5cad89
     runs-on: macos-latest
     defaults:
       run:
