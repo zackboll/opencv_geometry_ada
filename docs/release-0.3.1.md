@@ -60,6 +60,14 @@ substitute for fresh qualification of this release candidate against Core
 0.5.1. Candidate gates also retain Debian GNAT 12, Core 0.5.0 compatibility,
 the separate Debian AArch64 reference and existing OpenCV 4/5 coverage.
 
+Fresh release preflight at `df7fd96376af0771660bb51ea59b9e2158634786`
+has now reproduced the Scarthgap results against immutable Core 0.5.1,
+including both installed/relocated consumer kinds and 542/542 tests under
+QEMU with exit status 0. Separate Debian 12 GNAT 12 qualification passes
+all three profiles against each Core release, and the Debian AArch64
+reference passes against Core 0.5.0. The qualification record distinguishes
+these exact-source results from the final PR-head release gates.
+
 **AdaCore GNAT 12: NOT TESTED. Target hardware: NOT TESTED.** User-mode QEMU
 execution is not hardware execution. The historical 0.3.0 AdaCore/Yocto
 deferral remains accurate and is not rewritten by later GNAT Pro testing.
