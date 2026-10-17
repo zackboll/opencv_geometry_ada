@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import shlex
 import unittest
 from unittest.mock import patch
 
@@ -79,7 +80,12 @@ for argument in arguments:
         print(config["files"][argument.split("=", 1)[1]]); sys.exit(0)
 if "-c" in arguments:
     output = arguments[arguments.index("-o") + 1]
-    open(output, "w").close()
+    if not config.get("omit_object"):
+        open(output, "w").close()
+    if "identity_probe.adb" in arguments and not config.get("omit_ali"):
+        open("identity_probe.ali", "w").write(
+            config.get("ali", 'V "GNAT Lib v12"') +
+            '\nU identity_probe%b identity_probe.adb 721448c7 NE\n')
     sys.exit(0)
 sys.exit("unexpected compiler arguments: " + " ".join(arguments))
 '''
@@ -193,6 +199,7 @@ class CrossGeometryTests(unittest.TestCase):
                 self.base / "cxxlib/libstdc++.so"]:
             path.touch()
         self.version(4, 6, 0)
+        (self.runtime / "adalib/system.ali").write_text('V "GNAT Lib v12"\n')
         (self.core / "lib/opencv_core/opencv.ali").write_text(
             'V "GNAT Lib v12"\n')
         (self.core / "share/gpr/opencv_core.gpr").write_text(
@@ -354,6 +361,114 @@ class CrossGeometryTests(unittest.TestCase):
         self.assertEqual(first["native_geometry_module"], "imgproc")
         self.assertEqual(first["identities"], [IDENTITY])
 
+    def gnatls(self, text=None, status=0):
+        self.compilers[Path(self.ada).name]["files"]["adalib"] = "adalib"
+        text = text if text is not None else (
+            f"Source Search Path:\n <Current_Directory>\n"
+            f" {self.runtime}/adainclude\n\nObject Search Path:\n"
+            f" <Current_Directory>\n {self.runtime}/adalib\n")
+        return Path(self.executable(f"{TARGET}-gnatls-12",
+                    "#!/bin/sh\nprintf '%s\\n' " + shlex.quote(text)
+                    + f"\nexit {status}\n"))
+
+    def test_gnatls_fallback_and_compiler_symlink(self):
+        self.gnatls()
+        self.assertEqual(self.check()["runtime_identity"]["method"], "gnatls")
+        alias = self.base / "compiler-alias"
+        alias.symlink_to(self.ada)
+        self.assertEqual(cross.matching_gnatls(alias).parent, self.tools)
+
+    def test_gnatls_is_never_selected_from_path_or_foreign_directory(self):
+        sibling = self.gnatls()
+        sibling.unlink()
+        self.env["PATH"] = str(self.tools) + ":" + os.environ["PATH"]
+        self.executable("gnatls", "#!/bin/sh\nexit 0\n")
+        self.reject("matching GNATLS unavailable")
+        foreign = self.base / "foreign-gnatls"
+        foreign.write_text("#!/bin/sh\nexit 0\n")
+        foreign.chmod(0o755)
+        sibling.symlink_to(foreign)
+        self.reject("another toolchain directory")
+
+    def test_gnatls_complete_sections_and_all_paths_are_required(self):
+        for text in [
+                f"Object Search Path:\n {self.runtime}/adalib\n",
+                "Source Search Path:\nrelative/path\n",
+                f"Source Search Path:\n {self.runtime}/adainclude\n"
+                "Source Search Path:\n",
+                f"Source Search Path:\n {self.runtime}/adainclude\n"
+                f"Object Search Path:\n {self.runtime}/adalib\n {self.base}\n",
+                f"Source Search Path:\n {self.base}\n"
+                f"Object Search Path:\n {self.runtime}/adalib\n",
+                "Source Search Path:\n /missing-runtime\n"]:
+            with self.subTest(text=text):
+                self.gnatls(text)
+                self.reject("GNATLS|runtime differs")
+
+    def test_gnatls_failed_command_and_absolute_mismatch(self):
+        self.gnatls(status=1)
+        self.reject("command failed")
+        self.compilers[Path(self.ada).name]["files"]["adalib"] = str(self.base)
+        self.reject("runtime differs")
+
+    def test_gnatls_crlf_whitespace_and_runtime_alias(self):
+        self.gnatls(f" Source Search Path :\r\n {self.runtime}/adainclude\r\n"
+                    f" Object Search Path :\r\n {self.runtime}/adalib\r\n")
+        self.check()
+
+    def test_ali_version_is_compiled_not_gcc_major(self):
+        for compiler in self.compilers.values():
+            compiler["version"] = "13.3.1"
+        self.compilers[Path(self.ada).name]["ali"] = 'V "GNAT Lib v25"'
+        for path in [self.runtime / "adalib/system.ali",
+                     self.core / "lib/opencv_core/opencv.ali"]:
+            path.write_text('V "GNAT Lib v25"\n')
+        self.assertEqual(self.check()["ali_signature"], 'V "GNAT Lib v25"')
+        (self.core / "lib/opencv_core/stale.ali").write_text('V "GNAT Lib v13"\n')
+        self.reject("ALI from another GNAT")
+
+    def test_probe_missing_outputs_invalid_ali_and_runtime_mismatch(self):
+        compiler = self.compilers[Path(self.ada).name]
+        for key, value in [("omit_object", True), ("omit_ali", True),
+                           ("ali", "not a GNAT ALI"),
+                           ("ali", 'V "GNAT Lib v25"')]:
+            with self.subTest(key=key, value=value):
+                compiler[key] = value
+                self.reject("missing|invalid|differs")
+                del compiler[key]
+
+    def test_probe_host_object_is_rejected_before_core(self):
+        self.override("*/identity_probe.o", machine="X86-64")
+        self.reject("not ELF64 little-endian AArch64", require_core=False)
+
+    def test_probe_wrong_source_or_unidentified_compiler(self):
+        original = cross.run
+        with patch.object(cross, "run", wraps=cross.run) as command:
+            def foreign(args, **kwargs):
+                result = original(args, **kwargs)
+                if "--RTS=" + str(self.runtime) in args:
+                    (Path(kwargs["cwd"]) / "identity_probe.ali").write_text(
+                        'V "GNAT Lib v12"\nU foreign%b foreign.adb 1234\n')
+                return result
+            command.side_effect = foreign
+            self.reject("controlled source")
+        self.override("*/identity_probe.o", comment=[])
+        self.reject("no compiler identity")
+
+    def test_probe_hashes_are_repeatable_and_changed_compiler_is_detectable(self):
+        first = self.check()["ada_probe"]
+        self.assertEqual(first, self.check()["ada_probe"])
+        Path(self.ada).write_text(Path(self.ada).read_text() + "\n# new compiler\n")
+        self.assertNotEqual(first["compiler_sha256"],
+                            self.check()["ada_probe"]["compiler_sha256"])
+
+    def test_mixed_geometry_alis_are_rejected(self):
+        work = self.run_workspace("--build", self.base / "work")
+        (work / "obj/stale.ali").write_text('V "GNAT Lib v25"\n')
+        with self.assertRaisesRegex(cross.ConfigurationError,
+                                    "ALI from another GNAT"):
+            cross.check_outputs(work, self.check())
+
     def test_opencv5_selects_the_geometry_backend(self):
         (self.include / "opencv2/geometry.hpp").touch()
         (self.include / "opencv2/imgproc.hpp").unlink()
@@ -396,6 +511,8 @@ class CrossGeometryTests(unittest.TestCase):
                         .is_file())
         self.assertEqual((work / "source-revision.txt").read_text().strip(),
                          evidence["source_sha"])
+        self.assertNotIn('with "opencv_core.gpr";',
+                         (work / "config/opencv_geometry_config.gpr").read_text())
 
     def test_independent_toolchains_require_explicit_opt_in(self):
         self.compilers[Path(self.cxx).name]["version"] = "13.3.0"

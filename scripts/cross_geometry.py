@@ -59,7 +59,8 @@ HOST_SEARCH = [
     "CPATH", "C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH", "LIBRARY_PATH",
     "GCC_EXEC_PREFIX", "COMPILER_PATH", "ADA_INCLUDE_PATH",
     "ADA_OBJECTS_PATH", "GPR_PROJECT_PATH", "ADA_PROJECT_PATH",
-    "LD_LIBRARY_PATH", "PKG_CONFIG_PATH"]
+    "LD_LIBRARY_PATH", "PKG_CONFIG_PATH", "ADA_PRJ_INCLUDE_FILE",
+    "ADA_PRJ_OBJECTS_FILE"]
 
 PROFILES = ["release", "validation", "development"]
 
@@ -163,7 +164,121 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def probe_identity(compiler, language, readelf):
+def matching_gnatls(ada):
+    """Use the actual installation, never a PATH or foreign GNATLS.
+
+    Mirrors Core PR #83, including versioned GCC executable names and
+    resolving compiler symlinks before deriving the sibling name.
+    """
+    compiler = resolved(ada)
+    match = re.fullmatch(r"(.*?)(?:gcc)(-[0-9][0-9.]*)?", compiler.name)
+    require(match, f"cannot derive matching GNATLS from {compiler}")
+    sibling = compiler.with_name(
+        match[1] + "gnatls" + (match[2] or ""))
+    require(sibling.is_file() and os.access(sibling, os.X_OK),
+            f"matching GNATLS unavailable: {sibling}")
+    sibling = resolved(sibling)
+    require(sibling.parent == compiler.parent,
+            "GNATLS belongs to another toolchain directory")
+    return sibling
+
+
+def runtime_identity(ada, runtime):
+    """Prove the default runtime independently of forcing --RTS.
+
+    An existing absolute compiler answer is authoritative. Otherwise require
+    both complete GNATLS sections and check *every* explicit search entry,
+    not just a matching suffix which could hide a higher priority runtime.
+    """
+    answer = run([ada, "-print-file-name=adalib"])
+    if Path(answer).is_absolute() and Path(answer).is_dir():
+        require(resolved(answer) == resolved(runtime / "adalib"),
+                "Ada runtime differs from the compiler's runtime")
+        return dict(method="compiler", adalib=str(resolved(answer)))
+    gnatls = matching_gnatls(ada)
+    env = dict(os.environ, LC_ALL="C")
+    output = run([gnatls, "-v"], env=env)
+    sections = {"Source": [], "Object": []}
+    seen = set()
+    section = None
+    for line in output.splitlines():
+        line = line.strip()
+        header = re.fullmatch(r"(Source|Object) Search Path\s*:", line)
+        if header:
+            section = header[1]
+            require(section not in seen, "duplicate GNATLS search section")
+            seen.add(section)
+        elif re.match(r"[A-Za-z].*Search Path\s*:", line):
+            require(not line.startswith(("Source", "Object")),
+                    "malformed GNATLS search section")
+            section = None
+        elif section and line and line != "<Current_Directory>":
+            require(Path(line).is_absolute(),
+                    "nonabsolute GNATLS search directory")
+            require(Path(line).is_dir(), "missing GNATLS search directory")
+            sections[section].append(str(resolved(line)))
+    for kind, directory in [("Source", "adainclude"), ("Object", "adalib")]:
+        require(sections[kind], f"missing GNATLS {kind} search paths")
+        require(all(path == str(resolved(runtime / directory))
+                    for path in sections[kind]),
+                f"Ada runtime differs from GNATLS {kind} search paths")
+    return dict(method="gnatls", gnatls=str(gnatls), paths=sections)
+
+
+def ali_signature(path):
+    """Only GNAT's complete version record, not an inferred GCC version."""
+    require(Path(path).is_file(), f"missing GNAT ALI: {path}")
+    lines = Path(path).read_text().splitlines()
+    require(lines and re.fullmatch(r'V "GNAT Lib v[0-9][0-9.]*"', lines[0]),
+            f"invalid GNAT ALI signature: {path}")
+    return lines[0]
+
+
+def probe_ada(ada, runtime, readelf):
+    """Fresh controlled compilation with the verified compiler/runtime.
+
+    The fresh private directory rules out stale outputs. Check the real
+    object architecture, compiler comment, source unit and ALI version.
+    Record hashes rather than treating a caller's version claim as proof.
+    """
+    with tempfile.TemporaryDirectory(prefix="geometry-cross-ali.") as temp:
+        directory = Path(temp)
+        source = directory / "identity_probe.adb"
+        source.write_text("procedure Identity_Probe is\n"
+                          "begin\n   null;\nend Identity_Probe;\n")
+        # GNAT records the source timestamp in the ALI dependency record.
+        # A controlled timestamp makes repeated probe evidence comparable.
+        os.utime(source, (946684800, 946684800))
+        run([ada, "--RTS=" + str(runtime), "-c", source.name,
+             "-o", "identity_probe.o"], cwd=directory)
+        obj = directory / "identity_probe.o"
+        ali = directory / "identity_probe.ali"
+        elf(obj, readelf)
+        identities = comments(obj, readelf)
+        require(identities, "Ada probe records no compiler identity")
+        signature = ali_signature(ali)
+        require(re.search(r"^U identity_probe%b\s+identity_probe.adb\s",
+                          ali.read_text(), re.M),
+                "Ada probe ALI does not identify the controlled source")
+        require(signature == ali_signature(runtime / "adalib/system.ali"),
+                "Ada probe ALI differs from supplied runtime ALI")
+        return dict(signature=signature, identities=sorted(identities),
+                    source_sha256=digest(source), ali_sha256=digest(ali),
+                    object_sha256=digest(obj), compiler_sha256=digest(ada),
+                    runtime_sha256=digest(runtime / "adalib/libgnat.a"))
+
+
+def check_alis(root, signature):
+    """Every ALI agrees with the verified probe, including installed ALIs."""
+    alis = sorted(Path(root).rglob("*.ali"))
+    require(alis, f"missing target ALIs: {root}")
+    for ali in alis:
+        require(ali_signature(ali) == signature,
+                f"ALI from another GNAT: {ali}")
+    return len(alis)
+
+
+def probe_identity(compiler, language, readelf, verify_elf=False):
     """The .comment identity of an object compiled by compiler."""
     with tempfile.TemporaryDirectory(prefix="geometry-cross-probe.") as temp:
         directory = Path(temp)
@@ -176,9 +291,29 @@ def probe_identity(compiler, language, readelf):
             source.write_text("int identity_probe() { return 0; }\n")
         run([compiler, "-c", source.name, "-o", "identity_probe.o"],
             cwd=directory)
+        if verify_elf:
+            elf(directory / "identity_probe.o", readelf)
         identity = comments(directory / "identity_probe.o", readelf)
     require(identity, f"compiler records no identity: {compiler}")
     return identity
+
+
+def check_executable(path, settings):
+    """A linked test must be target-only and load only sysroot libraries."""
+    readelf = settings["readelf"]
+    sysroot = Path(settings["sysroot"])
+    elf(path, readelf)
+    headers = run([readelf, "-l", path])
+    interpreter = re.search(r"Requesting program interpreter: ([^\]]+)\]", headers)
+    require(interpreter, "target executable has no program interpreter")
+    loader = resolved(sysroot / interpreter[1].lstrip("/"), [sysroot])
+    dynamic = run([readelf, "-d", path])
+    require(not re.search(r"\((?:RPATH|RUNPATH)\)", dynamic),
+            "target executable has an unqualified run path")
+    closure = dependency_closure([path, loader], sysroot, readelf,
+                                 settings["target"], [Path(path).parent])
+    return dict(interpreter=interpreter[1], closure=closure,
+                symbol_versions_checked=check_versions(closure, readelf))
 
 
 def loader_directories(sysroot, target):
@@ -352,10 +487,9 @@ def validate(require_core=True):
     require((runtime / "adainclude").is_dir()
             and (runtime / "adalib").is_dir(),
             "target Ada runtime must contain adainclude and adalib")
-    require(resolved(run([ada, "-print-file-name=adalib"]))
-            == resolved(runtime / "adalib"),
-            "Ada runtime differs from the compiler's runtime")
+    runtime_evidence = runtime_identity(ada, runtime)
     elf(resolved(runtime / "adalib/libgnat.a"), readelf)
+    ada_probe = probe_ada(ada, runtime, readelf)
     ada_version = run([ada, "-dumpfullversion"])
     cxx_version = run([cxx, "-dumpfullversion"])
     independent = os.environ.get(
@@ -504,8 +638,10 @@ def validate(require_core=True):
         target_cxx_runtime_symbols=sorted(target_symbols),
         gprbuild=tool("OPENCV_CROSS_GPRBUILD"),
         gprinstall=tool("OPENCV_CROSS_GPRINSTALL"),
-        identities=sorted(probe_identity(ada, "ada", readelf)
-                          | probe_identity(cxx, "c++", readelf)),
+        runtime_identity=runtime_evidence, ada_probe=ada_probe,
+        ali_signature=ada_probe["signature"],
+        identities=sorted(set(ada_probe["identities"])
+                           | probe_identity(cxx, "c++", readelf, verify_elf=True)),
         production_qualified=False)
     if require_core:
         settings.update(core_prefix(settings))
@@ -543,13 +679,12 @@ def core_prefix(settings):
         require(recorded <= set(settings["identities"]),
                 f"Core library built by another compiler: {archive}: "
                 f"{sorted(recorded - set(settings['identities']))}")
-    alis = sorted(core.rglob("*.ali"))
-    require(alis, "missing Core target ALIs")
-    expected = f'V "GNAT Lib v{settings["ada_version"].split(".")[0]}"'
-    for ali in alis:
-        first = ali.read_text().splitlines()[0]
-        require(first == expected, f"Core ALI from another GNAT: {ali}")
-    return dict(core=str(core), core_alis=len(alis))
+    require(list(core.rglob("*.ali")), "missing Core target ALIs")
+    try:
+        count = check_alis(core, settings["ali_signature"])
+    except ConfigurationError as error:
+        raise ConfigurationError(f"Core {error}") from error
+    return dict(core=str(core), core_alis=count)
 
 
 def configuration(settings):
@@ -649,12 +784,8 @@ def check_outputs(work, settings):
         recorded = comments(path, readelf)
         require(recorded and recorded <= identities,
                 f"object not built by the supplied compilers: {path}")
-    expected = f'V "GNAT Lib v{settings["ada_version"].split(".")[0]}"'
-    alis = sorted(work.rglob("*.ali"))
-    for ali in alis:
-        require(ali.read_text().splitlines()[0] == expected,
-                f"ALI from another GNAT: {ali}")
-    return dict(objects=len(objects), alis=len(alis))
+    count = check_alis(work, settings["ali_signature"])
+    return dict(objects=len(objects), alis=count)
 
 
 def extract(archive, work):
@@ -712,8 +843,14 @@ def workspace(mode, destination, settings):
     require(not install_config.exists(), "stale target configuration")
     install_config.parent.mkdir(exist_ok=True)
     install_config.write_text(configuration(settings))
-    shutil.copyfile(work / "tests/gnat12/opencv_geometry_config.gpr",
-                    work / "config/opencv_geometry_config.gpr")
+    # The switch-only abstract project must be a leaf. Its unused Core
+    # import makes GPRinstall Pro retain a dangling config import in both
+    # installed projects (and pulls Core's shim into Geometry's shim).
+    # Keep the GNAT 12 switch policy intact; remove only that unused import
+    # in the exported cross-build configuration, never installed metadata.
+    config_text = (work / "tests/gnat12/opencv_geometry_config.gpr").read_text()
+    (work / "config/opencv_geometry_config.gpr").write_text(
+        config_text.replace('with "opencv_core.gpr";\n', ''))
     shutil.copyfile(settings["config"], work / "config/target.cgpr")
     evidence = dict(settings, source_sha=revision, profile=profile,
                     qualification="CROSS_CONFIGURATION_ONLY")
@@ -770,6 +907,21 @@ def workspace(mode, destination, settings):
 
 def main(arguments):
     require(arguments, "operation required: check | --prepare | --build")
+    if len(arguments) == 3 and arguments[0] == "--verify-built":
+        settings = json.loads(Path(arguments[1]).read_text())
+        runtime = Path(settings["runtime"])
+        runtime_identity(settings["ada"], runtime)
+        fresh = probe_ada(settings["ada"], runtime, settings["readelf"])
+        require(fresh == settings["ada_probe"],
+                "compiler/runtime/probe identity changed since build")
+        print(json.dumps(check_outputs(Path(arguments[2]), settings),
+                         sort_keys=True))
+        return
+    if len(arguments) == 3 and arguments[0] == "--verify-executable":
+        settings = json.loads(Path(arguments[1]).read_text())
+        print(json.dumps(check_executable(Path(arguments[2]), settings),
+                         indent=2, sort_keys=True))
+        return
     if arguments == ["check"]:
         print(json.dumps(validate(), indent=2, sort_keys=True))
         return

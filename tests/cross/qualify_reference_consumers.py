@@ -96,6 +96,7 @@ def qualify(settings, core, geometry, work, logs, emulator):
              "-cargs:C++", sysroot_switch, "-largs", sysroot_switch],
             log, env, cwd=work)
         compiled = cross.check_trace(log, settings)
+        cross.check_outputs(work, settings)
         trace = log.read_text()
         for archive in [
                 core / "lib/opencv_core/libopencv_core_ada.a",
