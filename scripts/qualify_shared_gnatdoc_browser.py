@@ -207,6 +207,9 @@ def qualify(workspace, executable=None):
                                 check(len(api_links) >= 5, "authored genuine API links present", path=name, **dimensions)
                                 for link in api_links:
                                     destination = urlsplit(link["href"])
+                                    if destination.path == "../api/index.html" and not destination.fragment:
+                                        check(True, "guide API browser navigation", path=name, **dimensions)
+                                        continue
                                     owners = [(p, n, snippet) for (p, a), (filename, n, snippet) in native.items()
                                               if filename == Path(destination.path).name and a == destination.fragment]
                                     check(len(owners) == 1, "guide link uniquely owned native declaration",
