@@ -275,6 +275,8 @@ def verify_publication(workspace, enhancer=None):
     source = workspace / "source"
     trusted_inputs(source)
     check_current_sources(source, revision)
+    trusted_inputs(workspace / "legacy")
+    check_current_sources(workspace / "legacy", revision)
     require(file_hashes(workspace / "historical-first") == transition["pristine_sha256"] ==
             file_hashes(workspace / "historical-second"), "historical native evidence differs")
     # The only permitted tracked mutation in build clones is Alire's Core pin.
@@ -358,6 +360,7 @@ def qualify(args):
             prefix = workspace / "gnatdoc"
             s.run(["alr", "-n", "install", f"--prefix={prefix}", "gnatdoc_bin=26.0.0"], source)
         gnatdoc = prefix / "bin/gnatdoc"
+        require(sha(regular(gnatdoc)) == GNATDOC_SHA256, "wrong native generator bytes")
         require(s.run([gnatdoc, "--version"], source, (0, 1)) == GNATDOC, "wrong GNATdoc")
         report["gnatdoc"] = {"version": GNATDOC, "binary_sha256": sha(regular(gnatdoc))}
         historical = workspace / "historical"

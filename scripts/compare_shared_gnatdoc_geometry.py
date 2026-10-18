@@ -7,6 +7,7 @@ HTML readers and the original Geometry source matcher, not shared resolution.
 from collections import Counter
 import json
 from pathlib import Path
+import re
 import sys
 from urllib.parse import parse_qs, urlsplit
 
@@ -47,6 +48,13 @@ def compare(workspace):
                                       sources, pages, targets, core["types"])
             if identity:
                 expected_types[start, end] = identity
+        constant = re.match(r"\s*\w+\s*:\s*constant\s+([A-Za-z][A-Za-z0-9_.]*)", after.text, re.I)
+        if constant:
+            spelling = constant[1].lower()
+            identity, _, _ = resolve(spelling, declaration, sources.packages[package.lower()],
+                                      sources, pages, targets, core["types"])
+            require(identity is not None, "unresolved constant source type")
+            expected_types[constant.start(1), constant.end(1)] = identity
         left = {(x["offset"], x["end"]): x for x in before.links}
         right = {(x["offset"], x["end"]): x for x in after.links}
         require(len(left) == len(before.links) and len(right) == len(after.links),
