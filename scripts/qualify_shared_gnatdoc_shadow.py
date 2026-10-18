@@ -37,6 +37,36 @@ GNATDOC_SHA256 = "d256f0ece2f181046dfeb3ce490d7aa5c994992550c78da14e9065d453aa52
 EXAMPLES = ("contours_and_moments", "fitting_and_intersections", "affine_and_perspective",
             "delaunay_and_voronoi", "compatibility_and_safety")
 
+# Independent reference machinery, not evolving Geometry inputs. Hashes come
+# only from the immutable historical transition below. Legitimate changes to
+# this inventory or its components require a reviewed trust-policy transition;
+# current HEAD and generated manifests cannot approve replacement bytes.
+TRUSTED_SCRIPTS = (
+    "scripts/check_comment_only.py",
+    "scripts/check_doc_coverage.py",
+    "scripts/compare_gnatdoc_warnings.py",
+    "scripts/enhance_gnatdoc_navigation.py",
+    "scripts/generate_docs.sh",
+    "scripts/highlight_gnatdoc_ada.py",
+    "scripts/install_gnatdoc_theme.py",
+    "scripts/investigate_shared_gnatdoc_types.py",
+    "scripts/link_gnatdoc_types.py",
+    "scripts/render_gnatdoc_guides.py",
+    "scripts/validate_docs.py",
+    "scripts/test_check_comment_only.py",
+    "scripts/test_check_doc_coverage.py",
+    "scripts/test_compare_gnatdoc_warnings.py",
+    "scripts/test_gnatdoc_guides.py",
+    "scripts/test_gnatdoc_navigation.py",
+    "scripts/test_investigate_shared_gnatdoc_types.py",
+    "scripts/test_link_gnatdoc_types.py",
+    "scripts/test_validate_docs.py",
+    "scripts/test_core_type_links_browser.cjs",
+    "scripts/test_gnatdoc_guides_browser.cjs",
+    "scripts/test_gnatdoc_navigation_browser.cjs",
+    "scripts/test_gnatdoc_presentation_browser.cjs",
+)
+
 
 def safe(path):
     path = Path(path).absolute()
@@ -82,12 +112,12 @@ def trusted_inputs(root=ROOT):
     check_files(root, {CONFIG: transition["configuration_sha256"]})
     authored = read(root / EVIDENCE / "geometry-authored.json")
     check_files(root, authored["inputs"])
+    check_files(root, {name: transition["baseline_files_sha256"][name]
+                       for name in TRUSTED_SCRIPTS})
     # The production documentation machinery and authored navigation stay fixed.
     fixed = {n: d for n, d in transition["baseline_files_sha256"].items()
-             if n in ("docs_api.gpr", "docs_internal.gpr", "docs/api-categories.json",
-                      "scripts/generate_docs.sh") or
-             n.startswith(("docs/assets/", "docs/guides/", "docs/examples/")) or
-             (n.startswith("scripts/") and "gnatdoc" in n)}
+             if n in ("docs_api.gpr", "docs_internal.gpr", "docs/api-categories.json") or
+             n.startswith(("docs/assets/", "docs/guides/", "docs/examples/"))}
     check_files(root, fixed)
     return transition
 

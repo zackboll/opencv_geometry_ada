@@ -241,3 +241,44 @@ count-guard and failure-output assertions extend existing cases.
 Original browser suites, the eight-cell shadow matrix, original thresholds,
 adversarial restoration, and independent run/HEAD-bound readiness remain required.
 Early failure now writes non-ready evidence even when no workspace existed.
+
+## GEOM-029 R2: explicit trusted verification dependencies
+
+`trusted_inputs()` now names the historical reference machinery explicitly in
+`TRUSTED_SCRIPTS`, using only existing `baseline_files_sha256` entries in the
+unchanged GNATDOC-009B authority transition. No new source digest is minted.
+Changing a protected component requires an explicit, independently reviewed
+trust-policy transition, not acceptance of replacement bytes from current HEAD.
+
+The exact protected script inventory is:
+
+| Role | Files under `scripts/` |
+| --- | --- |
+| Source/type resolution, native readers, navigation | `link_gnatdoc_types.py`, `compare_gnatdoc_warnings.py`, `investigate_shared_gnatdoc_types.py`, `enhance_gnatdoc_navigation.py` |
+| Original generation, rendering, validation and coverage | `generate_docs.sh`, `install_gnatdoc_theme.py`, `highlight_gnatdoc_ada.py`, `render_gnatdoc_guides.py`, `validate_docs.py`, `check_doc_coverage.py` |
+| Counted original Python regression suites and their additional helper | `test_check_comment_only.py`, `check_comment_only.py`, `test_check_doc_coverage.py`, `test_compare_gnatdoc_warnings.py`, `test_gnatdoc_guides.py`, `test_gnatdoc_navigation.py`, `test_investigate_shared_gnatdoc_types.py`, `test_link_gnatdoc_types.py`, `test_validate_docs.py` |
+| Original browser qualification | `test_core_type_links_browser.cjs`, `test_gnatdoc_guides_browser.cjs`, `test_gnatdoc_navigation_browser.cjs`, `test_gnatdoc_presentation_browser.cjs` |
+
+The import/call review found no other local dependency in those reference
+components: Python dependencies outside this inventory are standard-library
+modules or the already-qualified external renderer/browser tools. In R1,
+`link_gnatdoc_types.py` and the other names containing `gnatdoc` were already
+protected by a filename heuristic. The newly covered gaps are the validator,
+coverage checker, Core browser suite, the three original Python suites without
+`gnatdoc` in their names, and their comment-only helper. Explicit names replace
+the heuristic without removing any previously frozen script.
+
+The newer shadow runner, comparator, browser/adversarial drivers, recorder and
+their workflow remain trust-policy implementation, not historical reference
+oracles; changes to them require independent review of that trust policy. They
+cannot be self-authorized by a successful run. No historical hash is invented
+for components absent from that authority. This qualification does not protect
+against an attacker authorized to replace the trust-policy checker itself or
+the execution environment. The immutable enhancer/Core requirements remain.
+
+Negative tests modify each of the 23 protected scripts separately and require
+rejection. Positive tests still permit Geometry Ada/C++ implementation changes
+and an additional AUnit registration; exact-head source binding, execution and
+success checks remain mandatory in real qualification. Application source,
+AUnit tests and evolving audit text are not newly frozen. Existing authored
+guide/output integrity requirements and all R1 evidence remain unchanged.

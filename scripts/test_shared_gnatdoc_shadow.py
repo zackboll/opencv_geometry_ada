@@ -8,6 +8,7 @@ import json
 from qualify_shared_gnatdoc_shadow import (
     ROOT, TRANSITION, REVIEWED, EVIDENCE, CONFIG, git, check_files, trusted_inputs,
     registered_cases, aunit_results, staged_contract,
+    TRUSTED_SCRIPTS,
 )
 
 
@@ -27,7 +28,37 @@ class TrustTests(unittest.TestCase):
             root = Path(directory)
             self.trust_copy(root)
             (root / "cpp/opencv_geometry_shim.cpp").write_text("legitimate future source")
+            (root / "src/opencv-geometry.adb").write_text("legitimate future implementation")
             trusted_inputs(root)
+
+    def test_each_trusted_verifier_dependency_change_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.trust_copy(root)
+            for name in TRUSTED_SCRIPTS:
+                with self.subTest(name=name):
+                    target = root / name
+                    original = target.read_bytes()
+                    try:
+                        target.write_bytes(original + b"\n# unapproved verifier change\n")
+                        with self.assertRaisesRegex(ValueError, "authority bytes differ: " + name):
+                            trusted_inputs(root)
+                    finally:
+                        target.write_bytes(original)
+            trusted_inputs(root)
+
+    def test_additional_current_test_registration_is_not_frozen(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.trust_copy(root)
+            suite = root / "tests/src/contour_geometry_tests.adb"
+            text = suite.read_text()
+            text = text.replace("      return Result'Access;", """      Result.Add_Test
+        (Caller.Create ("Future legitimate regression", C_ABI_Validation'Access));
+      return Result'Access;""", 1)
+            suite.write_text(text)
+            trusted_inputs(root)
+            self.assertEqual(len(registered_cases(root)), len(registered_cases(ROOT)) + 1)
 
     def test_historical_ledger_and_reviewed_results_are_immutable(self):
         for name in ("docs/evidence/gnatdoc009/type-link-occurrences.json",
