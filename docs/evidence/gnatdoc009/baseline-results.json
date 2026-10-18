@@ -1,0 +1,78 @@
+{
+  "disposition": "BLOCKED_BY_SHARED_TOOL",
+  "consumer_tested": "8690927853ffa74729206d8997b09046ad3d2246",
+  "enhancer": "53a321915da2c5a02a54581040673b61f8595b25",
+  "core_dependency": "f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f",
+  "core_browser_fixture": "ccc2190f9bf0712d65a2b9d2983cde7ce68b4bae",
+  "imgproc_reference": "6715ed13ee8d2ea0f4ac089722ed926cfef77eb6",
+  "native_opencv": "4.10.0",
+  "native_geometry_backend": "imgproc",
+  "tools": {
+    "alire": "2.1.1",
+    "gnat": "16.1.0",
+    "gprbuild_alire": "26.0.1",
+    "gnatdoc": "26.0.0 (20260415)",
+    "markdown-it-py": "3.0.0",
+    "mdurl": "0.1.2",
+    "original_browser_playwright": "1.64.1"
+  },
+  "original_generation": {
+    "status": "pass",
+    "public_packages": 2,
+    "native_declarations": 130,
+    "coverage_documented": 452,
+    "coverage_total": 452,
+    "warnings_added": 0,
+    "warnings_removed": 0,
+    "local_type_links": 167,
+    "external_type_links": 96
+  },
+  "original_documentation_tests": {"run": 224, "status": "pass"},
+  "aunit": {"run": 542, "successful": 542, "failed": 0, "errors": 0},
+  "compiled_programs": {
+    "example": {"build": "pass", "execution_exit": 0},
+    "contours_and_moments": {"build": "pass", "execution_exit": 0},
+    "fitting_and_intersections": {"build": "pass", "execution_exit": 0},
+    "affine_and_perspective": {"build": "pass", "execution_exit": 0},
+    "delaunay_and_voronoi": {"build": "pass", "execution_exit": 0},
+    "compatibility_and_safety": {"build": "pass", "execution_exit": 0}
+  },
+  "original_chromium_suites": {
+    "core_symbol_router": "pass: 1280px and 390px; real separately pinned fixture",
+    "presentation": "pass",
+    "navigation": "pass",
+    "guides": "pass: 1280px and 390px; light/dark; JavaScript enabled/disabled"
+  },
+  "diagnostic_tests": {"run": 8, "status": "pass"},
+  "not_performed": [
+    "Complete shadow Chromium matrix and offline Core interception",
+    "Full observed/restored adversarial mutation campaign",
+    "Complete independent-workspace shadow integration runner",
+    "PR-only shadow workflow and independent readiness recorder",
+    "Exact-final-head hosted shadow CI",
+    "Production Core HTTPS hosting verification"
+  ],
+  "local_log_sha256": {
+    "gnatdoc009-legacy-generation.log": "844348a37aa050e1f8e285f55c59d05eaca42e01fc73fcf39b8cdf3b6075127e",
+    "gnatdoc009-original-tests-qualified.log": "ee9fceded819ecd63d717cc14d61b06f41657f3ffbe9562474222de7abca4a4b",
+    "gnatdoc009-original-browser.log": "c266764ac2625a5fb5d11494d17c595a5012cf17bc29b1dae339a6e5137421fd",
+    "gnatdoc009-original-presentation.log": "3c451cce5bb677b3daeeec94111b7fb7b2970d64b1b0740f903edc0cdb9aeb62",
+    "gnatdoc009-original-navigation.log": "619fe220934a5daabc3231c19c86cff6114b31b5cd35c520a35ab3b844b7153c",
+    "gnatdoc009-original-guides.log": "3b56764ab8d6c6d301a64e3925bb98ceaaab7bccffc6786e981457f1a1fadba0",
+    "gnatdoc009-guide-build.log": "38d793bfab445e5de477346cbf8421aaf8891b5c275648549d1efd089748d908",
+    "gnatdoc009-example-execution.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gnatdoc009-aunit.log": "718e0aee07434abf0b9161e47a6d183d59f2c623b1719dde3a8257b1f88555b7",
+    "gnatdoc009-native-first.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gnatdoc009-native-second.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gnatdoc009-core-native.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "generated_evidence_sha256": {
+    "original-navigation.json": "831fd64808527656830c2b6f3673c196ac428cf58eb338ed33b27f3d1d7a8239",
+    "report.json": "135204cc2702dcef99076f2350a290d5bfab908c09bb38818d367ad3b210ab28",
+    "type-link-occurrences.json": "944c44d8147a53f4508db28c7c204c2a03989a748de33b9c8c48f34566ddab93"
+  },
+  "logs_location": "/tmp/gnatdoc009-* (local evidence, not hosted artifacts)",
+  "production_changes": false,
+  "production_https_verified": false,
+  "non_deployable": true
+}
