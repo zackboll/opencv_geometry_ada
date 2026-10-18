@@ -93,7 +93,7 @@ def qualify(workspace, enhancer):
         mutation("cross-package declaration substitution", site / "api/index.html",
                  lambda b: b.replace(contour["native_page"].encode(), other_page.encode(), 1))
         mutation("forged type identity", page,
-                 lambda b: b.replace(b'data-type="OpenCV.Point_Array"', b'data-type="OpenCV.Rect"', 1))
+                 lambda b: b.replace(b'data-type="opencv.point_array"', b'data-type="opencv.rect"', 1))
         mutation("forged external URL", page,
                  lambda b: b.replace(b"https://core.invalid/", b"https://unapproved.invalid/", 1))
         categories = root / "docs/api-categories.json"
