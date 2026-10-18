@@ -137,6 +137,37 @@ workflow is unchanged.
 
 ## Readiness and remaining production blockers
 
+### Full locally qualified implementation
+
+`docs/evidence/gnatdoc009b/qualified/` records the complete, independently
+recorded run at **`268e95b0529a39cc309e1663a7c98f3545275634`**, run ID
+`dd8403ae-24f6-4a54-9c3f-3e86f628c10b`. This includes:
+
+- All original 232 Python tests, 542/542 AUnit and six compiled/executed examples.
+- Original/native/shadow coverage 452/452 and warning delta 0 added/0 removed.
+- Two independent pristine copies and enhanced copies, deterministic and idempotent.
+- Native preservation: two public packages, 130 declarations, complete profiles.
+- Source-backed 263 equivalent / 4 shared-only / 0 missing occurrence ledger;
+  171 local / 96 external type links; unchanged 130-entry navigation oracle.
+- Landing/five-guide/stylesheet byte parity and unchanged example ownership.
+- All four unchanged original Chromium suites, including the separate router.
+- **26 observed, rejected and hash-restored adversarial cases**, including
+  coordinated tampered output plus rewritten manifest authorization.
+- **6,904 real Chromium assertions**, all eight desktop/mobile, light/dark,
+  JavaScript on/off cells; 16 history traces; all guide API links source/native
+  checked; repaired Contour and every approved external Core identity exercised.
+- Independent recorder: `full_shadow_qualification: true`, no failures,
+  disposition `HOSTED_CI_PENDING` (never production readiness).
+
+The exact implementation-head original documentation hosted run passed:
+<https://github.com/zackboll/opencv_geometry_ada/actions/runs/39102179995>.
+Its shadow hosted run is
+<https://github.com/zackboll/opencv_geometry_ada/actions/runs/39102179882>.
+Reports retain their original tested SHA, run bindings and hashes; checking in
+evidence does not retroactively qualify a later evidence-only commit. Exact
+final-head Actions results must be checked on PR #50. Large logs, generated
+sites and browser trace ZIPs remain review artifacts, never committed source.
+
 ### Intermediate evidence (not final-head readiness)
 
 `docs/evidence/gnatdoc009b/intermediate/` records the independent reconstruction
