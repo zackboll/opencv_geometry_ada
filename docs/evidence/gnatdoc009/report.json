@@ -1,0 +1,1101 @@
+{
+  "actual_alire_core_source": "/tmp/gnatdoc009-core",
+  "authored_byte_parity": {
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "authority_sha256": {
+    "docs/evidence/gnatdoc005/core-0.5.0-input.json": "4abd944e932116582efee29adb3eec767da762f67436cba5dddd82377fadcbbb",
+    "docs/evidence/gnatdoc005/core-0.5.0-types.json": "70fa9a9e5de8ad038bf0bc4bdf6c76ec8ecbe5f201027d18554275f7d9ed7f7f",
+    "docs/evidence/gnatdoc007/geometry-authored.json": "62a5cacfb86ece2017045e6354d6a9ce47b3d9706dd16873c2437b854dcb59ea"
+  },
+  "byte_idempotent": true,
+  "classification_counts": {
+    "BLOCKED-source-backed-reference-lost": 1,
+    "equivalent-verified-native-destination": 262,
+    "shared-only-reference": 4
+  },
+  "configuration_sha256": "5949004baacbab0fe2507c31964b175c4150fd488a51d57a6c557b2226c3d399",
+  "consumer": "8690927853ffa74729206d8997b09046ad3d2246",
+  "core_dependency": "f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f",
+  "disposition": "BLOCKED_BY_SHARED_TOOL",
+  "enhanced_deterministic": true,
+  "legacy_external": 96,
+  "legacy_local": 167,
+  "native_deterministic": true,
+  "native_identities": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": {
+      "declarations": [
+        [
+          "08665d5897069a7f4143466e67250acad1def414e17b6e352c9928b2db7a57aa",
+          "Affine_Row_Index"
+        ],
+        [
+          "a0893b8da763652282fa398e6ef799cc1bbdfc73759b02bdddfcbc104ea56c9a",
+          "Affine_Transform_2D"
+        ],
+        [
+          "aea1319c5bef8a0978afde90a41a0c9ed0ea2ec5879617420204bdfc2dd5779d",
+          "Approximate_Curve"
+        ],
+        [
+          "ed6414090f62a3ccfe23137fb30a78c5777093407c31c75b16d9c29dbe434d6c",
+          "Approximate_Curve"
+        ],
+        [
+          "b7d006fb301e0d7e41050441cfe03fbd187fd88eb98443c2ec166da6c7392231",
+          "Arc_Length"
+        ],
+        [
+          "d1251e2ba0d40fa33dae6a5abe25028df9b455b61a6b4a0490d34358cf3ba98e",
+          "Arc_Length"
+        ],
+        [
+          "e329b99bf3fe4eb1bc3cb680d6e9fecd385e4481bd674bf56196f82e1ed28193",
+          "Bounding_Rect"
+        ],
+        [
+          "504d01c7c30acd2af11e5ebfddcdd3e6d84a384892b23e1d8898945b5f399147",
+          "Bounding_Rect"
+        ],
+        [
+          "ff65c1d26d55afeda2fe7a7e7788a233c58ba7052def5ee1ff4410904a4cd3b3",
+          "Box_Points"
+        ],
+        [
+          "e98dea9ba73aad28794e3b33a2a2bf1bd8c5980ad1cc39d2935287deb9748497",
+          "Box_Vertex_Index"
+        ],
+        [
+          "176ff95f9584fc573b2c4dcf4e0336b312e9a4f08f6cf879ec4424b0289274e9",
+          "Box_Vertices"
+        ],
+        [
+          "fec5ade1e5d8a3ed86580feb6e6063cda08d77d9de1075ab512b909eaeb41521",
+          "Closest_Ellipse_Points"
+        ],
+        [
+          "bc67fbd6352aa040021db1b02ce740f7af36d1eacf05be4cd687da50c01acfea",
+          "Closest_Ellipse_Points"
+        ],
+        [
+          "c642cb235fd1a186a6931d5b096a470540874134763c57963bd5f0e8971ab352",
+          "Compute_Moments"
+        ],
+        [
+          "74fa63895656ba695c0f4b576fbe414bfdfc040e363923bae9265f28effde9aa",
+          "Compute_Moments"
+        ],
+        [
+          "0c3fbeacf849b3776f9533db4d982b2125bc49319590c9215acbc2ffaff07503",
+          "Contour"
+        ],
+        [
+          "6eba25785311b9dfa6f89260d4deec8d2dcb9421e5488524380d1e0d7a43955f",
+          "Contour_Area"
+        ],
+        [
+          "b87b2b0105b34b29b36bfb78c579001c814170739c3920d6b3ca2653d964a98e",
+          "Contour_Area"
+        ],
+        [
+          "a84a30f0bdf6bd566fb15ae42b199469809f846fdfabf22ca80af7b991fd3ff6",
+          "Contour_Point_Location"
+        ],
+        [
+          "efeaf4f7f954ba3f4a96fb92941b94b86def0b4dd82464912ceb14e041bea32f",
+          "Convex_Hull"
+        ],
+        [
+          "e9fd00efbba2e22b27874dd98043513ccbea41028f1cef245c6f74685a161666",
+          "Convex_Hull"
+        ],
+        [
+          "35ad7a6608210a292e7308fb8d4a13455f4dcca44173285d9c215625e7cdcc3a",
+          "Convex_Hull_Indices"
+        ],
+        [
+          "f6c6b2235880fad5a44511aa0274d38eeeb8e6a917023abcf2bdbde9fd385ee4",
+          "Convex_Hull_Indices"
+        ],
+        [
+          "4f5c0331a0e38274c6685871020a1275c7d44820402badf5c06f59e02be58088",
+          "Convex_Polygon_Intersection"
+        ],
+        [
+          "c0f8197f0f348b514d86c8c9c16d33dd6e24fed218d0cac639d5943f224486fc",
+          "Convexity_Defect"
+        ],
+        [
+          "56970d39c5e0d655f5c79fa488eea94e529f91bea0fbb4cb9e54f4a55df2cb7d",
+          "Convexity_Defect_Array"
+        ],
+        [
+          "e3af6cddd2130d76d582abd853eb01536afabf8b90a50fa6732c77e1f6423797",
+          "Convexity_Defects"
+        ],
+        [
+          "c8ffc5c2dcf41b985cf974ed054f8f9704dc79c2b9a1ba6f5017fae7e0f2c5b1",
+          "Convexity_Defects"
+        ],
+        [
+          "89d13a6c8d894b84e2738057fe35514d9665317ad87a2b45913af980a0196b3f",
+          "Enclosing_Circle"
+        ],
+        [
+          "cd70150a2e7a499db6c1450ef45488b08d9ad0b06a2250904aa60e98374a786d",
+          "Enclosing_Triangle"
+        ],
+        [
+          "726a899c9e1ab6af0ec8631c1d0414c711dd21166076b6a4f2c500a9fd0996b6",
+          "Fit_Ellipse"
+        ],
+        [
+          "6418c2a393ef25dfc8632bfb53d435538044a67ab6aa92020f2787e0d45b7288",
+          "Fit_Ellipse"
+        ],
+        [
+          "ca25ecd050328608407023fd517fbcb09c099749523a2d6becd54fe70c211d81",
+          "Fit_Ellipse_AMS"
+        ],
+        [
+          "783e18e41670b657b3455fd46b47e4553f1af4cd2bed46d53178a07c9032c3a9",
+          "Fit_Ellipse_AMS"
+        ],
+        [
+          "fae4d1c7a78cd97ec9c6e011e030eec27b964cd8351350d2be2f3f060826ed84",
+          "Fit_Ellipse_Direct"
+        ],
+        [
+          "c30f46143f74379778e65447bf85dfd14babc25f6694a48b3c707e4dc937b325",
+          "Fit_Ellipse_Direct"
+        ],
+        [
+          "7d7e8172b914b72e0bd0d4c553c8cad54e3c27d43bd328d6a29784281687f0d4",
+          "Fit_Line_2D"
+        ],
+        [
+          "371e44b4cc7f17d3dd4760c513037e287bbef2ca1572084ab32b2806858d9958",
+          "Fit_Line_2D"
+        ],
+        [
+          "9711b264ade5f48734bc12cdb66e4e9b7cbd551468e8a8a3c3cae3cd1f8be0cd",
+          "Fitted_Line_2D"
+        ],
+        [
+          "bec9df22e6eea0ee3a80c9cd74e44ea89a2fd040b13e2c28c8e450ba06bfbc59",
+          "Float32_Point_Array"
+        ],
+        [
+          "d4d18c9ccf30c84a7531ac81885280060fdc40d12adb7e7ddd077c2ac3ba24f0",
+          "Get_Affine_Transform"
+        ],
+        [
+          "5a5df1d42190dd5657e6042b3f87e746e7ce334f13998d283ab2ee7c1f279924",
+          "Get_Perspective_Transform"
+        ],
+        [
+          "ec068289d836e143df9ec9f805316133f312bb13fea8eb378ba187612166f35c",
+          "Get_Rotation_Matrix_2D"
+        ],
+        [
+          "861bf31409e48aab8a03a7a144db30ffba11fea98b47d8e2c7230ad5373c3c6d",
+          "Hu_Moment_Index"
+        ],
+        [
+          "d257faa4b426cf20cd12570d02d52d292e2bd638cc44b4fff579bf0dfe295f17",
+          "Hu_Moments"
+        ],
+        [
+          "43b1abf12c1b3eff3bc2deb0e23e68fedf35d5a73021f2cb05dea44e730e623e",
+          "Hu_Moments_Result"
+        ],
+        [
+          "a28df9b9d891b446680c3d68108a95a35fa7aa5b5bcc76f7cf2b07bb4e6951be",
+          "Hull_Orientation"
+        ],
+        [
+          "c2a2c036a31acde9ac05af070d12fa04c52b26d9d4988e9b09eac09f8bbbfb0f",
+          "Identity_Affine_Transform"
+        ],
+        [
+          "2a2e46a1606d4825df18a6f8fb38902eabd47d5af13b1beafbacbd411bdfb9d7",
+          "Identity_Perspective_Transform"
+        ],
+        [
+          "16afa6aa06b5512f3acb168efd143327bf4fc2bb960fea889153af4f1767822a",
+          "Intersect_Convex_Polygons"
+        ],
+        [
+          "4a17247596647dad23c772a762cd75e4bf1a7724337bd1bbe9049e5826fe2a56",
+          "Intersect_Convex_Polygons"
+        ],
+        [
+          "20d07f402335d362a5b512a9e975a5b75c42e222c45e5bbc5cb71f0886bb5604",
+          "Intersect_Convex_Polygons_Extended_Float32"
+        ],
+        [
+          "4b53c026be5fe7719392b5222e12dc8eb8c19091f7ec80f6f25d7bcf01065c2f",
+          "Intersect_Rotated_Rectangles"
+        ],
+        [
+          "9684641ee32404bbc291f5728a485edf3e8e7b556f04ce9af81827180a9ea6c3",
+          "Invert_Affine_Transform"
+        ],
+        [
+          "080079331f4318458c70b36a79c350c64626d5ea73e20606331af853a0b3cdb7",
+          "Is_Convex"
+        ],
+        [
+          "480099f6973d14cc45b3c758fe43449d5296e50e5febb3a34327f5579b558e39",
+          "Is_Convex"
+        ],
+        [
+          "88913bfcdf32a14f364b47fb7494827a555a82592d57f765517d5729a8cb84e3",
+          "Is_Natively_Supported"
+        ],
+        [
+          "8a4501f4c2d3f4cf774c6cb726226e2f941fe3e19699d3fbd325e823b5316931",
+          "Line_Fit_Distance"
+        ],
+        [
+          "4ff226bea8dc6e2e024183f952b2985db3116792c3b3b0741cdb15c525017bb2",
+          "Locate_Point"
+        ],
+        [
+          "e6db01e559791503e14eed56c66f5e73061343dbc786825c72a04d6793897cfa",
+          "Locate_Point"
+        ],
+        [
+          "35b61d95acc2ad90daf79d41a2869c92d398092b0f0e6c1c024cd58b096a5ac7",
+          "Match_Shapes"
+        ],
+        [
+          "575475a23f635490f92359d9ab8fedf64c5ee7649a27975e80446d46be48c8f2",
+          "Match_Shapes"
+        ],
+        [
+          "6db6b75bcfeebdfa09e8a3bddd598d12a0d56235e999f6605368b649411de36a",
+          "Minimum_Area_Rectangle"
+        ],
+        [
+          "b9957cbcf8f84e09e25136ed934363cdb27eabcb147fd4c9fbc866526be13252",
+          "Minimum_Area_Rectangle"
+        ],
+        [
+          "93d6b5c797bd2d2dcc1690febba6455143d7ef91e21981e6f319903b49555f78",
+          "Minimum_Enclosing_Circle"
+        ],
+        [
+          "bd6955f2bff30fe6242f626cb6987754094fbcf74a010518a72fdc8a32d98c24",
+          "Minimum_Enclosing_Circle"
+        ],
+        [
+          "088dc36517e1a4aff3bdae7106cf93acf22524e0e8db5603db033c52d1169d68",
+          "Minimum_Enclosing_Triangle"
+        ],
+        [
+          "2f040468a005f40b58b56a993245f8b2d5184782170d46f6ae75848aab5759a5",
+          "Moments_Result"
+        ],
+        [
+          "15581cf6da8bb82b322cf81df2f969c0866bdff13091bda16e2c23ec83d48653",
+          "Native_Feature"
+        ],
+        [
+          "65c8711dbe2d34317c39c978b15d8cb4d6a3cf6295e4e4b368a6bef89aeb2344",
+          "Perspective_Row_Index"
+        ],
+        [
+          "a3016ca57a11e0b231c60dc9cafc5543f3774187cfd3cf06d1683396c02bb8d5",
+          "Perspective_Solve_Method"
+        ],
+        [
+          "d5b98bc1260cc18e18848a7786d3c2f516a248fe03c1a4f80dffcb2816e4c141",
+          "Perspective_Transform_2D"
+        ],
+        [
+          "7a6a1c313220429bb34d295dc14c81cd5bbc9a2e1291b9f76c1f725088ed0aef",
+          "Point_Index_Array"
+        ],
+        [
+          "7e4d653ebb605fbf335d9f96087389e2b216cd66ba1a9687361c28cccbb03d86",
+          "Rectangle_Intersection_Kind"
+        ],
+        [
+          "97a5a9414e4dd355c3328da0e703aa3d06fc6948d44d81767cdf7b5f28808933",
+          "Rectangle_Intersection_Vertex_Count"
+        ],
+        [
+          "1e4c8f19146c42b9094caedf45987e4a968a27ef4824ab7f8607650a64a8a58b",
+          "Rotated_Rectangle_Intersection"
+        ],
+        [
+          "15b2c3ead76277c43229e655c45e6ebc303b80e95876d77f4ede768d6e6b4fdc",
+          "Shape_Match_Method"
+        ],
+        [
+          "93214d3574ab96fe5bf911eded86a254c5b84fc2b03c6146dce2905b4b075b8f",
+          "Signed_Distance_To_Contour"
+        ],
+        [
+          "027fe991fd93861cdcc765dbdb2335157727496cb61f20e03f3af152b3d25ab6",
+          "Signed_Distance_To_Contour"
+        ],
+        [
+          "d5e72a68b99c96fdb6414518747303ed5be7151d2444170fbe8fd2f047300eb3",
+          "Transform_Column_Index"
+        ],
+        [
+          "549574f469e3de56e9bd121289bc8795ad2a8174ac09c890f11d943379019a61",
+          "Transform_Point"
+        ],
+        [
+          "21166afd9f59d286e4bb8ccb0983d6cea45e297f95402b567b6133564867f734",
+          "Transform_Point"
+        ],
+        [
+          "75937b73150b80f463933d8acbd67019c94ef394205e389cea66108abf089111",
+          "Transform_Points"
+        ],
+        [
+          "38b3024a5d42687fec7fa2533b03ec6a1fafdc9ba9c8c8036313743fcbf0897b",
+          "Transform_Points"
+        ],
+        [
+          "b6c542f7d9d5bfaba09a156f39b57ded9f95715e3c7ecf42401f2e3545c25285",
+          "Triangle_Vertex_Index"
+        ],
+        [
+          "4df0f09685c2d357dbf6855bfc8cea0950ef17d7758aa31e6baadbb63de71418",
+          "Triangle_Vertices"
+        ]
+      ],
+      "ids": [
+        "08665d5897069a7f4143466e67250acad1def414e17b6e352c9928b2db7a57aa",
+        "a0893b8da763652282fa398e6ef799cc1bbdfc73759b02bdddfcbc104ea56c9a",
+        "aea1319c5bef8a0978afde90a41a0c9ed0ea2ec5879617420204bdfc2dd5779d",
+        "ed6414090f62a3ccfe23137fb30a78c5777093407c31c75b16d9c29dbe434d6c",
+        "b7d006fb301e0d7e41050441cfe03fbd187fd88eb98443c2ec166da6c7392231",
+        "d1251e2ba0d40fa33dae6a5abe25028df9b455b61a6b4a0490d34358cf3ba98e",
+        "e329b99bf3fe4eb1bc3cb680d6e9fecd385e4481bd674bf56196f82e1ed28193",
+        "504d01c7c30acd2af11e5ebfddcdd3e6d84a384892b23e1d8898945b5f399147",
+        "ff65c1d26d55afeda2fe7a7e7788a233c58ba7052def5ee1ff4410904a4cd3b3",
+        "e98dea9ba73aad28794e3b33a2a2bf1bd8c5980ad1cc39d2935287deb9748497",
+        "176ff95f9584fc573b2c4dcf4e0336b312e9a4f08f6cf879ec4424b0289274e9",
+        "fec5ade1e5d8a3ed86580feb6e6063cda08d77d9de1075ab512b909eaeb41521",
+        "bc67fbd6352aa040021db1b02ce740f7af36d1eacf05be4cd687da50c01acfea",
+        "c642cb235fd1a186a6931d5b096a470540874134763c57963bd5f0e8971ab352",
+        "74fa63895656ba695c0f4b576fbe414bfdfc040e363923bae9265f28effde9aa",
+        "0c3fbeacf849b3776f9533db4d982b2125bc49319590c9215acbc2ffaff07503",
+        "6eba25785311b9dfa6f89260d4deec8d2dcb9421e5488524380d1e0d7a43955f",
+        "b87b2b0105b34b29b36bfb78c579001c814170739c3920d6b3ca2653d964a98e",
+        "a84a30f0bdf6bd566fb15ae42b199469809f846fdfabf22ca80af7b991fd3ff6",
+        "efeaf4f7f954ba3f4a96fb92941b94b86def0b4dd82464912ceb14e041bea32f",
+        "e9fd00efbba2e22b27874dd98043513ccbea41028f1cef245c6f74685a161666",
+        "35ad7a6608210a292e7308fb8d4a13455f4dcca44173285d9c215625e7cdcc3a",
+        "f6c6b2235880fad5a44511aa0274d38eeeb8e6a917023abcf2bdbde9fd385ee4",
+        "4f5c0331a0e38274c6685871020a1275c7d44820402badf5c06f59e02be58088",
+        "c0f8197f0f348b514d86c8c9c16d33dd6e24fed218d0cac639d5943f224486fc",
+        "56970d39c5e0d655f5c79fa488eea94e529f91bea0fbb4cb9e54f4a55df2cb7d",
+        "e3af6cddd2130d76d582abd853eb01536afabf8b90a50fa6732c77e1f6423797",
+        "c8ffc5c2dcf41b985cf974ed054f8f9704dc79c2b9a1ba6f5017fae7e0f2c5b1",
+        "89d13a6c8d894b84e2738057fe35514d9665317ad87a2b45913af980a0196b3f",
+        "cd70150a2e7a499db6c1450ef45488b08d9ad0b06a2250904aa60e98374a786d",
+        "726a899c9e1ab6af0ec8631c1d0414c711dd21166076b6a4f2c500a9fd0996b6",
+        "6418c2a393ef25dfc8632bfb53d435538044a67ab6aa92020f2787e0d45b7288",
+        "ca25ecd050328608407023fd517fbcb09c099749523a2d6becd54fe70c211d81",
+        "783e18e41670b657b3455fd46b47e4553f1af4cd2bed46d53178a07c9032c3a9",
+        "fae4d1c7a78cd97ec9c6e011e030eec27b964cd8351350d2be2f3f060826ed84",
+        "c30f46143f74379778e65447bf85dfd14babc25f6694a48b3c707e4dc937b325",
+        "7d7e8172b914b72e0bd0d4c553c8cad54e3c27d43bd328d6a29784281687f0d4",
+        "371e44b4cc7f17d3dd4760c513037e287bbef2ca1572084ab32b2806858d9958",
+        "9711b264ade5f48734bc12cdb66e4e9b7cbd551468e8a8a3c3cae3cd1f8be0cd",
+        "bec9df22e6eea0ee3a80c9cd74e44ea89a2fd040b13e2c28c8e450ba06bfbc59",
+        "d4d18c9ccf30c84a7531ac81885280060fdc40d12adb7e7ddd077c2ac3ba24f0",
+        "5a5df1d42190dd5657e6042b3f87e746e7ce334f13998d283ab2ee7c1f279924",
+        "ec068289d836e143df9ec9f805316133f312bb13fea8eb378ba187612166f35c",
+        "861bf31409e48aab8a03a7a144db30ffba11fea98b47d8e2c7230ad5373c3c6d",
+        "d257faa4b426cf20cd12570d02d52d292e2bd638cc44b4fff579bf0dfe295f17",
+        "43b1abf12c1b3eff3bc2deb0e23e68fedf35d5a73021f2cb05dea44e730e623e",
+        "a28df9b9d891b446680c3d68108a95a35fa7aa5b5bcc76f7cf2b07bb4e6951be",
+        "c2a2c036a31acde9ac05af070d12fa04c52b26d9d4988e9b09eac09f8bbbfb0f",
+        "2a2e46a1606d4825df18a6f8fb38902eabd47d5af13b1beafbacbd411bdfb9d7",
+        "16afa6aa06b5512f3acb168efd143327bf4fc2bb960fea889153af4f1767822a",
+        "4a17247596647dad23c772a762cd75e4bf1a7724337bd1bbe9049e5826fe2a56",
+        "20d07f402335d362a5b512a9e975a5b75c42e222c45e5bbc5cb71f0886bb5604",
+        "4b53c026be5fe7719392b5222e12dc8eb8c19091f7ec80f6f25d7bcf01065c2f",
+        "9684641ee32404bbc291f5728a485edf3e8e7b556f04ce9af81827180a9ea6c3",
+        "080079331f4318458c70b36a79c350c64626d5ea73e20606331af853a0b3cdb7",
+        "480099f6973d14cc45b3c758fe43449d5296e50e5febb3a34327f5579b558e39",
+        "88913bfcdf32a14f364b47fb7494827a555a82592d57f765517d5729a8cb84e3",
+        "8a4501f4c2d3f4cf774c6cb726226e2f941fe3e19699d3fbd325e823b5316931",
+        "4ff226bea8dc6e2e024183f952b2985db3116792c3b3b0741cdb15c525017bb2",
+        "e6db01e559791503e14eed56c66f5e73061343dbc786825c72a04d6793897cfa",
+        "35b61d95acc2ad90daf79d41a2869c92d398092b0f0e6c1c024cd58b096a5ac7",
+        "575475a23f635490f92359d9ab8fedf64c5ee7649a27975e80446d46be48c8f2",
+        "6db6b75bcfeebdfa09e8a3bddd598d12a0d56235e999f6605368b649411de36a",
+        "b9957cbcf8f84e09e25136ed934363cdb27eabcb147fd4c9fbc866526be13252",
+        "93d6b5c797bd2d2dcc1690febba6455143d7ef91e21981e6f319903b49555f78",
+        "bd6955f2bff30fe6242f626cb6987754094fbcf74a010518a72fdc8a32d98c24",
+        "088dc36517e1a4aff3bdae7106cf93acf22524e0e8db5603db033c52d1169d68",
+        "2f040468a005f40b58b56a993245f8b2d5184782170d46f6ae75848aab5759a5",
+        "15581cf6da8bb82b322cf81df2f969c0866bdff13091bda16e2c23ec83d48653",
+        "65c8711dbe2d34317c39c978b15d8cb4d6a3cf6295e4e4b368a6bef89aeb2344",
+        "a3016ca57a11e0b231c60dc9cafc5543f3774187cfd3cf06d1683396c02bb8d5",
+        "d5b98bc1260cc18e18848a7786d3c2f516a248fe03c1a4f80dffcb2816e4c141",
+        "7a6a1c313220429bb34d295dc14c81cd5bbc9a2e1291b9f76c1f725088ed0aef",
+        "7e4d653ebb605fbf335d9f96087389e2b216cd66ba1a9687361c28cccbb03d86",
+        "97a5a9414e4dd355c3328da0e703aa3d06fc6948d44d81767cdf7b5f28808933",
+        "1e4c8f19146c42b9094caedf45987e4a968a27ef4824ab7f8607650a64a8a58b",
+        "15b2c3ead76277c43229e655c45e6ebc303b80e95876d77f4ede768d6e6b4fdc",
+        "93214d3574ab96fe5bf911eded86a254c5b84fc2b03c6146dce2905b4b075b8f",
+        "027fe991fd93861cdcc765dbdb2335157727496cb61f20e03f3af152b3d25ab6",
+        "d5e72a68b99c96fdb6414518747303ed5be7151d2444170fbe8fd2f047300eb3",
+        "549574f469e3de56e9bd121289bc8795ad2a8174ac09c890f11d943379019a61",
+        "21166afd9f59d286e4bb8ccb0983d6cea45e297f95402b567b6133564867f734",
+        "75937b73150b80f463933d8acbd67019c94ef394205e389cea66108abf089111",
+        "38b3024a5d42687fec7fa2533b03ec6a1fafdc9ba9c8c8036313743fcbf0897b",
+        "b6c542f7d9d5bfaba09a156f39b57ded9f95715e3c7ecf42401f2e3545c25285",
+        "4df0f09685c2d357dbf6855bfc8cea0950ef17d7758aa31e6baadbb63de71418"
+      ],
+      "native_links": [
+        "#08665d5897069a7f4143466e67250acad1def414e17b6e352c9928b2db7a57aa",
+        "#e98dea9ba73aad28794e3b33a2a2bf1bd8c5980ad1cc39d2935287deb9748497",
+        "#a84a30f0bdf6bd566fb15ae42b199469809f846fdfabf22ca80af7b991fd3ff6",
+        "#861bf31409e48aab8a03a7a144db30ffba11fea98b47d8e2c7230ad5373c3c6d",
+        "#a28df9b9d891b446680c3d68108a95a35fa7aa5b5bcc76f7cf2b07bb4e6951be",
+        "#8a4501f4c2d3f4cf774c6cb726226e2f941fe3e19699d3fbd325e823b5316931",
+        "#15581cf6da8bb82b322cf81df2f969c0866bdff13091bda16e2c23ec83d48653",
+        "#65c8711dbe2d34317c39c978b15d8cb4d6a3cf6295e4e4b368a6bef89aeb2344",
+        "#a3016ca57a11e0b231c60dc9cafc5543f3774187cfd3cf06d1683396c02bb8d5",
+        "#7e4d653ebb605fbf335d9f96087389e2b216cd66ba1a9687361c28cccbb03d86",
+        "#15b2c3ead76277c43229e655c45e6ebc303b80e95876d77f4ede768d6e6b4fdc",
+        "#d5e72a68b99c96fdb6414518747303ed5be7151d2444170fbe8fd2f047300eb3",
+        "#b6c542f7d9d5bfaba09a156f39b57ded9f95715e3c7ecf42401f2e3545c25285",
+        "#a0893b8da763652282fa398e6ef799cc1bbdfc73759b02bdddfcbc104ea56c9a",
+        "#176ff95f9584fc573b2c4dcf4e0336b312e9a4f08f6cf879ec4424b0289274e9",
+        "#56970d39c5e0d655f5c79fa488eea94e529f91bea0fbb4cb9e54f4a55df2cb7d",
+        "#bec9df22e6eea0ee3a80c9cd74e44ea89a2fd040b13e2c28c8e450ba06bfbc59",
+        "#43b1abf12c1b3eff3bc2deb0e23e68fedf35d5a73021f2cb05dea44e730e623e",
+        "#d5b98bc1260cc18e18848a7786d3c2f516a248fe03c1a4f80dffcb2816e4c141",
+        "#7a6a1c313220429bb34d295dc14c81cd5bbc9a2e1291b9f76c1f725088ed0aef",
+        "#4df0f09685c2d357dbf6855bfc8cea0950ef17d7758aa31e6baadbb63de71418",
+        "#4f5c0331a0e38274c6685871020a1275c7d44820402badf5c06f59e02be58088",
+        "#c0f8197f0f348b514d86c8c9c16d33dd6e24fed218d0cac639d5943f224486fc",
+        "#89d13a6c8d894b84e2738057fe35514d9665317ad87a2b45913af980a0196b3f",
+        "#cd70150a2e7a499db6c1450ef45488b08d9ad0b06a2250904aa60e98374a786d",
+        "#9711b264ade5f48734bc12cdb66e4e9b7cbd551468e8a8a3c3cae3cd1f8be0cd",
+        "#2f040468a005f40b58b56a993245f8b2d5184782170d46f6ae75848aab5759a5",
+        "#1e4c8f19146c42b9094caedf45987e4a968a27ef4824ab7f8607650a64a8a58b",
+        "#0c3fbeacf849b3776f9533db4d982b2125bc49319590c9215acbc2ffaff07503",
+        "#97a5a9414e4dd355c3328da0e703aa3d06fc6948d44d81767cdf7b5f28808933",
+        "#c2a2c036a31acde9ac05af070d12fa04c52b26d9d4988e9b09eac09f8bbbfb0f",
+        "#2a2e46a1606d4825df18a6f8fb38902eabd47d5af13b1beafbacbd411bdfb9d7",
+        "#aea1319c5bef8a0978afde90a41a0c9ed0ea2ec5879617420204bdfc2dd5779d",
+        "#ed6414090f62a3ccfe23137fb30a78c5777093407c31c75b16d9c29dbe434d6c",
+        "#b7d006fb301e0d7e41050441cfe03fbd187fd88eb98443c2ec166da6c7392231",
+        "#d1251e2ba0d40fa33dae6a5abe25028df9b455b61a6b4a0490d34358cf3ba98e",
+        "#e329b99bf3fe4eb1bc3cb680d6e9fecd385e4481bd674bf56196f82e1ed28193",
+        "#504d01c7c30acd2af11e5ebfddcdd3e6d84a384892b23e1d8898945b5f399147",
+        "#ff65c1d26d55afeda2fe7a7e7788a233c58ba7052def5ee1ff4410904a4cd3b3",
+        "#fec5ade1e5d8a3ed86580feb6e6063cda08d77d9de1075ab512b909eaeb41521",
+        "#bc67fbd6352aa040021db1b02ce740f7af36d1eacf05be4cd687da50c01acfea",
+        "#c642cb235fd1a186a6931d5b096a470540874134763c57963bd5f0e8971ab352",
+        "#74fa63895656ba695c0f4b576fbe414bfdfc040e363923bae9265f28effde9aa",
+        "#6eba25785311b9dfa6f89260d4deec8d2dcb9421e5488524380d1e0d7a43955f",
+        "#b87b2b0105b34b29b36bfb78c579001c814170739c3920d6b3ca2653d964a98e",
+        "#efeaf4f7f954ba3f4a96fb92941b94b86def0b4dd82464912ceb14e041bea32f",
+        "#e9fd00efbba2e22b27874dd98043513ccbea41028f1cef245c6f74685a161666",
+        "#35ad7a6608210a292e7308fb8d4a13455f4dcca44173285d9c215625e7cdcc3a",
+        "#f6c6b2235880fad5a44511aa0274d38eeeb8e6a917023abcf2bdbde9fd385ee4",
+        "#e3af6cddd2130d76d582abd853eb01536afabf8b90a50fa6732c77e1f6423797",
+        "#c8ffc5c2dcf41b985cf974ed054f8f9704dc79c2b9a1ba6f5017fae7e0f2c5b1",
+        "#726a899c9e1ab6af0ec8631c1d0414c711dd21166076b6a4f2c500a9fd0996b6",
+        "#6418c2a393ef25dfc8632bfb53d435538044a67ab6aa92020f2787e0d45b7288",
+        "#ca25ecd050328608407023fd517fbcb09c099749523a2d6becd54fe70c211d81",
+        "#783e18e41670b657b3455fd46b47e4553f1af4cd2bed46d53178a07c9032c3a9",
+        "#fae4d1c7a78cd97ec9c6e011e030eec27b964cd8351350d2be2f3f060826ed84",
+        "#c30f46143f74379778e65447bf85dfd14babc25f6694a48b3c707e4dc937b325",
+        "#7d7e8172b914b72e0bd0d4c553c8cad54e3c27d43bd328d6a29784281687f0d4",
+        "#371e44b4cc7f17d3dd4760c513037e287bbef2ca1572084ab32b2806858d9958",
+        "#d4d18c9ccf30c84a7531ac81885280060fdc40d12adb7e7ddd077c2ac3ba24f0",
+        "#5a5df1d42190dd5657e6042b3f87e746e7ce334f13998d283ab2ee7c1f279924",
+        "#ec068289d836e143df9ec9f805316133f312bb13fea8eb378ba187612166f35c",
+        "#d257faa4b426cf20cd12570d02d52d292e2bd638cc44b4fff579bf0dfe295f17",
+        "#16afa6aa06b5512f3acb168efd143327bf4fc2bb960fea889153af4f1767822a",
+        "#4a17247596647dad23c772a762cd75e4bf1a7724337bd1bbe9049e5826fe2a56",
+        "#20d07f402335d362a5b512a9e975a5b75c42e222c45e5bbc5cb71f0886bb5604",
+        "#4b53c026be5fe7719392b5222e12dc8eb8c19091f7ec80f6f25d7bcf01065c2f",
+        "#9684641ee32404bbc291f5728a485edf3e8e7b556f04ce9af81827180a9ea6c3",
+        "#080079331f4318458c70b36a79c350c64626d5ea73e20606331af853a0b3cdb7",
+        "#480099f6973d14cc45b3c758fe43449d5296e50e5febb3a34327f5579b558e39",
+        "#88913bfcdf32a14f364b47fb7494827a555a82592d57f765517d5729a8cb84e3",
+        "#4ff226bea8dc6e2e024183f952b2985db3116792c3b3b0741cdb15c525017bb2",
+        "#e6db01e559791503e14eed56c66f5e73061343dbc786825c72a04d6793897cfa",
+        "#35b61d95acc2ad90daf79d41a2869c92d398092b0f0e6c1c024cd58b096a5ac7",
+        "#575475a23f635490f92359d9ab8fedf64c5ee7649a27975e80446d46be48c8f2",
+        "#6db6b75bcfeebdfa09e8a3bddd598d12a0d56235e999f6605368b649411de36a",
+        "#b9957cbcf8f84e09e25136ed934363cdb27eabcb147fd4c9fbc866526be13252",
+        "#93d6b5c797bd2d2dcc1690febba6455143d7ef91e21981e6f319903b49555f78",
+        "#bd6955f2bff30fe6242f626cb6987754094fbcf74a010518a72fdc8a32d98c24",
+        "#088dc36517e1a4aff3bdae7106cf93acf22524e0e8db5603db033c52d1169d68",
+        "#93214d3574ab96fe5bf911eded86a254c5b84fc2b03c6146dce2905b4b075b8f",
+        "#027fe991fd93861cdcc765dbdb2335157727496cb61f20e03f3af152b3d25ab6",
+        "#549574f469e3de56e9bd121289bc8795ad2a8174ac09c890f11d943379019a61",
+        "#21166afd9f59d286e4bb8ccb0983d6cea45e297f95402b567b6133564867f734",
+        "#75937b73150b80f463933d8acbd67019c94ef394205e389cea66108abf089111",
+        "#38b3024a5d42687fec7fa2533b03ec6a1fafdc9ba9c8c8036313743fcbf0897b"
+      ],
+      "package": "OpenCV.Geometry",
+      "signatures": [
+        "type Affine_Row_Index is range 1 .. 2;\n",
+        "type Affine_Transform_2D is\n  array (Affine_Row_Index, Transform_Column_Index) of OpenCV.Float64_Value;\n",
+        "T (1, 1) * X + T (1, 2) * Y + T (1, 3)",
+        "T (2, 1) * X + T (2, 2) * Y + T (2, 3)",
+        "function Approximate_Curve\n  (Points : Contour; Epsilon : OpenCV.Float64_Value; Closed : Boolean)\n   return Contour\n",
+        "0.0 <= Epsilon < 1.0E30",
+        "function Approximate_Curve\n  (Points  : Float32_Point_Array;\n   Epsilon : OpenCV.Float64_Value;\n   Closed  : Boolean) return Float32_Point_Array\n",
+        "0.0 <= Epsilon < 1.0E30",
+        "function Arc_Length\n  (Points : Contour; Closed : Boolean) return OpenCV.Float64_Value\n",
+        "function Arc_Length\n  (Points : Float32_Point_Array; Closed : Boolean)\n   return OpenCV.Float64_Value\n",
+        "function Bounding_Rect (Points : Contour) return OpenCV.Rect\n",
+        "function Bounding_Rect (Points : Float32_Point_Array) return OpenCV.Rect\n",
+        "-2.0**31 .. 2.0**31",
+        "-2.0**31",
+        "2.0**31",
+        "function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices\n",
+        "type Box_Vertex_Index is range 1 .. 4;\n",
+        "type Box_Vertices is array (Box_Vertex_Index) of OpenCV.Float32_Point;\n",
+        "function Closest_Ellipse_Points\n  (Ellipse : OpenCV.Rotated_Rect; Points : Contour)\n   return Float32_Point_Array\n",
+        "function Closest_Ellipse_Points\n  (Ellipse : OpenCV.Rotated_Rect; Points : Float32_Point_Array)\n   return Float32_Point_Array\n",
+        "function Compute_Moments (Points : Contour) return Moments_Result\n",
+        "function Compute_Moments\n  (Points : Float32_Point_Array) return Moments_Result\n",
+        "2.0**(-23)",
+        "subtype Contour is OpenCV.Point_Array;\n",
+        "function Contour_Area\n  (Points : Contour; Oriented : Boolean := False)\n   return OpenCV.Float64_Value\n",
+        "function Contour_Area\n  (Points : Float32_Point_Array; Oriented : Boolean := False)\n   return OpenCV.Float64_Value\n",
+        "type Contour_Point_Location is\n  (Outside_Contour, On_Contour_Boundary, Inside_Contour);\n",
+        "function Convex_Hull\n  (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)\n   return Contour\n",
+        "function Convex_Hull\n  (Points      : Float32_Point_Array;\n   Orientation : Hull_Orientation := Counterclockwise)\n   return Float32_Point_Array\n",
+        "function Convex_Hull_Indices\n  (Points : Contour; Orientation : Hull_Orientation := Counterclockwise)\n   return Point_Index_Array\n",
+        "function Convex_Hull_Indices\n  (Points      : Float32_Point_Array;\n   Orientation : Hull_Orientation := Counterclockwise)\n   return Point_Index_Array\n",
+        "type Convex_Polygon_Intersection (Vertex_Count : Natural) is record\n   Area     : OpenCV.Float32_Value;\n   Vertices : Float32_Point_Array (1 .. Vertex_Count);\nend record;\n",
+        "type Convexity_Defect is record\n   Start_Index    : Natural := 0;\n   End_Index      : Natural := 0;\n   Farthest_Index : Natural := 0;\n   Depth          : OpenCV.Float64_Value := 0.0;\nend record;\n",
+        "type Convexity_Defect_Array is array (Natural range <>) of Convexity_Defect;\n",
+        "function Convexity_Defects (Points : Contour) return Convexity_Defect_Array\n",
+        "function Convexity_Defects\n  (Points : Contour; Hull : Point_Index_Array) return Convexity_Defect_Array\n",
+        "Width**2 + Height**2 <= 8_388_607**2",
+        "type Enclosing_Circle is record\n   Center : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);\n   Radius : OpenCV.Float32_Value := 0.0;\nend record;\n",
+        "type Enclosing_Triangle is record\n   Area     : OpenCV.Float64_Value := 0.0;\n   Vertices : Triangle_Vertices := (others => (X => 0.0, Y => 0.0));\nend record;\n",
+        "function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect\n",
+        "13 * n",
+        "function Fit_Ellipse\n  (Points : Float32_Point_Array) return OpenCV.Rotated_Rect\n",
+        "2.0**103",
+        "function Fit_Ellipse_AMS (Points : Contour) return OpenCV.Rotated_Rect\n",
+        "function Fit_Ellipse_AMS\n  (Points : Float32_Point_Array) return OpenCV.Rotated_Rect\n",
+        "function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect\n",
+        "function Fit_Ellipse_Direct\n  (Points : Float32_Point_Array) return OpenCV.Rotated_Rect\n",
+        "function Fit_Line_2D\n  (Points          : Contour;\n   Distance        : Line_Fit_Distance := L2;\n   Parameter       : OpenCV.Float64_Value := 0.0;\n   Radius_Accuracy : OpenCV.Float64_Value := 0.01;\n   Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D\n",
+        "function Fit_Line_2D\n  (Points          : Float32_Point_Array;\n   Distance        : Line_Fit_Distance := L2;\n   Parameter       : OpenCV.Float64_Value := 0.0;\n   Radius_Accuracy : OpenCV.Float64_Value := 0.01;\n   Angle_Accuracy  : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D\n",
+        "X*X",
+        "Y*Y",
+        "X*Y",
+        "2.0**63",
+        "count*2",
+        "2.0**63",
+        "type Fitted_Line_2D is record\n   Direction : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);\n   Point     : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);\nend record;\n",
+        "type Float32_Point_Array is\n  array (Natural range <>) of OpenCV.Float32_Point;\n",
+        "function Get_Affine_Transform\n  (Source, Destination : Float32_Point_Array) return Affine_Transform_2D\n",
+        "function Get_Perspective_Transform\n  (Source, Destination : Float32_Point_Array;\n   Method              : Perspective_Solve_Method := LU_Decomposition)\n   return Perspective_Transform_2D\n",
+        "function Get_Rotation_Matrix_2D\n  (Center : OpenCV.Float32_Point;\n   Angle  : OpenCV.Float64_Value;\n   Scale  : OpenCV.Float64_Value := 1.0;\n   Units  : OpenCV.Angle_Unit := OpenCV.Degrees) return OpenCV.Core.Mat\n",
+        "type Hu_Moment_Index is range 1 .. 7;\n",
+        "function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result\n",
+        "type Hu_Moments_Result is array (Hu_Moment_Index) of OpenCV.Float64_Value;\n",
+        "type Hull_Orientation is (Counterclockwise, Clockwise);\n",
+        "Identity_Affine_Transform : constant Affine_Transform_2D :=\n  ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0));\n",
+        "Identity_Perspective_Transform : constant Perspective_Transform_2D :=\n  ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0));\n",
+        "function Intersect_Convex_Polygons\n  (Left, Right : Contour; Handle_Nested : Boolean := True)\n   return Convex_Polygon_Intersection\n",
+        "-2**24 .. 2**24",
+        "2**24",
+        "2**25",
+        "(Integer_32'Last - 4) / 2",
+        "function Intersect_Convex_Polygons\n  (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)\n   return Convex_Polygon_Intersection\n",
+        "2.0**K",
+        "2.0**K",
+        "2.0**(24 + K)",
+        "2.0**(24 + K)",
+        "2.0**(K + 1)",
+        "2.0**30",
+        "2.0**31",
+        "2.0**K",
+        "function Intersect_Convex_Polygons_Extended_Float32\n  (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True)\n   return Convex_Polygon_Intersection\n",
+        "2.0**30",
+        "function Intersect_Rotated_Rectangles\n  (Left, Right : OpenCV.Rotated_Rect) return Rotated_Rectangle_Intersection\n",
+        "function Invert_Affine_Transform\n  (Transform : Affine_Transform_2D) return Affine_Transform_2D\n",
+        "function Is_Convex (Points : Contour) return Boolean\n",
+        "function Is_Convex (Points : Float32_Point_Array) return Boolean\n",
+        "function Is_Natively_Supported (Feature : Native_Feature) return Boolean\n",
+        "type Line_Fit_Distance is (L2, L1, L12, Fair, Welsch, Huber);\n",
+        "function Locate_Point\n  (Points : Contour; Query : OpenCV.Float32_Point)\n   return Contour_Point_Location\n",
+        "-2.0**31 .. 2.0**31",
+        "2.0**31",
+        "function Locate_Point\n  (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)\n   return Contour_Point_Location\n",
+        "-2.0**31",
+        "2.0**31",
+        "function Match_Shapes\n  (Left, Right : Contour; Method : Shape_Match_Method)\n   return OpenCV.Float64_Value\n",
+        "function Match_Shapes\n  (Left, Right : Float32_Point_Array; Method : Shape_Match_Method)\n   return OpenCV.Float64_Value\n",
+        "function Minimum_Area_Rectangle\n  (Points : Contour) return OpenCV.Rotated_Rect\n",
+        "function Minimum_Area_Rectangle\n  (Points : Float32_Point_Array) return OpenCV.Rotated_Rect\n",
+        "function Minimum_Enclosing_Circle\n  (Points : Contour) return Enclosing_Circle\n",
+        "function Minimum_Enclosing_Circle\n  (Points : Float32_Point_Array) return Enclosing_Circle\n",
+        "2.0**41",
+        "2.0**41",
+        "function Minimum_Enclosing_Triangle\n  (Points : Contour) return Enclosing_Triangle\n",
+        "type Moments_Result is record\n   M_00 : OpenCV.Float64_Value := 0.0;\n   M_10 : OpenCV.Float64_Value := 0.0;\n   M_01 : OpenCV.Float64_Value := 0.0;\n   M_20 : OpenCV.Float64_Value := 0.0;\n   M_11 : OpenCV.Float64_Value := 0.0;\n   M_02 : OpenCV.Float64_Value := 0.0;\n   M_30 : OpenCV.Float64_Value := 0.0;\n   M_21 : OpenCV.Float64_Value := 0.0;\n   M_12 : OpenCV.Float64_Value := 0.0;\n   M_03 : OpenCV.Float64_Value := 0.0;\n   Mu_20 : OpenCV.Float64_Value := 0.0;\n   Mu_11 : OpenCV.Float64_Value := 0.0;\n   Mu_02 : OpenCV.Float64_Value := 0.0;\n   Mu_30 : OpenCV.Float64_Value := 0.0;\n   Mu_21 : OpenCV.Float64_Value := 0.0;\n   Mu_12 : OpenCV.Float64_Value := 0.0;\n   Mu_03 : OpenCV.Float64_Value := 0.0;\n   Nu_20 : OpenCV.Float64_Value := 0.0;\n   Nu_11 : OpenCV.Float64_Value := 0.0;\n   Nu_02 : OpenCV.Float64_Value := 0.0;\n   Nu_30 : OpenCV.Float64_Value := 0.0;\n   Nu_21 : OpenCV.Float64_Value := 0.0;\n   Nu_12 : OpenCV.Float64_Value := 0.0;\n   Nu_03 : OpenCV.Float64_Value := 0.0;\nend record;\n",
+        "Nu_pq = Mu_pq / M_00**(1 + (p+q)/2)",
+        "type Native_Feature is\n  (Approximate_Convex_Polygon_Feature,\n   Closest_Ellipse_Points_Feature,\n   Minimum_Enclosing_Convex_Polygon_Feature,\n   Float32_Subdivision_Bounds_Feature);\n",
+        "type Perspective_Row_Index is range 1 .. 3;\n",
+        "type Perspective_Solve_Method is\n  (LU_Decomposition, Singular_Value_Decomposition, QR_Decomposition);\n",
+        "type Perspective_Transform_2D is\n  array (Perspective_Row_Index, Transform_Column_Index)\n  of OpenCV.Float64_Value;\n",
+        "type Point_Index_Array is array (Natural range <>) of Natural;\n",
+        "type Rectangle_Intersection_Kind is\n  (No_Intersection, Partial_Intersection, Full_Intersection);\n",
+        "subtype Rectangle_Intersection_Vertex_Count is Natural range 0 .. 8;\n",
+        "type Rotated_Rectangle_Intersection\n  (Vertex_Count : Rectangle_Intersection_Vertex_Count := 0)\nis record\n   Kind     : Rectangle_Intersection_Kind := No_Intersection;\n   Vertices : Float32_Point_Array (1 .. Vertex_Count);\nend record;\n",
+        "type Shape_Match_Method is\n  (Reciprocal_Log_Difference, Log_Difference, Relative_Log_Difference);\n",
+        "m = sign (h) * log |h|",
+        "|1/mA - 1/mB|",
+        "|mA - mB|",
+        "|(mA - mB) / mA|",
+        "function Signed_Distance_To_Contour\n  (Points : Contour; Query : OpenCV.Float32_Point)\n   return OpenCV.Float64_Value\n",
+        "function Signed_Distance_To_Contour\n  (Points : Float32_Point_Array; Query : OpenCV.Float32_Point)\n   return OpenCV.Float64_Value\n",
+        "type Transform_Column_Index is range 1 .. 3;\n",
+        "function Transform_Point\n  (Transform : Affine_Transform_2D; Point : OpenCV.Float32_Point)\n   return OpenCV.Float32_Point\n",
+        "function Transform_Point\n  (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point)\n   return OpenCV.Float32_Point\n",
+        "function Transform_Points\n  (Transform : Affine_Transform_2D; Points : Float32_Point_Array)\n   return Float32_Point_Array\n",
+        "function Transform_Points\n  (Transform : Perspective_Transform_2D; Points : Float32_Point_Array)\n   return Float32_Point_Array\n",
+        "type Triangle_Vertex_Index is range 1 .. 3;\n",
+        "type Triangle_Vertices is\n  array (Triangle_Vertex_Index) of OpenCV.Float32_Point;\n"
+      ],
+      "visible_text_sha256": "9a80b74a562c03f9a68bd5f2f887207b56e726171440d02fbea9b385534520e7"
+    },
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": {
+      "declarations": [
+        [
+          "84ae12c265ab51107ff60d0639974a089298c5746103783fff3ef63927ffe9ab",
+          "Bounds"
+        ],
+        [
+          "8373cc3123ae8722a02c20fe75624324a05b240e96e48ff9037199ef989f6b86",
+          "Bounds_Float32"
+        ],
+        [
+          "f1ed3ec83a6df7197b87f750151e7e2aa4f2397f8c4e61c008f205173a329c76",
+          "Create"
+        ],
+        [
+          "c83e0ed56ddd87e613028f87ca967f2da1a90be5751ac14cea2d20884a5cfaa5",
+          "Create_Float32"
+        ],
+        [
+          "ed071994bb70f5747223262217d0d65bff03048e7986743e3cc16dd7ec46215f",
+          "Destination"
+        ],
+        [
+          "4f4ba2bc1497150545680c01c96c8a1e137be7dae83c261885d4ca66f8e5d11e",
+          "Edge_Id"
+        ],
+        [
+          "a498e27d1e44c21b8f293d66a9a4d7757fdb1effcd90c970fddbbbda3cfdfba8",
+          "Edge_Id_Array"
+        ],
+        [
+          "51c30b3309ed26d54c340ebf9856de71182aab08b217deaf686d658b4f3ab40b",
+          "Edge_List"
+        ],
+        [
+          "eab663978f5ba01a8c495e3e3b90a7e08384fea96d604bc144b0f3e932679d4a",
+          "Edge_Navigation"
+        ],
+        [
+          "4b3f7a676b58c5934faa79d2e55db7aa7dc92ad37ac0fcfa4d7c389d7895cbd1",
+          "Edge_Rotation"
+        ],
+        [
+          "d2cc8e71ce5d4baaf8998f8cb66c2aef260e921004cfb06004265174271c1334",
+          "Edge_Segment"
+        ],
+        [
+          "92da97d0d027d0f69c06f9f1cf305127aec400151ed86587bc41cd0cf7c99c66",
+          "Edge_Segment_Array"
+        ],
+        [
+          "d9d0858b70058d688f0dc7ec0b09e3a4b3fa4f1b0de3dfb09553beab0976fadc",
+          "Facet_Points"
+        ],
+        [
+          "b597c65821fbff756de2b3f7c927b5f360599958ed84aab216ba14ea54562eb3",
+          "Find_Nearest"
+        ],
+        [
+          "b125253f5c455a7da363afe004c112ca954a86d3ed0f6c6d15aea023f7c78ca6",
+          "First_Edge"
+        ],
+        [
+          "f949ceda55cccb217b367ecb4afd42371991c95d0db3446f35959c4ed724af52",
+          "Float32_Rectangle"
+        ],
+        [
+          "c5833967df20dd7e966292b6dc5425b3fe8447b6615fdd59ee780fa1d27346c6",
+          "Insert"
+        ],
+        [
+          "2d682176b7e149bf13a16d367cc17e78deced31317ada954300c221a384ede35",
+          "Insert"
+        ],
+        [
+          "1dba028766a42c4b730b73e78df21edd66461caa5c6a52b32ca25cb9987bb425",
+          "Is_Ready"
+        ],
+        [
+          "6b327953f9eb1d4d7e518e7149ce1976680326aa5e337d616c31f2a2eb3e5490",
+          "Leading_Edge_List"
+        ],
+        [
+          "fbfdbf46f2545c15887368c29713f59ae1c2afbd27f47be65777acc8b4d44c43",
+          "Locate"
+        ],
+        [
+          "b9ff3363e884f40cabc55b3a7470a1c2def2d2b1d3673ee93fe87db24f734081",
+          "Locate_Result"
+        ],
+        [
+          "a7ad958478fe2b1a3b54eb1901fdf350b7603cba7deec6ad41dc5989da119123",
+          "Navigate"
+        ],
+        [
+          "bb42d2cc3932e5efbd0582d66089c08c480db3c35ee624159bfc28d85d5923bd",
+          "Nearest_Result"
+        ],
+        [
+          "53885852c2b270c017202fa66ac34ead99925feff5171f25eb2f9974eb9b4579",
+          "Next_Edge"
+        ],
+        [
+          "3c48db0c5299a605f0d26dd0ebd163b063d7ab476d41cf5919b2d64b120e564b",
+          "No_Edge"
+        ],
+        [
+          "d569763fc23e0795e109ff3b9ca11449a1335a7cab718b146e96cd98048a6eb8",
+          "No_Vertex"
+        ],
+        [
+          "b8cda029656252b719904711289d9b8a20388c14b115057a2d7afccd7a8037bc",
+          "Origin"
+        ],
+        [
+          "d0382199f6d647399cbec96d1100f908f3fd73e8b389c00721ceefede0ba4426",
+          "Point_Location_Kind"
+        ],
+        [
+          "78cad4e7575c44c2e65e72335848e764c0cefd803dfae2d46a002e02fd5e50b9",
+          "Reset"
+        ],
+        [
+          "c4ebe8e3910bba90be1b27e3a1c5b9cfca8808da57edca77f449b3e6b1f09993",
+          "Reset_Float32"
+        ],
+        [
+          "231a4c73968ecfe809a383b8aa8250e757965b378a715ec20da7cfe05b7c8297",
+          "Rotate"
+        ],
+        [
+          "2e8fcfedfbf19b2208b3731936405081ecc91d15ddfa0b22ba69c9ce2f2b2f52",
+          "Subdivision"
+        ],
+        [
+          "603aef11200a5330fae979463002638ce4e2361b49be81fd844a7a571496c936",
+          "Symmetric_Edge"
+        ],
+        [
+          "34e22f06ddf411ba6da2cacd635f9e83c273b7a7aa3009df10d2f69730e535e6",
+          "Triangle_Array"
+        ],
+        [
+          "8413db754673e07fff9f3958b92e006c6795a6a04ee22052af1b67edb41315e6",
+          "Triangle_List"
+        ],
+        [
+          "dd050c3c0687b6ef8dd3fa3345b429f52beaa94e575a53319b505a97f530c9a2",
+          "Vertex_Id"
+        ],
+        [
+          "e95f7e035af974e40d2d411f5206b758b3b3665717993f8843fe7f4a7744f73a",
+          "Vertex_Id_Array"
+        ],
+        [
+          "e534b3fbdfcf897aa843fdcda37d3655fe8a6c23a74f27ada360ed1c2793f3ae",
+          "Vertex_Point"
+        ],
+        [
+          "a125ec53d879614b49bbf461cde07b3f335e7774560ef81a43c67875bd6f10ae",
+          "Voronoi_Diagram"
+        ],
+        [
+          "c33bf84ac459e6212120426ff4dfdf5797c3ac2bdd58d381bc380e5fcebe2f7d",
+          "Voronoi_Facet"
+        ],
+        [
+          "71539492eca6e0e89efef961a3176106b860f286ae3c6cea1d76320479dad535",
+          "Voronoi_Facet_Array"
+        ],
+        [
+          "e0402b3aee8b3781289bab36d68dc32c0ec62ce50d276fbb333035ae0d6757ea",
+          "Voronoi_Facets"
+        ],
+        [
+          "0bf4599039a7b13e965e24657a52ac19280f856f1903755ea34285df69c39ab7",
+          "Voronoi_Facets"
+        ]
+      ],
+      "ids": [
+        "84ae12c265ab51107ff60d0639974a089298c5746103783fff3ef63927ffe9ab",
+        "8373cc3123ae8722a02c20fe75624324a05b240e96e48ff9037199ef989f6b86",
+        "f1ed3ec83a6df7197b87f750151e7e2aa4f2397f8c4e61c008f205173a329c76",
+        "c83e0ed56ddd87e613028f87ca967f2da1a90be5751ac14cea2d20884a5cfaa5",
+        "ed071994bb70f5747223262217d0d65bff03048e7986743e3cc16dd7ec46215f",
+        "4f4ba2bc1497150545680c01c96c8a1e137be7dae83c261885d4ca66f8e5d11e",
+        "a498e27d1e44c21b8f293d66a9a4d7757fdb1effcd90c970fddbbbda3cfdfba8",
+        "51c30b3309ed26d54c340ebf9856de71182aab08b217deaf686d658b4f3ab40b",
+        "eab663978f5ba01a8c495e3e3b90a7e08384fea96d604bc144b0f3e932679d4a",
+        "4b3f7a676b58c5934faa79d2e55db7aa7dc92ad37ac0fcfa4d7c389d7895cbd1",
+        "d2cc8e71ce5d4baaf8998f8cb66c2aef260e921004cfb06004265174271c1334",
+        "92da97d0d027d0f69c06f9f1cf305127aec400151ed86587bc41cd0cf7c99c66",
+        "d9d0858b70058d688f0dc7ec0b09e3a4b3fa4f1b0de3dfb09553beab0976fadc",
+        "b597c65821fbff756de2b3f7c927b5f360599958ed84aab216ba14ea54562eb3",
+        "b125253f5c455a7da363afe004c112ca954a86d3ed0f6c6d15aea023f7c78ca6",
+        "f949ceda55cccb217b367ecb4afd42371991c95d0db3446f35959c4ed724af52",
+        "c5833967df20dd7e966292b6dc5425b3fe8447b6615fdd59ee780fa1d27346c6",
+        "2d682176b7e149bf13a16d367cc17e78deced31317ada954300c221a384ede35",
+        "1dba028766a42c4b730b73e78df21edd66461caa5c6a52b32ca25cb9987bb425",
+        "6b327953f9eb1d4d7e518e7149ce1976680326aa5e337d616c31f2a2eb3e5490",
+        "fbfdbf46f2545c15887368c29713f59ae1c2afbd27f47be65777acc8b4d44c43",
+        "b9ff3363e884f40cabc55b3a7470a1c2def2d2b1d3673ee93fe87db24f734081",
+        "a7ad958478fe2b1a3b54eb1901fdf350b7603cba7deec6ad41dc5989da119123",
+        "bb42d2cc3932e5efbd0582d66089c08c480db3c35ee624159bfc28d85d5923bd",
+        "53885852c2b270c017202fa66ac34ead99925feff5171f25eb2f9974eb9b4579",
+        "3c48db0c5299a605f0d26dd0ebd163b063d7ab476d41cf5919b2d64b120e564b",
+        "d569763fc23e0795e109ff3b9ca11449a1335a7cab718b146e96cd98048a6eb8",
+        "b8cda029656252b719904711289d9b8a20388c14b115057a2d7afccd7a8037bc",
+        "d0382199f6d647399cbec96d1100f908f3fd73e8b389c00721ceefede0ba4426",
+        "78cad4e7575c44c2e65e72335848e764c0cefd803dfae2d46a002e02fd5e50b9",
+        "c4ebe8e3910bba90be1b27e3a1c5b9cfca8808da57edca77f449b3e6b1f09993",
+        "231a4c73968ecfe809a383b8aa8250e757965b378a715ec20da7cfe05b7c8297",
+        "2e8fcfedfbf19b2208b3731936405081ecc91d15ddfa0b22ba69c9ce2f2b2f52",
+        "603aef11200a5330fae979463002638ce4e2361b49be81fd844a7a571496c936",
+        "34e22f06ddf411ba6da2cacd635f9e83c273b7a7aa3009df10d2f69730e535e6",
+        "8413db754673e07fff9f3958b92e006c6795a6a04ee22052af1b67edb41315e6",
+        "dd050c3c0687b6ef8dd3fa3345b429f52beaa94e575a53319b505a97f530c9a2",
+        "e95f7e035af974e40d2d411f5206b758b3b3665717993f8843fe7f4a7744f73a",
+        "e534b3fbdfcf897aa843fdcda37d3655fe8a6c23a74f27ada360ed1c2793f3ae",
+        "a125ec53d879614b49bbf461cde07b3f335e7774560ef81a43c67875bd6f10ae",
+        "c33bf84ac459e6212120426ff4dfdf5797c3ac2bdd58d381bc380e5fcebe2f7d",
+        "71539492eca6e0e89efef961a3176106b860f286ae3c6cea1d76320479dad535",
+        "e0402b3aee8b3781289bab36d68dc32c0ec62ce50d276fbb333035ae0d6757ea",
+        "0bf4599039a7b13e965e24657a52ac19280f856f1903755ea34285df69c39ab7"
+      ],
+      "native_links": [
+        "#4f4ba2bc1497150545680c01c96c8a1e137be7dae83c261885d4ca66f8e5d11e",
+        "#eab663978f5ba01a8c495e3e3b90a7e08384fea96d604bc144b0f3e932679d4a",
+        "#4b3f7a676b58c5934faa79d2e55db7aa7dc92ad37ac0fcfa4d7c389d7895cbd1",
+        "#d0382199f6d647399cbec96d1100f908f3fd73e8b389c00721ceefede0ba4426",
+        "#2e8fcfedfbf19b2208b3731936405081ecc91d15ddfa0b22ba69c9ce2f2b2f52",
+        "#dd050c3c0687b6ef8dd3fa3345b429f52beaa94e575a53319b505a97f530c9a2",
+        "#a498e27d1e44c21b8f293d66a9a4d7757fdb1effcd90c970fddbbbda3cfdfba8",
+        "#92da97d0d027d0f69c06f9f1cf305127aec400151ed86587bc41cd0cf7c99c66",
+        "#34e22f06ddf411ba6da2cacd635f9e83c273b7a7aa3009df10d2f69730e535e6",
+        "#e95f7e035af974e40d2d411f5206b758b3b3665717993f8843fe7f4a7744f73a",
+        "#71539492eca6e0e89efef961a3176106b860f286ae3c6cea1d76320479dad535",
+        "#d2cc8e71ce5d4baaf8998f8cb66c2aef260e921004cfb06004265174271c1334",
+        "#f949ceda55cccb217b367ecb4afd42371991c95d0db3446f35959c4ed724af52",
+        "#b9ff3363e884f40cabc55b3a7470a1c2def2d2b1d3673ee93fe87db24f734081",
+        "#bb42d2cc3932e5efbd0582d66089c08c480db3c35ee624159bfc28d85d5923bd",
+        "#a125ec53d879614b49bbf461cde07b3f335e7774560ef81a43c67875bd6f10ae",
+        "#c33bf84ac459e6212120426ff4dfdf5797c3ac2bdd58d381bc380e5fcebe2f7d",
+        "#3c48db0c5299a605f0d26dd0ebd163b063d7ab476d41cf5919b2d64b120e564b",
+        "#d569763fc23e0795e109ff3b9ca11449a1335a7cab718b146e96cd98048a6eb8",
+        "#84ae12c265ab51107ff60d0639974a089298c5746103783fff3ef63927ffe9ab",
+        "#8373cc3123ae8722a02c20fe75624324a05b240e96e48ff9037199ef989f6b86",
+        "#f1ed3ec83a6df7197b87f750151e7e2aa4f2397f8c4e61c008f205173a329c76",
+        "#c83e0ed56ddd87e613028f87ca967f2da1a90be5751ac14cea2d20884a5cfaa5",
+        "#ed071994bb70f5747223262217d0d65bff03048e7986743e3cc16dd7ec46215f",
+        "#51c30b3309ed26d54c340ebf9856de71182aab08b217deaf686d658b4f3ab40b",
+        "#d9d0858b70058d688f0dc7ec0b09e3a4b3fa4f1b0de3dfb09553beab0976fadc",
+        "#b597c65821fbff756de2b3f7c927b5f360599958ed84aab216ba14ea54562eb3",
+        "#b125253f5c455a7da363afe004c112ca954a86d3ed0f6c6d15aea023f7c78ca6",
+        "#c5833967df20dd7e966292b6dc5425b3fe8447b6615fdd59ee780fa1d27346c6",
+        "#2d682176b7e149bf13a16d367cc17e78deced31317ada954300c221a384ede35",
+        "#1dba028766a42c4b730b73e78df21edd66461caa5c6a52b32ca25cb9987bb425",
+        "#6b327953f9eb1d4d7e518e7149ce1976680326aa5e337d616c31f2a2eb3e5490",
+        "#fbfdbf46f2545c15887368c29713f59ae1c2afbd27f47be65777acc8b4d44c43",
+        "#a7ad958478fe2b1a3b54eb1901fdf350b7603cba7deec6ad41dc5989da119123",
+        "#53885852c2b270c017202fa66ac34ead99925feff5171f25eb2f9974eb9b4579",
+        "#b8cda029656252b719904711289d9b8a20388c14b115057a2d7afccd7a8037bc",
+        "#78cad4e7575c44c2e65e72335848e764c0cefd803dfae2d46a002e02fd5e50b9",
+        "#c4ebe8e3910bba90be1b27e3a1c5b9cfca8808da57edca77f449b3e6b1f09993",
+        "#231a4c73968ecfe809a383b8aa8250e757965b378a715ec20da7cfe05b7c8297",
+        "#603aef11200a5330fae979463002638ce4e2361b49be81fd844a7a571496c936",
+        "#8413db754673e07fff9f3958b92e006c6795a6a04ee22052af1b67edb41315e6",
+        "#e534b3fbdfcf897aa843fdcda37d3655fe8a6c23a74f27ada360ed1c2793f3ae",
+        "#e0402b3aee8b3781289bab36d68dc32c0ec62ce50d276fbb333035ae0d6757ea",
+        "#0bf4599039a7b13e965e24657a52ac19280f856f1903755ea34285df69c39ab7"
+      ],
+      "package": "OpenCV.Geometry.Subdiv2D",
+      "signatures": [
+        "function Bounds (Object : Subdivision) return OpenCV.Rect\n",
+        "function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle\n",
+        "function Create (Bounds : OpenCV.Rect) return Subdivision\n",
+        "function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision\n",
+        "function Destination\n  (Object : Subdivision; Edge : Edge_Id) return Vertex_Id\n",
+        "type Edge_Id is range 0 .. 2**31 - 1;\n",
+        "type Edge_Id_Array is array (Natural range <>) of Edge_Id;\n",
+        "function Edge_List (Object : Subdivision) return Edge_Segment_Array\n",
+        "type Edge_Navigation is\n  (Next_Around_Origin,\n   Next_Around_Destination,\n   Previous_Around_Origin,\n   Previous_Around_Destination,\n   Next_Around_Left,\n   Next_Around_Right,\n   Previous_Around_Left,\n   Previous_Around_Right);\n",
+        "type Edge_Rotation is\n  (Same_Edge, Rotated_Edge, Reversed_Edge, Reversed_Rotated_Edge);\n",
+        "type Edge_Segment is record\n   Origin      : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);\n   Destination : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);\nend record;\n",
+        "type Edge_Segment_Array is array (Natural range <>) of Edge_Segment;\n",
+        "function Facet_Points\n  (Diagram : Voronoi_Diagram; Index : Positive) return Float32_Point_Array\n",
+        "function Find_Nearest\n  (Object : in out Subdivision; Point : OpenCV.Float32_Point)\n   return Nearest_Result\n",
+        "function First_Edge\n  (Object : Subdivision; Vertex : Vertex_Id) return Edge_Id\n",
+        "type Float32_Rectangle is record\n   X      : OpenCV.Float32_Value := 0.0;\n   Y      : OpenCV.Float32_Value := 0.0;\n   Width  : OpenCV.Float32_Value := 0.0;\n   Height : OpenCV.Float32_Value := 0.0;\nend record;\n",
+        "function Insert\n  (Object : in out Subdivision; Point : OpenCV.Float32_Point)\n   return Vertex_Id\n",
+        "procedure Insert\n  (Object : in out Subdivision; Points : Float32_Point_Array)\n",
+        "function Is_Ready (Object : Subdivision) return Boolean\n",
+        "function Leading_Edge_List (Object : Subdivision) return Edge_Id_Array\n",
+        "function Locate\n  (Object : in out Subdivision; Point : OpenCV.Float32_Point)\n   return Locate_Result\n",
+        "type Locate_Result (Kind : Point_Location_Kind := Inside_Facet) is record\n   case Kind is\n      when Inside_Facet | On_Edge =>\n         Edge : Edge_Id;\n      when On_Vertex =>\n         Vertex : Vertex_Id;\n   end case;\nend record;\n",
+        "function Navigate\n  (Object : Subdivision; Edge : Edge_Id; Direction : Edge_Navigation)\n   return Edge_Id\n",
+        "type Nearest_Result is record\n   Vertex : Vertex_Id := No_Vertex;\n   Point  : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);\nend record;\n",
+        "function Next_Edge (Object : Subdivision; Edge : Edge_Id) return Edge_Id\n",
+        "No_Edge : constant Edge_Id := 0;\n",
+        "No_Vertex : constant Vertex_Id := 0;\n",
+        "function Origin (Object : Subdivision; Edge : Edge_Id) return Vertex_Id\n",
+        "type Point_Location_Kind is (Inside_Facet, On_Edge, On_Vertex);\n",
+        "procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect)\n",
+        "procedure Reset_Float32\n  (Object : in out Subdivision; Bounds : Float32_Rectangle)\n",
+        "Big = 6 * max (Width, Height)",
+        "function Rotate\n  (Object : Subdivision; Edge : Edge_Id; Rotation : Edge_Rotation)\n   return Edge_Id\n",
+        "type Subdivision is limited private;\n",
+        "function Symmetric_Edge\n  (Object : Subdivision; Edge : Edge_Id) return Edge_Id\n",
+        "type Triangle_Array is\n  array (Natural range <>) of OpenCV.Geometry.Triangle_Vertices;\n",
+        "function Triangle_List (Object : Subdivision) return Triangle_Array\n",
+        "type Vertex_Id is range 0 .. 2**31 - 1;\n",
+        "type Vertex_Id_Array is array (Natural range <>) of Vertex_Id;\n",
+        "function Vertex_Point\n  (Object : Subdivision; Vertex : Vertex_Id) return OpenCV.Float32_Point\n",
+        "type Voronoi_Diagram (Facet_Count, Point_Count : Natural) is record\n   Facets : Voronoi_Facet_Array (1 .. Facet_Count);\n   Points : Float32_Point_Array (1 .. Point_Count);\nend record;\n",
+        "type Voronoi_Facet is record\n   Site       : Vertex_Id := No_Vertex;\n   Site_Point : OpenCV.Float32_Point := (X => 0.0, Y => 0.0);\n   First      : Positive := 1;\n   Last       : Natural := 0;\n   Complete   : Boolean := True;\nend record;\n",
+        "type Voronoi_Facet_Array is array (Natural range <>) of Voronoi_Facet;\n",
+        "function Voronoi_Facets\n  (Object : in out Subdivision) return Voronoi_Diagram\n",
+        "function Voronoi_Facets\n  (Object : in out Subdivision; Sites : Vertex_Id_Array)\n   return Voronoi_Diagram\n"
+      ],
+      "visible_text_sha256": "d17afb06438976de9049590deea3b2d33387898e654481c871bb48502c61c4cc"
+    },
+    "api/index.html": {
+      "declarations": [],
+      "ids": [
+        "compilation-units",
+        "tagged-types"
+      ],
+      "native_links": [
+        "#compilation-units",
+        "#tagged-types",
+        "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+        "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html"
+      ],
+      "package": null,
+      "signatures": [],
+      "visible_text_sha256": "47ecc4462a144f4fd33db3a21ebd6150a98ed76d0fc79e836eb015ec53d00b11"
+    }
+  },
+  "non_deployable": true,
+  "original_navigation_declarations": 130,
+  "pristine_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "66e1c621aa2dc8f36ca225c46745d42b19f7be370ba1099a8a146ec7c9baabe8",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "018538fdbef120204f8cdf7bdccebf787fce4a48e42de8c4f5ccd38e5ff4c56f",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "e5132ce2c3804326c83f7b73827770ec30467b10a67f520146667bbda8adfd23"
+  },
+  "production_https_verified": false,
+  "publication": {
+    "declaration_snippets": 130,
+    "files": 14,
+    "html_pages": 9,
+    "linked_external_types": 95,
+    "linked_local_types": 171,
+    "linked_types": 266,
+    "links": 749,
+    "mode": "verified",
+    "public_packages": 2,
+    "unrendered_renderer_exceptions": 0
+  },
+  "published_navigation_matches_unchanged_oracle": true,
+  "shadow_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "58155bca7c7b6ed34db64fc5f48652fe5b00c12fb3771689efb86201b1c7450e",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+    "api/presentation.json": "b9edb06f4f17704e2bf95502cb761c844a7c9e11f2ffb80cf6943f1a1b29d41f",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "tool": {
+    "direct_url": {
+      "dir_info": {},
+      "url": "file:///tmp/gnatdoc009-enhancer"
+    },
+    "installed_sha256": {
+      "__init__.py": "21896c73fca800e37688baf29579a31a9a19f232fdc2845dfd2bc3caa085c17b",
+      "__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+      "adapters/__init__.py": "bc7839c1ed01b2d028cbb28537f7ab636ae839e11e9c6fba0c82ae9669a882d3",
+      "adapters/mel.py": "4e3d20173d81a03a18d1027814334100f00d9159ba3031d5a94f2f85a3a9bef8",
+      "adapters/opencv.py": "7f45fca90c6c8656398a56ff02bf4aacbde19a96dc4f81d553e7d16a87c55410",
+      "assets/gnatdoc-guides.css": "79f3fc6d5f1e854eb42d225f9bec113b7a41fa833b12d3bd70ca089ba5df0a8c",
+      "assets/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+      "assets/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+      "authored.py": "ab263beb88bbd5602b8f61b5269486a56b6ffb91930d641ab192e87dc2cb66de",
+      "cli.py": "2236a2c01928a42772ddb3a8b4e16f02fdbec63fb30f396a8ddd3366d6a1789e",
+      "config.py": "01dab5ed7c0b26bd027f0bba4e7ce57b960705a1a010aca3001f95d3eb6f41fb",
+      "conformance.py": "ae2f04143abf23dd70f0c56ff82fe500af6111b1a8abbff18cff904778d4507d",
+      "coverage.py": "b5e78be5f070f65731bcc16e1338ad034e6feac4420b2ed3ed31c91d737fdecf",
+      "destinations.py": "7a10181adafbfe236ee7999db5f5093ef746fe367e4e186a15698cb9c04e2bc6",
+      "errors.py": "6fa7d9eab4bac0a32a114685606f11fd1e8838fc8463c8852766edacf8a480da",
+      "external_types.py": "86333d6a961a5f02af71f14cb276e888f35ef4fbd531921f2ea71ae4fc85bc33",
+      "generic_instances.py": "07efc9e92201548f7c33939c57ef1f8c3c3aecd92f3199a52f657aff65ff12f8",
+      "guides.py": "c5e66f5fd1e22dca2990d015ffdbea2f633e2e868cae3ae7c5838fe31bc6bdf0",
+      "inventory.py": "d8e29273e8960cee5cf435eaa7a52ba266a8ad9d2fc8ceb1e0fa4eb13e01b593",
+      "native_html.py": "1e29e589c7ed30de1933c7902fa920894d5b4f2decb77502d3dbc337cb8193ca",
+      "navigation.py": "8687b0ebd90eaf92c7fe1c27749bb063654754ad11dedbceda8f10047cdabc8c",
+      "pipeline.py": "ef611672577fe2650ab02513e325b53af17b3224dd61bdea779b6c0fd86fcc23",
+      "profiles.py": "be0fa1b79f2a522d6c830841709906953c7f746c1a021bc9fdda11a6642c6ab2",
+      "qualification.py": "1e36e59542e19c5a30689e8b94aa6703f7081f733de7463b2bce42bc4c70d28d",
+      "syntax.py": "3d4868b5efa69799b32c5af29ae0690838c45d10a24a6e0c8263f8c73f589848",
+      "theme.py": "ec24fcdd209c976a8d17473544f2ad5ed1b6e92ae4d7a6c85d5500697680d55e",
+      "util.py": "0b2c9d554263ca6d3251737e191b2859c738a64b7b41607adecf0e7e204a66f1",
+      "validation.py": "067cc2ef12cb1716c1292d3e0338dd8c64552765f626686a9e86d55daec30e52",
+      "warnings.py": "3e3e2090f541c5872b08594e72af4fedb39301cd66c919cf040d63ba9e6e15fc"
+    },
+    "revision": "53a321915da2c5a02a54581040673b61f8595b25"
+  }
+}
