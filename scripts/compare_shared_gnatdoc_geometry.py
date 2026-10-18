@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from investigate_shared_gnatdoc_types import Navigation, regular, require, sections, sha
 from enhance_gnatdoc_navigation import entries
-from link_gnatdoc_types import Sources
+from link_gnatdoc_types import Sources, resolve, type_positions
 
 
 def write(path, value):
@@ -33,16 +33,26 @@ def compare(workspace):
     local = {(p + "." + n).lower(): {"page": page, "anchor": a, "package": p}
              for (p, a), (page, n, s) in native.items()
              if s.text.lstrip().startswith(("type ", "subtype "))}
+    pages = {p.lower(): Path(page) for (p, _), (page, _, _) in native.items()}
+    targets = {name: owner["anchor"] for name, owner in local.items()}
     rows = []
     for (package, anchor), (page, name, before) in old.items():
         after = new[package, anchor][2]
         require(before.text == after.text == native[package, anchor][2].text,
                 "complete native profile changed")
         declaration = sources.packages[package.lower()].match(after.text)
+        expected_types = {}
+        for spelling, start, end in type_positions(after.text):
+            identity, _, _ = resolve(spelling, declaration, sources.packages[package.lower()],
+                                      sources, pages, targets, core["types"])
+            if identity:
+                expected_types[start, end] = identity
         left = {(x["offset"], x["end"]): x for x in before.links}
         right = {(x["offset"], x["end"]): x for x in after.links}
         require(len(left) == len(before.links) and len(right) == len(after.links),
                 "duplicate type occurrence")
+        require({position: link["identity"] for position, link in right.items()} == expected_types,
+                "type references differ from independently resolved source positions")
         for position in sorted(left.keys() | right.keys()):
             a, b = left.get(position), right.get(position)
             require(b is not None, "missing source-backed type occurrence")
@@ -88,12 +98,13 @@ def compare(workspace):
             "local type count differs")
     history_root = Path(__file__).absolute().parents[1]
     history = json.loads(regular(history_root / "docs/evidence/gnatdoc009/type-link-occurrences.json"))
-    keys = ("package", "declaration", "native_page", "native_anchor", "offset", "end",
-            "referenced_type", "complete_source_profile", "exact_source_declaration", "source_line",
-            "actual_native_declaration_owner", "legacy")
-    require(len(history) == len(rows) and
-            all(all(a[k] == b[k] for k in keys) for a, b in zip(history, rows)),
-            "source occurrence ledger differs from reviewed historical identities")
+    # Historical line numbers belong to historical source. Current profiles,
+    # occurrences and destinations have just been resolved from current source
+    # and two independently generated native sites; history is not their oracle.
+    historical_profiles = {(a["package"], a["native_anchor"]): a["complete_source_profile"]
+                           for a in history}
+    changes = [r["native_anchor"] for r in rows if historical_profiles.get(
+        (r["package"], r["native_anchor"])) != r["complete_source_profile"]]
     repaired = [r for r in rows if r["declaration"] == "Contour"]
     require(len(repaired) == 1 and repaired[0]["referenced_type"] == "opencv.point_array" and
             repaired[0]["exact_source_declaration"].strip().startswith(
@@ -101,9 +112,6 @@ def compare(workspace):
     oracle = entries(pristine / "api", source / "src", source / "docs/api-categories.json")
     legacy_oracle = entries(source / "_site/api", source / "src", source / "docs/api-categories.json")
     require(oracle == legacy_oracle, "original navigation/profile oracle changed")
-    require(json.loads(json.dumps(oracle)) == json.loads(regular(
-                history_root / "docs/evidence/gnatdoc009/original-navigation.json")),
-            "navigation differs from historical source-backed oracle")
     expected = [[category, item["href"], item["name"] +
                  (f' ({item["overload"]})' if item["overload"] else "")]
                 for _, _, groups in oracle for category, _, items in groups for item in items]
@@ -114,6 +122,7 @@ def compare(workspace):
     result = {"status": "pass", "classification_counts": counts, "missing": 0, "total": 267,
               "local_type_links": 171, "external_type_links": 96, "navigation_entries": 130,
               "contour": repaired[0], "shared_only_owners": additions,
+              "current_profiles_changed_from_history": sorted(set(changes)),
               "tested_shadow_sha256": file_hashes(shadow)}
     write(workspace / "comparison.json", result)
     return result

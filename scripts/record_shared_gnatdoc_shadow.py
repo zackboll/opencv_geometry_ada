@@ -11,6 +11,7 @@ from qualify_shared_gnatdoc_shadow import (
 
 
 def record(workspace):
+    workspace.mkdir(parents=True, exist_ok=True)
     result = {"disposition": "PARTIAL_SHADOW_COMPATIBILITY", "full_shadow_qualification": False,
               "non_deployable": True, "production_migration_ready": False,
               "production_https_verified": False, "enhancer": ENHANCER, "failures": []}
@@ -37,7 +38,18 @@ def record(workspace):
         require(verification == q["verification"], "independent verification differs")
         require(q["documentation_tests"]["executed"] >= 232 and q["documentation_tests"]["status"] == "pass",
                 "missing original documentation tests")
-        require(q["aunit"] == {"executed": 542, "successful": 542}, "missing AUnit baseline")
+        from qualify_shared_gnatdoc_shadow import registered_cases, aunit_results
+        require(q["historical"]["revision"] == BASE and
+                q["historical"]["aunit"]["registered"] == 542,
+                "missing historical AUnit baseline")
+        for data, source in ((q["aunit"], workspace / "legacy"),
+                             (q["historical"]["aunit"], workspace / "historical")):
+            require(data["cases"] == registered_cases(source), "stale AUnit registrations")
+            logs = [command for command in read(workspace / "commands.json")
+                    if command["argv"] == ["alr", "-n", "run"] and
+                    command["cwd"] == str(source / "tests") and command["exit"] == 0]
+            require(len(logs) == 1 and aunit_results(source, regular(
+                workspace / logs[0]["log"]).decode()) == data, "missing executed AUnit evidence")
         require(len(q["examples"]) == 6 and len({e["main"] for e in q["examples"]}) == 6 and
                 all(e["build_exit"] == e["run_exit"] == 0 for e in q["examples"]), "missing compiled examples")
         expected_gate = {"coverage": "Documentation coverage: 452/452 items (100.0%); 0 newly undocumented, 0 newly documented",

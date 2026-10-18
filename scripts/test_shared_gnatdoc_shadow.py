@@ -5,10 +5,73 @@ import tempfile
 import unittest
 import json
 
-from qualify_shared_gnatdoc_shadow import ROOT, TRANSITION, check_files, trusted_inputs
+from qualify_shared_gnatdoc_shadow import (
+    ROOT, TRANSITION, REVIEWED, EVIDENCE, CONFIG, git, check_files, trusted_inputs,
+    registered_cases, aunit_results, staged_contract,
+)
 
 
 class TrustTests(unittest.TestCase):
+    def trust_copy(self, root):
+        transition = json.loads((ROOT / TRANSITION).read_text())
+        names = set(transition["baseline_files_sha256"]) | {TRANSITION, CONFIG}
+        names.update(git(ROOT, "ls-tree", "-r", "--name-only", REVIEWED, "--",
+                         "docs/evidence/gnatdoc009", EVIDENCE).decode().splitlines())
+        for name in names:
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, target)
+
+    def test_current_implementation_changes_do_not_rewrite_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.trust_copy(root)
+            (root / "cpp/opencv_geometry_shim.cpp").write_text("legitimate future source")
+            trusted_inputs(root)
+
+    def test_historical_ledger_and_reviewed_results_are_immutable(self):
+        for name in ("docs/evidence/gnatdoc009/type-link-occurrences.json",
+                     EVIDENCE + "/qualified/readiness.json"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.trust_copy(root)
+                (root / name).write_text("forged historical evidence")
+                with self.assertRaisesRegex(ValueError, "historical evidence"):
+                    trusted_inputs(root)
+
+    def test_authored_guides_remain_immutable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.trust_copy(root)
+            (root / "docs/guides/delaunay-and-voronoi.md").write_text("tamper")
+            with self.assertRaisesRegex(ValueError, "authority bytes"):
+                trusted_inputs(root)
+
+    def test_current_registrations_and_executed_cases(self):
+        cases = registered_cases(ROOT)
+        self.assertEqual(len(cases), 547)
+        output = "\n".join("OK " + case for case in cases) + (
+            "\nTotal Tests Run: 547\nSuccessful Tests: 547\n"
+            "Failed Assertions: 0\nUnexpected Errors: 0\n")
+        self.assertEqual(aunit_results(ROOT, output)["registered"], 547)
+        for bad in (output.replace("547", "542"), output.replace("OK " + cases[0], "FAIL " + cases[0]),
+                    output.replace("Unexpected Errors: 0", "Unexpected Errors: 1"),
+                    output + "Total Tests Run: 547\n"):
+            with self.assertRaises(ValueError):
+                aunit_results(ROOT, bad)
+
+    def test_run_local_contract_only_rebinds_native_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            pristine = Path(directory)
+            (pristine / "api").mkdir()
+            (pristine / "api/index.html").write_text("independent native output")
+            payload, config = staged_contract(ROOT, pristine)
+            current = json.loads(payload)
+            history = json.loads((ROOT / EVIDENCE / "geometry-authored.json").read_text())
+            self.assertNotEqual(current.pop("native_sha256"), history.pop("native_sha256"))
+            self.assertEqual(current, history)
+            self.assertIn(b'current-authored.json', config)
+
     def test_reviewed_contracts_and_baseline(self):
         transition = trusted_inputs()
         self.assertEqual(transition["historical_classification"]["BLOCKED-source-backed-reference-lost"], 1)
@@ -38,6 +101,13 @@ class TrustTests(unittest.TestCase):
             result = record(Path(directory))
             self.assertFalse(result["full_shadow_qualification"])
             self.assertEqual(result["disposition"], "PARTIAL_SHADOW_COMPATIBILITY")
+
+    def test_readiness_records_early_failure_in_new_workspace(self):
+        from record_shared_gnatdoc_shadow import record
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "not-created-yet"
+            self.assertFalse(record(root)["full_shadow_qualification"])
+            self.assertTrue((root / "readiness.json").is_file())
 
     def test_historical_blocked_report_cannot_qualify_new_enhancer(self):
         from record_shared_gnatdoc_shadow import record

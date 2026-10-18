@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 from urllib.parse import unquote, urlsplit
 import uuid
@@ -24,6 +25,7 @@ from compare_shared_gnatdoc_geometry import compare, file_hashes, write
 
 ROOT = Path(__file__).absolute().parents[1]
 BASE = "ec4d689eac748b7837abd4c3754c3090ca4bf814"
+REVIEWED = "2101e5c8757898b6904becfb899247e9f685c25b"
 ENHANCER = "426f38852ef7dfff264f73ad01aab458f5e12b23"
 CORE = "f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f"
 EVIDENCE = "docs/evidence/gnatdoc009b"
@@ -31,6 +33,7 @@ TRANSITION = EVIDENCE + "/authority-transition.json"
 TRANSITION_SHA256 = "ddf461928a5fc7a3ab4fc9ed0248c237aa465e581249708a5390496b7b447cb5"
 CONFIG = "docs/shared-gnatdoc-shadow.toml"
 GNATDOC = "GNATdoc 26.0.0 (20260415)"
+GNATDOC_SHA256 = "d256f0ece2f181046dfeb3ce490d7aa5c994992550c78da14e9065d453aa52c5"
 EXAMPLES = ("contours_and_moments", "fitting_and_intersections", "affine_and_perspective",
             "delaunay_and_voronoi", "compatibility_and_safety")
 
@@ -67,10 +70,113 @@ def trusted_inputs(root=ROOT):
             and transition["core_source"] == CORE and
             transition["publication"] == "shadow-only / offline-test / non-deployable",
             "authority transition identity differs")
-    check_files(root, transition["baseline_files_sha256"])
+    # Immutable Git objects, not today's implementation, own historical bytes.
+    for name, digest in transition["baseline_files_sha256"].items():
+        require(sha(git(ROOT, "show", f"{BASE}:{name}")) == digest,
+                "historical source authority differs: " + name)
+    for name in git(ROOT, "ls-tree", "-r", "--name-only", REVIEWED, "--",
+                    "docs/evidence/gnatdoc009", EVIDENCE).decode().splitlines():
+        require(regular(root / name) == git(ROOT, "show", f"{REVIEWED}:{name}"),
+                "historical evidence differs: " + name)
     check_files(root / EVIDENCE, transition["contracts_sha256"])
     check_files(root, {CONFIG: transition["configuration_sha256"]})
+    authored = read(root / EVIDENCE / "geometry-authored.json")
+    check_files(root, authored["inputs"])
+    # The production documentation machinery and authored navigation stay fixed.
+    fixed = {n: d for n, d in transition["baseline_files_sha256"].items()
+             if n in ("docs_api.gpr", "docs_internal.gpr", "docs/api-categories.json",
+                      "scripts/generate_docs.sh") or
+             n.startswith(("docs/assets/", "docs/guides/", "docs/examples/")) or
+             (n.startswith("scripts/") and "gnatdoc" in n)}
+    check_files(root, fixed)
     return transition
+
+
+def check_current_sources(root, revision):
+    """Bind staged/current inputs directly to the checkout's immutable HEAD."""
+    names = git(ROOT, "ls-tree", "-r", "--name-only", revision).decode().splitlines()
+    inputs = [n for n in names if n.startswith(("src/", "cpp/", "tests/src/"))]
+    for name in inputs:
+        require(regular(root / name) == git(ROOT, "show", f"{revision}:{name}"),
+                "current source differs from exact HEAD: " + name)
+    for prefix in ("src", "cpp", "tests/src"):
+        actual = {p.relative_to(root).as_posix() for p in (root / prefix).rglob("*") if p.is_file()}
+        require(actual == {n for n in inputs if n.startswith(prefix + "/")},
+                "current source inventory differs: " + prefix)
+
+
+def registered_cases(source):
+    """Fail on unsupported suite construction, rather than guess a denominator."""
+    from compare_gnatdoc_warnings import code_tokens
+    main = "\n".join(code_tokens(line) for line in regular(source / "tests/src/tests.adb").decode().splitlines())
+    suites = re.findall(r"\b([A-Za-z0-9_]+_Tests)\.Suite\b", main, re.I)
+    require(suites and len(suites) == len(set(s.lower() for s in suites)), "duplicate/missing AUnit suites")
+    cases = []
+    for suite in suites:
+        text = regular(source / "tests/src" / (suite.lower() + ".adb")).decode()
+        # Preserve string literals; comments cannot supply fake registrations.
+        text = re.sub(r'"(?:[^"\n]|"")*"|--[^\n]*',
+                      lambda m: "" if m[0].startswith("--") else m[0], text)
+        body = re.search(r"\bfunction\s+Suite\s+return\b(.*?)\bend\s+Suite\s*;", text, re.S | re.I)
+        require(body is not None and not re.search(r"\b(if|loop|case|goto)\b",
+                re.sub(r'"(?:[^"\n]|"")*"', '""', body[1]), re.I),
+                "unsupported AUnit suite construction: " + suite)
+        calls = re.findall(r'Caller\.Create\s*\(\s*"((?:[^"\n]|"")*)"\s*,\s*\w+\s*\'Access\s*\)',
+                           body[1], re.I)
+        require(len(calls) == len(re.findall(r"\bAdd_Test\b", body[1], re.I)) > 0,
+                "unaccounted AUnit registration: " + suite)
+        cases.extend(c.replace('""', '"') for c in calls)
+    require(len(cases) >= 542 and len(cases) == len(set(cases)), "AUnit registration regression/duplicates")
+    return cases
+
+
+def aunit_results(source, output):
+    cases = registered_cases(source)
+    successful = re.findall(r"^OK (.+)$", output, re.M)
+    require(sorted(successful) == sorted(cases), "AUnit executed cases differ from registrations")
+    for label, expected in (("Total Tests Run", len(cases)), ("Successful Tests", len(cases)),
+                            ("Failed Assertions", 0), ("Unexpected Errors", 0)):
+        require(re.findall(r"^" + label + r":\s*(\d+)\s*$", output, re.M) == [str(expected)],
+                "AUnit totals differ: " + label)
+    return {"registered": len(cases), "executed": len(successful), "successful": len(successful),
+            "failed_assertions": 0, "unexpected_errors": 0, "cases": cases}
+
+
+def staged_contract(root, pristine):
+    """Only native bindings vary; immutable authored policy/inputs never do."""
+    authored = read(ROOT / EVIDENCE / "geometry-authored.json")
+    authored["native_sha256"] = file_hashes(pristine)
+    payload = (json.dumps(authored, sort_keys=True, indent=2) + "\n").encode()
+    config = regular(ROOT / CONFIG).replace(
+        b'manifest = "docs/evidence/gnatdoc009b/geometry-authored.json"',
+        b'manifest = "current-authored.json"').replace(
+        read(ROOT / TRANSITION)["contracts_sha256"]["geometry-authored.json"].encode(), sha(payload).encode())
+    return payload, config
+
+
+def historical_references(workspace):
+    """Recheck the reviewed ledger/oracle against their own source and native."""
+    from investigate_shared_gnatdoc_types import sections
+    from link_gnatdoc_types import Sources
+    from enhance_gnatdoc_navigation import entries
+    source, site = workspace / "historical", workspace / "historical-first"
+    native_sections = sections(site)
+    sources = Sources(source / "src")
+    ledger = read(ROOT / "docs/evidence/gnatdoc009/type-link-occurrences.json")
+    require(len(ledger) == 267 and len(native_sections) == 130, "historical reference inventory differs")
+    for row in ledger:
+        page, name, snippet = native_sections[row["package"], row["native_anchor"]]
+        package = sources.packages[row["package"].lower()]
+        declaration = package.match(snippet.text)
+        require(page == row["native_page"] and name == row["declaration"] and
+                declaration["signature"] == row["complete_source_profile"] and
+                declaration["start"] == row["source_line"] and
+                "\n".join(package.lines[declaration["start"] - 1:declaration["end"]]) ==
+                row["exact_source_declaration"], "historical source-backed occurrence differs")
+    oracle = entries(site / "api", source / "src", source / "docs/api-categories.json")
+    require(json.loads(json.dumps(oracle)) == read(
+        ROOT / "docs/evidence/gnatdoc009/original-navigation.json"), "historical navigation differs")
+    return {"occurrences": 267, "navigation_entries": 130, "revision": BASE}
 
 
 class Session:
@@ -163,14 +269,37 @@ def verify_publication(workspace, enhancer=None):
         provenance(enhancer)
     root = workspace / "first"
     transition = trusted_inputs(root)
-    require(file_hashes(workspace / "pristine-first") == transition["pristine_sha256"],
-            "pristine input no longer matches reviewed authority")
+    revision = git(ROOT, "rev-parse", "HEAD").decode().strip()
+    require(not git(ROOT, "status", "--porcelain"), "Geometry snapshot is not clean")
+    check_current_sources(root, revision)
+    source = workspace / "source"
+    trusted_inputs(source)
+    check_current_sources(source, revision)
+    require(file_hashes(workspace / "historical-first") == transition["pristine_sha256"] ==
+            file_hashes(workspace / "historical-second"), "historical native evidence differs")
+    # The only permitted tracked mutation in build clones is Alire's Core pin.
+    check_files(workspace / "historical", {n: d for n, d in transition["baseline_files_sha256"].items()
+                                         if n not in ("alire.toml", "tests/alire.toml")})
+    historical_references(workspace)
+    require(sha(regular(workspace / "gnatdoc/bin/gnatdoc")) == GNATDOC_SHA256,
+            "native generator bytes differ")
+    # Reexecute native generation, not a hash claim in qualification.json or
+    # presentation.json. Even coordinated pristine/output/manifest forgery fails.
+    with tempfile.TemporaryDirectory(prefix="geometry-native-verification-") as directory:
+        temp = Path(directory)
+        native(Session(temp), source, workspace / "gnatdoc/bin/gnatdoc",
+               temp / "native", temp / "native.log")
+        require(file_hashes(temp / "native") == file_hashes(workspace / "pristine-first") ==
+                file_hashes(workspace / "pristine-second"), "fresh native reconstruction differs")
+    payload, config = staged_contract(root, workspace / "pristine-first")
+    require(regular(root / "current-authored.json") == payload and
+            regular(root / "current-shadow.toml") == config, "derived current contract differs")
     authored = read(root / EVIDENCE / "geometry-authored.json")
     check_files(root, authored["inputs"])
     for name in ("src/opencv-geometry.ads", "src/opencv-geometry-subdiv2d.ads"):
         require(regular(root / "qualification-public" / name) == regular(root / name), "staged source changed")
     site = root / "_site"
-    publication = verify(load(root, CONFIG), site)
+    publication = verify(load(root, "current-shadow.toml"), site)
     bind_pristine(workspace / "pristine-first", site)
     preserved = preserve_native(identities(workspace / "pristine-first"), site)
     require(preserved["packages"] == 2 and preserved["declarations"] == 130, "native declaration loss")
@@ -209,7 +338,7 @@ def qualify(args):
         legacy, source, core = (workspace / n for n in ("legacy", "source", "core"))
         for target in (legacy, source):
             s.clone(ROOT, args.expected_head, target)
-            check_files(target, transition["baseline_files_sha256"])
+            check_current_sources(target, args.expected_head)
         s.clone(safe(args.core), CORE, core)
         core_spec = read(ROOT / EVIDENCE / "core-0.5.0-input.json")
         check_files(core, core_spec["source_sha256"])
@@ -223,13 +352,30 @@ def qualify(args):
                 builder.startswith("GPRBUILD 26.0.0 (2026-04-15)"), "wrong compiler/project tools")
         report["compiler"], report["gprbuild"] = compiler, builder
         if args.gnatdoc_prefix:
-            prefix = safe(args.gnatdoc_prefix)
+            prefix = workspace / "gnatdoc"
+            shutil.copytree(safe(args.gnatdoc_prefix), prefix)
         else:
             prefix = workspace / "gnatdoc"
             s.run(["alr", "-n", "install", f"--prefix={prefix}", "gnatdoc_bin=26.0.0"], source)
         gnatdoc = prefix / "bin/gnatdoc"
         require(s.run([gnatdoc, "--version"], source, (0, 1)) == GNATDOC, "wrong GNATdoc")
         report["gnatdoc"] = {"version": GNATDOC, "binary_sha256": sha(regular(gnatdoc))}
+        historical = workspace / "historical"
+        s.clone(ROOT, BASE, historical)
+        check_files(historical, transition["baseline_files_sha256"])
+        s.run(["alr", "-n", "pin", "opencv_core", "--use=../core"], historical)
+        s.run(["alr", "-n", "build"], historical)
+        for label in ("first", "second"):
+            native(s, historical, gnatdoc, workspace / ("historical-" + label),
+                   workspace / ("historical-" + label + ".log"))
+            require(file_hashes(workspace / ("historical-" + label)) == transition["pristine_sha256"],
+                    "historical native acquisition differs from reviewed authority")
+        s.run(["alr", "-n", "pin", "opencv_core", "--use=../../core"], historical / "tests")
+        history_aunit = aunit_results(historical, s.run(["alr", "-n", "run"], historical / "tests"))
+        require(history_aunit["registered"] == 542, "historical AUnit baseline differs")
+        report["historical"] = {"revision": BASE, "aunit": history_aunit,
+                                "pristine_sha256": transition["pristine_sha256"],
+                                "references": historical_references(workspace)}
         s.run(["sh", "scripts/generate_docs.sh"], legacy, env={"GNATDOC_PREFIX": str(prefix)})
         legacy_first = file_hashes(legacy / "_site")
         s.run(["sh", "scripts/generate_docs.sh"], legacy, env={"GNATDOC_PREFIX": str(prefix)})
@@ -261,15 +407,11 @@ def qualify(args):
         report["examples"] = examples
         s.run(["alr", "-n", "pin", "opencv_core", "--use=../../core"], legacy / "tests")
         aunit = s.run(["alr", "-n", "run"], legacy / "tests")
-        require(re.search(r"Total Tests Run:\s+542", aunit) and
-                re.search(r"Successful Tests:\s+542", aunit) and
-                re.search(r"Failed Assertions:\s+0", aunit) and
-                re.search(r"Unexpected Errors:\s+0", aunit), "AUnit baseline differs")
-        report["aunit"] = {"executed": 542, "successful": 542}
+        report["aunit"] = aunit_results(legacy, aunit)
         for label in ("first", "second"):
             native(s, source, gnatdoc, workspace / f"pristine-{label}", workspace / f"native-{label}.log")
-            require(file_hashes(workspace / f"pristine-{label}") == transition["pristine_sha256"],
-                    "native acquisition differs from reviewed authority")
+        require(file_hashes(workspace / "pristine-first") == file_hashes(workspace / "pristine-second"),
+                "independent current native acquisitions differ")
         report["pristine_sha256"] = file_hashes(workspace / "pristine-first")
         from ada_gnatdoc_enhancer.qualification import identities
         write(workspace / "native-identities.json", identities(workspace / "pristine-first"))
@@ -291,7 +433,8 @@ def qualify(args):
         for label in ("first", "second"):
             root = workspace / label
             root.mkdir()
-            for name in {*transition["baseline_files_sha256"], CONFIG, TRANSITION,
+            current_files = git(ROOT, "ls-tree", "-r", "--name-only", args.expected_head).decode().splitlines()
+            for name in {*current_files, CONFIG, TRANSITION,
                          *(EVIDENCE + "/" + n for n in transition["contracts_sha256"])}:
                 target = root / name
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -306,7 +449,10 @@ def qualify(args):
                 target.write_bytes(regular(core / name))
             shutil.copytree(workspace / "core-native", root / "dependency/native")
             shutil.copytree(workspace / f"pristine-{label}", root / "_site")
-            config = load(root, CONFIG)
+            payload, config_bytes = staged_contract(root, workspace / f"pristine-{label}")
+            (root / "current-authored.json").write_bytes(payload)
+            (root / "current-shadow.toml").write_bytes(config_bytes)
+            config = load(root, "current-shadow.toml")
             packages(config)
             before = file_hashes(root / "_site")
             enhance(config, root / "_site", dry_run=True)

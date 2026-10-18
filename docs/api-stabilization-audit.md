@@ -88,7 +88,9 @@ passed all four native tests with no sanitizer report:
 
 The registered suite count is 547. The same tree at
 `2101e5c8757898b6904becfb899247e9f685c25b` ran 542 tests; the five added tests
-cover the two count rejections and the cleared failure outputs.
+are three Subdiv2D chunking cases and two Voronoi facet cases. The count-guard
+and failure-output regression assertions were added to existing suites; they
+do not account for the five-case increase.
 
 Debian 12 GNAT 12.2.0, in `localhost/core-rel007-native-prereqs:20261017`,
 built the same Geometry commit with Core

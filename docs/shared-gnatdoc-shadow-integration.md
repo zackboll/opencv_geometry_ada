@@ -42,8 +42,9 @@ fail closed. The Core source dependency remains `>=0.5.0 & <0.6.0`.
 The runner clones exact clean PR HEAD into separate `legacy` and `source`
 workspaces. Only those disposable build clones receive a temporary Core path pin.
 The original generator runs unchanged in `legacy`; `source` produces genuine
-GNATdoc output only. Two fresh native copies must match one another and the
-reviewed native map. Core's full native artifact is independently regenerated,
+GNATdoc output only. Two fresh current native copies must match one another;
+a separate historical checkout reproduces the reviewed native map. Core's full
+native artifact is independently regenerated,
 hash-checked and reconciled before any offline destination is used.
 
 Required tools are Alire 2.1.1, GNAT 16.1.0, GPRbuild Alire 26.0.1 (executable
@@ -194,3 +195,49 @@ exact-final-head hosted success and independent review are separate requirements
 
 No production migration, stable Core hosting, release, deployment, merge or
 auto-merge is authorized. `.invalid` destinations must never be published.
+
+## GEOM-029 R1: historical authority is not a current-source golden file
+
+The failure at [run 39150274405](https://github.com/zackboll/opencv_geometry_ada/actions/runs/39150274405)
+compared legitimate GEOM-029 shim changes with pre-GEOM-029 hashes. Beyond that
+first failure, current HTML contains updated comments, the historical occurrence
+ledger contains old source lines, the authored contract embeds old native hashes,
+and the AUnit denominator increased from 542 to 547. The always-run recorder also
+failed to create an evidence directory when qualification stopped early.
+
+The authority transition and its literal digest are unchanged. Historical source
+is checked through Git objects at `ec4d689eac748b7837abd4c3754c3090ca4bf814`.
+Historical GNATDOC-009/009B evidence is byte-compared with the reviewed merge
+`2101e5c8757898b6904becfb899247e9f685c25b`, not rewritten or relabeled. Two new
+historical native acquisitions must match the original immutable map; the old
+267-occurrence ledger and 130-entry navigation oracle are checked against that
+source. Historical AUnit execution must still register and pass exactly 542.
+
+Current public/implementation/test inputs are bound to exact PR HEAD Git objects,
+including inventory checks. Two current native acquisitions must agree. Each
+independent publication verification regenerates native HTML again with the
+pinned GNATdoc binary and compares it with both acquisitions. It then binds the
+generated presentation manifest to those bytes and resolves type-mark positions
+using the original source matcher, independent of the shared enhancer. The
+current source-backed navigation oracle still requires 130 declarations in the
+same two public packages. No historical source-line equality is imposed on new
+source. Changes in declaration count require a separately reviewed policy change.
+
+The immutable authored contract is retained. A disposable `current-authored.json`
+changes **only** its native hash map; `current-shadow.toml` changes only that
+contract path and digest. Both derivations are recomputed during verification.
+Guide input/output hashes, example ownership, categories, original documentation
+machinery, enhancer and Core requirements stay fixed. Coordinated generated
+output/manifest changes cannot establish native authority. This is not an
+authority-update command and does not affect the production generator.
+
+Current AUnit evidence enumerates the suites wired into `Tests`, accounts for
+every supported `Caller.Create` registration, and requires unique names, matching
+executed/successful case names and exact totals, zero failures/errors, and at least
+542 registrations. Unsupported dynamic suite construction fails closed. The
+current 547 includes three new Subdiv2D chunking and two Voronoi facet cases;
+count-guard and failure-output assertions extend existing cases.
+
+Original browser suites, the eight-cell shadow matrix, original thresholds,
+adversarial restoration, and independent run/HEAD-bound readiness remain required.
+Early failure now writes non-ready evidence even when no workspace existed.
