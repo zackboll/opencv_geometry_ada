@@ -1,0 +1,101 @@
+name: Shared GNATdoc shadow (non-deployable)
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-shared-shadow-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: geometry
+    steps:
+      - name: Checkout exact Geometry PR HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          path: geometry
+          persist-credentials: false
+      - name: Checkout immutable merged enhancer PR 11
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/ada-gnatdoc-enhancer
+          ref: 426f38852ef7dfff264f73ad01aab458f5e12b23
+          fetch-depth: 0
+          path: enhancer
+          persist-credentials: false
+      - name: Checkout Core 0.5.0 source (not browser fixture)
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/opencv_core_ada
+          ref: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
+          fetch-depth: 0
+          path: core
+          persist-credentials: false
+      - name: Install native prerequisites and qualified Alire
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential libopencv-dev pkg-config unzip python3-venv
+          curl --fail --location --output /tmp/alire.zip https://github.com/alire-project/alire/releases/download/v2.1.1/alr-2.1.1-bin-x86_64-linux.zip
+          unzip /tmp/alire.zip -d /tmp/alire
+          sudo install -m 0755 /tmp/alire/bin/alr /usr/local/bin/alr
+          alr -n --force toolchain --select gnat_native=16.1.0 gprbuild=26.0.1
+      - name: Install immutable enhancer non-editably and browser tools
+        run: |
+          git -C ../enhancer fetch origin main
+          git -C ../enhancer merge-base --is-ancestor 426f38852ef7dfff264f73ad01aab458f5e12b23 origin/main
+          python3 -m venv /tmp/shadow-tools
+          /tmp/shadow-tools/bin/pip install "$GITHUB_WORKSPACE/enhancer" markdown-it-py==3.0.0 mdurl==0.1.2 playwright==1.58.0
+          /tmp/shadow-tools/bin/pip check
+          /tmp/shadow-tools/bin/playwright install --with-deps chromium
+          npm install --prefix /tmp/doc-browser --no-package-lock playwright@1.64.1
+          /tmp/doc-browser/node_modules/.bin/playwright install --with-deps chromium
+          echo "CHROME=$(/tmp/shadow-tools/bin/python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')" >> "$GITHUB_ENV"
+      - name: Test consumer trust and fail-closed recorder
+        run: /tmp/shadow-tools/bin/python -m unittest discover -s scripts -p test_shared_gnatdoc_shadow.py -v
+      - name: Real-source isolated native and shared qualification
+        run: |
+          /tmp/shadow-tools/bin/python scripts/qualify_shared_gnatdoc_shadow.py \
+            --expected-head '${{ github.event.pull_request.head.sha }}' \
+            --enhancer "$GITHUB_WORKSPACE/enhancer" --core "$GITHUB_WORKSPACE/core" \
+            --workspace /tmp/geometry-shadow
+      - name: Original symbol-router, presentation, navigation and guide Chromium suites
+        run: |
+          /tmp/shadow-tools/bin/python scripts/qualify_original_gnatdoc_browser.py \
+            --workspace /tmp/geometry-shadow --core-repository "$GITHUB_WORKSPACE/core" \
+            --gnatdoc-prefix /tmp/geometry-shadow/gnatdoc \
+            --playwright-module /tmp/doc-browser/node_modules/playwright --chromium "$CHROME"
+      - name: Sequential adversarial mutations and complete restoration
+        run: |
+          /tmp/shadow-tools/bin/python scripts/qualify_shared_gnatdoc_adversarial.py \
+            --workspace /tmp/geometry-shadow --enhancer "$GITHUB_WORKSPACE/enhancer"
+      - name: Real Geometry shadow Chromium matrix and offline Core navigation
+        run: |
+          /tmp/shadow-tools/bin/python scripts/qualify_shared_gnatdoc_browser.py \
+            --workspace /tmp/geometry-shadow --chromium "$CHROME"
+      - name: Independent current-run readiness recorder
+        if: always()
+        run: /tmp/shadow-tools/bin/python scripts/record_shared_gnatdoc_shadow.py --workspace /tmp/geometry-shadow
+      - name: Upload non-deployable review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NON-DEPLOYABLE-geometry-shadow-${{ github.event.pull_request.head.sha }}
+          path: |
+            /tmp/geometry-shadow/*.json
+            /tmp/geometry-shadow/*.log
+            /tmp/geometry-shadow/*.zip
+            /tmp/geometry-shadow/original-chromium/
+            /tmp/geometry-shadow/original-browser-logs/
+            /tmp/geometry-shadow/first/_site/
+            /tmp/geometry-shadow/pristine-first/
+          if-no-files-found: error

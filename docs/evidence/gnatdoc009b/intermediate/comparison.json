@@ -1,0 +1,76 @@
+{
+  "classification_counts": {
+    "equivalent-verified-native-destination": 263,
+    "shared-only-reference": 4
+  },
+  "contour": {
+    "actual_native_declaration_owner": {
+      "anchor": "da696e09a1f1b297516365244e16533e23cca626f26df4bb3f727a64beb697b0",
+      "kind": "type",
+      "native_declaration_sha256": "7f8246b140f26ae48f9850910a340bb9d5fda671b520bc081dabb24e509a6068",
+      "package": "OpenCV",
+      "page": "ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html",
+      "qualification": "dependency-anchor-verified",
+      "qualified_name": "OpenCV.Point_Array",
+      "source_declaration_sha256": "893ba78cfb1d7e6004e6f0ac743f81f27e3f27f14274057a8e78f57189c768fd",
+      "source_file_sha256": "2ebf97ba3b08e88cef529f77e78cf896cab17fa24b7a6f3363db33016b58d076",
+      "source_line": 81,
+      "source_path": "src/opencv.ads"
+    },
+    "classification": "equivalent-verified-native-destination",
+    "complete_source_profile": "subtype Contour is OpenCV.Point_Array;",
+    "declaration": "Contour",
+    "end": 37,
+    "exact_source_declaration": "   subtype Contour is OpenCV.Point_Array;",
+    "legacy": {
+      "end": 37,
+      "href": "https://zackboll.github.io/opencv_core_ada/api/index.html?symbol=OpenCV.Point_Array",
+      "identity": "opencv.point_array",
+      "offset": 19,
+      "spelling": "OpenCV.Point_Array",
+      "target": "_top"
+    },
+    "native_anchor": "0c3fbeacf849b3776f9533db4d982b2125bc49319590c9215acbc2ffaff07503",
+    "native_page": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+    "offset": 19,
+    "package": "OpenCV.Geometry",
+    "referenced_type": "opencv.point_array",
+    "shared": {
+      "end": 37,
+      "href": "https://core.invalid/f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#da696e09a1f1b297516365244e16533e23cca626f26df4bb3f727a64beb697b0",
+      "identity": "opencv.point_array",
+      "offset": 19,
+      "spelling": "OpenCV.Point_Array",
+      "target": null
+    },
+    "source_line": 76
+  },
+  "external_type_links": 96,
+  "local_type_links": 171,
+  "missing": 0,
+  "navigation_entries": 130,
+  "shared_only_owners": {
+    "Identity_Affine_Transform": "opencv.geometry.affine_transform_2d",
+    "Identity_Perspective_Transform": "opencv.geometry.perspective_transform_2d",
+    "No_Edge": "opencv.geometry.subdiv2d.edge_id",
+    "No_Vertex": "opencv.geometry.subdiv2d.vertex_id"
+  },
+  "status": "pass",
+  "tested_shadow_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+    "api/presentation.json": "e5c098b3d9c1463ceabaf6765c7b1adc760ee0a76f015045e09028a048d950d0",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "total": 267
+}

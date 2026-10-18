@@ -1,0 +1,285 @@
+{
+  "aunit": {
+    "executed": 542,
+    "successful": 542
+  },
+  "authority_transition_sha256": "ddf461928a5fc7a3ab4fc9ed0248c237aa465e581249708a5390496b7b447cb5",
+  "byte_idempotent": true,
+  "commands_sha256": "cd36c675b68bd383322d5d032e6971b5e277f4870c1718577ab5f55c3a89974d",
+  "compiler": "GNAT 16.1.0\nCopyright (C) 1996-2025, Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "consumer_start": "ec4d689eac748b7837abd4c3754c3090ca4bf814",
+  "consumer_tested": "268e95b0529a39cc309e1663a7c98f3545275634",
+  "core": "f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f",
+  "core_resolution": {
+    "legacy": {
+      "resolved": "/tmp/gnatdoc009b-qualified/core",
+      "revision": "f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f",
+      "state": {
+        "crate": "opencv_core",
+        "fulfilment": "linked",
+        "link": {
+          "lockfiled": true,
+          "path": "../core"
+        },
+        "pinned": false,
+        "transitivity": "direct",
+        "versions": ">=0.5.0 & <0.6.0"
+      }
+    },
+    "source": {
+      "resolved": "/tmp/gnatdoc009b-qualified/core",
+      "revision": "f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f",
+      "state": {
+        "crate": "opencv_core",
+        "fulfilment": "linked",
+        "link": {
+          "lockfiled": true,
+          "path": "../core"
+        },
+        "pinned": false,
+        "transitivity": "direct",
+        "versions": ">=0.5.0 & <0.6.0"
+      }
+    }
+  },
+  "deterministic": true,
+  "disposition": "HOSTED_CI_PENDING",
+  "documentation_tests": {
+    "executed": 232,
+    "status": "pass"
+  },
+  "enhancer": "426f38852ef7dfff264f73ad01aab458f5e12b23",
+  "examples": [
+    {
+      "build_exit": 0,
+      "main": "example",
+      "project": "docs/example.gpr",
+      "run_exit": 0
+    },
+    {
+      "build_exit": 0,
+      "main": "contours_and_moments",
+      "project": "docs/examples/examples.gpr",
+      "run_exit": 0
+    },
+    {
+      "build_exit": 0,
+      "main": "fitting_and_intersections",
+      "project": "docs/examples/examples.gpr",
+      "run_exit": 0
+    },
+    {
+      "build_exit": 0,
+      "main": "affine_and_perspective",
+      "project": "docs/examples/examples.gpr",
+      "run_exit": 0
+    },
+    {
+      "build_exit": 0,
+      "main": "delaunay_and_voronoi",
+      "project": "docs/examples/examples.gpr",
+      "run_exit": 0
+    },
+    {
+      "build_exit": 0,
+      "main": "compatibility_and_safety",
+      "project": "docs/examples/examples.gpr",
+      "run_exit": 0
+    }
+  ],
+  "gnatdoc": {
+    "binary_sha256": "d256f0ece2f181046dfeb3ce490d7aa5c994992550c78da14e9065d453aa52c5",
+    "version": "GNATdoc 26.0.0 (20260415)"
+  },
+  "gprbuild": "GPRBUILD 26.0.0 (2026-04-15) (x86_64-pc-linux-gnu)\nCopyright (C) 2004-2026, AdaCore\nThis is free software; see the source for copying conditions.\nThere is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "legacy_byte_idempotent": true,
+  "legacy_deterministic": true,
+  "legacy_gates": {
+    "coverage": "Documentation coverage: 452/452 items (100.0%); 0 newly undocumented, 0 newly documented",
+    "warnings": "GNATdoc warning delta: 0 added, 0 removed"
+  },
+  "legacy_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "00892130d9110eea23a0f36d596b34b9621cc860158d54a766fd22093962abc6",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "37ab378103af90ad7c748b09efa761fa8d27c24032e64d36d0aed5f2054556bc",
+    "api/gnatdoc-navigation.js": "6c8f6e7561f2bd26c1467c233be5fc49bc827cf9eeb742418c52a4e1e58ab33e",
+    "api/gnatdoc-theme.css": "1ff7eb160cbba4ee3a9b4dc4dc185331bf3eb4697be80c0e80d170b827fd0ad3",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "619b4b6d4bea8e6ab249dae31b023aff288ef1dfa8823cff46e92d631bd495c6",
+    "api/presentation.json": "5d2988228f2b337932720d1204cfd182883f6b501d83cc29051fbe04bc228e15",
+    "api/type-crossrefs.json": "fd619be171c8e727c2a084c879d1c7da376eb4c3f0d66bcade56152f9d724517",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "native_gates": {
+    "coverage": "Documentation coverage: 452/452 items (100.0%); 0 newly undocumented, 0 newly documented",
+    "warnings": "GNATdoc warning delta: 0 added, 0 removed"
+  },
+  "non_deployable": true,
+  "pristine_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "66e1c621aa2dc8f36ca225c46745d42b19f7be370ba1099a8a146ec7c9baabe8",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "018538fdbef120204f8cdf7bdccebf787fce4a48e42de8c4f5ccd38e5ff4c56f",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "e5132ce2c3804326c83f7b73827770ec30467b10a67f520146667bbda8adfd23"
+  },
+  "run_id": "dd8403ae-24f6-4a54-9c3f-3e86f628c10b",
+  "shadow_gates": {
+    "coverage": "Documentation coverage: 452/452 items (100.0%); 0 newly undocumented, 0 newly documented",
+    "warnings": "GNATdoc warning delta: 0 added, 0 removed"
+  },
+  "shadow_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+    "api/presentation.json": "e5c098b3d9c1463ceabaf6765c7b1adc760ee0a76f015045e09028a048d950d0",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "tool": {
+    "direct_url": {
+      "dir_info": {},
+      "url": "file:///tmp/gnatdoc009b-enhancer"
+    },
+    "installed_sha256": {
+      "__init__.py": "21896c73fca800e37688baf29579a31a9a19f232fdc2845dfd2bc3caa085c17b",
+      "__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+      "adapters/__init__.py": "bc7839c1ed01b2d028cbb28537f7ab636ae839e11e9c6fba0c82ae9669a882d3",
+      "adapters/mel.py": "4e3d20173d81a03a18d1027814334100f00d9159ba3031d5a94f2f85a3a9bef8",
+      "adapters/opencv.py": "7f45fca90c6c8656398a56ff02bf4aacbde19a96dc4f81d553e7d16a87c55410",
+      "assets/gnatdoc-guides.css": "79f3fc6d5f1e854eb42d225f9bec113b7a41fa833b12d3bd70ca089ba5df0a8c",
+      "assets/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+      "assets/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+      "authored.py": "ab263beb88bbd5602b8f61b5269486a56b6ffb91930d641ab192e87dc2cb66de",
+      "cli.py": "2236a2c01928a42772ddb3a8b4e16f02fdbec63fb30f396a8ddd3366d6a1789e",
+      "config.py": "01dab5ed7c0b26bd027f0bba4e7ce57b960705a1a010aca3001f95d3eb6f41fb",
+      "conformance.py": "ae2f04143abf23dd70f0c56ff82fe500af6111b1a8abbff18cff904778d4507d",
+      "coverage.py": "b5e78be5f070f65731bcc16e1338ad034e6feac4420b2ed3ed31c91d737fdecf",
+      "destinations.py": "7a10181adafbfe236ee7999db5f5093ef746fe367e4e186a15698cb9c04e2bc6",
+      "errors.py": "6fa7d9eab4bac0a32a114685606f11fd1e8838fc8463c8852766edacf8a480da",
+      "external_types.py": "86333d6a961a5f02af71f14cb276e888f35ef4fbd531921f2ea71ae4fc85bc33",
+      "generic_instances.py": "07efc9e92201548f7c33939c57ef1f8c3c3aecd92f3199a52f657aff65ff12f8",
+      "guides.py": "c5e66f5fd1e22dca2990d015ffdbea2f633e2e868cae3ae7c5838fe31bc6bdf0",
+      "inventory.py": "d8e29273e8960cee5cf435eaa7a52ba266a8ad9d2fc8ceb1e0fa4eb13e01b593",
+      "native_html.py": "1e29e589c7ed30de1933c7902fa920894d5b4f2decb77502d3dbc337cb8193ca",
+      "navigation.py": "8687b0ebd90eaf92c7fe1c27749bb063654754ad11dedbceda8f10047cdabc8c",
+      "pipeline.py": "ef611672577fe2650ab02513e325b53af17b3224dd61bdea779b6c0fd86fcc23",
+      "profiles.py": "be0fa1b79f2a522d6c830841709906953c7f746c1a021bc9fdda11a6642c6ab2",
+      "qualification.py": "1e36e59542e19c5a30689e8b94aa6703f7081f733de7463b2bce42bc4c70d28d",
+      "syntax.py": "2f2c0e45ed158292e0b788a65cdfb5c4933066038afeeeef3a23a8bf2ebf6bee",
+      "theme.py": "ec24fcdd209c976a8d17473544f2ad5ed1b6e92ae4d7a6c85d5500697680d55e",
+      "util.py": "0b2c9d554263ca6d3251737e191b2859c738a64b7b41607adecf0e7e204a66f1",
+      "validation.py": "067cc2ef12cb1716c1292d3e0338dd8c64552765f626686a9e86d55daec30e52",
+      "warnings.py": "3e3e2090f541c5872b08594e72af4fedb39301cd66c919cf040d63ba9e6e15fc"
+    },
+    "revision": "426f38852ef7dfff264f73ad01aab458f5e12b23"
+  },
+  "verification": {
+    "comparison": {
+      "classification_counts": {
+        "equivalent-verified-native-destination": 263,
+        "shared-only-reference": 4
+      },
+      "contour": {
+        "actual_native_declaration_owner": {
+          "anchor": "da696e09a1f1b297516365244e16533e23cca626f26df4bb3f727a64beb697b0",
+          "kind": "type",
+          "native_declaration_sha256": "7f8246b140f26ae48f9850910a340bb9d5fda671b520bc081dabb24e509a6068",
+          "package": "OpenCV",
+          "page": "ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html",
+          "qualification": "dependency-anchor-verified",
+          "qualified_name": "OpenCV.Point_Array",
+          "source_declaration_sha256": "893ba78cfb1d7e6004e6f0ac743f81f27e3f27f14274057a8e78f57189c768fd",
+          "source_file_sha256": "2ebf97ba3b08e88cef529f77e78cf896cab17fa24b7a6f3363db33016b58d076",
+          "source_line": 81,
+          "source_path": "src/opencv.ads"
+        },
+        "classification": "equivalent-verified-native-destination",
+        "complete_source_profile": "subtype Contour is OpenCV.Point_Array;",
+        "declaration": "Contour",
+        "end": 37,
+        "exact_source_declaration": "   subtype Contour is OpenCV.Point_Array;",
+        "legacy": {
+          "end": 37,
+          "href": "https://zackboll.github.io/opencv_core_ada/api/index.html?symbol=OpenCV.Point_Array",
+          "identity": "opencv.point_array",
+          "offset": 19,
+          "spelling": "OpenCV.Point_Array",
+          "target": "_top"
+        },
+        "native_anchor": "0c3fbeacf849b3776f9533db4d982b2125bc49319590c9215acbc2ffaff07503",
+        "native_page": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+        "offset": 19,
+        "package": "OpenCV.Geometry",
+        "referenced_type": "opencv.point_array",
+        "shared": {
+          "end": 37,
+          "href": "https://core.invalid/f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#da696e09a1f1b297516365244e16533e23cca626f26df4bb3f727a64beb697b0",
+          "identity": "opencv.point_array",
+          "offset": 19,
+          "spelling": "OpenCV.Point_Array",
+          "target": null
+        },
+        "source_line": 76
+      },
+      "external_type_links": 96,
+      "local_type_links": 171,
+      "missing": 0,
+      "navigation_entries": 130,
+      "shared_only_owners": {
+        "Identity_Affine_Transform": "opencv.geometry.affine_transform_2d",
+        "Identity_Perspective_Transform": "opencv.geometry.perspective_transform_2d",
+        "No_Edge": "opencv.geometry.subdiv2d.edge_id",
+        "No_Vertex": "opencv.geometry.subdiv2d.vertex_id"
+      },
+      "status": "pass",
+      "tested_shadow_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "e5c098b3d9c1463ceabaf6765c7b1adc760ee0a76f015045e09028a048d950d0",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      },
+      "total": 267
+    },
+    "native": {
+      "declarations": 130,
+      "packages": 2,
+      "pages": 3,
+      "signatures": 172,
+      "status": "preserved"
+    },
+    "publication": {
+      "declaration_snippets": 130,
+      "files": 14,
+      "html_pages": 9,
+      "linked_external_types": 96,
+      "linked_local_types": 171,
+      "linked_types": 267,
+      "links": 750,
+      "mode": "verified",
+      "public_packages": 2,
+      "unrendered_renderer_exceptions": 0
+    }
+  }
+}

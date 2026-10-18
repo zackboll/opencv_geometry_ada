@@ -1,0 +1,35 @@
+schema_version = 1
+project = "opencv_geometry_ada"
+
+[gnatdoc]
+version = "26.0.0"
+[sources]
+directories = ["qualification-public"]
+packages = ["OpenCV.Geometry", "OpenCV.Geometry.Subdiv2D"]
+comment_style = "leading"
+[navigation]
+mode = "operations"
+categories = "docs/api-categories.json"
+[presentation]
+theme = true
+syntax_highlighting = true
+type_links = true
+[guides]
+mode = "authored-markdown"
+manifest = "docs/evidence/gnatdoc009b/geometry-authored.json"
+sha256 = "62a5cacfb86ece2017045e6354d6a9ce47b3d9706dd16873c2437b854dcb59ea"
+[security]
+external_hosts = ["core.invalid", "github.com", "zackboll.github.io"]
+
+[[external_dependencies]]
+repository = "https://github.com/zackboll/opencv_core_ada"
+revision = "f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f"
+manifest = "docs/evidence/gnatdoc009b/core-0.5.0-types.json"
+manifest_sha256 = "70fa9a9e5de8ad038bf0bc4bdf6c76ec8ecbe5f201027d18554275f7d9ed7f7f"
+acquisition = "docs/evidence/gnatdoc009b/core-0.5.0-input.json"
+acquisition_sha256 = "4abd944e932116582efee29adb3eec767da762f67436cba5dddd82377fadcbbb"
+source = "dependency/source"
+site = "dependency/native"
+base_url = "https://core.invalid/f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f/api/"
+publication = "offline-test"
+types = ["OpenCV.Angle_Unit", "OpenCV.Core.Mat", "OpenCV.Float32_Point", "OpenCV.Float32_Value", "OpenCV.Float64_Value", "OpenCV.Rect", "OpenCV.Rotated_Rect", "OpenCV.Point_Array"]

@@ -1,0 +1,187 @@
+{
+  "consumer_tested": "ec4d689eac748b7837abd4c3754c3090ca4bf814",
+  "evidence_scope": "Exploratory acquisition workspace, not committed-head readiness",
+  "executed": 25,
+  "mutations": [
+    {
+      "name": "modified authority transition",
+      "observed_sha256": "084c410e13aca99478933dcf5d69c05992ec82f9589a8b6e2038d092b34dbfcb",
+      "original_sha256": "ddf461928a5fc7a3ab4fc9ed0248c237aa465e581249708a5390496b7b447cb5",
+      "rejection": "authority transition digest differs"
+    },
+    {
+      "name": "missing authority transition",
+      "observed": true,
+      "rejection": "missing file: /tmp/gnatdoc009b-acquisition/first/docs/evidence/gnatdoc009b/authority-transition.json"
+    },
+    {
+      "name": "altered historical occurrence ledger",
+      "observed_sha256": "8a427ddeb933e36c44ba37588d23e8cb22cd62a234a9dcdc15245c0f070ca18d",
+      "original_sha256": "944c44d8147a53f4508db28c7c204c2a03989a748de33b9c8c48f34566ddab93",
+      "rejection": "authority bytes differ: docs/evidence/gnatdoc009/type-link-occurrences.json"
+    },
+    {
+      "name": "Core 0.5.1 substitution",
+      "observed_sha256": "9a20113c25a09eef34359962de5c3dd62c84a4fdcd88811a32ed95786ab48491",
+      "original_sha256": "9f001f95697dadcd30314e959babda21388ee06033aadaf0b132e29017629a33",
+      "rejection": "authority bytes differ: docs/shared-gnatdoc-shadow.toml"
+    },
+    {
+      "name": "browser fixture substituted for Core source",
+      "observed_sha256": "f650e461a0bada2b07ee55bd0e3617bde5d452861622081bfff85dbe4df8308d",
+      "original_sha256": "9f001f95697dadcd30314e959babda21388ee06033aadaf0b132e29017629a33",
+      "rejection": "authority bytes differ: docs/shared-gnatdoc-shadow.toml"
+    },
+    {
+      "name": "altered public Ada declaration",
+      "observed_sha256": "6ed8e35f1a0fd583c449e0c1fcd8d6eaacd5fce4a08bc0ac06e7cf725c8666a7",
+      "original_sha256": "7beb89c1f8fc32e3b78cfc8580115155e5d06fea04c43c0ae2af3855e9091c21",
+      "rejection": "staged source changed"
+    },
+    {
+      "name": "wrong-but-existing native Core anchor",
+      "observed_sha256": "f50815f95d5d93c8f93c52b1333565d56444239743b99ce9e98c417491ea9b5d",
+      "original_sha256": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html"
+    },
+    {
+      "name": "cross-package declaration substitution",
+      "observed_sha256": "c2fa7767ab80ceaec876831a1719fc05f1b701edd5ee78251cbeac8d115714bb",
+      "original_sha256": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+      "rejection": "published file differs from reconstructed output: api/index.html"
+    },
+    {
+      "name": "forged type identity",
+      "observed_sha256": "ad4f81c874ef4400c102c274cc2ec125362735e14f1084b4bb02e83d8aa86f95",
+      "original_sha256": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html"
+    },
+    {
+      "name": "forged external URL",
+      "observed_sha256": "c429821a8c9660b0b5cec9dab47af3e9cf999bd3847ca07526846fb0e1d80573",
+      "original_sha256": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html"
+    },
+    {
+      "name": "missing category assignment",
+      "observed_sha256": "d7e290b77e885441919a2f2db8de57a5bea40bfad52339a4fa15e3b809d2e106",
+      "original_sha256": "be3a9dc45808c7bc3007b66130117208a13ba02130f4c1224ea981a6e28cf8f0",
+      "rejection": "authority bytes differ: docs/api-categories.json"
+    },
+    {
+      "name": "duplicated category assignment",
+      "observed_sha256": "86cbc989c2ba0e2f8b32a24c697e2ded578a5504f4cbb3c6f42a29a93afe6b4d",
+      "original_sha256": "be3a9dc45808c7bc3007b66130117208a13ba02130f4c1224ea981a6e28cf8f0",
+      "rejection": "authority bytes differ: docs/api-categories.json"
+    },
+    {
+      "name": "wrong overload full profile",
+      "observed_sha256": "dbac37a2b49602ff3893c250c4b245bf4b730c59bcb7e30b30f38216ab7be455",
+      "original_sha256": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html"
+    },
+    {
+      "name": "altered authored guide",
+      "observed_sha256": "b92e9c68cf2baab307136d1c0ce9e0de345d2154728cde508d191cb9476f34f1",
+      "original_sha256": "c41de934d81b070a90cfa0ffa381c289704ff9fa7aab3189c10e8cf2ec53d433",
+      "rejection": "authority bytes differ: docs/guides/delaunay-and-voronoi.md"
+    },
+    {
+      "name": "altered executable source",
+      "observed_sha256": "06f7ffaa9b0d4e686ebf8a45d8a82c2a057b3c8700a251e753d2e3316dfe3d6a",
+      "original_sha256": "b3a3d8b812255b4df5ac3a30e473ae416a9dca08ddc76b83733919cc8b6d4bb8",
+      "rejection": "authority bytes differ: docs/example.adb"
+    },
+    {
+      "name": "changed compiled-example ownership",
+      "observed_sha256": "c097740493e44ebead1bfe98bfe38a9e5e73377ade37464727cbca6209ed71b6",
+      "original_sha256": "62a5cacfb86ece2017045e6354d6a9ce47b3d9706dd16873c2437b854dcb59ea",
+      "rejection": "authority bytes differ: geometry-authored.json"
+    },
+    {
+      "name": "output manifest rewritten to authorize tampering",
+      "observed_sha256": "83ad0185c41a2d70d53ab65c91f09e5e6b9262c1c3a0dbd222bba0200d4ac510",
+      "original_sha256": "e5c098b3d9c1463ceabaf6765c7b1adc760ee0a76f015045e09028a048d950d0",
+      "rejection": "enhanced output does not match source/manifest"
+    },
+    {
+      "name": "nondeterministic generated asset",
+      "observed_sha256": "073307af7582e886ec762df84a19c265bf40053ec0fde5345485b6a0e16947e4",
+      "original_sha256": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+      "rejection": "published file differs from reconstructed output: api/gnatdoc-navigation.js"
+    },
+    {
+      "name": "unexpected generated file",
+      "observed": true,
+      "rejection": "unapproved output file: unexpected.html"
+    },
+    {
+      "name": "invalid symlink",
+      "observed": true,
+      "rejection": "symlink published: /tmp/gnatdoc009b-acquisition/first/_site/escape"
+    },
+    {
+      "name": "path traversal in dependency configuration",
+      "observed_sha256": "5efa78864f95a555201bbf4c036a1aff8e95479334e605a7379f3fdbcb853b53",
+      "original_sha256": "9f001f95697dadcd30314e959babda21388ee06033aadaf0b132e29017629a33",
+      "rejection": "authority bytes differ: docs/shared-gnatdoc-shadow.toml"
+    },
+    {
+      "name": "partial publication after failed enhancement",
+      "observed": true,
+      "rejection": "unapproved output file: unexpected.html",
+      "restored": true
+    },
+    {
+      "name": "modified installed asset",
+      "observed": true,
+      "rejection": "modified installed enhancer asset/module"
+    },
+    {
+      "name": "old/wrong enhancer commit",
+      "observed": true,
+      "rejection": "wrong enhancer commit"
+    },
+    {
+      "name": "incorrect Alire resolution",
+      "observed": true,
+      "rejection": "incorrect Alire Core resolution"
+    }
+  ],
+  "qualification_sha256": "5c0127077335e5e6cd1726f03c09105014cf89f2f9d86d9eef54e32b49593ca0",
+  "restored_and_verified": true,
+  "restored_shadow_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+    "api/presentation.json": "e5c098b3d9c1463ceabaf6765c7b1adc760ee0a76f015045e09028a048d950d0",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "run_id": "2cd274f1-e15b-40f9-922b-05f22a0202e5",
+  "status": "pass",
+  "tested_shadow_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "200c9399a05fd82ee30710ab302e8f0af7d416309fe360b53f6b012835c5679e",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+    "api/presentation.json": "e5c098b3d9c1463ceabaf6765c7b1adc760ee0a76f015045e09028a048d950d0",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  }
+}
