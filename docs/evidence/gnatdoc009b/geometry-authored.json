@@ -1,0 +1,132 @@
+{
+  "ada_policy": "exact-examples",
+  "anchors": null,
+  "api_label": "API browser",
+  "attribution_base": "https://github.com/zackboll/opencv_geometry_ada/blob/main/",
+  "directory_pages": [],
+  "example_project": "docs/examples/examples.gpr",
+  "examples": [
+    "docs/examples/affine_and_perspective.adb",
+    "docs/examples/compatibility_and_safety.adb",
+    "docs/examples/contours_and_moments.adb",
+    "docs/examples/delaunay_and_voronoi.adb",
+    "docs/examples/fitting_and_intersections.adb"
+  ],
+  "groups": [],
+  "guides": [
+    {
+      "entry_points": [
+        "Contour/1",
+        "Float32_Point_Array/1",
+        "Contour_Area/1",
+        "Compute_Moments/1",
+        "Convex_Hull/1",
+        "Convexity_Defects/1",
+        "Locate_Point/1"
+      ],
+      "id": "geometry-fundamentals-and-contours",
+      "label": "Geometry fundamentals and contour analysis",
+      "path": "guides/geometry-fundamentals-and-contours.html",
+      "source": "docs/guides/geometry-fundamentals-and-contours.md"
+    },
+    {
+      "entry_points": [
+        "Minimum_Area_Rectangle/1",
+        "Fit_Ellipse/1",
+        "Fit_Line_2D/1",
+        "Minimum_Enclosing_Circle/1",
+        "Intersect_Convex_Polygons/1",
+        "Intersect_Rotated_Rectangles/1"
+      ],
+      "id": "shape-fitting-and-intersections",
+      "label": "Shape fitting and intersections",
+      "path": "guides/shape-fitting-and-intersections.html",
+      "source": "docs/guides/shape-fitting-and-intersections.md"
+    },
+    {
+      "entry_points": [
+        "Affine_Transform_2D/1",
+        "Get_Affine_Transform/1",
+        "Invert_Affine_Transform/1",
+        "Get_Perspective_Transform/1",
+        "Transform_Points/1",
+        "Get_Rotation_Matrix_2D/1"
+      ],
+      "id": "affine-and-perspective-geometry",
+      "label": "Affine and perspective geometry",
+      "path": "guides/affine-and-perspective-geometry.html",
+      "source": "docs/guides/affine-and-perspective-geometry.md"
+    },
+    {
+      "entry_points": [
+        "Subdivision/1",
+        "Insert/1",
+        "Locate/1",
+        "Find_Nearest/1",
+        "Navigate/1",
+        "Voronoi_Facets/1"
+      ],
+      "id": "delaunay-and-voronoi",
+      "label": "Delaunay and Voronoi with Subdiv2D",
+      "path": "guides/delaunay-and-voronoi.html",
+      "source": "docs/guides/delaunay-and-voronoi.md"
+    },
+    {
+      "entry_points": [
+        "Native_Feature/1",
+        "Is_Natively_Supported/1",
+        "Closest_Ellipse_Points/1",
+        "Reset_Float32/1",
+        "Minimum_Enclosing_Triangle/1"
+      ],
+      "id": "compatibility-ownership-and-safety",
+      "label": "Compatibility, ownership and native safety",
+      "path": "guides/compatibility-ownership-and-safety.html",
+      "source": "docs/guides/compatibility-ownership-and-safety.md"
+    }
+  ],
+  "home": {
+    "path": "index.html",
+    "source": "docs/index.html"
+  },
+  "inputs": {
+    "docs/assets/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "docs/example.adb": "b3a3d8b812255b4df5ac3a30e473ae416a9dca08ddc76b83733919cc8b6d4bb8",
+    "docs/example.gpr": "f1f6e9f9b08f118ed37f8e3506b0bdb52a1bd53f9eec93d3571d791cc42170a5",
+    "docs/examples/affine_and_perspective.adb": "8475efdea3ad2656e739c4a67e9d981383681965d3abdd6b050a572fc6af75e9",
+    "docs/examples/compatibility_and_safety.adb": "76c564b2c675e2b1a51331bfa10c6771e0fdad501d0517db82440d14ca031a32",
+    "docs/examples/contours_and_moments.adb": "bb51cf92e097a91c93659ef699d2ef8451885611033d039451dfe80d13c3649d",
+    "docs/examples/delaunay_and_voronoi.adb": "2467756f429604643c5db9fe217f288258a92eaf8e98c864a2dc5b60b3fbc87a",
+    "docs/examples/examples.gpr": "05cc69a2561311f5810eb0e1f9cf1c317a7cb33b9b435bea5eb28dfcfb78a5c9",
+    "docs/examples/fitting_and_intersections.adb": "2c3393ad30adb04e017eac2251872ef8e13f5d8f166943d41a8f07b8a0efd565",
+    "docs/guides/affine-and-perspective-geometry.md": "80248fec743cffa0d560f3d0919cb1c8fd0b0e699799c2fe455bf0cb5e2dafb3",
+    "docs/guides/compatibility-ownership-and-safety.md": "90a901d18fdbd9525850cc107f4234046495501479b83d6c4d7d2dd2e0e954cc",
+    "docs/guides/delaunay-and-voronoi.md": "c41de934d81b070a90cfa0ffa381c289704ff9fa7aab3189c10e8cf2ec53d433",
+    "docs/guides/geometry-fundamentals-and-contours.md": "e666b1fba2b9177f9456c4606cce155f99334cc49d94b8cbc9d3b655fe9c4b4b",
+    "docs/guides/shape-fitting-and-intersections.md": "73ba24c7f598acbe28bdaf302cce708ce7ebc037d23b5b34ae4b3cff5990496e",
+    "docs/index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "landing_example": "docs/example.adb",
+  "landing_project": "docs/example.gpr",
+  "languages": [
+    "ada",
+    "sh",
+    "text"
+  ],
+  "native_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "66e1c621aa2dc8f36ca225c46745d42b19f7be370ba1099a8a146ec7c9baabe8",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "018538fdbef120204f8cdf7bdccebf787fce4a48e42de8c4f5ccd38e5ff4c56f",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "e5132ce2c3804326c83f7b73827770ec30467b10a67f520146667bbda8adfd23"
+  },
+  "renderer_exceptions": [],
+  "schema_version": 2,
+  "site_map": null,
+  "source_inventory": "docs/guides",
+  "source_links": {},
+  "stylesheet": {
+    "path": "guides/gnatdoc-guides.css",
+    "source": "docs/assets/gnatdoc-guides.css"
+  },
+  "title_suffix": "OpenCV Geometry Ada"
+}
