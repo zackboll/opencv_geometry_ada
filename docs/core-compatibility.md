@@ -1,4 +1,22 @@
-# Task 023: Core 0.4.x compatibility
+# Core compatibility
+
+## Core 0.5.1 tooling patch (GEOMETRY-REL-004)
+
+Geometry 0.3.1 preserves `opencv_core >=0.5.0 & <0.6.0`. Core 0.5.0
+(`f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f`) remains supported on
+previously qualified platforms. Core 0.5.1
+(`64d8a60b59acfe4334045280e430c4774b5cad89`, annotated tag object
+`4190bb68c0b089475db4fb385349bc6d2a62cb31`) supplies corrected tooling
+for the specifically qualified GNAT Pro 25.2 / Scarthgap environment; it
+is not a new global minimum. Core's production `src/` and `cpp/` trees
+are also identical between these releases. Geometry needs no 0.5.1-only API.
+
+The [0.3.1 candidate record](geometry-0.3.1-release-qualification.md)
+distinguishes indexed Core 0.5.0 resolution from temporary immutable-source
+Core 0.5.1 qualification. An open index PR is not index availability.
+The minimum-dependency documentation fixture remains Core 0.5.0.
+
+## Historical Task 023: Core 0.4.x compatibility
 
 This is the historical Task 023 record. GEOMETRY-REL-003 replaced the
 constraint with `>=0.5.0 & <0.6.0`; see [Core 0.5.0](#core-050-geometry-rel-003)
