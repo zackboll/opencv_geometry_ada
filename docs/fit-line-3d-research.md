@@ -1,5 +1,17 @@
 # Task 019: 3-D fitLine ownership gate and source research
 
+## Current readiness (GEOM-028)
+
+The ownership blocker described in the historical Task 019/020 notes below
+is **resolved**: released Core 0.5.0 owns `Point_3D`, `Point_3D_Array`,
+`Float32_Point_3D` and `Float32_Point_3D_Array`. Geometry 0.3.1 already
+requires `opencv_core >=0.5.0 & <0.6.0`; no dependency change is needed.
+The **native L2 safety gate is still open**. See the
+[GEOM-028 assessment](fit-line-3d-l2-readiness.md) for source identities,
+new floating-point-environment evidence and the precise remaining proof
+obligation. The original task dispositions and baselines below are
+historical, not descriptions of the current dependency or release.
+
 ## Disposition
 
 **Stopped at the public type-ownership gate. No production binding added.**

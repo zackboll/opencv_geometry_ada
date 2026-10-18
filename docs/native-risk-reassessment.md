@@ -5,6 +5,17 @@ dependency or release file changed. Every deferred feature stays
 **Deferred** or **Excluded** in [coverage](coverage.md). Nothing here is a
 binding proposal for a feature that is not safe.
 
+## Current Fit_Line_3D readiness (GEOM-028)
+
+Released Core 0.5.0 supplies all four shared root 3D point types, and
+Geometry already requires that release. The ownership/packaging blocker
+in the historical Task 025 assessment below is resolved. Native 3D L2
+arithmetic safety remains **INSUFFICIENT_EVIDENCE**, not an ownership
+problem. The [GEOM-028 source audit and targeted probes](
+fit-line-3d-l2-readiness.md) add direct floating-point exception observations
+and a fresh Eigen-enabled build; they do not certify an accepted domain.
+No production binding or dependency changes were made.
+
 ## Baseline
 
 | Item | Value |
