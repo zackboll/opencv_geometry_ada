@@ -101,7 +101,8 @@ def qualify(workspace, enhancer):
         mutation("duplicated category assignment", categories,
                  lambda b: b.replace(b'"Contour",', b'"Contour", "Contour",', 1))
         mutation("wrong overload full profile", page,
-                 lambda b: b.replace(b"Oriented : Boolean := False", b"Oriented : Boolean := True", 1))
+                 lambda b: b.replace(b'Oriented <span class="ada-operator">:</span> Boolean',
+                                     b'Oriented <span class="ada-operator">:</span> Natural', 1))
         mutation("altered authored guide", root / "docs/guides/delaunay-and-voronoi.md", lambda b: b + b"tamper\n")
         mutation("altered executable source", root / "docs/example.adb", lambda b: b + b"-- tamper\n")
         mutation("changed compiled-example ownership", root / EVIDENCE / "geometry-authored.json",
