@@ -110,7 +110,12 @@ def provenance(enhancer):
     def package_hashes(root):
         return {p.relative_to(root).as_posix(): sha(regular(p)) for p in root.rglob("*")
                 if p.is_file() and "__pycache__" not in p.parts}
-    expected = package_hashes(enhancer / "src/ada_gnatdoc_enhancer")
+    source = enhancer / "src/ada_gnatdoc_enhancer"
+    tracked = git(enhancer, "ls-tree", "-r", "--name-only", ENHANCER,
+                  "--", "src/ada_gnatdoc_enhancer").decode().splitlines()
+    expected = {Path(n).relative_to("src/ada_gnatdoc_enhancer").as_posix():
+                sha(git(enhancer, "show", f"{ENHANCER}:{n}")) for n in tracked}
+    require(package_hashes(source) == expected, "enhancer package inventory differs from immutable Git tree")
     require(package_hashes(Path(dist.locate_file("ada_gnatdoc_enhancer"))) == expected,
             "modified installed enhancer asset/module")
     require(importlib.metadata.version("markdown-it-py") == "3.0.0" and
@@ -186,6 +191,15 @@ def qualify(args):
         require(not git(ROOT, "status", "--porcelain"), "Geometry snapshot is not clean")
         git(ROOT, "merge-base", "--is-ancestor", BASE, "HEAD")
         transition = trusted_inputs()
+        tracked = git(ROOT, "ls-tree", "-r", "--name-only", args.expected_head).decode().splitlines()
+        expected_ada = {n for n in transition["baseline_files_sha256"]
+                        if Path(n).suffix.lower() in (".ads", ".adb")}
+        require({n for n in tracked if Path(n).suffix.lower() in (".ads", ".adb")} == expected_ada,
+                "Ada source inventory changed")
+        for prefix_name in ("src/", "cpp/", "docs/guides/", "docs/examples/", "docs/assets/"):
+            require({n for n in tracked if n.startswith(prefix_name)} ==
+                    {n for n in transition["baseline_files_sha256"] if n.startswith(prefix_name)},
+                    "production source/authored inventory changed: " + prefix_name)
         report["tool"] = provenance(safe(args.enhancer))
         for name, path in transition["contract_provenance"].items():
             require(regular(ROOT / EVIDENCE / name) == git(args.enhancer, "show", f"{ENHANCER}:{path}"),

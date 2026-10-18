@@ -199,6 +199,24 @@ def qualify(workspace, executable=None):
                             check(page.locator("h1").count() == 1, "authored heading", path=name, **dimensions)
                             check(page.evaluate("document.documentElement.scrollWidth <= innerWidth"),
                                   "authored responsive overflow", path=name, **dimensions)
+                            if name != "index.html":
+                                check(page.locator('.guide-nav [aria-current="page"]').get_attribute("href") ==
+                                      name.split("/")[-1], "authored guide navigation ownership", **dimensions)
+                                api_links = page.locator('main a[href^="../api/"]').evaluate_all(
+                                    "es=>es.map(e=>({href:e.getAttribute('href'),label:e.textContent}))")
+                                check(len(api_links) >= 5, "authored genuine API links present", path=name, **dimensions)
+                                for link in api_links:
+                                    destination = urlsplit(link["href"])
+                                    owners = [(p, n, snippet) for (p, a), (filename, n, snippet) in native.items()
+                                              if filename == Path(destination.path).name and a == destination.fragment]
+                                    check(len(owners) == 1, "guide link uniquely owned native declaration",
+                                          path=name, href=link["href"], **dimensions)
+                                    page.goto(urljoin(base + name, link["href"]))
+                                    owner_package, owner_name, snippet = owners[0]
+                                    h = page.locator('h4[id="' + destination.fragment + '"]')
+                                    check(h.inner_text() == owner_name and page.locator("h1").inner_text() == owner_package and
+                                          " ".join(h.locator("xpath=following-sibling::pre[1]").inner_text().split()) ==
+                                          " ".join(snippet.text.split()), "guide API link actual owner/profile", **dimensions)
                         check(not errors, "no unexpected JavaScript/console errors", errors=errors, **dimensions)
                         context.tracing.stop(path=str(workspace / f"chromium-{width}-{theme}-{javascript}.zip"))
                         context.close()

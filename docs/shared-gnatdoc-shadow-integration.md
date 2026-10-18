@@ -137,6 +137,24 @@ workflow is unchanged.
 
 ## Readiness and remaining production blockers
 
+### Intermediate evidence (not final-head readiness)
+
+`docs/evidence/gnatdoc009b/intermediate/` records the independent reconstruction
+at `5728e76b2682a9de3b689bbad85c786481c40c88`: all original gates, full native
+inventory, 267-occurrence ledger, 130-entry navigation oracle, authored parity,
+six examples, determinism/idempotence, and four unchanged original Chromium
+suites passed. The shadow Chromium report passed **4,648 assertions in eight
+matrix cells**, with **16 history traces** and Chromium `156.0.8078.4`.
+The separate exploratory adversarial record passed 25 observed/restored cases.
+It is explicitly not represented as the same committed-head qualification run.
+
+Subsequent hardening adds immutable Git-tree package-inventory checking,
+historical occurrence/profile equality, full authored-guide API browser checks,
+and coordinated output/manifest forgery. Those changes need a fresh exact-head
+run. A concurrent-development reconstruction at `5a9e14d4ee79fac873f1f9ba2aa743366bb3947b`
+correctly failed its end-of-run clean-snapshot check after implementation files
+changed; no readiness credit is taken for that failed run.
+
 `record_shared_gnatdoc_shadow.py` reexecutes independent verification and rejects
 missing/stale evidence, changed HEAD, mismatched run IDs, tool/trust revisions,
 native/output maps, occurrence/navigation results, examples, ratchets, browser

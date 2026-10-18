@@ -1,0 +1,1386 @@
+[
+  [
+    "OpenCV.Geometry",
+    "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+    [
+      [
+        "contours-moments",
+        "Point sets, contours and moments",
+        [
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#b7d006fb301e0d7e41050441cfe03fbd187fd88eb98443c2ec166da6c7392231",
+            "kind": "function",
+            "name": "Arc_Length",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Arc_Length (Points : Contour; Closed : Boolean) return OpenCV.Float64_Value"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#d1251e2ba0d40fa33dae6a5abe25028df9b455b61a6b4a0490d34358cf3ba98e",
+            "kind": "function",
+            "name": "Arc_Length",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Arc_Length (Points : Float32_Point_Array; Closed : Boolean) return OpenCV.Float64_Value"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#c642cb235fd1a186a6931d5b096a470540874134763c57963bd5f0e8971ab352",
+            "kind": "function",
+            "name": "Compute_Moments",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Compute_Moments (Points : Contour) return Moments_Result"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#74fa63895656ba695c0f4b576fbe414bfdfc040e363923bae9265f28effde9aa",
+            "kind": "function",
+            "name": "Compute_Moments",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Compute_Moments (Points : Float32_Point_Array) return Moments_Result"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#0c3fbeacf849b3776f9533db4d982b2125bc49319590c9215acbc2ffaff07503",
+            "kind": "subtype",
+            "name": "Contour",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "subtype Contour is OpenCV.Point_Array"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#6eba25785311b9dfa6f89260d4deec8d2dcb9421e5488524380d1e0d7a43955f",
+            "kind": "function",
+            "name": "Contour_Area",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Contour_Area (Points : Contour; Oriented : Boolean := False) return OpenCV.Float64_Value"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#b87b2b0105b34b29b36bfb78c579001c814170739c3920d6b3ca2653d964a98e",
+            "kind": "function",
+            "name": "Contour_Area",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Contour_Area (Points : Float32_Point_Array; Oriented : Boolean := False) return OpenCV.Float64_Value"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#bec9df22e6eea0ee3a80c9cd74e44ea89a2fd040b13e2c28c8e450ba06bfbc59",
+            "kind": "type",
+            "name": "Float32_Point_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Float32_Point_Array is array (Natural range <>) of OpenCV.Float32_Point"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#861bf31409e48aab8a03a7a144db30ffba11fea98b47d8e2c7230ad5373c3c6d",
+            "kind": "type",
+            "name": "Hu_Moment_Index",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Hu_Moment_Index is range 1 .. 7"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#d257faa4b426cf20cd12570d02d52d292e2bd638cc44b4fff579bf0dfe295f17",
+            "kind": "function",
+            "name": "Hu_Moments",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Hu_Moments (Moments : Moments_Result) return Hu_Moments_Result"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#43b1abf12c1b3eff3bc2deb0e23e68fedf35d5a73021f2cb05dea44e730e623e",
+            "kind": "type",
+            "name": "Hu_Moments_Result",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Hu_Moments_Result is array (Hu_Moment_Index) of OpenCV.Float64_Value"
+          },
+          {
+            "category": "Point sets, contours and moments",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#2f040468a005f40b58b56a993245f8b2d5184782170d46f6ae75848aab5759a5",
+            "kind": "type",
+            "name": "Moments_Result",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Moments_Result is record"
+          }
+        ]
+      ],
+      [
+        "hulls-convexity",
+        "Hulls, convexity and curve approximation",
+        [
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#aea1319c5bef8a0978afde90a41a0c9ed0ea2ec5879617420204bdfc2dd5779d",
+            "kind": "function",
+            "name": "Approximate_Curve",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Approximate_Curve (Points : Contour; Epsilon : OpenCV.Float64_Value; Closed : Boolean) return Contour"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#ed6414090f62a3ccfe23137fb30a78c5777093407c31c75b16d9c29dbe434d6c",
+            "kind": "function",
+            "name": "Approximate_Curve",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Approximate_Curve (Points : Float32_Point_Array; Epsilon : OpenCV.Float64_Value; Closed : Boolean) return Float32_Point_Array"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#efeaf4f7f954ba3f4a96fb92941b94b86def0b4dd82464912ceb14e041bea32f",
+            "kind": "function",
+            "name": "Convex_Hull",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Convex_Hull (Points : Contour; Orientation : Hull_Orientation := Counterclockwise) return Contour"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#e9fd00efbba2e22b27874dd98043513ccbea41028f1cef245c6f74685a161666",
+            "kind": "function",
+            "name": "Convex_Hull",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Convex_Hull (Points : Float32_Point_Array; Orientation : Hull_Orientation := Counterclockwise) return Float32_Point_Array"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#35ad7a6608210a292e7308fb8d4a13455f4dcca44173285d9c215625e7cdcc3a",
+            "kind": "function",
+            "name": "Convex_Hull_Indices",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Convex_Hull_Indices (Points : Contour; Orientation : Hull_Orientation := Counterclockwise) return Point_Index_Array with Post => Convex_Hull_Indices'Result'Length <= Points'Length and then (for all Index of Convex_Hull_Indices'Result => Index in Points'Range)"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#f6c6b2235880fad5a44511aa0274d38eeeb8e6a917023abcf2bdbde9fd385ee4",
+            "kind": "function",
+            "name": "Convex_Hull_Indices",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Convex_Hull_Indices (Points : Float32_Point_Array; Orientation : Hull_Orientation := Counterclockwise) return Point_Index_Array with Post => Convex_Hull_Indices'Result'Length <= Points'Length and then (for all Index of Convex_Hull_Indices'Result => Index in Points'Range)"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#c0f8197f0f348b514d86c8c9c16d33dd6e24fed218d0cac639d5943f224486fc",
+            "kind": "type",
+            "name": "Convexity_Defect",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Convexity_Defect is record"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#56970d39c5e0d655f5c79fa488eea94e529f91bea0fbb4cb9e54f4a55df2cb7d",
+            "kind": "type",
+            "name": "Convexity_Defect_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Convexity_Defect_Array is array (Natural range <>) of Convexity_Defect"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#c8ffc5c2dcf41b985cf974ed054f8f9704dc79c2b9a1ba6f5017fae7e0f2c5b1",
+            "kind": "function",
+            "name": "Convexity_Defects",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Convexity_Defects (Points : Contour; Hull : Point_Index_Array) return Convexity_Defect_Array with Post => Convexity_Defects'Result'Length <= Hull'Length and then (for all Defect of Convexity_Defects'Result => Defect.Start_Index in Points'Range and then Defect.End_Index in Points'Range and then Defect.Farthest_Index in Points'Range)"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#e3af6cddd2130d76d582abd853eb01536afabf8b90a50fa6732c77e1f6423797",
+            "kind": "function",
+            "name": "Convexity_Defects",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Convexity_Defects (Points : Contour) return Convexity_Defect_Array with Post => Convexity_Defects'Result'Length <= Points'Length and then (for all Defect of Convexity_Defects'Result => Defect.Start_Index in Points'Range and then Defect.End_Index in Points'Range and then Defect.Farthest_Index in Points'Range)"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#a28df9b9d891b446680c3d68108a95a35fa7aa5b5bcc76f7cf2b07bb4e6951be",
+            "kind": "type",
+            "name": "Hull_Orientation",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Hull_Orientation is (Counterclockwise, Clockwise)"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#080079331f4318458c70b36a79c350c64626d5ea73e20606331af853a0b3cdb7",
+            "kind": "function",
+            "name": "Is_Convex",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Is_Convex (Points : Contour) return Boolean"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#480099f6973d14cc45b3c758fe43449d5296e50e5febb3a34327f5579b558e39",
+            "kind": "function",
+            "name": "Is_Convex",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Is_Convex (Points : Float32_Point_Array) return Boolean"
+          },
+          {
+            "category": "Hulls, convexity and curve approximation",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#7a6a1c313220429bb34d295dc14c81cd5bbc9a2e1291b9f76c1f725088ed0aef",
+            "kind": "type",
+            "name": "Point_Index_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Point_Index_Array is array (Natural range <>) of Natural"
+          }
+        ]
+      ],
+      [
+        "shape-queries",
+        "Shape matching and geometric queries",
+        [
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#e329b99bf3fe4eb1bc3cb680d6e9fecd385e4481bd674bf56196f82e1ed28193",
+            "kind": "function",
+            "name": "Bounding_Rect",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Bounding_Rect (Points : Contour) return OpenCV.Rect"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#504d01c7c30acd2af11e5ebfddcdd3e6d84a384892b23e1d8898945b5f399147",
+            "kind": "function",
+            "name": "Bounding_Rect",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Bounding_Rect (Points : Float32_Point_Array) return OpenCV.Rect"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#a84a30f0bdf6bd566fb15ae42b199469809f846fdfabf22ca80af7b991fd3ff6",
+            "kind": "type",
+            "name": "Contour_Point_Location",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Contour_Point_Location is (Outside_Contour, On_Contour_Boundary, Inside_Contour)"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#4ff226bea8dc6e2e024183f952b2985db3116792c3b3b0741cdb15c525017bb2",
+            "kind": "function",
+            "name": "Locate_Point",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Locate_Point (Points : Contour; Query : OpenCV.Float32_Point) return Contour_Point_Location"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#e6db01e559791503e14eed56c66f5e73061343dbc786825c72a04d6793897cfa",
+            "kind": "function",
+            "name": "Locate_Point",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Locate_Point (Points : Float32_Point_Array; Query : OpenCV.Float32_Point) return Contour_Point_Location"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#35b61d95acc2ad90daf79d41a2869c92d398092b0f0e6c1c024cd58b096a5ac7",
+            "kind": "function",
+            "name": "Match_Shapes",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Match_Shapes (Left, Right : Contour; Method : Shape_Match_Method) return OpenCV.Float64_Value"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#575475a23f635490f92359d9ab8fedf64c5ee7649a27975e80446d46be48c8f2",
+            "kind": "function",
+            "name": "Match_Shapes",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Match_Shapes (Left, Right : Float32_Point_Array; Method : Shape_Match_Method) return OpenCV.Float64_Value"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#15b2c3ead76277c43229e655c45e6ebc303b80e95876d77f4ede768d6e6b4fdc",
+            "kind": "type",
+            "name": "Shape_Match_Method",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Shape_Match_Method is (Reciprocal_Log_Difference, Log_Difference, Relative_Log_Difference)"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#93214d3574ab96fe5bf911eded86a254c5b84fc2b03c6146dce2905b4b075b8f",
+            "kind": "function",
+            "name": "Signed_Distance_To_Contour",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Signed_Distance_To_Contour (Points : Contour; Query : OpenCV.Float32_Point) return OpenCV.Float64_Value"
+          },
+          {
+            "category": "Shape matching and geometric queries",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#027fe991fd93861cdcc765dbdb2335157727496cb61f20e03f3af152b3d25ab6",
+            "kind": "function",
+            "name": "Signed_Distance_To_Contour",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Signed_Distance_To_Contour (Points : Float32_Point_Array; Query : OpenCV.Float32_Point) return OpenCV.Float64_Value"
+          }
+        ]
+      ],
+      [
+        "fitting-enclosing",
+        "Fitting and enclosing shapes",
+        [
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#fec5ade1e5d8a3ed86580feb6e6063cda08d77d9de1075ab512b909eaeb41521",
+            "kind": "function",
+            "name": "Closest_Ellipse_Points",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Closest_Ellipse_Points (Ellipse : OpenCV.Rotated_Rect; Points : Contour) return Float32_Point_Array with Post => Closest_Ellipse_Points'Result'First = Points'First and then Closest_Ellipse_Points'Result'Last = Points'Last"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#bc67fbd6352aa040021db1b02ce740f7af36d1eacf05be4cd687da50c01acfea",
+            "kind": "function",
+            "name": "Closest_Ellipse_Points",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Closest_Ellipse_Points (Ellipse : OpenCV.Rotated_Rect; Points : Float32_Point_Array) return Float32_Point_Array with Post => Closest_Ellipse_Points'Result'First = Points'First and then Closest_Ellipse_Points'Result'Last = Points'Last"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#89d13a6c8d894b84e2738057fe35514d9665317ad87a2b45913af980a0196b3f",
+            "kind": "type",
+            "name": "Enclosing_Circle",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Enclosing_Circle is record"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#cd70150a2e7a499db6c1450ef45488b08d9ad0b06a2250904aa60e98374a786d",
+            "kind": "type",
+            "name": "Enclosing_Triangle",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Enclosing_Triangle is record"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#726a899c9e1ab6af0ec8631c1d0414c711dd21166076b6a4f2c500a9fd0996b6",
+            "kind": "function",
+            "name": "Fit_Ellipse",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Ellipse (Points : Contour) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#6418c2a393ef25dfc8632bfb53d435538044a67ab6aa92020f2787e0d45b7288",
+            "kind": "function",
+            "name": "Fit_Ellipse",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Ellipse (Points : Float32_Point_Array) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#ca25ecd050328608407023fd517fbcb09c099749523a2d6becd54fe70c211d81",
+            "kind": "function",
+            "name": "Fit_Ellipse_AMS",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Ellipse_AMS (Points : Contour) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#783e18e41670b657b3455fd46b47e4553f1af4cd2bed46d53178a07c9032c3a9",
+            "kind": "function",
+            "name": "Fit_Ellipse_AMS",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Ellipse_AMS (Points : Float32_Point_Array) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#fae4d1c7a78cd97ec9c6e011e030eec27b964cd8351350d2be2f3f060826ed84",
+            "kind": "function",
+            "name": "Fit_Ellipse_Direct",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Ellipse_Direct (Points : Contour) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#c30f46143f74379778e65447bf85dfd14babc25f6694a48b3c707e4dc937b325",
+            "kind": "function",
+            "name": "Fit_Ellipse_Direct",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Ellipse_Direct (Points : Float32_Point_Array) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#7d7e8172b914b72e0bd0d4c553c8cad54e3c27d43bd328d6a29784281687f0d4",
+            "kind": "function",
+            "name": "Fit_Line_2D",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Line_2D (Points : Contour; Distance : Line_Fit_Distance := L2; Parameter : OpenCV.Float64_Value := 0.0; Radius_Accuracy : OpenCV.Float64_Value := 0.01; Angle_Accuracy : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#371e44b4cc7f17d3dd4760c513037e287bbef2ca1572084ab32b2806858d9958",
+            "kind": "function",
+            "name": "Fit_Line_2D",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Fit_Line_2D (Points : Float32_Point_Array; Distance : Line_Fit_Distance := L2; Parameter : OpenCV.Float64_Value := 0.0; Radius_Accuracy : OpenCV.Float64_Value := 0.01; Angle_Accuracy : OpenCV.Float64_Value := 0.01) return Fitted_Line_2D"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#9711b264ade5f48734bc12cdb66e4e9b7cbd551468e8a8a3c3cae3cd1f8be0cd",
+            "kind": "type",
+            "name": "Fitted_Line_2D",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Fitted_Line_2D is record"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#8a4501f4c2d3f4cf774c6cb726226e2f941fe3e19699d3fbd325e823b5316931",
+            "kind": "type",
+            "name": "Line_Fit_Distance",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Line_Fit_Distance is (L2, L1, L12, Fair, Welsch, Huber)"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#6db6b75bcfeebdfa09e8a3bddd598d12a0d56235e999f6605368b649411de36a",
+            "kind": "function",
+            "name": "Minimum_Area_Rectangle",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Minimum_Area_Rectangle (Points : Contour) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#b9957cbcf8f84e09e25136ed934363cdb27eabcb147fd4c9fbc866526be13252",
+            "kind": "function",
+            "name": "Minimum_Area_Rectangle",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Minimum_Area_Rectangle (Points : Float32_Point_Array) return OpenCV.Rotated_Rect"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#93d6b5c797bd2d2dcc1690febba6455143d7ef91e21981e6f319903b49555f78",
+            "kind": "function",
+            "name": "Minimum_Enclosing_Circle",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Minimum_Enclosing_Circle (Points : Contour) return Enclosing_Circle"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#bd6955f2bff30fe6242f626cb6987754094fbcf74a010518a72fdc8a32d98c24",
+            "kind": "function",
+            "name": "Minimum_Enclosing_Circle",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Minimum_Enclosing_Circle (Points : Float32_Point_Array) return Enclosing_Circle"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#088dc36517e1a4aff3bdae7106cf93acf22524e0e8db5603db033c52d1169d68",
+            "kind": "function",
+            "name": "Minimum_Enclosing_Triangle",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Minimum_Enclosing_Triangle (Points : Contour) return Enclosing_Triangle"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#b6c542f7d9d5bfaba09a156f39b57ded9f95715e3c7ecf42401f2e3545c25285",
+            "kind": "type",
+            "name": "Triangle_Vertex_Index",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Triangle_Vertex_Index is range 1 .. 3"
+          },
+          {
+            "category": "Fitting and enclosing shapes",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#4df0f09685c2d357dbf6855bfc8cea0950ef17d7758aa31e6baadbb63de71418",
+            "kind": "type",
+            "name": "Triangle_Vertices",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Triangle_Vertices is array (Triangle_Vertex_Index) of OpenCV.Float32_Point"
+          }
+        ]
+      ],
+      [
+        "intersections-rotated",
+        "Intersections and rotated geometry",
+        [
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#ff65c1d26d55afeda2fe7a7e7788a233c58ba7052def5ee1ff4410904a4cd3b3",
+            "kind": "function",
+            "name": "Box_Points",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Box_Points (Box : OpenCV.Rotated_Rect) return Box_Vertices"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#e98dea9ba73aad28794e3b33a2a2bf1bd8c5980ad1cc39d2935287deb9748497",
+            "kind": "type",
+            "name": "Box_Vertex_Index",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Box_Vertex_Index is range 1 .. 4"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#176ff95f9584fc573b2c4dcf4e0336b312e9a4f08f6cf879ec4424b0289274e9",
+            "kind": "type",
+            "name": "Box_Vertices",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Box_Vertices is array (Box_Vertex_Index) of OpenCV.Float32_Point"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#4f5c0331a0e38274c6685871020a1275c7d44820402badf5c06f59e02be58088",
+            "kind": "type",
+            "name": "Convex_Polygon_Intersection",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Convex_Polygon_Intersection (Vertex_Count : Natural) is record"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#16afa6aa06b5512f3acb168efd143327bf4fc2bb960fea889153af4f1767822a",
+            "kind": "function",
+            "name": "Intersect_Convex_Polygons",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Intersect_Convex_Polygons (Left, Right : Contour; Handle_Nested : Boolean := True) return Convex_Polygon_Intersection"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#4a17247596647dad23c772a762cd75e4bf1a7724337bd1bbe9049e5826fe2a56",
+            "kind": "function",
+            "name": "Intersect_Convex_Polygons",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Intersect_Convex_Polygons (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True) return Convex_Polygon_Intersection"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#20d07f402335d362a5b512a9e975a5b75c42e222c45e5bbc5cb71f0886bb5604",
+            "kind": "function",
+            "name": "Intersect_Convex_Polygons_Extended_Float32",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Intersect_Convex_Polygons_Extended_Float32 (Left, Right : Float32_Point_Array; Handle_Nested : Boolean := True) return Convex_Polygon_Intersection"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#4b53c026be5fe7719392b5222e12dc8eb8c19091f7ec80f6f25d7bcf01065c2f",
+            "kind": "function",
+            "name": "Intersect_Rotated_Rectangles",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Intersect_Rotated_Rectangles (Left, Right : OpenCV.Rotated_Rect) return Rotated_Rectangle_Intersection"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#7e4d653ebb605fbf335d9f96087389e2b216cd66ba1a9687361c28cccbb03d86",
+            "kind": "type",
+            "name": "Rectangle_Intersection_Kind",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Rectangle_Intersection_Kind is (No_Intersection, Partial_Intersection, Full_Intersection)"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#97a5a9414e4dd355c3328da0e703aa3d06fc6948d44d81767cdf7b5f28808933",
+            "kind": "subtype",
+            "name": "Rectangle_Intersection_Vertex_Count",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "subtype Rectangle_Intersection_Vertex_Count is Natural range 0 .. 8"
+          },
+          {
+            "category": "Intersections and rotated geometry",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#1e4c8f19146c42b9094caedf45987e4a968a27ef4824ab7f8607650a64a8a58b",
+            "kind": "type",
+            "name": "Rotated_Rectangle_Intersection",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Rotated_Rectangle_Intersection (Vertex_Count : Rectangle_Intersection_Vertex_Count := 0) is record"
+          }
+        ]
+      ],
+      [
+        "transforms",
+        "Affine and perspective transformations",
+        [
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#08665d5897069a7f4143466e67250acad1def414e17b6e352c9928b2db7a57aa",
+            "kind": "type",
+            "name": "Affine_Row_Index",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Affine_Row_Index is range 1 .. 2"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#a0893b8da763652282fa398e6ef799cc1bbdfc73759b02bdddfcbc104ea56c9a",
+            "kind": "type",
+            "name": "Affine_Transform_2D",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Affine_Transform_2D is array (Affine_Row_Index, Transform_Column_Index) of OpenCV.Float64_Value"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#d4d18c9ccf30c84a7531ac81885280060fdc40d12adb7e7ddd077c2ac3ba24f0",
+            "kind": "function",
+            "name": "Get_Affine_Transform",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Get_Affine_Transform (Source, Destination : Float32_Point_Array) return Affine_Transform_2D"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#5a5df1d42190dd5657e6042b3f87e746e7ce334f13998d283ab2ee7c1f279924",
+            "kind": "function",
+            "name": "Get_Perspective_Transform",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Get_Perspective_Transform (Source, Destination : Float32_Point_Array; Method : Perspective_Solve_Method := LU_Decomposition) return Perspective_Transform_2D"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#ec068289d836e143df9ec9f805316133f312bb13fea8eb378ba187612166f35c",
+            "kind": "function",
+            "name": "Get_Rotation_Matrix_2D",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Get_Rotation_Matrix_2D (Center : OpenCV.Float32_Point; Angle : OpenCV.Float64_Value; Scale : OpenCV.Float64_Value := 1.0; Units : OpenCV.Angle_Unit := OpenCV.Degrees) return OpenCV.Core.Mat"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#c2a2c036a31acde9ac05af070d12fa04c52b26d9d4988e9b09eac09f8bbbfb0f",
+            "kind": "constant",
+            "name": "Identity_Affine_Transform",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "Identity_Affine_Transform : constant Affine_Transform_2D := ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0))"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#2a2e46a1606d4825df18a6f8fb38902eabd47d5af13b1beafbacbd411bdfb9d7",
+            "kind": "constant",
+            "name": "Identity_Perspective_Transform",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "Identity_Perspective_Transform : constant Perspective_Transform_2D := ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#9684641ee32404bbc291f5728a485edf3e8e7b556f04ce9af81827180a9ea6c3",
+            "kind": "function",
+            "name": "Invert_Affine_Transform",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Invert_Affine_Transform (Transform : Affine_Transform_2D) return Affine_Transform_2D"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#65c8711dbe2d34317c39c978b15d8cb4d6a3cf6295e4e4b368a6bef89aeb2344",
+            "kind": "type",
+            "name": "Perspective_Row_Index",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Perspective_Row_Index is range 1 .. 3"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#a3016ca57a11e0b231c60dc9cafc5543f3774187cfd3cf06d1683396c02bb8d5",
+            "kind": "type",
+            "name": "Perspective_Solve_Method",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Perspective_Solve_Method is (LU_Decomposition, Singular_Value_Decomposition, QR_Decomposition)"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#d5b98bc1260cc18e18848a7786d3c2f516a248fe03c1a4f80dffcb2816e4c141",
+            "kind": "type",
+            "name": "Perspective_Transform_2D",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Perspective_Transform_2D is array (Perspective_Row_Index, Transform_Column_Index) of OpenCV.Float64_Value"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#d5e72a68b99c96fdb6414518747303ed5be7151d2444170fbe8fd2f047300eb3",
+            "kind": "type",
+            "name": "Transform_Column_Index",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Transform_Column_Index is range 1 .. 3"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#549574f469e3de56e9bd121289bc8795ad2a8174ac09c890f11d943379019a61",
+            "kind": "function",
+            "name": "Transform_Point",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Transform_Point (Transform : Affine_Transform_2D; Point : OpenCV.Float32_Point) return OpenCV.Float32_Point"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#21166afd9f59d286e4bb8ccb0983d6cea45e297f95402b567b6133564867f734",
+            "kind": "function",
+            "name": "Transform_Point",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Transform_Point (Transform : Perspective_Transform_2D; Point : OpenCV.Float32_Point) return OpenCV.Float32_Point"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#75937b73150b80f463933d8acbd67019c94ef394205e389cea66108abf089111",
+            "kind": "function",
+            "name": "Transform_Points",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Transform_Points (Transform : Affine_Transform_2D; Points : Float32_Point_Array) return Float32_Point_Array with Post => Transform_Points'Result'First = Points'First and then Transform_Points'Result'Last = Points'Last"
+          },
+          {
+            "category": "Affine and perspective transformations",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#38b3024a5d42687fec7fa2533b03ec6a1fafdc9ba9c8c8036313743fcbf0897b",
+            "kind": "function",
+            "name": "Transform_Points",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry",
+            "profile": "function Transform_Points (Transform : Perspective_Transform_2D; Points : Float32_Point_Array) return Float32_Point_Array with Post => Transform_Points'Result'First = Points'First and then Transform_Points'Result'Last = Points'Last"
+          }
+        ]
+      ],
+      [
+        "capability",
+        "Native capability and compatibility",
+        [
+          {
+            "category": "Native capability and compatibility",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#88913bfcdf32a14f364b47fb7494827a555a82592d57f765517d5729a8cb84e3",
+            "kind": "function",
+            "name": "Is_Natively_Supported",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "function Is_Natively_Supported (Feature : Native_Feature) return Boolean"
+          },
+          {
+            "category": "Native capability and compatibility",
+            "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#15581cf6da8bb82b322cf81df2f969c0866bdff13091bda16e2c23ec83d48653",
+            "kind": "type",
+            "name": "Native_Feature",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry",
+            "profile": "type Native_Feature is (Approximate_Convex_Polygon_Feature, Closest_Ellipse_Points_Feature, Minimum_Enclosing_Convex_Polygon_Feature, Float32_Subdivision_Bounds_Feature)"
+          }
+        ]
+      ]
+    ]
+  ],
+  [
+    "OpenCV.Geometry.Subdiv2D",
+    "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html",
+    [
+      [
+        "subdivision-lifecycle",
+        "Lifecycle and bounds",
+        [
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#84ae12c265ab51107ff60d0639974a089298c5746103783fff3ef63927ffe9ab",
+            "kind": "function",
+            "name": "Bounds",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Bounds (Object : Subdivision) return OpenCV.Rect"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#8373cc3123ae8722a02c20fe75624324a05b240e96e48ff9037199ef989f6b86",
+            "kind": "function",
+            "name": "Bounds_Float32",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Bounds_Float32 (Object : Subdivision) return Float32_Rectangle"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#f1ed3ec83a6df7197b87f750151e7e2aa4f2397f8c4e61c008f205173a329c76",
+            "kind": "function",
+            "name": "Create",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Create (Bounds : OpenCV.Rect) return Subdivision"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#c83e0ed56ddd87e613028f87ca967f2da1a90be5751ac14cea2d20884a5cfaa5",
+            "kind": "function",
+            "name": "Create_Float32",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Create_Float32 (Bounds : Float32_Rectangle) return Subdivision"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#f949ceda55cccb217b367ecb4afd42371991c95d0db3446f35959c4ed724af52",
+            "kind": "type",
+            "name": "Float32_Rectangle",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Float32_Rectangle is record"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#1dba028766a42c4b730b73e78df21edd66461caa5c6a52b32ca25cb9987bb425",
+            "kind": "function",
+            "name": "Is_Ready",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Is_Ready (Object : Subdivision) return Boolean"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#78cad4e7575c44c2e65e72335848e764c0cefd803dfae2d46a002e02fd5e50b9",
+            "kind": "procedure",
+            "name": "Reset",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "procedure Reset (Object : in out Subdivision; Bounds : OpenCV.Rect)"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#c4ebe8e3910bba90be1b27e3a1c5b9cfca8808da57edca77f449b3e6b1f09993",
+            "kind": "procedure",
+            "name": "Reset_Float32",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "procedure Reset_Float32 (Object : in out Subdivision; Bounds : Float32_Rectangle)"
+          },
+          {
+            "category": "Lifecycle and bounds",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#2e8fcfedfbf19b2208b3731936405081ecc91d15ddfa0b22ba69c9ce2f2b2f52",
+            "kind": "type",
+            "name": "Subdivision",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Subdivision is limited private"
+          }
+        ]
+      ],
+      [
+        "subdivision-queries",
+        "Insertion and point queries",
+        [
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#b597c65821fbff756de2b3f7c927b5f360599958ed84aab216ba14ea54562eb3",
+            "kind": "function",
+            "name": "Find_Nearest",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Find_Nearest (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Nearest_Result"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#c5833967df20dd7e966292b6dc5425b3fe8447b6615fdd59ee780fa1d27346c6",
+            "kind": "function",
+            "name": "Insert",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Insert (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Vertex_Id"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#2d682176b7e149bf13a16d367cc17e78deced31317ada954300c221a384ede35",
+            "kind": "procedure",
+            "name": "Insert",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "procedure Insert (Object : in out Subdivision; Points : Float32_Point_Array)"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#fbfdbf46f2545c15887368c29713f59ae1c2afbd27f47be65777acc8b4d44c43",
+            "kind": "function",
+            "name": "Locate",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Locate (Object : in out Subdivision; Point : OpenCV.Float32_Point) return Locate_Result"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#b9ff3363e884f40cabc55b3a7470a1c2def2d2b1d3673ee93fe87db24f734081",
+            "kind": "type",
+            "name": "Locate_Result",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Locate_Result (Kind : Point_Location_Kind := Inside_Facet) is record"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#bb42d2cc3932e5efbd0582d66089c08c480db3c35ee624159bfc28d85d5923bd",
+            "kind": "type",
+            "name": "Nearest_Result",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Nearest_Result is record"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#d569763fc23e0795e109ff3b9ca11449a1335a7cab718b146e96cd98048a6eb8",
+            "kind": "constant",
+            "name": "No_Vertex",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "No_Vertex : constant Vertex_Id := 0"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#d0382199f6d647399cbec96d1100f908f3fd73e8b389c00721ceefede0ba4426",
+            "kind": "type",
+            "name": "Point_Location_Kind",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Point_Location_Kind is (Inside_Facet, On_Edge, On_Vertex)"
+          },
+          {
+            "category": "Insertion and point queries",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#dd050c3c0687b6ef8dd3fa3345b429f52beaa94e575a53319b505a97f530c9a2",
+            "kind": "type",
+            "name": "Vertex_Id",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Vertex_Id is range 0 .. 2**31 - 1"
+          }
+        ]
+      ],
+      [
+        "subdivision-navigation",
+        "Edge and vertex navigation",
+        [
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#ed071994bb70f5747223262217d0d65bff03048e7986743e3cc16dd7ec46215f",
+            "kind": "function",
+            "name": "Destination",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Destination (Object : Subdivision; Edge : Edge_Id) return Vertex_Id"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#4f4ba2bc1497150545680c01c96c8a1e137be7dae83c261885d4ca66f8e5d11e",
+            "kind": "type",
+            "name": "Edge_Id",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Edge_Id is range 0 .. 2**31 - 1"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#eab663978f5ba01a8c495e3e3b90a7e08384fea96d604bc144b0f3e932679d4a",
+            "kind": "type",
+            "name": "Edge_Navigation",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Edge_Navigation is (Next_Around_Origin, Next_Around_Destination, Previous_Around_Origin, Previous_Around_Destination, Next_Around_Left, Next_Around_Right, Previous_Around_Left, Previous_Around_Right)"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#4b3f7a676b58c5934faa79d2e55db7aa7dc92ad37ac0fcfa4d7c389d7895cbd1",
+            "kind": "type",
+            "name": "Edge_Rotation",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Edge_Rotation is (Same_Edge, Rotated_Edge, Reversed_Edge, Reversed_Rotated_Edge)"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#b125253f5c455a7da363afe004c112ca954a86d3ed0f6c6d15aea023f7c78ca6",
+            "kind": "function",
+            "name": "First_Edge",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function First_Edge (Object : Subdivision; Vertex : Vertex_Id) return Edge_Id"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#a7ad958478fe2b1a3b54eb1901fdf350b7603cba7deec6ad41dc5989da119123",
+            "kind": "function",
+            "name": "Navigate",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Navigate (Object : Subdivision; Edge : Edge_Id; Direction : Edge_Navigation) return Edge_Id"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#53885852c2b270c017202fa66ac34ead99925feff5171f25eb2f9974eb9b4579",
+            "kind": "function",
+            "name": "Next_Edge",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Next_Edge (Object : Subdivision; Edge : Edge_Id) return Edge_Id"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#3c48db0c5299a605f0d26dd0ebd163b063d7ab476d41cf5919b2d64b120e564b",
+            "kind": "constant",
+            "name": "No_Edge",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "No_Edge : constant Edge_Id := 0"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#b8cda029656252b719904711289d9b8a20388c14b115057a2d7afccd7a8037bc",
+            "kind": "function",
+            "name": "Origin",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Origin (Object : Subdivision; Edge : Edge_Id) return Vertex_Id"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#231a4c73968ecfe809a383b8aa8250e757965b378a715ec20da7cfe05b7c8297",
+            "kind": "function",
+            "name": "Rotate",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Rotate (Object : Subdivision; Edge : Edge_Id; Rotation : Edge_Rotation) return Edge_Id"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#603aef11200a5330fae979463002638ce4e2361b49be81fd844a7a571496c936",
+            "kind": "function",
+            "name": "Symmetric_Edge",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Symmetric_Edge (Object : Subdivision; Edge : Edge_Id) return Edge_Id"
+          },
+          {
+            "category": "Edge and vertex navigation",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#e534b3fbdfcf897aa843fdcda37d3655fe8a6c23a74f27ada360ed1c2793f3ae",
+            "kind": "function",
+            "name": "Vertex_Point",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Vertex_Point (Object : Subdivision; Vertex : Vertex_Id) return OpenCV.Float32_Point"
+          }
+        ]
+      ],
+      [
+        "subdivision-extraction",
+        "Triangles and extraction",
+        [
+          {
+            "category": "Triangles and extraction",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#a498e27d1e44c21b8f293d66a9a4d7757fdb1effcd90c970fddbbbda3cfdfba8",
+            "kind": "type",
+            "name": "Edge_Id_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Edge_Id_Array is array (Natural range <>) of Edge_Id"
+          },
+          {
+            "category": "Triangles and extraction",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#51c30b3309ed26d54c340ebf9856de71182aab08b217deaf686d658b4f3ab40b",
+            "kind": "function",
+            "name": "Edge_List",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Edge_List (Object : Subdivision) return Edge_Segment_Array"
+          },
+          {
+            "category": "Triangles and extraction",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#d2cc8e71ce5d4baaf8998f8cb66c2aef260e921004cfb06004265174271c1334",
+            "kind": "type",
+            "name": "Edge_Segment",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Edge_Segment is record"
+          },
+          {
+            "category": "Triangles and extraction",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#92da97d0d027d0f69c06f9f1cf305127aec400151ed86587bc41cd0cf7c99c66",
+            "kind": "type",
+            "name": "Edge_Segment_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Edge_Segment_Array is array (Natural range <>) of Edge_Segment"
+          },
+          {
+            "category": "Triangles and extraction",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#6b327953f9eb1d4d7e518e7149ce1976680326aa5e337d616c31f2a2eb3e5490",
+            "kind": "function",
+            "name": "Leading_Edge_List",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Leading_Edge_List (Object : Subdivision) return Edge_Id_Array"
+          },
+          {
+            "category": "Triangles and extraction",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#34e22f06ddf411ba6da2cacd635f9e83c273b7a7aa3009df10d2f69730e535e6",
+            "kind": "type",
+            "name": "Triangle_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Triangle_Array is array (Natural range <>) of OpenCV.Geometry.Triangle_Vertices"
+          },
+          {
+            "category": "Triangles and extraction",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#8413db754673e07fff9f3958b92e006c6795a6a04ee22052af1b67edb41315e6",
+            "kind": "function",
+            "name": "Triangle_List",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Triangle_List (Object : Subdivision) return Triangle_Array"
+          }
+        ]
+      ],
+      [
+        "subdivision-voronoi",
+        "Voronoi diagrams and facets",
+        [
+          {
+            "category": "Voronoi diagrams and facets",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#d9d0858b70058d688f0dc7ec0b09e3a4b3fa4f1b0de3dfb09553beab0976fadc",
+            "kind": "function",
+            "name": "Facet_Points",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Facet_Points (Diagram : Voronoi_Diagram; Index : Positive) return Float32_Point_Array"
+          },
+          {
+            "category": "Voronoi diagrams and facets",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#e95f7e035af974e40d2d411f5206b758b3b3665717993f8843fe7f4a7744f73a",
+            "kind": "type",
+            "name": "Vertex_Id_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Vertex_Id_Array is array (Natural range <>) of Vertex_Id"
+          },
+          {
+            "category": "Voronoi diagrams and facets",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#a125ec53d879614b49bbf461cde07b3f335e7774560ef81a43c67875bd6f10ae",
+            "kind": "type",
+            "name": "Voronoi_Diagram",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Voronoi_Diagram (Facet_Count, Point_Count : Natural) is record"
+          },
+          {
+            "category": "Voronoi diagrams and facets",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#c33bf84ac459e6212120426ff4dfdf5797c3ac2bdd58d381bc380e5fcebe2f7d",
+            "kind": "type",
+            "name": "Voronoi_Facet",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Voronoi_Facet is record"
+          },
+          {
+            "category": "Voronoi diagrams and facets",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#71539492eca6e0e89efef961a3176106b860f286ae3c6cea1d76320479dad535",
+            "kind": "type",
+            "name": "Voronoi_Facet_Array",
+            "overload": 0,
+            "overloads": 1,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "type Voronoi_Facet_Array is array (Natural range <>) of Voronoi_Facet"
+          },
+          {
+            "category": "Voronoi diagrams and facets",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#e0402b3aee8b3781289bab36d68dc32c0ec62ce50d276fbb333035ae0d6757ea",
+            "kind": "function",
+            "name": "Voronoi_Facets",
+            "overload": 1,
+            "overloads": 2,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Voronoi_Facets (Object : in out Subdivision) return Voronoi_Diagram"
+          },
+          {
+            "category": "Voronoi diagrams and facets",
+            "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#0bf4599039a7b13e965e24657a52ac19280f856f1903755ea34285df69c39ab7",
+            "kind": "function",
+            "name": "Voronoi_Facets",
+            "overload": 2,
+            "overloads": 2,
+            "package": "OpenCV.Geometry.Subdiv2D",
+            "profile": "function Voronoi_Facets (Object : in out Subdivision; Sites : Vertex_Id_Array) return Voronoi_Diagram"
+          }
+        ]
+      ]
+    ]
+  ]
+]
