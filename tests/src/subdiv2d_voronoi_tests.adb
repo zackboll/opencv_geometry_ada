@@ -986,6 +986,68 @@ package body Subdiv2D_Voronoi_Tests is
          raise;
    end C_ABI_Validation;
 
+   procedure Facet_Value_Copy (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Diagram : Subdiv.Voronoi_Diagram (1, 3) :=
+        (Facet_Count => 1,
+         Point_Count => 3,
+         Facets      => (1 => (First => 2, Last => 3, others => <>)),
+         Points      => ((1.0, 2.0), (3.0, 4.0), (5.0, 6.0)));
+      Polygon : Points := Subdiv.Facet_Points (Diagram, 1);
+   begin
+      AUnit.Assertions.Assert
+        (Polygon'First = 1
+         and then Polygon'Last = 2
+         and then Polygon = Diagram.Points (2 .. 3),
+         "a caller-built diagram slice is rebased without changing order");
+      Polygon (1) := (X => 99.0, Y => 99.0);
+      AUnit.Assertions.Assert
+        (Diagram.Points (2) = (X => 3.0, Y => 4.0),
+         "the returned polygon owns its storage");
+      Diagram.Facets (1) := (First => 1, Last => 0, others => <>);
+      AUnit.Assertions.Assert
+        (Subdiv.Facet_Points (Diagram, 1)'Length = 0,
+         "a caller-built null facet follows Ada null-slice semantics");
+   end Facet_Value_Copy;
+
+   procedure Facet_Invalid_Slices (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Diagram : Subdiv.Voronoi_Diagram (1, 1) :=
+        (Facet_Count => 1,
+         Point_Count => 1,
+         Facets      => (1 => (First => 1, Last => 1, others => <>)),
+         Points      => (1 => (X => 3.0, Y => 4.0)));
+
+      procedure Check (Index : Positive) is
+         Raised : Boolean := False;
+      begin
+         begin
+            declare
+               Ignored : constant Points :=
+                 Subdiv.Facet_Points (Diagram, Index);
+            begin
+               AUnit.Assertions.Assert
+                 (Ignored'Length = 0, "unreachable invalid slice");
+            end;
+         exception
+            when Constraint_Error =>
+               Raised := True;
+         end;
+         AUnit.Assertions.Assert
+           (Raised, "invalid facet index or nonnull slice raises CE");
+      end Check;
+   begin
+      Check (2);
+      Diagram.Facets (1).Last := 2;
+      Check (1);
+      Diagram.Facets (1) :=
+        (First => Natural'Last, Last => Natural'Last, others => <>);
+      Check (1);
+      AUnit.Assertions.Assert
+        (Diagram.Points (1) = (X => 3.0, Y => 4.0),
+         "rejected slices do not modify the point storage");
+   end Facet_Invalid_Slices;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       Result.Add_Test
@@ -1016,6 +1078,13 @@ package body Subdiv2D_Voronoi_Tests is
       Result.Add_Test
         (Caller.Create
            ("Subdiv2D Voronoi C ABI validation", C_ABI_Validation'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Subdiv2D Voronoi facet value copy", Facet_Value_Copy'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Subdiv2D Voronoi invalid facet slices",
+            Facet_Invalid_Slices'Access));
       return Result'Access;
    end Suite;
 

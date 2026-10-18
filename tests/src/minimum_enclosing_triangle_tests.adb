@@ -476,6 +476,14 @@ package body Minimum_Enclosing_Triangle_Tests is
          Assert_Zeroed (Message);
       end Assert_Rejected;
    begin
+      --  The count guard must run before scanning this four-point buffer.
+      Status :=
+        C_API.Min_Enclosing_Triangle
+          (Points (Points'First)'Access,
+           Interfaces.Integer_32'Last - 1,
+           Area'Access,
+           Output'Access);
+      Assert_Rejected (Status, "allocation", "native hull count overflow");
       Status :=
         C_API.Min_Enclosing_Triangle
           (Points (Points'First)'Access, 4, null, Output'Access);

@@ -22,7 +22,7 @@
 # return, for scripts/test_run_linux_matrix_027c1.sh.
 set -u -o pipefail
 
-expected_tests=${EXPECTED_TESTS:-542}
+expected_tests=${EXPECTED_TESTS:-547}
 native_programs=${NATIVE_PROGRAMS:-"closest_ellipse_equivalence \
 extended_convex_intersection subdiv2d_fault_injection \
 subdiv2d_float32_equivalence"}

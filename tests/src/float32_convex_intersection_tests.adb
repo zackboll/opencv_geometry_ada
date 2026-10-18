@@ -543,6 +543,7 @@ package body Float32_Convex_Intersection_Tests is
           (null, 0, null, 0, 0, null, 0, null, Area'Access);
       AUnit.Assertions.Assert
         (Status = C_API.Error_Invalid_Argument
+         and then Area = 0.0
          and then Has_Message ("count pointer"),
          "a null count output must be rejected");
       Status :=

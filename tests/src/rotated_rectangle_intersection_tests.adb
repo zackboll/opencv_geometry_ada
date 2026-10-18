@@ -421,6 +421,7 @@ package body Rotated_Rectangle_Intersection_Tests is
           (Left'Access, Right'Access, Kind'Access, Output (0)'Access, 8, null);
       AUnit.Assertions.Assert
         (Status = C_API.Error_Invalid_Argument
+         and then Kind = C_API.Rectangles_Intersect_None
          and then C_API."=" (Output, Sentinel),
          "null output count must be rejected");
 

@@ -78,6 +78,19 @@ package body OpenCV.Geometry is
       end if;
    end Pack_Contour;
 
+   --  Bound native signed count expressions before allocating packed input.
+   function Pack_Bounded_Contour
+     (Points : Contour; Limit : Natural) return Internal.C_API.Point_I32_Array
+   is
+   begin
+      if Points'Length > Limit then
+         Ada.Exceptions.Raise_Exception
+           (OpenCV.OpenCV_Error'Identity,
+            "contour point count exceeds native allocation range");
+      end if;
+      return Pack_Contour (Points);
+   end Pack_Bounded_Contour;
+
    procedure Raise_On_Error
      (Status : Internal.C_API.Status; Operation : String)
    is
@@ -1049,7 +1062,9 @@ package body OpenCV.Geometry is
      (Points : Contour) return Enclosing_Triangle
    is
       pragma Suppress (Validity_Check);
-      Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Packed : Internal.C_API.Point_I32_Array :=
+        Pack_Bounded_Contour
+          (Points, Natural (Interfaces.Integer_32'Last) - 2);
       Area   : aliased Interfaces.C.double := 0.0;
       Result : aliased Internal.C_API.C_Triangle :=
         (V0_X => 0.0,
@@ -1200,7 +1215,9 @@ package body OpenCV.Geometry is
      (Points : Contour) return OpenCV.Rotated_Rect
    is
       pragma Suppress (Validity_Check);
-      Packed : Internal.C_API.Point_I32_Array := Pack_Contour (Points);
+      Packed : Internal.C_API.Point_I32_Array :=
+        Pack_Bounded_Contour
+          (Points, Natural (Interfaces.Integer_32'Last) / 3);
       Result : aliased Internal.C_API.C_Rotated_Rect :=
         (Center_X      => 0.0,
          Center_Y      => 0.0,

@@ -674,6 +674,7 @@ package body Convex_Polygon_Intersection_Tests is
            Count'Access,
            Area'Access);
       Expect_Invalid ("output", "null output with positive capacity");
+      Area := -1.0;
       Status :=
         C_API.Intersect_Convex_Convex
           (Left (0)'Access,
@@ -687,6 +688,7 @@ package body Convex_Polygon_Intersection_Tests is
            Area'Access);
       AUnit.Assertions.Assert
         (Status = C_API.Error_Invalid_Argument
+         and then Area = 0.0
          and then C_API."=" (Output, Sentinel),
          "null output count must be rejected");
       Count := -1;
