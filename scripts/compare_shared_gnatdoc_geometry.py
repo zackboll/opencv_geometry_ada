@@ -86,6 +86,14 @@ def compare(workspace):
             "shared-only reference ownership differs")
     require(sum(r["referenced_type"].startswith("opencv.geometry.") for r in rows) == 171,
             "local type count differs")
+    history_root = Path(__file__).absolute().parents[1]
+    history = json.loads(regular(history_root / "docs/evidence/gnatdoc009/type-link-occurrences.json"))
+    keys = ("package", "declaration", "native_page", "native_anchor", "offset", "end",
+            "referenced_type", "complete_source_profile", "exact_source_declaration", "source_line",
+            "actual_native_declaration_owner", "legacy")
+    require(len(history) == len(rows) and
+            all(all(a[k] == b[k] for k in keys) for a, b in zip(history, rows)),
+            "source occurrence ledger differs from reviewed historical identities")
     repaired = [r for r in rows if r["declaration"] == "Contour"]
     require(len(repaired) == 1 and repaired[0]["referenced_type"] == "opencv.point_array" and
             repaired[0]["exact_source_declaration"].strip().startswith(
@@ -93,6 +101,9 @@ def compare(workspace):
     oracle = entries(pristine / "api", source / "src", source / "docs/api-categories.json")
     legacy_oracle = entries(source / "_site/api", source / "src", source / "docs/api-categories.json")
     require(oracle == legacy_oracle, "original navigation/profile oracle changed")
+    require(json.loads(json.dumps(oracle)) == json.loads(regular(
+                history_root / "docs/evidence/gnatdoc009/original-navigation.json")),
+            "navigation differs from historical source-backed oracle")
     expected = [[category, item["href"], item["name"] +
                  (f' ({item["overload"]})' if item["overload"] else "")]
                 for _, _, groups in oracle for category, _, items in groups for item in items]

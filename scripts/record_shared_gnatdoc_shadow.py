@@ -24,6 +24,11 @@ def record(workspace):
         from qualify_shared_gnatdoc_shadow import ROOT, git
         require(q["consumer_tested"] == git(ROOT, "rev-parse", "HEAD").decode().strip(), "stale Geometry HEAD")
         require(q["deterministic"] is True and q["byte_idempotent"] is True, "missing determinism/idempotence")
+        require(q["legacy_deterministic"] is True and q["legacy_byte_idempotent"] is True,
+                "missing original determinism/idempotence")
+        require(sha(regular(workspace / "commands.json")) == q["commands_sha256"], "command provenance changed")
+        for command in read(workspace / "commands.json"):
+            require(sha(regular(workspace / command["log"])) == command["sha256"], "execution log changed")
         require(file_hashes(workspace / "pristine-first") == file_hashes(workspace / "pristine-second") ==
                 q["pristine_sha256"], "pristine binding differs")
         require(file_hashes(workspace / "first/_site") == file_hashes(workspace / "second/_site") ==

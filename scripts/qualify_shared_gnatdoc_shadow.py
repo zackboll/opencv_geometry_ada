@@ -305,6 +305,8 @@ def qualify(args):
         require(outputs[0] == outputs[1], "two-copy nondeterminism")
         report["verification"] = verify_publication(workspace, args.enhancer)
         report["shadow_gates"] = gates(s, source, workspace / "first/_site", workspace / "native-first.log")
+        require(git(ROOT, "rev-parse", "HEAD").decode().strip() == args.expected_head and
+                not git(ROOT, "status", "--porcelain"), "Geometry snapshot changed during qualification")
         report.update({"shadow_sha256": outputs[0], "legacy_sha256": file_hashes(legacy / "_site"),
                        "deterministic": True, "byte_idempotent": True,
                        "disposition": "HOSTED_CI_PENDING"})
