@@ -165,10 +165,12 @@ def candidate_rules(baseline, candidate, additions=ADDITIONS):
                             if n not in EVOLVING_AUTHORED})
     for name in git(ROOT, "ls-files", "--", "docs/assets").decode().splitlines():
         require(regular(candidate / name) == regular(ROOT / name), "authored asset modified")
-    old, current = inventory(baseline), inventory(candidate)
+    # The selected reviewed policy base is the evolving published baseline.
+    # PREDECESSOR stays historical; future merged additions cannot be removed.
+    old, current = inventory(ROOT), inventory(candidate)
     added = compatible(old, current, additions)
-    categories(baseline, candidate, current)
-    old_cases, current_cases = registered_cases(baseline), registered_cases(candidate)
+    categories(ROOT, candidate, current)
+    old_cases, current_cases = registered_cases(ROOT), registered_cases(candidate)
     require(set(old_cases) <= set(current_cases), "existing AUnit registration disappeared")
     return {"declarations": sum(map(len, current.values())), "added": added,
             "aunit_registered": len(current_cases)}
@@ -203,6 +205,7 @@ def current_output(source, pristine, shadow, core):
     """Independent source matcher/resolver; no shared-tool inventory authority."""
     oracle = entries(pristine / "api", source / "src", source / "docs/api-categories.json")
     native, rendered = sections(pristine), sections(shadow)
+    require({p.lower() for p, _ in native} == PACKAGES, "native package ownership changed")
     require(native.keys() == rendered.keys(), "native declaration inventory mismatch")
     require(len(native) == sum(map(len, inventory(source).values())),
             "source/native declaration correspondence differs")

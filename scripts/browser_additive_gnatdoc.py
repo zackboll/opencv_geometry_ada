@@ -82,8 +82,7 @@ def qualify(workspace, executable):
                         page.on("pageerror", lambda error: errors.append(str(error)))
                         page.goto(shell)
                         if javascript:
-                            page.locator('#package-navigation[data-default-ready="true"]').wait_for()
-                        page.locator("#operations").click()
+                            page.locator('#package-navigation[data-ready="true"]').wait_for()
                         links = page.locator(".operation-group a")
                         check(links.count() == len(selections), "derived navigation total")
                         check(page.locator(".operation-group").count() ==

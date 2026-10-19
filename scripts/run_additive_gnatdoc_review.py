@@ -26,6 +26,8 @@ def run(args):
     # Environment is inherited by renderer/native subprocesses too.
     os.environ.update(env)
     python = sys.executable
+    # Original fixed-count suites also run in their actual original source
+    # checkout, not merely on a newer checkout with coincidentally equal totals.
     session.run([python, "scripts/qualify_shared_gnatdoc_shadow.py",
                  "--workspace", historical, "--expected-head", PREDECESSOR,
                  "--enhancer", args.enhancer, "--core", args.core,
@@ -38,6 +40,15 @@ def run(args):
     session.run([python, "scripts/qualify_shared_gnatdoc_browser.py", "--workspace", historical,
                  "--chromium", args.chromium], predecessor)
     session.run([python, "scripts/record_shared_gnatdoc_shadow.py", "--workspace", historical], predecessor)
+    original = historical / "historical"
+    session.run(["sh", "scripts/generate_docs.sh"], original,
+                env={"GNATDOC_PREFIX": str(args.gnatdoc_prefix)})
+    from additive_gnatdoc_policy import TRANSITION, read
+    authority = read(ROOT / TRANSITION)
+    modules = sorted(Path(n).stem for n in authority["baseline_files_sha256"]
+                     if n.startswith("scripts/test_") and n.endswith(".py"))
+    session.run([python, "-m", "unittest", "-v", *modules], original,
+                env={"PYTHONPATH": str(original / "scripts")})
     policy_revision = git(ROOT, "rev-parse", "HEAD").decode().strip()
     from additive_gnatdoc_fixture import create
     fixture_repository = args.workspace / "fixture-repository"

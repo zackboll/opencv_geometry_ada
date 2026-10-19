@@ -119,6 +119,32 @@ class AdditivePolicyTests(unittest.TestCase):
             self.assertEqual(derived, original)
             self.assertIn(b"current-authored.json", config)
 
+    def test_each_protected_script_still_uses_historical_authority(self):
+        from additive_gnatdoc_policy import TRUSTED_SCRIPTS, TRANSITION, check_files
+        authority = read(ROOT / TRANSITION)
+        self.assertEqual(len(TRUSTED_SCRIPTS), 23)
+        for name in TRUSTED_SCRIPTS:
+            with self.subTest(name=name):
+                check_files(ROOT, {name: authority["baseline_files_sha256"][name]})
+
+    def test_recorder_missing_evidence_is_nonready(self):
+        from record_additive_gnatdoc import record
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            result = record(root / "absent", ROOT, PREDECESSOR, PREDECESSOR, root)
+            self.assertFalse(result["local_qualification_complete"])
+            self.assertFalse(result["policy_approved"])
+            self.assertTrue(result["non_deployable"])
+            self.assertTrue((root / "absent/readiness.json").is_file())
+
+    def test_constant_type_reference_uses_lowercase_resolver_identity(self):
+        # The historical resolver consumes token-normalized names. Constants
+        # are an extra type position and must use the same normalization.
+        import re
+        text = "Identity_Affine_Transform : constant Affine_Transform_2D := 0;"
+        match = re.match(r"\s*\w+\s*:\s*constant\s+([A-Za-z][A-Za-z0-9_.]*)", text)
+        self.assertEqual(match[1].lower(), "affine_transform_2d")
+
 
 if __name__ == "__main__":
     unittest.main()

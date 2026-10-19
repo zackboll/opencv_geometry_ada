@@ -30,10 +30,16 @@ def source_rules(baseline, source, synthetic):
 
 def verify(workspace, repository, revision, policy_revision, synthetic=False):
     policy_tree = policy_identity(policy_revision)
+    git(repository, "merge-base", "--is-ancestor", policy_revision, revision)
     source = workspace / "source"
     require(git(source, "rev-parse", "HEAD").decode().strip() == revision,
             "stale/substituted candidate commit")
     tree = exact_snapshot(source, repository, revision, pins=True)
+    for name, pin in (("alire.toml", "../core"), ("tests/alire.toml", "../../core")):
+        original = git(repository, "show", f"{revision}:{name}")
+        expected = original + ("\n[[pins]]\nopencv_core = { path='" + pin + "' }\n").encode()
+        require(regular(source / name) == expected, "unauthorized build-clone manifest mutation")
+    exact_snapshot(workspace / "baseline", repository, PREDECESSOR)
     rules = source_rules(workspace / "baseline", source, synthetic)
     require(not git(source, "diff", "--name-only", "--", ".", ":(exclude)alire.toml",
                     ":(exclude)tests/alire.toml"), "tracked candidate files changed")
