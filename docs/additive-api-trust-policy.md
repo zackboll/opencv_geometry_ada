@@ -173,15 +173,42 @@ GNAT 16.1.0, GPRbuild 26.0.1 Alire release, Alire 2.1.1, Markdown 3.0.0/0.1.2
 and the existing browser environment remain the qualification tools. No runtime
 dependency is added. Native OpenCV/platform isolation is outside this policy.
 
-## Known integration gate: production regression workflow routing
+## R1 routing and publication boundary
 
-The production generator and Pages workflow are deliberately unchanged in this
-candidate. Their protected historical regression scripts still contain fixed
-130-entry assertions. The old shared-shadow workflow also still invokes the
-predecessor runner on candidate HEAD. Consequently **a successful additive
-shadow fixture alone does not yet establish that an additive feature PR can
-pass all ordinary documentation workflows**. A reviewed routing integration
-must keep production generation and Pages behavior, run fixed historical tests
-on historical output, and invoke the successor current-source checks on the
-candidate. Until that integration and final-head qualification are complete,
-this policy is not an unblocking authorization for GEOM-031.
+The standard `Ada API Documentation / build` job still builds and generates
+the actual candidate with the unchanged production `scripts/generate_docs.sh`,
+checks deterministic fresh output/idempotence, executes all six examples and
+uploads the actual current `_site`. Its unchanged fixed-count Python and four
+Chromium suites now run on `ec4d689eac748b7837abd4c3754c3090ca4bf814`, with
+that checkout's generated output. No historical output is substituted for the
+current artifact. The existing `Shared GNATdoc shadow / qualify` identity now
+executes the immutable predecessor campaign at `2f5239a...`, including native,
+542/542 historical AUnit, 30 attacks and the eight-cell historical matrix.
+
+The standard workflow also calls the successor workflow as `current-trust`.
+Pages deployment needs **both** `build` and `current-trust`; only authorized
+non-PR main events retain Pages/OIDC permissions. The uploaded Pages artifact
+comes exclusively from production `geometry/_site`, never an offline workspace.
+The successor independently regenerates production output, checks its complete
+coverage and forbids `.invalid` destinations, in addition to its shadow checks.
+Both current and disposable additive fixture execute this same production
+generator twice and independently again during verification. Fixed historical
+regressions are never applied to the expanded candidate output.
+
+All three workflows retain read-only contents permissions and non-persistent
+checkout credentials for source execution. There is no label/name/path bypass.
+The additive workflow is reusable as well as PR-triggered. PR policy selection
+uses the exact base SHA; main push uses the event's predecessor, and manual main
+uses its first parent. A missing successor is bootstrapped only from the named
+immutable predecessor and is explicitly exploratory/unapproved. A candidate
+cannot change scripts/workflows to authorize new verifier bytes. Future policy
+changes require a separate human-reviewed policy transition.
+
+Administrators must protect the existing `build` and `qualify` required-check
+identities and the new reusable current-trust check, and require independent
+workflow review (for example through repository rules/CODEOWNERS managed by the
+maintainer). No API call in this task changes branch protection. Candidate-owned
+workflow YAML, read-only tokens and evidence hashes alone cannot prevent an
+authorized attacker from replacing the workflow or runner; those are explicit
+external trust assumptions, not self-proven guarantees. **DO NOT MERGE** until
+final technical qualification and independent review are complete.

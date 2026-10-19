@@ -5,6 +5,7 @@ infrastructure, not a repository editing or authority-update command.
 """
 from pathlib import Path
 import subprocess
+import tempfile
 
 from additive_gnatdoc_policy import ROOT, GUIDE, EXAMPLE, regular, require, git
 
@@ -117,17 +118,29 @@ def expected(source):
 
 
 def validate(candidate, policy):
-    expected_files = expected(policy)
     policy_revision = git(policy, "rev-parse", "HEAD").decode().strip()
-    names = git(candidate, "diff", "--name-only", policy_revision, "HEAD").decode().splitlines()
+    parent = git(candidate, "rev-parse", "HEAD^1").decode().strip()
+    git(candidate, "merge-base", "--is-ancestor", policy_revision, parent)
+    # The fixture is based on the actual candidate, including legitimate
+    # future additions, not the older policy API. Obtain original bytes from
+    # its immutable parent, never an editable fixture expectation manifest.
+    with tempfile.TemporaryDirectory(prefix="fixture-parent-") as folder:
+        original = Path(folder)
+        for name in ("src/opencv-geometry.ads", "src/opencv-geometry.adb",
+                     "docs/api-categories.json", GUIDE, EXAMPLE, "tests/src/tests.adb"):
+            dest = original / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(git(candidate, "show", f"{parent}:{name}"))
+        expected_files = expected(original)
+    names = git(candidate, "diff", "--name-only", parent, "HEAD").decode().splitlines()
     require(set(names) == set(expected_files), "synthetic fixture contains non-fixture changes")
     for name, payload in expected_files.items():
         require(regular(candidate / name) == payload, "synthetic fixture changed: " + name)
 
 
-def create(target, policy_revision):
+def create(target, policy_revision, repository=ROOT):
     require(not target.exists() and not target.is_relative_to(ROOT), "fixture must be a new disposable path")
-    subprocess.run(["git", "clone", "--no-hardlinks", str(ROOT), str(target)], check=True)
+    subprocess.run(["git", "clone", "--no-hardlinks", str(repository), str(target)], check=True)
     subprocess.run(["git", "checkout", "--detach", policy_revision], cwd=target, check=True)
     for name, payload in expected(target).items():
         (target / name).write_bytes(payload)

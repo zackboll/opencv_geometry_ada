@@ -2,37 +2,43 @@ name: Additive GNATdoc policy review (non-deployable)
 
 on:
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: additive-doc-policy-${{ github.event.pull_request.number }}
+  group: additive-doc-policy-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   qualify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout exact candidate without credentials
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           path: candidate
           persist-credentials: false
       - name: Checkout independently selected base policy
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
           fetch-depth: 0
           path: policy
           persist-credentials: false
       - name: Explicit first-policy review bootstrap, never approval
         env:
-          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          # Manual main runs select its first-parent reviewed base. Neither
+          # candidate scripts nor an editable manifest choose this revision.
+          if test "$(git -C policy rev-parse HEAD)" = "$CANDIDATE_SHA"; then
+            git -C policy checkout --detach "$CANDIDATE_SHA^1"
+          fi
           if test ! -f policy/scripts/run_additive_gnatdoc_review.py; then
             test "$(git -C policy rev-parse HEAD)" = 2f5239a0e264ca2bb4106cdb338d3eac25abf674
             git -C policy fetch ../candidate "$CANDIDATE_SHA"
@@ -81,7 +87,7 @@ jobs:
       - name: Historical and exact-current qualification, fixture and attacks
         working-directory: policy
         env:
-          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           /tmp/policy-tools/bin/python scripts/run_additive_gnatdoc_review.py \
             --workspace /tmp/additive-review \
@@ -95,7 +101,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: NON-DEPLOYABLE-additive-policy-${{ github.event.pull_request.head.sha }}
+          name: NON-DEPLOYABLE-additive-policy-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             /tmp/additive-review/campaign.json
             /tmp/additive-review/*.log

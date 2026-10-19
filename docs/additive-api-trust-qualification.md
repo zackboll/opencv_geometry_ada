@@ -2,6 +2,24 @@
 
 **CORRECTIVE_WORK_REQUIRED. Not an approval record. GEOM-031 remains blocked.**
 
+## R1 correction under qualification
+
+R1 routes fixed tests to immutable historical output and keeps actual candidate
+production generation/artifacts separate. Pages now additionally depends on the
+reusable successor current-trust job. Standard generation is run for both the
+candidate and synthetic fixture and reconstructed during independent checking.
+The stale-commit attack uses a real predecessor commit and requires the exact
+identity-mismatch diagnostic. Other mutations accept only `ValueError` integrity
+diagnostics appropriate to the mutated object, never generic Git/OSError failure.
+Focused tests explicitly reject unrelated tool/environment failures as evidence.
+
+At the reviewed `809daea...` head, hosted standard documentation, Linux/macOS,
+GNAT 12, Debian AArch64, installed-consumer and cross-configuration checks were
+observed passing. The policy and shared-shadow runs were still in progress.
+Earlier cancellations and the failed local campaign remain historical evidence;
+none qualifies the corrected final head. R1 final-head results must be collected
+separately, with exact candidate/policy identities from the campaign reports.
+
 PR: <https://github.com/zackboll/opencv_geometry_ada/pull/53>.
 Starting main: `2f5239a0e264ca2bb4106cdb338d3eac25abf674`;
 tree: `c440b9901e1003f06ae555b3a8a80d9874229680`.

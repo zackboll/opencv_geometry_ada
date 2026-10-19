@@ -45,6 +45,9 @@ def record(workspace, repository, revision, policy_revision, historical_workspac
         expected_examples |= {str(workspace / "source/obj/docs-examples" / name) for name in EXAMPLES}
         require(expected_examples <= {c["argv"][0] for c in commands if len(c["argv"]) == 1},
                 "compiled example execution missing")
+        require(sum(c["argv"] == ["sh", "scripts/generate_docs.sh"] and
+                    c["cwd"] == str(workspace / "source") for c in commands) == 2,
+                "standard current generation/determinism evidence missing")
         reports = {}
         for name in ("browser", "negative"):
             report = read(workspace / (name + ".json"))

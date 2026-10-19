@@ -28,6 +28,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: geometry
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Checkout immutable historical regression source
+        uses: actions/checkout@v4
+        with:
+          ref: ec4d689eac748b7837abd4c3754c3090ca4bf814
+          path: historical
+          persist-credentials: false
       # The opencv_core 0.5.0 release commit (tag 0.5.0), temporarily
       # pinned as in the cross-platform CI; scripts/generate_docs.sh
       # verifies it.
@@ -37,6 +45,7 @@ jobs:
           repository: zackboll/opencv_core_ada
           ref: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
           path: core
+          persist-credentials: false
       - name: Record checkout identities
         run: |
           echo "Geometry: $(git rev-parse HEAD)"
@@ -63,24 +72,20 @@ jobs:
           python3 -m venv .doc-tools/markdown
           .doc-tools/markdown/bin/pip install -r docs/requirements.txt
           echo "DOC_PYTHON=$GITHUB_WORKSPACE/geometry/.doc-tools/markdown/bin/python" >> "$GITHUB_ENV"
-      - name: Test warning comparison
-        run: '"$DOC_PYTHON" -m unittest discover -s scripts -p ''test_compare_gnatdoc_warnings.py'' -v'
-      - name: Test documentation validator
-        run: '"$DOC_PYTHON" -m unittest discover -s scripts -p ''test_validate_docs.py'' -v'
-      - name: Test documentation coverage and comment-only checks
-        run: |
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_check_doc_coverage.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_check_comment_only.py' -v
-      - name: Test type links, theme and Ada highlighting
-        run: '"$DOC_PYTHON" -m unittest discover -s scripts -p ''test_link_gnatdoc_types.py'' -v'
       - name: Generate and validate public API and guides
         run: sh scripts/generate_docs.sh
-      - name: Qualify generated site against validator, coverage, navigation and guide mutations
+      - name: Generate historical output and run unchanged 232 regression tests
+        working-directory: historical
+        env:
+          GNATDOC_PREFIX: ${{ github.workspace }}/geometry/.doc-tools/gnatdoc-26.0.0
         run: |
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_validate_docs.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_check_doc_coverage.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_gnatdoc_navigation.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_gnatdoc_guides.py' -v
+          alr -n pin opencv_core --use=../core
+          sh scripts/generate_docs.sh
+          PYTHONPATH="$PWD/scripts" "$DOC_PYTHON" -m unittest -v \
+            test_check_comment_only test_check_doc_coverage \
+            test_compare_gnatdoc_warnings test_gnatdoc_guides \
+            test_gnatdoc_navigation test_investigate_shared_gnatdoc_types \
+            test_link_gnatdoc_types test_validate_docs
       - name: Qualify deterministic fresh generation and idempotent enhancement
         run: |
           cp -a _site /tmp/documentation-first
@@ -109,12 +114,14 @@ jobs:
           repository: zackboll/opencv_core_ada
           ref: ccc2190f9bf0712d65a2b9d2983cde7ce68b4bae
           path: core-navigation
+          persist-credentials: false
       - name: Generate actual Core browser fixture
         working-directory: core-navigation
         env:
           GNATDOC_PREFIX: ${{ github.workspace }}/geometry/.doc-tools/gnatdoc-26.0.0
         run: sh scripts/generate_docs.sh
       - name: Qualify cross-repository declaration navigation in Chromium
+        working-directory: historical
         run: |
           npm install --prefix /tmp/doc-browser --no-package-lock playwright@1.64.1
           /tmp/doc-browser/node_modules/.bin/playwright install --with-deps chromium
@@ -134,6 +141,7 @@ jobs:
           node scripts/test_core_type_links_browser.cjs
           node scripts/test_gnatdoc_presentation_browser.cjs
           node scripts/test_gnatdoc_navigation_browser.cjs
+          node scripts/test_gnatdoc_guides_browser.cjs
       - name: Upload cross-repository browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -162,9 +170,14 @@ jobs:
         with:
           path: geometry/_site/
 
+  current-trust:
+    # Stable build check stays; publication additionally requires complete
+    # exact-candidate successor qualification, never the offline artifact.
+    uses: ./.github/workflows/documentation-additive-policy.yml
+
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
+    needs: [build, current-trust]
     runs-on: ubuntu-24.04
     permissions:
       pages: write

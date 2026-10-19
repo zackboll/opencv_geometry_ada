@@ -30,10 +30,10 @@ def source_rules(baseline, source, synthetic):
 
 def verify(workspace, repository, revision, policy_revision, synthetic=False):
     policy_tree = policy_identity(policy_revision)
-    git(repository, "merge-base", "--is-ancestor", policy_revision, revision)
     source = workspace / "source"
     require(git(source, "rev-parse", "HEAD").decode().strip() == revision,
             "stale/substituted candidate commit")
+    git(repository, "merge-base", "--is-ancestor", policy_revision, revision)
     tree = exact_snapshot(source, repository, revision, pins=True)
     for name, pin in (("alire.toml", "../core"), ("tests/alire.toml", "../../core")):
         original = git(repository, "show", f"{revision}:{name}")
@@ -77,9 +77,34 @@ def verify(workspace, repository, revision, policy_revision, synthetic=False):
     cov = coverage(source, site, workspace / "native-first.log")
     executed = aunit_results(source, regular(workspace / "aunit.log").decode())
     require(executed["registered"] == rules["aunit_registered"], "AUnit source/execution mismatch")
+    production = verify_production(workspace, source)
     return {"policy_revision": policy_revision, "policy_tree": policy_tree,
             "candidate": revision, "candidate_tree": tree, "rules": rules,
-            "coverage": cov, "aunit": executed, "comparison": comparison}
+            "coverage": cov, "aunit": executed, "comparison": comparison,
+            "production": production}
+
+
+def production_generate(session, source, prefix):
+    # The candidate copy is byte-checked against the protected historical
+    # generator before execution; source-matching helpers are likewise frozen.
+    session.run(["sh", "scripts/generate_docs.sh"], source,
+                env={"GNATDOC_PREFIX": str(prefix)})
+    return file_hashes(source / "_site")
+
+
+def verify_production(workspace, source):
+    """Regenerate actual deployable output, never substitute offline shadow."""
+    expected = read(workspace / "production-sha256.json")
+    require(file_hashes(source / "_site") == expected, "production site changed")
+    with tempfile.TemporaryDirectory(prefix="production-recheck-") as folder:
+        observed = production_generate(Session(Path(folder)), source, workspace / "gnatdoc")
+    require(observed == expected, "independent production regeneration differs")
+    for name in observed:
+        if name.endswith((".html", ".json", ".js", ".css")):
+            require(b".invalid" not in regular(source / "_site" / name),
+                    "offline destination in production output")
+    cov = coverage(source, source / "_site", source / "obj/docs/gnatdoc.log")
+    return {"site_sha256": observed, "coverage": cov, "deployable_output": True}
 
 
 def historical_verify(workspace, historical_workspace):
@@ -146,6 +171,10 @@ def qualify(args):
         shutil.copytree(args.gnatdoc_prefix, workspace / "gnatdoc")
         require(sha(regular(workspace / "gnatdoc/bin/gnatdoc")) == GNATDOC_SHA256,
                 "wrong GNATdoc bytes")
+        production = production_generate(session, source, workspace / "gnatdoc")
+        require(production_generate(session, source, workspace / "gnatdoc") == production,
+                "standard generator is nondeterministic")
+        write(workspace / "production-sha256.json", production)
         for label in ("first", "second"):
             native(session, source, workspace / "gnatdoc/bin/gnatdoc",
                    workspace / ("pristine-" + label), workspace / ("native-" + label + ".log"))

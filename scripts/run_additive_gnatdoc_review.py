@@ -74,7 +74,7 @@ def run(args):
     policy_revision = git(ROOT, "rev-parse", "HEAD").decode().strip()
     from additive_gnatdoc_fixture import create
     fixture_repository = args.workspace / "fixture-repository"
-    fixture_revision = create(fixture_repository, policy_revision)
+    fixture_revision = create(fixture_repository, args.candidate_revision, args.candidate_repository)
     current = args.workspace / "current"
     fixture = args.workspace / "fixture"
     for repository, revision, output, flags in (

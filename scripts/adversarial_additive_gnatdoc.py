@@ -4,7 +4,6 @@ import argparse
 import copy
 import json
 from pathlib import Path
-import subprocess
 
 from additive_gnatdoc_policy import (
     ROOT, EVIDENCE, GUIDE, EXAMPLE, TRANSITION, TRUSTED_SCRIPTS,
@@ -12,6 +11,13 @@ from additive_gnatdoc_policy import (
     candidate_rules, aunit_results,
 )
 from qualify_additive_gnatdoc import verify
+
+
+def expected_rejection(error, expected):
+    """Only a diagnosed integrity rejection counts; tool/environment faults fail."""
+    require(isinstance(error, ValueError) and any(text in str(error) for text in expected),
+            "unrelated rejection cannot qualify an attack: " + repr(error))
+    return str(error)
 
 
 def qualify(workspace, repository, revision, policy_revision, synthetic=False):
@@ -39,8 +45,27 @@ def qualify(workspace, repository, revision, policy_revision, synthetic=False):
                 observed[str(path.relative_to(workspace))] = sha(after)
             try:
                 reject()
-            except (ValueError, OSError, KeyError, subprocess.CalledProcessError) as error:
-                reason = str(error)
+            except ValueError as error:
+                paths = [str(p.relative_to(root)) for p in changes if p.is_relative_to(root)
+                         and not p.is_relative_to(site)]
+                if spec in changes:
+                    expected = ("candidate snapshot changed: src/opencv-geometry.ads",)
+                elif paths and all(p.startswith("qualification-public/") for p in paths):
+                    expected = ("staged source/native mismatch",)
+                elif paths and paths != ["current-authored.json"]:
+                    expected = tuple("candidate snapshot changed: " + p for p in paths)
+                else:
+                    expected = {
+                        "forged authored-input manifest": ("forged authored input contract",),
+                        "falsified AUnit execution": ("AUnit executed cases differ from registrations",),
+                        "falsified AUnit totals": ("AUnit totals differ: Failed Assertions",),
+                        "wrong Core type destination": ("published file differs from reconstructed output:",),
+                        "wrong-but-valid native anchor": ("published file differs from reconstructed output:",),
+                        "native profile tamper": ("published file differs from reconstructed output:",),
+                        "coordinated output and matching forged manifest": ("enhanced output does not match source/manifest",),
+                        "forged current native acquisition": ("native acquisitions differ",),
+                    }[name]
+                reason = expected_rejection(error, expected)
             else:
                 raise AssertionError("attack accepted: " + name)
         finally:
@@ -117,13 +142,18 @@ def qualify(workspace, repository, revision, policy_revision, synthetic=False):
         try:
             compatible(before, changed)
         except ValueError as error:
+            expected_rejection(error, ("published declaration order changed",))
             report["attacks"].append({"name": "incorrect existing overload identity",
                 "observed": True, "rejection": str(error), "restored_and_verified": check() == initial})
         else:
             raise AssertionError("overload substitution accepted")
         try:
-            verify(workspace, repository, "0" * 40, policy_revision, synthetic)
-        except (ValueError, OSError, subprocess.CalledProcessError) as error:
+            # Use a real, independently present commit, not an invalid object
+            # whose Git error could be mistaken for a security rejection.
+            from additive_gnatdoc_policy import PREDECESSOR
+            verify(workspace, repository, PREDECESSOR, policy_revision, synthetic)
+        except ValueError as error:
+            expected_rejection(error, ("stale/substituted candidate commit",))
             report["attacks"].append({"name": "stale/substituted candidate commit", "observed": True,
                 "rejection": str(error), "restored_and_verified": check() == initial})
         else:

@@ -183,6 +183,17 @@ class AdditivePolicyTests(unittest.TestCase):
             with self.subTest(text=text), self.assertRaises(ValueError):
                 markdown(text)
 
+    def test_attack_harness_rejects_unrelated_subprocess_failure(self):
+        import subprocess
+        from adversarial_additive_gnatdoc import expected_rejection
+        for error in (subprocess.CalledProcessError(128, ["git", "status"]),
+                      OSError("disk full"), ValueError("native generator failed")):
+            with self.subTest(error=error), self.assertRaisesRegex(ValueError, "unrelated rejection"):
+                expected_rejection(error, ("stale/substituted candidate commit",))
+        self.assertEqual(expected_rejection(ValueError("stale/substituted candidate commit"),
+                                           ("stale/substituted candidate commit",)),
+                         "stale/substituted candidate commit")
+
 
 if __name__ == "__main__":
     unittest.main()
