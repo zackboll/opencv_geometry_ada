@@ -115,9 +115,6 @@ check_dependencies() {
     otool -L "$binary"
     otool -l "$binary" | grep -A4 LC_BUILD_VERSION
     otool -L "$binary" | grep -F /usr/lib/libSystem.B.dylib
-    if otool -L "$binary" | grep -E 'libstdc\+\+'; then
-        exit 1
-    fi
 }
 
 shim=lib/libopencv_geometry_shim.dylib
@@ -125,7 +122,9 @@ otool -D "$shim" | grep -Fx '@rpath/libopencv_geometry_shim.dylib'
 otool -L "$shim" | grep -F "$library/libopencv_$native."
 otool -L "$shim" | grep -F "$library/libopencv_core."
 otool -L "$shim" | grep -F /usr/lib/libc++
-if otool -L "$shim" | grep -F libopencv_core_shim; then exit 1; fi
+# GNAT's executable driver itself can link libstdc++; the isolation
+# requirement applies to the externally compiled Geometry C++ shim.
+if otool -L "$shim" | grep -E 'libopencv_core_shim|libstdc\+\+'; then exit 1; fi
 check_dependencies "$shim"
 
 # -v retains the actual gprbuild/GCC command. -t retains every linker input.
