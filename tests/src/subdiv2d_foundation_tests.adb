@@ -454,6 +454,78 @@ package body Subdiv2D_Foundation_Tests is
         (Subdiv.Is_Ready (Object), "an empty array inserts nothing");
    end Nonzero_Array_Bounds;
 
+   procedure Chunked_High_Bounds (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Object : Subdiv.Subdivision := Subdiv.Create (Square);
+      Batch  : Points (Natural'Last - 4096 .. Natural'Last) :=
+        (others => Fixture_Points (1));
+   begin
+      --  Distinct markers straddle the chunk boundary. Repeated points keep
+      --  native geometry small while exercising all 4097 array positions.
+      Batch (Batch'Last - 1) := Fixture_Points (2);
+      Batch (Batch'Last) := Fixture_Points (3);
+      Subdiv.Insert (Object, Batch);
+      for Index in 1 .. 3 loop
+         AUnit.Assertions.Assert
+           (Is_Vertex (Object, Fixture_Points (Index)),
+            "both chunks, including the high-bound last point, are inserted");
+      end loop;
+      Subdiv.Insert
+        (Object,
+         Points'(Natural'Last .. Natural'Last - 1 => (X => 0.0, Y => 0.0)));
+      AUnit.Assertions.Assert
+        (Subdiv.Is_Ready (Object) and then Subdiv.Bounds (Object) = Square,
+         "a high-bound null range leaves the subdivision ready");
+   end Chunked_High_Bounds;
+
+   procedure Chunked_Nonfinite_Preflight (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      pragma Suppress (Validity_Check);
+      Object : Subdiv.Subdivision := Subdiv.Create (Square);
+      Saved  : constant Subdiv.Vertex_Id :=
+        Subdiv.Insert (Object, Fixture_Points (0));
+      Batch  : Points (17 .. 4113) := (others => Fixture_Points (1));
+
+      procedure Attempt is
+      begin
+         Subdiv.Insert (Object, Batch);
+      end Attempt;
+   begin
+      Batch (Batch'Last) := (X => NaN_32, Y => 10.0);
+      Assert_Raises_OpenCV_Error
+        (Attempt'Access, "a nonfinite point in chunk two is rejected");
+      AUnit.Assertions.Assert
+        (Subdiv.Is_Ready (Object)
+         and then Subdiv.Bounds (Object) = Square
+         and then Vertex_At (Object, Fixture_Points (0)) = Saved
+         and then not Is_Vertex (Object, Fixture_Points (1)),
+         "whole-array preflight rejects before chunk one mutates state");
+   end Chunked_Nonfinite_Preflight;
+
+   procedure Chunked_Native_Failure (Test : in out Fixture) is
+      pragma Unreferenced (Test);
+      Object : Subdiv.Subdivision := Subdiv.Create (Square);
+      Batch  : Points (17 .. 4114) := (others => Fixture_Points (1));
+
+      procedure Attempt is
+      begin
+         Subdiv.Insert (Object, Batch);
+      end Attempt;
+   begin
+      Batch (Batch'Last - 2) := Fixture_Points (2);
+      Batch (Batch'Last - 1) := (X => 100.0, Y => 10.0);
+      Batch (Batch'Last) := Fixture_Points (3);
+      Assert_Raises_OpenCV_Error
+        (Attempt'Access, "an outside point in chunk two is rejected");
+      AUnit.Assertions.Assert
+        (Subdiv.Is_Ready (Object)
+         and then Subdiv.Bounds (Object) = Square
+         and then Is_Vertex (Object, Fixture_Points (1))
+         and then Is_Vertex (Object, Fixture_Points (2))
+         and then not Is_Vertex (Object, Fixture_Points (3)),
+         "native rejection preserves the inserted prefix, not the suffix");
+   end Chunked_Native_Failure;
+
    procedure Reset_Discards_Points (Test : in out Fixture) is
       pragma Unreferenced (Test);
       Object : Subdiv.Subdivision := Subdiv.Create (Square);
@@ -825,6 +897,16 @@ package body Subdiv2D_Foundation_Tests is
       Result.Add_Test
         (Caller.Create
            ("Subdiv2D nonzero array bounds", Nonzero_Array_Bounds'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Subdiv2D chunked high bounds", Chunked_High_Bounds'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Subdiv2D chunked nonfinite preflight",
+            Chunked_Nonfinite_Preflight'Access));
+      Result.Add_Test
+        (Caller.Create
+           ("Subdiv2D chunked native failure", Chunked_Native_Failure'Access));
       Result.Add_Test
         (Caller.Create
            ("Subdiv2D Reset discards points", Reset_Discards_Points'Access));

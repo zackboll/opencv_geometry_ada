@@ -1797,6 +1797,12 @@ opencv_geometry_min_enclosing_triangle(
         return invalid_argument(
             "enclosing triangle point count must not be negative");
     }
+    // ABI safety: minEnclosingTriangle calls convexHull, which allocates
+    // total + 2 stack entries using signed int before processing the hull.
+    if (point_count > maximum_convex_hull_point_count) {
+        return invalid_argument(
+            "enclosing triangle point count exceeds native allocation range");
+    }
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
     }
@@ -1853,6 +1859,13 @@ opencv_geometry_min_area_rect(
     if (point_count < 0) {
         return invalid_argument(
             "minimum area rectangle point count must not be negative");
+    }
+    // ABI safety: integer minAreaRect also reaches rotatingCalipers, whose
+    // n*3 allocation uses signed int. Every input point may be a hull vertex.
+    // This bound also keeps convexHull's total + 2 and convertTo's 2*n safe.
+    if (point_count > INT32_MAX / 3) {
+        return invalid_argument(
+            "minimum area rectangle point count exceeds native allocation range");
     }
     if (point_count > 0 && points == nullptr) {
         return invalid_argument("null contour points with positive count");
@@ -3124,6 +3137,9 @@ opencv_geometry_intersect_convex_convex(
     float *out_area)
 {
     clear_error();
+    if (out_area != nullptr) {
+        *out_area = 0.0f;
+    }
     if (out_count == nullptr) {
         return invalid_argument(
             "null convex intersection output count pointer");
@@ -3232,6 +3248,9 @@ opencv_geometry_intersect_convex_convex_f32(
     float *out_area)
 {
     clear_error();
+    if (out_area != nullptr) {
+        *out_area = 0.0f;
+    }
     if (out_count == nullptr) {
         return invalid_argument(
             "null convex intersection output count pointer");
@@ -3518,6 +3537,9 @@ opencv_geometry_rotated_rectangle_intersection(
     int32_t *out_count)
 {
     clear_error();
+    if (out_kind != nullptr) {
+        *out_kind = OPENCV_GEOMETRY_RECTANGLES_INTERSECT_NONE;
+    }
     if (out_count == nullptr) {
         return invalid_argument(
             "null rectangle intersection output count pointer");

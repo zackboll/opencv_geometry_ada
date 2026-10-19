@@ -87,6 +87,14 @@ def qualify(workspace, enhancer):
                  lambda b: b.replace(CORE.encode(), b"ccc2190f9bf0712d65a2b9d2983cde7ce68b4bae"))
         mutation("altered public Ada declaration", root / "qualification-public/src/opencv-geometry.ads",
                  lambda b: b.replace(b"subtype Contour is OpenCV.Point_Array;", b"subtype Contour is OpenCV.Rect;"))
+        mutation("forged current authored native binding", root / "current-authored.json",
+                 lambda b: b.replace(b'"native_sha256": {', b'"native_sha256": {"forged": "0",'))
+        mutation("forged current configuration", root / "current-shadow.toml",
+                 lambda b: b.replace(b'current-authored.json', b'forged-authored.json'))
+        mutation("changed current source with matching staged declaration", root / "src/opencv-geometry.ads",
+                 lambda b: b + b"-- not in exact HEAD\n")
+        mutation("tampered reconstructed native output", workspace / "pristine-first/api/index.html",
+                 lambda b: b + b"<!-- forged native authority -->")
         mutation("wrong-but-existing native Core anchor", page,
                  lambda b: b.replace(anchor.encode(), other_anchor.encode(), 1))
         other_page = next(r["native_page"] for r in rows if r["package"] == "OpenCV.Geometry.Subdiv2D")
@@ -177,7 +185,7 @@ def qualify(workspace, enhancer):
             (staging / "unexpected.html").write_text("partial publication probe")
             initial = file_hashes(staging)
             try:
-                enhance(load(root, CONFIG), staging)
+                enhance(load(root, "current-shadow.toml"), staging)
             except ValueError as exc:
                 require(file_hashes(staging) == initial, "partial publication after failed enhancement")
                 report["mutations"].append({"name": "partial publication after failed enhancement",

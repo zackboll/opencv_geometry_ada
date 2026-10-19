@@ -519,7 +519,9 @@ package OpenCV.Geometry is
    --  Empty and degenerate contours preserve the native representation; no
    --  cross-version numerical equivalence is promised for degenerate cases.
    --  Points is unchanged. Inputs that would overflow native integer
-   --  convex-hull arithmetic raise OpenCV_Error.
+   --  convex-hull arithmetic raise OpenCV_Error. More than Integer_32'Last / 3
+   --  points are rejected before packing: native rotating calipers allocates
+   --  three binary32 values per hull vertex using signed count arithmetic.
    --  @param Points The point set, with any bounds; may be empty.
    --  @return The native minimum-area rotated rectangle, every field finite
    --    and Size nonnegative.
@@ -1364,8 +1366,8 @@ package OpenCV.Geometry is
    --    area nonnegative, when the native search returns.
    --  @exception OpenCV_Error Empty input or another failure reported by
    --    OpenCV, coordinates that would overflow native hull arithmetic, more
-   --    than Integer_32'Last points, or a non-finite or negative native
-   --    value.
+   --    than Integer_32'Last - 2 points (native hull allocation), or a
+   --    non-finite or negative native value.
    function Minimum_Enclosing_Triangle
      (Points : Contour) return Enclosing_Triangle;
 

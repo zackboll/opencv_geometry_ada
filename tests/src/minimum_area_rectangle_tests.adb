@@ -489,6 +489,21 @@ package body Minimum_Area_Rectangle_Tests is
          Angle_Degrees => -1.0);
       Status   : C_API.Status;
    begin
+      --  A tiny real buffer proves rejection precedes any point access.
+      Status :=
+        C_API.Min_Area_Rect
+          (Safe (0)'Access, Interfaces.Integer_32'Last / 3 + 1, Output'Access);
+      AUnit.Assertions.Assert
+        (Status = C_API.Error_Invalid_Argument
+         and then Ada.Strings.Fixed.Index
+                    (C_API.Last_Error_Message, "allocation")
+                  /= 0
+         and then Output.Center_X = 0.0
+         and then Output.Center_Y = 0.0
+         and then Output.Width = 0.0
+         and then Output.Height = 0.0
+         and then Output.Angle_Degrees = 0.0,
+         "oversized integer caliper allocation rejected before buffer read");
       Status := C_API.Min_Area_Rect (Safe (0)'Access, 3, Output'Access);
       AUnit.Assertions.Assert
         (Status = C_API.Success, "safe full span status");
