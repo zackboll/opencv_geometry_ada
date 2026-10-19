@@ -145,6 +145,36 @@ class AdditivePolicyTests(unittest.TestCase):
         match = re.match(r"\s*\w+\s*:\s*constant\s+([A-Za-z][A-Za-z0-9_.]*)", text)
         self.assertEqual(match[1].lower(), "affine_transform_2d")
 
+    def test_successor_historical_check_allows_scoped_source_only(self):
+        from additive_gnatdoc_policy import historical_inputs, EXAMPLE
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.copy(root)
+            (root / GUIDE).write_bytes(regular(root / GUIDE) + b"\nReviewed scope probe.\n")
+            (root / EXAMPLE).write_bytes(regular(root / EXAMPLE) + b"\n-- scope probe\n")
+            historical_inputs(root)
+            other = root / "docs/guides/delaunay-and-voronoi.md"
+            other.write_bytes(regular(other) + b"\nUnapproved guide.\n")
+            with self.assertRaisesRegex(ValueError, "authority bytes differ"):
+                historical_inputs(root)
+
+    def test_mutated_historical_transition_rejected_by_successor(self):
+        from additive_gnatdoc_policy import historical_inputs, TRANSITION
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.copy(root)
+            (root / TRANSITION).write_bytes(regular(root / TRANSITION) + b" ")
+            with self.assertRaisesRegex(ValueError, "authority bytes differ"):
+                historical_inputs(root)
+
+    def test_fixture_is_exact_and_never_writes_production(self):
+        from additive_gnatdoc_fixture import expected
+        before = regular(ROOT / "src/opencv-geometry.ads")
+        result = expected(ROOT)
+        self.assertEqual(before, regular(ROOT / "src/opencv-geometry.ads"))
+        self.assertEqual(result["src/opencv-geometry.ads"].count(b"function Policy_Probe"), 2)
+        self.assertIn(b"api:Policy_Probe/2", result[GUIDE])
+
 
 if __name__ == "__main__":
     unittest.main()

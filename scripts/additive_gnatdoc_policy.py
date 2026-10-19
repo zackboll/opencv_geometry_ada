@@ -132,21 +132,37 @@ def policy_identity(revision):
             "executing verifier is not the selected policy revision")
     require(not git(ROOT, "status", "--porcelain"), "policy checkout is not clean")
     git(ROOT, "merge-base", "--is-ancestor", PREDECESSOR, revision)
-    trusted_inputs()
+    historical_inputs(ROOT)
     return git(ROOT, "rev-parse", revision + "^{tree}").decode().strip()
+
+
+def historical_inputs(root):
+    """Keep predecessor authority, but never freeze evolving scoped inputs."""
+    check_files(root, {TRANSITION: TRANSITION_SHA256})
+    authority = read(ROOT / TRANSITION)
+    for name, digest in authority["baseline_files_sha256"].items():
+        require(sha(git(ROOT, "show", f"{BASE}:{name}")) == digest,
+                "historical Git authority differs: " + name)
+    for prefix in ("docs/evidence/gnatdoc009", EVIDENCE):
+        for name in git(ROOT, "ls-tree", "-r", "--name-only", REVIEWED,
+                        "--", prefix).decode().splitlines():
+            require(regular(root / name) == git(ROOT, "show", f"{REVIEWED}:{name}"),
+                    "historical evidence modified: " + name)
+    check_files(root / EVIDENCE, authority["contracts_sha256"])
+    check_files(root, {CONFIG: authority["configuration_sha256"]})
+    for name in TRUSTED_SCRIPTS:
+        check_files(root, {name: authority["baseline_files_sha256"][name]})
+    authored = read(ROOT / EVIDENCE / "geometry-authored.json")
+    check_files(root, {n: d for n, d in authored["inputs"].items()
+                      if n not in EVOLVING_AUTHORED})
+    check_files(root, {n: d for n, d in authority["baseline_files_sha256"].items()
+                      if n in ("docs_api.gpr", "docs_internal.gpr") or n.startswith("docs/assets/")})
+    return authority
 
 
 def candidate_rules(baseline, candidate, additions=ADDITIONS):
     """Candidate hashes never select verifier code or authorize frozen inputs."""
-    authority = read(ROOT / TRANSITION)
-    check_files(candidate, {TRANSITION: TRANSITION_SHA256})
-    for prefix in ("docs/evidence/gnatdoc009", EVIDENCE):
-        for name in git(ROOT, "ls-tree", "-r", "--name-only", REVIEWED,
-                        "--", prefix).decode().splitlines():
-            require(regular(candidate / name) == git(ROOT, "show", f"{REVIEWED}:{name}"),
-                    "historical evidence modified: " + name)
-    for name in TRUSTED_SCRIPTS:
-        check_files(candidate, {name: authority["baseline_files_sha256"][name]})
+    historical_inputs(candidate)
     # Protect every executable local verifier dependency, not a filename heuristic.
     for name in git(ROOT, "ls-files", "--", "scripts", ".github/workflows").decode().splitlines():
         require(regular(candidate / name) == regular(ROOT / name),

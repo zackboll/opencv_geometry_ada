@@ -77,10 +77,11 @@ def record(workspace, repository, revision, policy_revision, historical_workspac
                 historical_negative["restored_and_verified"], "historical 30-attack threshold lost")
         if not synthetic:
             require(fixture_workspace is not None, "positive additive fixture missing")
-            fixture = read(fixture_workspace / "readiness.json")
+            fixture_q = read(fixture_workspace / "qualification.json")
+            fixture = record(fixture_workspace, fixture_workspace / "source",
+                             fixture_q["candidate"], policy_revision, historical_workspace)
             require(fixture["local_qualification_complete"] and fixture["synthetic_not_for_release"] and
                     fixture["policy_revision"] == policy_revision, "positive fixture not qualified")
-            fixture_q = read(fixture_workspace / "qualification.json")
             require(fixture["qualification_sha256"] == sha(regular(fixture_workspace / "qualification.json")),
                     "fixture evidence changed")
             require(fixture_q["verification"]["rules"]["declarations"] ==
