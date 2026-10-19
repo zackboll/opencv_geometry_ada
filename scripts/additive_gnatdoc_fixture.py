@@ -87,7 +87,7 @@ def expected(source):
     for name, fragment in (("src/opencv-geometry.ads", SPEC),
                            ("src/opencv-geometry.adb", BODY)):
         result[name] = replace_once(regular(source / name).decode(),
-                                   "end OpenCV.Geometry;", fragment + "end OpenCV.Geometry;")
+                                   "end OpenCV.Geometry;", fragment.lstrip("\n") + "end OpenCV.Geometry;")
     categories = json.loads(regular(source / "docs/api-categories.json"))
     group = next(g for g in categories["packages"][0]["categories"] if g["id"] == "transforms")
     group["declarations"].append(NAME)
