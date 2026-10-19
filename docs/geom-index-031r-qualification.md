@@ -9,6 +9,12 @@ the Apple relocatable Ada library link. It preserves the existing `-L`,
 shim library and rpath options. This matches Core 0.5.1's driver-level
 SDK selection; it does not change the external Apple C++ build strategy.
 
+Native installed-consumer qualification also exposed a pre-existing
+GPRinstall failure: the external shim project removed all language/source
+metadata, so installation aborted with "no language found". Retain its
+existing C++ metadata, as Core does, while keeping `Externally_Built` true.
+The external shim builder remains the sole compiler/linker for that shim.
+
 No public Ada or private C ABI change is intended. `src/`, `cpp/`, the
 547-test inventory, dependency constraints, backend detection and release
 manifest version 0.3.2 must remain unchanged.
