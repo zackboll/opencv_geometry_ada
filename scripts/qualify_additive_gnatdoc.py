@@ -136,6 +136,12 @@ def qualify(args):
         for target, pin in ((source, "../core"), (source / "tests", "../../core")):
             session.run(["alr", "-n", "pin", "opencv_core", "--use=" + pin], target)
         session.run(["alr", "-n", "build"], source)
+        compiler = session.run(["alr", "exec", "--", "gnat", "--version"], source)
+        builder = session.run(["alr", "exec", "--", "gprbuild", "--version"], source)
+        require(compiler.splitlines()[0] == "GNAT 16.1.0" and
+                builder.startswith("GPRBUILD 26.0.0 (2026-04-15)"),
+                "unqualified compiler/project tools")
+        report["compiler"], report["gprbuild"] = compiler, builder
         resolved_core(session, source, core)
         shutil.copytree(args.gnatdoc_prefix, workspace / "gnatdoc")
         require(sha(regular(workspace / "gnatdoc/bin/gnatdoc")) == GNATDOC_SHA256,

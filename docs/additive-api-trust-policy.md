@@ -115,3 +115,73 @@ The disposable positive fixture is a policy test only. It must demonstrate
 actual build, native generation, source/type/navigation growth, authored guide
 validation, example execution and AUnit execution without editing committed
 production files. Historical results do not establish current-source success.
+
+## Successor components and invocation
+
+The candidate successor verification components are:
+
+- `scripts/additive_gnatdoc_policy.py`: predecessor authority, complete source
+  profiles, additive compatibility, category restrictions and independent
+  occurrence/destination reconstruction.
+- `scripts/qualify_additive_gnatdoc.py`: clean policy/exact candidate identities,
+  disposable build pins, independently regenerated native output, examples,
+  AUnit, two-copy generation and verification.
+- `scripts/additive_gnatdoc_fixture.py`: exact disposable fixture, never a
+  production API or an arbitrary source-authorizing manifest.
+- `scripts/browser_additive_gnatdoc.py`: current derived navigation inventory
+  in eight configurations, overloads, search, anchors and history.
+- `scripts/adversarial_additive_gnatdoc.py`: observed sequential attacks with
+  complete restoration and independent reconstruction after each attack.
+- `scripts/record_additive_gnatdoc.py`: fail-closed independent reconstruction,
+  executed command/example/AUnit evidence, browser inventory and fixture checks.
+- `scripts/run_additive_gnatdoc_review.py`: separate historical/current campaign.
+- `scripts/test_additive_gnatdoc_policy.py`: focused mechanism regression tests.
+- `.github/workflows/documentation-additive-policy.yml`: read-only bootstrap
+  review and subsequent base-checkout execution, never publication.
+
+All tracked `scripts/` and `.github/workflows/` files in a candidate must match
+the selected policy checkout, including the original 23 protected files. New
+candidate verifier files are rejected too. A future verifier change is a new
+independent policy review, not a feature-side exception. A clean selected
+policy base supplies the evolving published declaration and AUnit-name baseline;
+the immutable predecessor supplies historical evidence. The review campaign
+does not call a changed candidate Python validator.
+
+For a local policy-PR review, use a clean detached policy checkout, the exact
+candidate SHA, and separately acquired qualified tool/dependency checkouts:
+
+```sh
+/path/to/qualified-tools/bin/python /path/to/policy/scripts/run_additive_gnatdoc_review.py \
+  --workspace /path/to/new-offline-workspace \
+  --candidate-repository /path/to/candidate --candidate-revision FULL_SHA \
+  --enhancer /path/to/enhancer --core /path/to/core \
+  --gnatdoc-prefix /path/to/gnatdoc-26.0.0 \
+  --playwright-module /path/to/node_modules/playwright \
+  --chromium /path/to/chromium --policy-review
+```
+
+`--policy-review` permits exploratory same-revision policy/candidate execution;
+it never marks `policy_approved` true. Without it the candidate cannot be its
+own policy authority. The workflow obtains the future verifier from the PR's
+exact base revision, not from candidate scripts. The first-policy bootstrap is
+limited to the named immutable predecessor base and clearly logs its review
+status. Neither this workflow nor an output digest is proof of human approval.
+
+Core remains `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f`; the enhancer remains
+`426f38852ef7dfff264f73ad01aab458f5e12b23`. GNATdoc 26.0.0 binary identity,
+GNAT 16.1.0, GPRbuild 26.0.1 Alire release, Alire 2.1.1, Markdown 3.0.0/0.1.2
+and the existing browser environment remain the qualification tools. No runtime
+dependency is added. Native OpenCV/platform isolation is outside this policy.
+
+## Known integration gate: production regression workflow routing
+
+The production generator and Pages workflow are deliberately unchanged in this
+candidate. Their protected historical regression scripts still contain fixed
+130-entry assertions. The old shared-shadow workflow also still invokes the
+predecessor runner on candidate HEAD. Consequently **a successful additive
+shadow fixture alone does not yet establish that an additive feature PR can
+pass all ordinary documentation workflows**. A reviewed routing integration
+must keep production generation and Pages behavior, run fixed historical tests
+on historical output, and invoke the successor current-source checks on the
+candidate. Until that integration and final-head qualification are complete,
+this policy is not an unblocking authorization for GEOM-031.

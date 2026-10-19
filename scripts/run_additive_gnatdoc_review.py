@@ -49,6 +49,28 @@ def run(args):
                      if n.startswith("scripts/test_") and n.endswith(".py"))
     session.run([python, "-m", "unittest", "-v", *modules], original,
                 env={"PYTHONPATH": str(original / "scripts")})
+    # Also run original fixed-count browser scripts on the actual historical
+    # source/output, using the independently built router from the predecessor
+    # browser campaign. No candidate verifier or expected count is substituted.
+    from functools import partial
+    from http.server import ThreadingHTTPServer
+    import threading
+    from qualify_shared_gnatdoc_browser import QuietHandler
+    servers = [ThreadingHTTPServer(("127.0.0.1", 0), partial(QuietHandler, directory=str(site)))
+               for site in (original / "_site", historical / "core-router/_site")]
+    for server in servers:
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        browser_env = {"DOC_URL": f"http://127.0.0.1:{servers[0].server_port}/",
+                       "CORE_DOC_URL": f"http://127.0.0.1:{servers[1].server_port}/",
+                       "DOC_EVIDENCE": str(args.workspace / "historical-original-browser"),
+                       "PLAYWRIGHT_MODULE": str(args.playwright_module), "CHROME": args.chromium}
+        for name in ("core_type_links", "gnatdoc_presentation", "gnatdoc_navigation", "gnatdoc_guides"):
+            session.run(["node", "scripts/test_" + name + "_browser.cjs"], original, env=browser_env)
+    finally:
+        for server in servers:
+            server.shutdown()
+            server.server_close()
     policy_revision = git(ROOT, "rev-parse", "HEAD").decode().strip()
     from additive_gnatdoc_fixture import create
     fixture_repository = args.workspace / "fixture-repository"

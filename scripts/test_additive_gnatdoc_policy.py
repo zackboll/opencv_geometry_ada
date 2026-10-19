@@ -24,7 +24,8 @@ class AdditivePolicyTests(unittest.TestCase):
         # New uncommitted policy components are not candidate authority.
 
     def test_current_inventory_is_source_derived(self):
-        self.assertEqual(sum(map(len, self.original.values())), 130)
+        self.assertEqual(set(self.original), {"opencv.geometry", "opencv.geometry.subdiv2d"})
+        self.assertTrue(all(self.original.values()))
         self.assertEqual(compatible(self.original, inventory(ROOT)), [])
 
     def test_existing_removal_rejected(self):
@@ -174,6 +175,13 @@ class AdditivePolicyTests(unittest.TestCase):
         self.assertEqual(before, regular(ROOT / "src/opencv-geometry.ads"))
         self.assertEqual(result["src/opencv-geometry.ads"].count(b"function Policy_Probe"), 2)
         self.assertIn(b"api:Policy_Probe/2", result[GUIDE])
+
+    def test_guide_renderer_still_rejects_active_content(self):
+        from render_gnatdoc_guides import markdown
+        for text in ("# Title\n\n<script>alert(1)</script>\n",
+                     "# Title\n\n<img src=x onerror=alert(1)>\n"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                markdown(text)
 
 
 if __name__ == "__main__":

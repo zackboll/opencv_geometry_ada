@@ -4,6 +4,7 @@ import argparse
 import copy
 import json
 from pathlib import Path
+import subprocess
 
 from additive_gnatdoc_policy import (
     ROOT, EVIDENCE, GUIDE, EXAMPLE, TRANSITION, TRUSTED_SCRIPTS,
@@ -38,7 +39,7 @@ def qualify(workspace, repository, revision, policy_revision, synthetic=False):
                 observed[str(path.relative_to(workspace))] = sha(after)
             try:
                 reject()
-            except (ValueError, OSError, KeyError) as error:
+            except (ValueError, OSError, KeyError, subprocess.CalledProcessError) as error:
                 reason = str(error)
             else:
                 raise AssertionError("attack accepted: " + name)
@@ -49,6 +50,7 @@ def qualify(workspace, repository, revision, policy_revision, synthetic=False):
         require(check() == initial, "independent restored verification differs")
         report["attacks"].append({"name": name, "observed_sha256": observed,
                                    "rejection": reason, "restored_and_verified": True})
+        write(workspace / "negative-progress.json", report)
 
     source = workspace / "source"
     root = workspace / "first"
@@ -121,7 +123,7 @@ def qualify(workspace, repository, revision, policy_revision, synthetic=False):
             raise AssertionError("overload substitution accepted")
         try:
             verify(workspace, repository, "0" * 40, policy_revision, synthetic)
-        except (ValueError, OSError) as error:
+        except (ValueError, OSError, subprocess.CalledProcessError) as error:
             report["attacks"].append({"name": "stale/substituted candidate commit", "observed": True,
                 "rejection": str(error), "restored_and_verified": check() == initial})
         else:

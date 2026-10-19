@@ -96,7 +96,9 @@ def record(workspace, repository, revision, policy_revision, historical_workspac
                        "qualification_sha256": sha(regular(workspace / "qualification.json")),
                        "report_sha256": {n: sha(regular(workspace / (n + ".json"))) for n in reports},
                        "hosted_and_human_approval": "not inferred from local tests"})
-    except (ValueError, OSError, KeyError, TypeError) as error:
+    except Exception as error:
+        # Native generator/Git subprocess failures must also leave explicit
+        # non-ready evidence, never an absent record or a previous ready file.
         result["failures"].append(str(error))
     write(workspace / "readiness.json", result)
     return result
