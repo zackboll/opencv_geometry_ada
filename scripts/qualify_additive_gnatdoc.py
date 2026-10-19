@@ -35,6 +35,8 @@ def verify(workspace, repository, revision, policy_revision, synthetic=False):
             "stale/substituted candidate commit")
     tree = exact_snapshot(source, repository, revision, pins=True)
     rules = source_rules(workspace / "baseline", source, synthetic)
+    require(not git(source, "diff", "--name-only", "--", ".", ":(exclude)alire.toml",
+                    ":(exclude)tests/alire.toml"), "tracked candidate files changed")
     require(sha(regular(workspace / "gnatdoc/bin/gnatdoc")) == GNATDOC_SHA256,
             "native generator changed")
     require(file_hashes(workspace / "pristine-first") == file_hashes(workspace / "pristine-second"),
@@ -72,6 +74,25 @@ def verify(workspace, repository, revision, policy_revision, synthetic=False):
     return {"policy_revision": policy_revision, "policy_tree": policy_tree,
             "candidate": revision, "candidate_tree": tree, "rules": rules,
             "coverage": cov, "aunit": executed, "comparison": comparison}
+
+
+def historical_verify(workspace, historical_workspace):
+    """Execute the immutable predecessor recorder, never accept a ready boolean."""
+    baseline = workspace / "baseline"
+    exact_snapshot(baseline, ROOT, PREDECESSOR)
+    import subprocess
+    completed = subprocess.run(
+        [sys.executable, str(baseline / "scripts/record_shared_gnatdoc_shadow.py"),
+         "--workspace", str(historical_workspace)], cwd=baseline,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    require(completed.returncode == 0, "historical independent recorder failed: " + completed.stdout)
+    history = read(historical_workspace / "readiness.json")
+    require(history["full_shadow_qualification"] and history["consumer_tested"] == PREDECESSOR,
+            "historical predecessor identity differs")
+    attacks = read(historical_workspace / "negative.json")
+    require(attacks["executed"] >= 30 and attacks["restored_and_verified"],
+            "historical attack threshold differs")
+    return sha(regular(historical_workspace / "qualification.json"))
 
 
 def qualify(args):

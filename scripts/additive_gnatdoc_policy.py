@@ -222,7 +222,7 @@ def current_output(source, pristine, shadow, core):
         positions = list(type_positions(snippet.text))
         constant = re.match(r"\s*\w+\s*:\s*constant\s+([A-Za-z][A-Za-z0-9_.]*)", snippet.text, re.I)
         if constant:
-            positions.append((constant[1], constant.start(1), constant.end(1)))
+            positions.append((constant[1].lower(), constant.start(1), constant.end(1)))
         expected = {}
         for spelling, start, end in positions:
             identity, _, _ = resolve(spelling, declaration, package, sources, pages,
@@ -232,7 +232,8 @@ def current_output(source, pristine, shadow, core):
         actual = {(link["offset"], link["end"]): link for link in after.links}
         require(len(actual) == len(after.links) and
                 {pos: link["identity"] for pos, link in actual.items()} == expected,
-                "type occurrences differ from independently resolved source")
+                "type occurrences differ from independently resolved source: " + owner + "." + name
+                + " expected=" + repr(expected) + " actual=" + repr(actual))
         for position, identity in expected.items():
             external = not identity.startswith("opencv.geometry.")
             destination = core["types"][identity] if external else local[identity]
