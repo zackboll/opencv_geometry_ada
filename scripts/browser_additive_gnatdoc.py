@@ -51,6 +51,21 @@ def qualify(workspace, executable):
         check(" ".join(heading.locator("xpath=following-sibling::pre[1]").inner_text().split()) ==
               " ".join(native[package, anchor][2].text.split()), "complete native profile")
 
+    def restored_frame(page, item):
+        # History restoration uses location.replace and can supersede an
+        # in-flight iframe load. Wait for the actual destination/document, not
+        # Playwright's next navigation event (which can be the aborted old one).
+        # No error is swallowed and all owner/anchor/profile checks still run.
+        destination = urljoin(shell, item["href"])
+        page.wait_for_function("""expected => {
+            const frame = document.querySelector('iframe[name="document-content"]');
+            try {
+                return frame.contentWindow.location.href === expected &&
+                       frame.contentDocument.readyState === 'complete';
+            } catch (_) { return false; }
+        }""", arg=destination)
+        return page.frame(name="document-content")
+
     prefix = f'https://core.invalid/{core["revision"]}/api/'
     allowed = {r["shared"]["href"].split("#")[0] for r in comparison["type_references"]
                if not r["referenced_type"].startswith("opencv.geometry.")}
@@ -112,14 +127,13 @@ def qualify(workspace, executable):
                             sequence += [(p, i) for p, _, i in selections if i["name"] == "Insert"][:1]
                             for package, item in sequence:
                                 page.locator('.operation-group a[href="' + item["href"] + '"]').click()
-                                page.frame(name="document-content").wait_for_url(urljoin(shell, item["href"]))
+                                declaration(restored_frame(page, item), package, item)
                             for action, index in (("back", 1), ("back", 0), ("forward", 1), ("forward", 2)):
                                 page.evaluate("history." + action + "()")
                                 package, item = sequence[index]
                                 page.wait_for_url(shell + "?" + urlencode({"package": package,
                                                    "declaration": urlsplit(item["href"]).fragment}))
-                                frame = page.frame(name="document-content")
-                                frame.wait_for_url(urljoin(shell, item["href"]))
+                                frame = restored_frame(page, item)
                                 declaration(frame, package, item)
                                 report["history"].append({**cell, "visited": [], "action": action,
                                                           "href": item["href"]})

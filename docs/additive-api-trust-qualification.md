@@ -20,6 +20,44 @@ Earlier cancellations and the failed local campaign remain historical evidence;
 none qualifies the corrected final head. R1 final-head results must be collected
 separately, with exact candidate/policy identities from the campaign reports.
 
+### R1 first corrective campaign (preserved, not a final pass)
+
+Commit `df64829d50263fcf1049928bb8b1276339ab5afc`, tree
+`06858f66af2623b51711cc0bf38989554408326e`, completed the local historical
+track, actual-historical 232 Python tests and four browser suites, current
+component, current eight-cell matrix (6,604 assertions), and corrected current
+25/25 sequential attacks with restoration. The fixture component accepted
+132 declarations, 271 references, 458/458 items and 548/548 AUnit, including
+standard production generation. Its browser later failed on the history
+navigation-event race. The campaign is explicitly failed/non-ready, not a
+collection of passing fragments. The successor driver now waits for actual
+iframe destination/document readiness during history restoration, then still
+checks exact owner, anchor and full profile; it does not catch/retry failures.
+Historical verifier bytes remain unchanged.
+
+Hosted on that corrective head: standard `build`, historical shared-shadow,
+Linux/macOS with both Core versions, GNAT 12 with both Core versions, Debian
+AArch64, installed consumers and cross-configuration controls passed. Successor
+standalone/reusable qualification was unfinished when observed. The standard
+build log confirms 232 historical tests, actual current production output,
+deterministic generation and all original browser suites. Linux uses OpenCV
+4.6/imgproc; macOS uses 5.0/geometry, with 547/547 AUnit in each Core pairing.
+
+The reviewed-head hosted failure is retained as Actions run `39340564554`,
+artifact `12228834761`, digest
+`sha256:919a3a79366996cba70cf17bc33cfd18b74a0e441d4b84b61b18b5518dc3a80c`.
+Its `command-006.log` identifies the historical Back/Forward wait failure;
+SHA-256 `866a77d4dd0e51d198e96a1639890e30eec13b1f85c7d104408698dbc668c91c`.
+Corrective historical success is Actions run `39341990281`, artifact
+`12229734683`, digest
+`sha256:6f41aae4686fc9064f6ec24378857d76095a72247c982c6b616a31e96715bacc`.
+
+GitHub's branch-protection endpoint returned **404: Branch not protected** for
+main. Required-check and workflow-review enforcement is a separate maintainer
+prerequisite; no candidate-controlled CI result can substitute for it. The
+DO NOT MERGE warning remains regardless of local/hosted technical success until
+independent review authorizes changing it.
+
 PR: <https://github.com/zackboll/opencv_geometry_ada/pull/53>.
 Starting main: `2f5239a0e264ca2bb4106cdb338d3eac25abf674`;
 tree: `c440b9901e1003f06ae555b3a8a80d9874229680`.
