@@ -1,6 +1,66 @@
 # GEOM-DOC-010 — qualification progress and corrective disposition
 
-**CORRECTIVE_WORK_REQUIRED. Not an approval record. GEOM-031 remains blocked.**
+**DO NOT MERGE: independent review is required. GEOM-031 remains blocked.**
+
+## Completed R1 technical campaign and final-head binding
+
+The complete local campaign at
+`7870f21d58ef2c73ad82fe8e0f2dda6ee1f9ecfc`, tree
+`37236c8d91cada50ca26e67299ce0b0c4e191811`, passed as a single execution,
+not assembled from component fragments. The disposable fixture was
+`1f88656` (full identity in the immutable campaign's fixture repository).
+Both independent recorders returned `local_qualification_complete: true`,
+`failures: []`, `policy_approved: false`, and non-deployable output.
+
+| Gate | Current | Disposable additive fixture |
+| --- | --- | --- |
+| Declarations | 130 | 132 |
+| Type occurrences | 267 | 271 |
+| Documentation | 452/452 | 458/458 |
+| AUnit registered/executed/successful | 547/547/547 | 548/548/548 |
+| GNATdoc warnings | 0 | 0 |
+| Eight-cell browser assertions | 6,640 | 6,736 |
+| Sequential successor attacks | 25/25, restored | 25/25, restored |
+| Standard production generator | Two fresh generations plus independent reconstruction | Same unchanged generator and checks |
+| Examples | All six built/executed | All six, including both synthetic overload assertions |
+| Independent readiness | Pass | Pass, independently rechecked by current recorder |
+
+The same campaign includes 542/542 historical AUnit, 130 historical
+declarations, 267 occurrences, 452 documented items, the 232 original Python
+tests against actual historical output, all four original Chromium suites,
+6,904 historical matrix assertions, 30/30 historical mutations and the
+independent historical recorder. Existing trust tests passed 16/16 and successor
+focused tests passed 18/18 on that clean source. No threshold was reduced.
+
+Local evidence is under
+`/home/zboll/qualification/geomdoc010/r1-qualified-campaign/`:
+
+| File | SHA-256 |
+| --- | --- |
+| `campaign.json` | `af0aef29c2854ac0dcb1cf8a4f32672dd2a599765a19c5dfbe751eda85d7b1c9` |
+| `current/readiness.json` | `b85890a3148bb4c13bf6a773121bbcf26316a6038a962019dce811c062539dfa` |
+| `fixture/readiness.json` | `ac290115fac40bce5cf40db75a0b0362d51fd82c24b4d422f96cdf9ee952169e` |
+| `historical-qualification/readiness.json` | `ccd4d6d8d36715a61fb6d4aead90e52663dbf5fac24e0653b700b200ff9a5129` |
+
+Hosted on `7870f21...`, platform Linux/macOS (both Core versions), GNAT 12,
+AArch64, installed consumers, cross-configuration controls, historical shadow
+and standard production build passed. The historical hosted recorder log
+explicitly confirms `full_shadow_qualification: True`, no failures, and tested
+historical source `2f5239a...`. Its artifact is `12232597231`, digest
+`sha256:1e512d6bdc30c50a8aff4a20317151f098850fdf2c466d6951acc40163333f65`.
+The standalone/reusable successor hosted jobs were still running when this
+report update was authored. A later report-only commit does not automatically
+inherit exact-head success: its own exact-head campaign and hosted results must
+be bound in PR #53's review record. The PR description records the final SHA
+and tree without creating a self-referential hash inside that same commit.
+
+All known earlier failures and cancellations below remain evidence, not passes.
+The listed old remaining-work section describes the superseded initial state;
+R1 routing, production reconstruction, browser synchronization and full local
+adversarial qualification are now implemented and exercised. Human workflow
+review, required-check enforcement and independent approval remain external
+requirements. **main was observed unprotected; the maintainer must configure
+enforcement. No policy execution approves itself.**
 
 ## R1 correction under qualification
 
