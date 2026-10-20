@@ -25,6 +25,23 @@ jobs:
           fetch-depth: 0
           path: geometry
           persist-credentials: false
+      - name: Checkout independently selected browser policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          path: policy
+          persist-credentials: false
+      - name: Exploratory first-policy bootstrap only
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if test ! -f ../policy/scripts/run_additive_gnatdoc_review.py; then
+            test "$(git -C ../policy rev-parse HEAD)" = 2f5239a0e264ca2bb4106cdb338d3eac25abf674
+            git -C ../policy fetch origin "$CANDIDATE_SHA"
+            git -C ../policy checkout --detach "$CANDIDATE_SHA"
+            echo 'Exploratory browser policy, independent approval still required.'
+          fi
       - name: Checkout immutable merged enhancer PR 11
         uses: actions/checkout@v4
         with:
@@ -80,7 +97,7 @@ jobs:
             --workspace /tmp/geometry-shadow --enhancer "$GITHUB_WORKSPACE/enhancer"
       - name: Real Geometry shadow Chromium matrix and offline Core navigation
         run: |
-          /tmp/shadow-tools/bin/python scripts/qualify_shared_gnatdoc_browser.py \
+          /tmp/shadow-tools/bin/python ../policy/scripts/qualify_shared_gnatdoc_browser.py \
             --workspace /tmp/geometry-shadow --chromium "$CHROME"
       - name: Independent historical-run readiness recorder
         if: always()

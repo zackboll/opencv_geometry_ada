@@ -147,6 +147,15 @@ policy base supplies the evolving published declaration and AUnit-name baseline;
 the immutable predecessor supplies historical evidence. The review campaign
 does not call a changed candidate Python validator.
 
+R1 explicitly authorizes one synchronization-only successor change to
+`qualify_shared_gnatdoc_browser.py` (not one of the protected 23 originals):
+history restoration waits for the actual iframe URL and complete document
+instead of the next navigation event, which may be an aborted superseded load.
+All 130 entries, 12 categories, eight cells, source/profile/type checks and
+16 history transitions remain asserted. The selected policy checkout supplies
+this driver while immutable historical output supplies its inputs. The original
+historical Git object and all 23 protected original scripts remain unchanged.
+
 For a local policy-PR review, use a clean detached policy checkout, the exact
 candidate SHA, and separately acquired qualified tool/dependency checkouts:
 

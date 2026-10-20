@@ -58,6 +58,21 @@ prerequisite; no candidate-controlled CI result can substitute for it. The
 DO NOT MERGE warning remains regardless of local/hosted technical success until
 independent review authorizes changing it.
 
+### Historical browser synchronization correction
+
+The complete local `61f6d0c...` campaign stopped at the unchanged historical
+browser's line 137 (`net::ERR_ABORTED`), before current/fixture stages. Its failed
+record is retained at `r1-final-campaign/campaign.json`, SHA-256
+`a0fe2604cf45f0748a0d4225ebbadd17c544bd38242407f58653e12fac5c6ee7`;
+the failing command log is
+`24abece69b3c7bca590c68a0d6bcab0fbc704e66a617764e28afc245a960df04`.
+The successor policy now explicitly reviews the same synchronization-only
+correction in `qualify_shared_gnatdoc_browser.py`, which is not one of the 23
+protected original verifiers. It runs from the selected trusted policy against
+immutable historical output. Historical counts, all assertions and thresholds
+are retained; no generic browser exception is swallowed, retried or accepted.
+The historical implementation Git object and protected 23 files are unchanged.
+
 PR: <https://github.com/zackboll/opencv_geometry_ada/pull/53>.
 Starting main: `2f5239a0e264ca2bb4106cdb338d3eac25abf674`;
 tree: `c440b9901e1003f06ae555b3a8a80d9874229680`.

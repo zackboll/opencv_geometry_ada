@@ -67,6 +67,19 @@ def qualify(workspace, executable=None):
         check(" ".join(actual.split()) == " ".join(expected.split()), "complete source/native profile",
               profile=item["profile"], href=item["href"])
 
+    def restored_frame(page, shell, item):
+        # Successor-reviewed synchronization only: preserve every historical
+        # assertion while waiting for actual state rather than a superseded
+        # navigation event. No exception is swallowed or retried.
+        page.wait_for_function("""expected => {
+            const frame = document.querySelector('iframe[name="document-content"]');
+            try {
+                return frame.contentWindow.location.href === expected &&
+                       frame.contentDocument.readyState === 'complete';
+            } catch (_) { return false; }
+        }""", arg=urljoin(shell, item["href"]))
+        return page.frame(name="document-content")
+
     def intercept(route):
         url = route.request.url.split("#")[0]
         require(url in allowed, f"unapproved offline Core request: {url}")
@@ -125,16 +138,14 @@ def qualify(workspace, executable=None):
                             sequence += [x for x in selections if x[2]["name"] == "Insert"][:1]
                             for package, _, item in sequence:
                                 page.locator('.operation-group a[href="' + item["href"] + '"]').click()
-                                page.frame(name="document-content").wait_for_url(urljoin(shell, item["href"]))
-                                declaration(page.frame(name="document-content"), package, item)
+                                declaration(restored_frame(page, shell, item), package, item)
                             for action, index in (("back", 1), ("back", 0), ("forward", 1), ("forward", 2)):
                                 page.evaluate("history." + action + "()")
                                 package, _, item = sequence[index]
                                 expected = shell + "?" + urlencode({"package": package,
                                             "declaration": urlsplit(item["href"]).fragment})
                                 page.wait_for_url(expected)
-                                frame = page.frame(name="document-content")
-                                frame.wait_for_url(urljoin(shell, item["href"]))
+                                frame = restored_frame(page, shell, item)
                                 declaration(frame, package, item)
                                 report["history_traces"].append({"action": action, "package": package,
                                                                "href": item["href"], **dimensions})

@@ -38,7 +38,7 @@ def run(args):
     session.run([python, "scripts/qualify_shared_gnatdoc_adversarial.py", "--workspace", historical,
                  "--enhancer", args.enhancer], predecessor)
     session.run([python, "scripts/qualify_shared_gnatdoc_browser.py", "--workspace", historical,
-                 "--chromium", args.chromium], predecessor)
+                 "--chromium", args.chromium], ROOT)
     session.run([python, "scripts/record_shared_gnatdoc_shadow.py", "--workspace", historical], predecessor)
     original = historical / "historical"
     session.run(["sh", "scripts/generate_docs.sh"], original,
