@@ -1158,6 +1158,124 @@ class CrossGeometryTests(unittest.TestCase):
                        f"-L{settings['runtime']}/adalib/ file.o\n")
         self.assertEqual(cross.check_trace(log, settings), 1)
 
+    def installed_trace(self, switches, directories=(), settings=None):
+        """Reach compiler/link processing with a valid selected-driver trace."""
+        log = self.base / "installed-consumer-build.log"
+        log.write_text(f"{self.ada} -c consumer.adb\n"
+                       f"{self.cxx} consumer.o {' '.join(switches)} -o consumer\n")
+        return cross.check_trace(log, settings or {
+            "ada": self.ada, "cxx": self.cxx, "target": TARGET,
+            "sysroot": str(self.sysroot), "runtime": str(self.runtime)},
+            directories)
+
+    def test_installed_trace_vendor_library_directories(self):
+        # No root access or vendor installation is needed. Only the prior
+        # existence/containment check is substituted for these virtual paths;
+        # actual trace parsing, canonical comparison and host rejection run.
+        core = Path("/usr/local/lib/aarch64-linux-gnu/ada")
+        geometry = Path("/usr/local/lib/aarch64-linux-gnu/geometry-r1")
+        directories = [core / "lib/opencv_core", core / "lib/opencv_core_shim",
+                       geometry / "lib/opencv_geometry",
+                       geometry / "lib/opencv_geometry_shim"]
+        with patch.object(cross, "resolved", side_effect=lambda path, roots=None: Path(path)):
+            for directory in directories:
+                with self.subTest(directory=directory):
+                    self.assertEqual(self.installed_trace(
+                        [f"-L{directory}/"], directories), 1)
+            for path in ["/usr/local/lib/unverified", "/usr/lib/unverified",
+                         str(core) + "-untrusted/lib/opencv_core",
+                         str(core / "lib/other"), str(core / "lib/opencv_core/nested"),
+                         str(core / "lib/opencv_core/../../../unverified"),
+                         str(core / "lib/opencv_core/../opencv_core_shim")]:
+                with self.subTest(path=path), self.assertRaisesRegex(
+                        cross.ConfigurationError, "host search|unapproved installed"):
+                    self.installed_trace(["-L" + path], directories)
+            for path in [core / "lib/opencv_core", Path("/usr/local/include"),
+                         Path("/usr/include/opencv4")]:
+                with self.subTest(include=path), self.assertRaisesRegex(
+                        cross.ConfigurationError, "host search directory"):
+                    self.installed_trace(["-I" + str(path)], directories)
+            with self.assertRaisesRegex(cross.ConfigurationError, "host search"):
+                self.installed_trace(["-L" + str(directories[0])])
+
+    def test_installed_trace_separate_shared_and_relocated_prefixes(self):
+        for core, geometry in [(self.base / "core", self.base / "geometry"),
+                               (self.base / "shared", self.base / "shared"),
+                               (self.base / "relocated/longer/core",
+                                self.base / "relocated/longer/geometry")]:
+            directories = [core / "lib/opencv_core", core / "lib/opencv_core_shim",
+                           geometry / "lib/opencv_geometry",
+                           geometry / "lib/opencv_geometry_shim"]
+            for directory in directories:
+                directory.mkdir(parents=True, exist_ok=True)
+            with self.subTest(core=core, geometry=geometry):
+                self.assertEqual(self.installed_trace(
+                    [f"-L{directory}/" for directory in directories], directories), 1)
+                for path in [core / "lib/other", core / "lib/opencv_core/nested",
+                             core / "lib/opencv_core/../../../outside"]:
+                    with self.subTest(path=path), self.assertRaisesRegex(
+                            cross.ConfigurationError, "unapproved installed"):
+                        self.installed_trace(["-L" + str(path)], directories)
+
+    def test_installed_trace_symlink_and_traversal_escapes(self):
+        directory = self.core / "lib/opencv_core"
+        outside = self.base / "outside"
+        outside.mkdir()
+        (directory / "escape").symlink_to(outside, target_is_directory=True)
+        (self.core / "lib/escape").symlink_to(outside, target_is_directory=True)
+        for path in [directory / "escape", self.core / "lib/escape",
+                     directory / "../../../outside"]:
+            with self.subTest(path=path), self.assertRaisesRegex(
+                    cross.ConfigurationError, "unapproved installed"):
+                self.installed_trace(["-L" + str(path)], [directory])
+        escaped_directory = self.core / "lib/escape"
+        with self.assertRaisesRegex(cross.ConfigurationError, "escapes"):
+            self.installed_trace(["-L" + str(escaped_directory)], [escaped_directory])
+
+    def test_installed_trace_keeps_sysroot_and_runtime_exceptions(self):
+        directory = self.core / "lib/opencv_core"
+        self.assertEqual(self.installed_trace([
+            "-I" + str(self.include), "-L" + str(self.library),
+            f"-L{self.runtime}/adalib/", "-L" + str(directory)], [directory]), 1)
+
+    def test_consumer_trace_uses_current_not_original_prefixes(self):
+        consumers = installer.consumer_module()
+        for label, shared in [("separate", False), ("shared", True),
+                              ("relocated/longer", False)]:
+            core = self.base / label / "core"
+            geometry = core if shared else self.base / label / "geometry"
+            directories = [core / "lib/opencv_core", core / "lib/opencv_core_shim",
+                           geometry / "lib/opencv_geometry",
+                           geometry / "lib/opencv_geometry_shim"]
+            for directory in directories:
+                directory.mkdir(parents=True, exist_ok=True)
+            for prefix in {core, geometry}:
+                (prefix / "share/gpr").mkdir(parents=True)
+            settings = dict(ada=self.ada, cxx=self.cxx, target=TARGET,
+                            sysroot=str(self.sysroot), runtime=str(self.runtime),
+                            readelf=self.readelf, identities=[IDENTITY],
+                            gprbuild=self.gprbuild, config=str(self.config),
+                            include=str(self.include), native_geometry_module="imgproc",
+                            core="/original/not-the-current-installation")
+            def logged(args, log, env, cwd=None):
+                log.write_text(f"{self.ada} -c consumer.adb\n{self.cxx} "
+                               + " ".join(f"-L{p}/" for p in directories) + "\n")
+            def checked(log, actual_settings, actual_directories):
+                self.assertEqual(actual_directories, directories)
+                self.assertEqual(cross.check_trace(log, actual_settings,
+                                                   actual_directories), 1)
+                raise RuntimeError("trace accepted; later ELF gates not simulated")
+            with self.subTest(label=label), \
+                    patch.object(consumers, "startup_identities", return_value=set()), \
+                    patch.object(consumers.subprocess, "run", return_value=
+                                 subprocess.CompletedProcess([], 0, "", "")), \
+                    patch.object(consumers.cross, "logged", side_effect=logged), \
+                    patch.object(consumers.cross, "check_trace", side_effect=checked):
+                with self.assertRaisesRegex(RuntimeError, "trace accepted"):
+                    consumers.qualify(settings, core, geometry,
+                                      self.base / label / "consumer-work",
+                                      self.base / label / "consumer-logs", None)
+
 
 if __name__ == "__main__":
     unittest.main()

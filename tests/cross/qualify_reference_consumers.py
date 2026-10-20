@@ -64,9 +64,18 @@ def qualify(settings, core, geometry, work, logs, emulator):
     sources = ROOT / "tests/installed_consumers"
     require(not work.exists(), f"consumer workspace exists: {work}")
     require(not logs.exists(), f"log directory exists: {logs}")
+    core = cross.resolved(core)
+    geometry = cross.resolved(geometry)
     for prefix in [core, geometry]:
         require((prefix / "share/gpr").is_dir(),
                 f"not an installed prefix: {prefix}")
+    # Derive only the four verified installations' library directories, not
+    # settings['core'], which can still name the original pre-relocation path.
+    installed_libraries = [cross.resolved(prefix / "lib" / project, [prefix])
+                           for prefix, projects in [
+                               (core, ["opencv_core", "opencv_core_shim"]),
+                               (geometry, ["opencv_geometry", "opencv_geometry_shim"])]
+                           for project in projects]
     work.mkdir(parents=True)
     logs.mkdir(parents=True)
     # The Geometry prefix must carry this checkout's redistribution
@@ -100,7 +109,7 @@ def qualify(settings, core, geometry, work, logs, emulator):
              *["-Wl,-rpath-link," + str(directory) for directory in
                cross.loader_directories(sysroot, settings["target"])]],
             log, env, cwd=work)
-        compiled = cross.check_trace(log, settings)
+        compiled = cross.check_trace(log, settings, installed_libraries)
         cross.check_outputs(work, settings)
         trace = log.read_text()
         for archive in [

@@ -750,10 +750,26 @@ TOOL_NAME = re.compile(
     r"gnat[a-z]*)(?:-[0-9.]+)?")
 
 
-def check_trace(log, settings):
+def check_trace(log, settings, installed_library_dirs=()):
     """Every compiler, linker, binder and archiver invocation in a gprbuild
     -v trace belongs to the supplied target toolchain, and no compile names
-    a host include or library directory."""
+    a host include or library directory.
+
+    Installed consumers may supply exact, previously verified library
+    directories (PREFIX/lib/PROJECT). This exception is for -L only, never
+    includes, parent directories or arbitrary libraries beneath a prefix.
+    Production/probe callers retain the strict default.
+    """
+    libraries = set()
+    installation_roots = set()
+    for directory in installed_library_dirs:
+        directory = Path(directory)
+        require(directory.is_absolute() and directory.parent.name == "lib"
+                and ".." not in directory.parts,
+                f"invalid installed library directory: {directory}")
+        root = resolved(directory.parent.parent)
+        libraries.add(resolved(directory, [root]))
+        installation_roots.add(root)
     drivers = {settings["ada"], settings["cxx"]}
     ada_directory = str(Path(settings["ada"]).parent)
     prefix = settings["target"] + "-"
@@ -779,6 +795,21 @@ def check_trace(log, settings):
                         ada_directory, str(Path(settings["cxx"]).parent)},
                     f"archiver is not a target tool in {log.name}: {line}")
         for word in words:
+            installed_library = False
+            if libraries and word.startswith("-L"):
+                path = Path(word[2:])
+                canonical = path.resolve()
+                # Check both spellings: a path lexically under an approved
+                # prefix must not escape through symlinks or '..'. Exact
+                # equality also rejects nested directories and name collisions.
+                installed_library = (
+                    path in libraries and canonical == path
+                    and ".." not in path.parts)
+                if any(inside(path, root) or inside(canonical, root)
+                       for root in installation_roots):
+                    require(installed_library,
+                            f"unapproved installed library directory in "
+                            f"{log.name}: {word}")
             # A target runtime can live under /usr/lib/gcc-cross. It was
             # authenticated through GNATLS, a fresh probe and ELF checks;
             # it is not a host library search path merely due to its prefix.
@@ -788,7 +819,8 @@ def check_trace(log, settings):
                                  word) or word.startswith(
                                      ("-I" + settings["sysroot"],
                                       "-L" + settings["sysroot"]))
-                    or (target_runtime and word.startswith(target_runtime)),
+                    or (target_runtime and word.startswith(target_runtime))
+                    or installed_library,
                     f"host search directory in {log.name}: {word}")
             require("x86_64" not in word,
                     f"host architecture path in {log.name}: {word}")
