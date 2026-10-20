@@ -7,14 +7,24 @@ For AArch64 cross-builds with an installed Core dependency, see the
 [one-command cross-install workflow](docs/cross-install-geometry.md):
 `sh scripts/cross_install_geometry.sh --target ... --toolchain-bin ...
 --runtime ... --sysroot ... --core-prefix ... --prefix ... --profile release`.
-GNAT Pro 25.0w / GCC 12.3.1 / Yocto Scarthgap vendor qualification is a
-separate pending gate, not the historical GNAT Pro 25.2 qualification below.
+The user qualified the merged PR #55 implementation with GNAT Pro 25.0w /
+GCC 12.3.1 / Yocto Scarthgap / OpenCV 4.9.0, including fresh and relocated
+installed Ada/mixed consumer links. This is cross-build/link evidence,
+not target execution or the historical GNAT Pro 25.2 QEMU campaign below.
 
-Release candidate 0.3.1 is a compatibility-preserving tooling and platform
-qualification patch. Its production Ada and C++ trees are identical to
-0.3.0. See the [0.3.1 release notes](docs/release-0.3.1.md) and
-[candidate qualification record](docs/geometry-0.3.1-release-qualification.md)
-for exact sources, results and outstanding release gates.
+**0.3.3 is a source-release candidate, not a published release.** It packages
+PR #55's cross-build tooling and installation improvements without changing
+the public Ada API, C ABI, native algorithms, or GPR projects from 0.3.2.
+See the [0.3.3 preparation record](docs/release-0.3.3-preparation.md) for
+source equivalence, qualification requirements and publication boundaries.
+
+The latest existing source tag is **0.3.2**. Its
+[Alire community-index submission #2257](https://github.com/alire-project/alire-index/pull/2257)
+is still open at this preparation check: source-tag availability is not index
+acceptance. That submission remains independent and unchanged; no 0.3.3 tag,
+GitHub Release or index submission is created by this preparation. Historical
+[0.3.2](docs/release-0.3.2.md) and
+[0.3.1](docs/release-0.3.1.md) release records remain unchanged.
 
 Release 0.3.0 added batch point transforms and an opt-in hardened Float32
 convex intersection, makes closest-ellipse points and Float32 Subdiv2D bounds
@@ -30,8 +40,9 @@ coverage-percentage target overrides those safety decisions.
 > with OpenCV 4.9.0, including 542/542 Geometry tests under QEMU; see
 > [the scoped qualification](docs/adacore25-scarthgap-qualification.md).
 > That evidence does not qualify AdaCore GNAT 12, other SDKs, or hardware.
-> **Target hardware: NOT TESTED.** The 0.3.1 candidate requires fresh
-> qualification at its own committed source. The original 0.3.0 disposition
+> **Target execution for the 25.0w / 0.3.3 cross-install track: NOT PERFORMED.**
+> **Target hardware: NOT TESTED.** Current candidate evidence is recorded
+> separately from historical campaigns. The original 0.3.0 disposition
 > remains `DEFERRED_BY_MAINTAINER — NOT YET QUALIFIED`; see
 > [its historical release notes](docs/release-0.3.0.md#deferred-adacore-gnat-12--yocto-scarthgap-testing).
 
@@ -58,9 +69,11 @@ remains supported on previously qualified platforms. Core 0.5.1 is the
 preferred corrected tooling release for GNAT Pro 25.2 / Scarthgap, not a
 new global minimum. Its community-index acceptance must be checked
 separately from its published source tag. The
-[0.3.1 qualification](docs/geometry-0.3.1-release-qualification.md) is the
-current candidate record; the
-[0.3.0 qualification](docs/geometry-0.3.0-release-qualification.md) remains
+[0.3.3 preparation](docs/release-0.3.3-preparation.md) is the
+current candidate record. Core 0.5.2 is not a mandatory minimum merely
+because it has newer cross-install tooling. The
+[0.3.1 qualification](docs/geometry-0.3.1-release-qualification.md) and
+[0.3.0 qualification](docs/geometry-0.3.0-release-qualification.md) remain
 historical evidence.
 
 | Native OpenCV | Header | Native implementation |
