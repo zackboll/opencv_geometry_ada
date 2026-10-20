@@ -75,6 +75,15 @@ def run(args):
     from additive_gnatdoc_fixture import create
     fixture_repository = args.workspace / "fixture-repository"
     fixture_revision = create(fixture_repository, args.candidate_revision, args.candidate_repository)
+    # Scenario C: exercise a genuine additive candidate against an independent
+    # policy base, never promote the fixture's own verifier as its authority.
+    from select_gnatdoc_policy import select
+    selection = select(fixture_repository, "pull_request", {"pull_request": {
+        "base": {"sha": policy_revision}, "head": {"sha": fixture_revision}}}, fixture_revision)
+    require(selection["policy_revision"] == policy_revision and
+            not selection["bootstrap_exploratory"] and not selection["policy_approved"],
+            "additive fixture did not select independent ordinary policy")
+    write(args.workspace / "fixture-policy-selection.json", selection)
     current = args.workspace / "current"
     fixture = args.workspace / "fixture"
     for repository, revision, output, flags in (

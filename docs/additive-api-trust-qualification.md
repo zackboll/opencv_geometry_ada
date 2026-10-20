@@ -2,6 +2,39 @@
 
 **DO NOT MERGE: independent review is required. GEOM-031 remains blocked.**
 
+## R2 reconciliation and bootstrap qualification
+
+The actual newer main is PR #54 merge
+`5f71c9a6d5291adb032eb1a43954c5f9aaf047e6`, tree
+`cc8487634f66be422e835b95c2ee8cd57e952d45`. The branch integrated it normally
+as merge `198c9a9c9d0bed4f4b0de5eb85f8869174638aa5`, tree
+`ef7506e1fd87d2396f41b7d5f6d2ba40b63787dd`, with parents the reviewed policy
+head `e569fa35...` and exact newer main. No conflict or manual GPR rewrite was
+needed. The only five incoming files are recorded in the policy transition;
+they were inspected, including full standalone qualification script and PR #54
+hosted Homebrew/MacPorts/Core results. Public `src/`, `cpp/`, manifest and test
+registrations are unchanged. Main's GPR fixes remain byte-identical.
+
+R1 standalone run **39350095239 completed successfully**, job **118392192407**,
+including independent campaign and evidence upload. Its artifact **12235452908**
+is `NON-DEPLOYABLE-additive-policy-Additive GNATdoc policy review (non-deployable)-e569fa35a25eb5296f2f079daa5e38659ced1579`,
+digest `sha256:58ed3c488e8f14976678c58b948e7dd489b9416d69aacdaa765fb2d00d4d5a5d`.
+It is historical R1 evidence, not R2 integrated-head qualification.
+
+R2 adds literal base/tree and PR #54 parent/blob verification, initial-PR,
+first-main-merge, manual-main and later-feature selection tests. Unknown base,
+wrong event head, wrong push-before, substituted verifier merge, changed tree,
+squash and unrelated second-parent controls fail closed. The same independent
+selector is used by both workflows; literal bootstrap guards run before loading
+an exploratory candidate selector. The real additive fixture records its
+ordinary base-policy selection with distinct candidate identity.
+
+R2 final tested SHA/tree and hosted evidence belong in the existing PR review
+record so updating those identities does not create an endless self-referential
+commit. R1 successful campaigns are not promoted to integrated-head results.
+The new unique required-check contexts and independent maintainer ruleset actions
+are specified in the policy document. No repository protection was applied.
+
 ## Completed R1 technical campaign and final-head binding
 
 The complete local campaign at

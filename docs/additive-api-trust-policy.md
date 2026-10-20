@@ -221,3 +221,78 @@ workflow YAML, read-only tokens and evidence hashes alone cannot prevent an
 authorized attacker from replacing the workflow or runner; those are explicit
 external trust assumptions, not self-proven guarantees. **DO NOT MERGE** until
 final technical qualification and independent review are complete.
+
+## R2: reviewed newer-main transition and exact check contexts
+
+Main advanced through independently merged PR #54 to
+`5f71c9a6d5291adb032eb1a43954c5f9aaf047e6`, tree
+`cc8487634f66be422e835b95c2ee8cd57e952d45`. Its parents are the immutable
+predecessor `2f5239a...` and `43e7a398a5c154ef7d63e44d12c5251d6647dc3e`.
+The reviewed change inventory is exactly the macOS standalone workflow, its
+qualification shell script/report, `opencv_geometry.gpr`, and
+`opencv_geometry_shim.gpr`. GPR changes select the configured SDK for Apple
+Ada links and preserve externally-built shim metadata for installation. Apple
+clang/libc++, shim ownership/linkage, public Ada and the C ABI are unchanged.
+R2 incorporates those exact bytes through a normal merge, not a rebase.
+
+`select_gnatdoc_policy.py` contains the literal two allowed first-policy
+base/tree pairs, the newer merge's exact parents, and all five Git blob IDs.
+Before exploratory candidate code can run, both workflow definitions independently
+enforce those same literal pairs. There is no mutable-main allowlist, editable
+approval manifest, changed-path/label exemption, or automatic approval bit.
+Unknown bases, substituted event heads, changed trees and wrong ancestry fail.
+
+Three separate paths are qualified:
+
+1. **Initial policy PR:** event base must be an exact ancestor, and only a
+   literal reviewed base lacking successor scripts permits candidate policy
+   execution. That selection is explicitly exploratory, never approved.
+2. **First main push:** event `before` must equal candidate first parent;
+   `after` must equal candidate. With an allowed predecessor lacking the
+   policy, require a two-parent merge and select its second parent (the policy
+   PR revision). The reviewed base must be an ancestor of that parent, and
+   scripts/workflows/historical evidence must match the merge candidate.
+   Squash/rebase-style initial publication is rejected rather than guessed.
+   This gate remains exploratory/unapproved; independent human merge review
+   supplies approval, not workflow execution. Manual main runs check the same
+   first-parent ancestry.
+3. **Later feature PR:** execute the selector and verifier from the clean exact
+   event base. The candidate is untrusted and cannot replace scripts, workflows
+   or historical evidence. The genuine additive fixture exercises this path
+   and records `fixture-policy-selection.json` with distinct base/head.
+
+Both historical and successor workflows now use explicit unique job display
+names; old generic `qualify` contexts must not remain the configured protection
+rule. GitHub Actions workflow names are not sufficient to distinguish two
+same-app check runs named `qualify`. Maintainers should configure a ruleset for
+`refs/heads/main` with these exact observed check names (GitHub Actions app):
+
+- `build` (standard production documentation)
+- `GNATdoc historical shadow qualification`
+- `GNATdoc successor policy qualification` (standalone)
+- `current-trust / GNATdoc successor policy qualification` (standard reusable)
+- `Linux x86_64 / Core 0.5.0` and `Linux x86_64 / Core 0.5.1`
+- `macOS ARM64 / Core 0.5.0` and `macOS ARM64 / Core 0.5.1`
+- `Debian 12 / Core 0.5.0` and `Debian 12 / Core 0.5.1`
+- `reference` (Debian AArch64), `consume` (installed consumers), `synthetic`
+  (cross-configuration), plus the four `Standalone homebrew ARM64 / Core ...`
+  and `Standalone macports ARM64 / Core ...` checks from merged PR #54.
+
+Require PRs with at least one approval from an independent non-author reviewer,
+dismiss stale approvals, require approval of the most recent push, require
+up-to-date branches and resolved conversations, and block force pushes/deletion.
+Require owner review for `.github/workflows/`, `scripts/` verifier components,
+`docs/evidence/`, policy documents and policy scope. An independently maintained
+CODEOWNERS/ruleset must assign actual trusted owners; this task does not invent
+reviewer identities. Protect the owner/ruleset definitions too. Disable routine
+bypass (including administrator bypass where supported); emergency exceptions
+must be explicit, audited, and must not silently approve candidate verifier
+replacement. Required-workflow rules should come from a maintainer-controlled
+source where the hosting plan permits them. Windows PR skips and Pages `deploy`
+are not required success checks. A merge queue needs separately reviewed
+`merge_group` routing before adoption.
+
+The repository protection API currently reports main unprotected and no enforced
+ruleset was observed. **BRANCH_PROTECTION_REQUIRED**: these settings have not
+been applied by this task. Human approval and external workflow/runner integrity
+remain necessary; candidate-owned YAML alone cannot guarantee non-bypassability.
