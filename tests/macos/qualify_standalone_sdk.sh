@@ -79,8 +79,9 @@ if test "$core_version" = 0.5.0; then
         echo NOT_REPRODUCED | tee "$evidence/control-result.txt"
         echo '::warning::Old Geometry links on this image; affected-runner regression comparison remains unproven'
     else
-        grep -F "$clt" "$evidence/baseline-link.log"
-        grep -E 'unknown architecture|arm64e\.x1' "$evidence/baseline-link.log"
+        grep -E "${clt//./\\.}:[0-9]+:[0-9]+: error: unknown architecture" \
+            "$evidence/baseline-link.log"
+        grep -F 'arm64e.x1-macos' "$evidence/baseline-link.log"
         echo REPRODUCED_GNAT_FSF_112 | tee "$evidence/control-result.txt"
     fi
     cd "$root"
@@ -175,6 +176,8 @@ cp tests/installed_consumers/ada_consumer.gpr \
     tests/installed_consumers/geometry_consumer_checks.ad[bs] "$consumer/"
 # Obtain only toolchain access from Alire. env overrides its project search
 # path, so gprbuild cannot resolve source projects via the Alire closure.
+# Also leave the source working directory: GPRbuild searches its current
+# directory before GPR_PROJECT_PATH, even with an absolute consumer -P.
 for mode in installed relocated; do
     if test "$mode" = relocated; then
         moved="$evidence/relocated/a-longer-installation-root"
@@ -183,11 +186,16 @@ for mode in installed relocated; do
         prefix="$moved/prefix"
         rm -rf "${consumer:?}/obj-ada" "${consumer:?}/bin"
     fi
+    # Positional parameters expand in the consumer shell, not this one.
+    # shellcheck disable=SC2016
     alr -n exec -- env -u ADA_PROJECT_PATH -u ADA_INCLUDE_PATH -u ADA_OBJECTS_PATH \
         GPR_PROJECT_PATH="$prefix/share/gpr" \
-        gprbuild -P "$consumer/ada_consumer.gpr" -p -v -largs -Wl,-t \
+        sh -c 'cd "$1"; shift; exec "$@"' sh "$consumer" \
+        gprbuild -P ada_consumer.gpr -p -v -largs -Wl,-t \
         2>&1 | tee "$evidence/$mode-consumer-link.log"
     check_trace "$evidence/$mode-consumer-link.log"
+    grep -F "$prefix/lib/opencv_geometry/libopencv_geometry_ada.a" \
+        "$evidence/$mode-consumer-link.log"
     check_dependencies "$consumer/bin/installed_geometry_consumer"
     DYLD_PRINT_LIBRARIES=1 "$consumer/bin/installed_geometry_consumer" \
         > "$evidence/$mode-consumer-run.log" 2> "$evidence/$mode-consumer-dyld.log"
