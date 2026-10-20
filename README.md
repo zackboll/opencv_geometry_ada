@@ -3,6 +3,13 @@
 Thick Ada binding to OpenCV Geometry, published as `opencv_geometry`.
 Repository: https://github.com/zackboll/opencv_geometry_ada
 
+For AArch64 cross-builds with an installed Core dependency, see the
+[one-command cross-install workflow](docs/cross-install-geometry.md):
+`sh scripts/cross_install_geometry.sh --target ... --toolchain-bin ...
+--runtime ... --sysroot ... --core-prefix ... --prefix ... --profile release`.
+GNAT Pro 25.0w / GCC 12.3.1 / Yocto Scarthgap vendor qualification is a
+separate pending gate, not the historical GNAT Pro 25.2 qualification below.
+
 Release candidate 0.3.1 is a compatibility-preserving tooling and platform
 qualification patch. Its production Ada and C++ trees are identical to
 0.3.0. See the [0.3.1 release notes](docs/release-0.3.1.md) and
