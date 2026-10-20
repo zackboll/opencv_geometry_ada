@@ -19,8 +19,9 @@ project OpenCV_Geometry_Shim is
          for Library_Kind use "relocatable";
       when "External_Relocatable" =>
          for Externally_Built use "True";
-         for Languages use ();
-         for Source_Dirs use ();
+         --  Retain language/source metadata so GPRinstall can recognize the
+         --  library (as in Core). Externally_Built still prevents GPRbuild
+         --  from compiling or linking the independently built C++ shim.
          for Library_Kind use "relocatable";
    end case;
 

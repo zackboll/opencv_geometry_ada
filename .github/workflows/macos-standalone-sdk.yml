@@ -1,0 +1,96 @@
+name: Standalone macOS Geometry SDK linking
+
+on:
+  push:
+    branches: ['corrective/**', main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    name: Standalone ${{ matrix.provider }} ARM64 / Core ${{ matrix.core }}
+    runs-on: macos-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [homebrew, macports]
+        core: ['0.5.0', '0.5.1']
+    defaults:
+      run:
+        shell: bash
+        working-directory: geometry
+    steps:
+      - name: Checkout exact Geometry head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: geometry
+
+      - name: Checkout pre-correction control
+        if: matrix.core == '0.5.0'
+        uses: actions/checkout@v4
+        with:
+          ref: 2f5239a0e264ca2bb4106cdb338d3eac25abf674
+          path: baseline
+
+      - name: Set up Alire
+        uses: alire-project/setup-alire@latest
+        with:
+          version: '2.1.1'
+
+      - name: Select affected GNAT toolchain
+        run: |
+          alr -n --force toolchain --select gnat_native=16.1.0 gprbuild=26.0.1
+
+      - name: Install independent Homebrew OpenCV
+        if: matrix.provider == 'homebrew'
+        run: |
+          brew install opencv pkg-config
+          prefix=$(brew --prefix opencv)
+          {
+            echo "PKG_CONFIG_LIBDIR=$prefix/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig"
+            echo 'PKG_CONFIG_PATH='
+            echo "EXPECTED_OPENCV_PREFIX=$prefix"
+          } >> "$GITHUB_ENV"
+
+      # Match the index MacPorts qualification, on a fresh runner separate
+      # from Homebrew. Do not alter the index's workflows or reuse Brew libs.
+      - name: Disable Homebrew
+        if: matrix.provider == 'macports'
+        run: rm -f "$(command -v brew)"
+
+      - name: Set up MacPorts
+        if: matrix.provider == 'macports'
+        uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3
+
+      - name: Install independent MacPorts OpenCV
+        if: matrix.provider == 'macports'
+        run: |
+          echo '-x11 +no_x11 +quartz' | sudo tee -a /opt/local/etc/macports/variants.conf
+          sudo port install opencv4 pkgconfig
+          port installed opencv4 pkgconfig
+          {
+            echo 'PKG_CONFIG_LIBDIR=/opt/local/lib/opencv4/pkgconfig:/opt/local/lib/pkgconfig:/opt/local/share/pkgconfig'
+            echo 'PKG_CONFIG_PATH='
+            echo 'EXPECTED_OPENCV_PREFIX=/opt/local'
+          } >> "$GITHUB_ENV"
+
+      - name: Qualify without SDK environment workarounds
+        env:
+          EXPECTED_GEOMETRY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          QUALIFY_CORE_VERSION: ${{ matrix.core }}
+          QUALIFY_PROVIDER: ${{ matrix.provider }}
+        run: |
+          env -u SDKROOT -u LIBRARY_PATH bash tests/macos/qualify_standalone_sdk.sh
+
+      - name: Preserve exact-head SDK, linker, AUnit and consumer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-sdk-${{ matrix.provider }}-core-${{ matrix.core }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/geometry-standalone-sdk/
+          if-no-files-found: error

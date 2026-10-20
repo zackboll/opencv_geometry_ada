@@ -29,10 +29,13 @@ project Opencv_Geometry is
             when "External_Relocatable" =>
                case Opencv_Geometry_Install.Cxx_Toolchain is
                   when "Apple_Clang" =>
+                     --  Match the SDK used by the external C++ shim rather
+                     --  than GNAT's independent Command Line Tools default.
                      for Library_Options use
                        ("-L" & Project'Project_Dir & "lib",
                         "-lopencv_geometry_shim",
-                        "-Wl,-rpath," & Project'Project_Dir & "lib");
+                        "-Wl,-rpath," & Project'Project_Dir & "lib",
+                        "--sysroot=" & Opencv_Geometry_Install.Cxx_Sysroot);
                   when "GNU" =>
                      for Library_Options use
                        ("-L" & Project'Project_Dir & "lib",
@@ -65,10 +68,14 @@ project Opencv_Geometry is
                   --  The macOS shim uses @rpath. Consumers need this
                   --  crate's lib directory at runtime; -L is link-time
                   --  only. Do not apply Mach-O rpath on Windows.
+                  --  Propagate the configured SDK to Ada executable links,
+                  --  including installed consumers, without SDKROOT or
+                  --  LIBRARY_PATH environment overrides (as in Core 0.5.1).
                   for Linker_Options use
                     ("-L" & Project'Project_Dir & "lib",
                      "-lopencv_geometry_shim",
-                     "-Wl,-rpath," & Project'Project_Dir & "lib");
+                     "-Wl,-rpath," & Project'Project_Dir & "lib",
+                     "--sysroot=" & Opencv_Geometry_Install.Cxx_Sysroot);
                when "GNU" =>
                   for Linker_Options use
                     ("-L" & Project'Project_Dir & "lib",
