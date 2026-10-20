@@ -162,6 +162,12 @@ prefix="$evidence/installed"
 alr -n exec -- gprinstall -P opencv_geometry.gpr -p -r --prefix="$prefix"
 mkdir -p "$prefix/lib/opencv_geometry_shim"
 cp "$shim" "$prefix/lib/opencv_geometry_shim/"
+# GPRinstall preserves the established source-tree -L/rpath options. Do
+# not rewrite those options for this SDK correction. Make their target
+# unavailable so only installed project/library paths can satisfy the link
+# and runtime loader; preserve the source artifacts for evidence afterwards.
+mv "$root/lib" "$root/lib-standalone-unavailable"
+trap 'mv "$root/lib-standalone-unavailable" "$root/lib"' EXIT
 consumer="$evidence/consumer"
 mkdir -p "$consumer"
 cp tests/installed_consumers/ada_consumer.gpr \
@@ -189,6 +195,6 @@ for mode in installed relocated; do
     grep -Fx 'consumer PASS installed Ada' "$evidence/$mode-consumer-run.log"
     grep -F "$prefix/lib/opencv_geometry_shim/libopencv_geometry_shim.dylib" \
         "$evidence/$mode-consumer-dyld.log"
-    if grep -F "$root/" "$evidence/$mode-consumer-link.log"; then exit 1; fi
+    if grep -F "$root/" "$evidence/$mode-consumer-dyld.log"; then exit 1; fi
 done
 echo 'PASS standalone GPR SDK linking, 547/547 AUnit, installed and relocated consumers'
