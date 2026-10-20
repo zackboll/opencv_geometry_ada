@@ -779,10 +779,16 @@ def check_trace(log, settings):
                         ada_directory, str(Path(settings["cxx"]).parent)},
                     f"archiver is not a target tool in {log.name}: {line}")
         for word in words:
+            # A target runtime can live under /usr/lib/gcc-cross. It was
+            # authenticated through GNATLS, a fresh probe and ELF checks;
+            # it is not a host library search path merely due to its prefix.
+            target_runtime = ("-L" + settings["runtime"].rstrip("/") + "/"
+                              if settings.get("runtime") else None)
             require(not re.match(r"-[IL]/usr/(?:local/)?(?:include|lib)\b",
                                  word) or word.startswith(
                                      ("-I" + settings["sysroot"],
-                                      "-L" + settings["sysroot"])),
+                                      "-L" + settings["sysroot"]))
+                    or (target_runtime and word.startswith(target_runtime)),
                     f"host search directory in {log.name}: {word}")
             require("x86_64" not in word,
                     f"host architecture path in {log.name}: {word}")

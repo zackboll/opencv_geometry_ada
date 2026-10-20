@@ -1153,6 +1153,10 @@ class CrossGeometryTests(unittest.TestCase):
             log.write_text(f"{self.ada} -c unit.adb\n{command}\n")
             with self.assertRaisesRegex(cross.ConfigurationError, "host|archiver"):
                 cross.check_trace(log, settings)
+        settings["runtime"] = "/usr/lib/gcc-cross/aarch64-linux-gnu/12"
+        log.write_text(f"{self.ada} -c unit.adb\n{self.cxx} "
+                       f"-L{settings['runtime']}/adalib/ file.o\n")
+        self.assertEqual(cross.check_trace(log, settings), 1)
 
 
 if __name__ == "__main__":

@@ -92,13 +92,13 @@ def qualify(settings, core, geometry, work, logs, emulator):
             [settings["gprbuild"], "--config=" + settings["config"], "-P",
              work / f"{project}.gpr", "-p", "-v", "-R",
              "-XCONSUMER_CXX_FROM=configuration",
-              "-XCONSUMER_OPENCV_BACKEND=-lopencv_"
-              + settings["native_geometry_module"],
+             "-XCONSUMER_OPENCV_BACKEND=-lopencv_"
+             + settings["native_geometry_module"],
              "-XCONSUMER_OPENCV_INCLUDE=-I" + settings["include"],
-              "-cargs:Ada", sysroot_switch, "-cargs:C++", sysroot_switch,
-              "-largs", sysroot_switch, "-Wl,-t",
-              *["-Wl,-rpath-link," + str(directory) for directory in
-                cross.loader_directories(sysroot, settings["target"])]],
+             "-cargs:Ada", sysroot_switch, "-cargs:C++", sysroot_switch,
+             "-largs", sysroot_switch, "-Wl,-t",
+             *["-Wl,-rpath-link," + str(directory) for directory in
+               cross.loader_directories(sysroot, settings["target"])]],
             log, env, cwd=work)
         compiled = cross.check_trace(log, settings)
         cross.check_outputs(work, settings)
