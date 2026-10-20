@@ -171,7 +171,7 @@ Keep these evidence profiles distinct:
 | Profile | Scope |
 | --- | --- |
 | Debian GNU GNAT 12 AArch64 reference | Public reference compiler/sysroot; not proprietary vendor qualification. Existing `qualify_debian_aarch64_reference.sh` includes QEMU/AUnit. |
-| AdaCore GNAT Pro 25.0w / GCC 12.3.1 + Yocto Scarthgap + OpenCV 4.9.0 | Intended new entry-point profile. **Vendor qualification pending** until the command above succeeds with those actual inputs. Core PR #92's separate qualification does not qualify Geometry. |
+| AdaCore GNAT Pro 25.0w / GCC 12.3.1 + Yocto Scarthgap + OpenCV 4.9.0 | User-qualified PR #55 head `ff4089671cb11837416fe1aa9892018c5fa24fda`: fresh build/install and installed/relocated Ada/mixed consumer cross-links passed. [0.3.3 provenance and byte-equivalence record](release-0.3.3-preparation.md). Core PR #92's separate qualification does not qualify Geometry. |
 | Historical GNAT Pro 25.2 / GCC 13.3.1 + Scarthgap | Separate [historical record](adacore25-scarthgap-qualification.md), including its exact sources and 542-test QEMU result. Not evidence for 25.0w. |
 
 The current native Geometry suite registers **547** tests, not the historical
