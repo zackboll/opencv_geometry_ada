@@ -28,6 +28,54 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: geometry
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Checkout independent build-input authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          path: build-policy
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preflight before candidate dependency installation or Alire actions
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
+            git -C ../build-policy checkout --detach "$CANDIDATE_SHA^1"
+          fi
+          base=$(git -C ../build-policy rev-parse HEAD)
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git merge-base --is-ancestor "$base" "$CANDIDATE_SHA"
+          if test "$GITHUB_EVENT_NAME" = push; then
+            test "$GITHUB_REF" = refs/heads/main
+            test "$(git rev-parse "$CANDIDATE_SHA^1")" = "$base"
+          fi
+          if test -f ../build-policy/scripts/validate_gnatdoc_inputs.py; then
+            # Only the independently selected base provides executable preflight.
+            python3 -I ../build-policy/scripts/validate_gnatdoc_inputs.py \
+              --candidate "$GITHUB_WORKSPACE/geometry"
+          else
+            # First policy bootstrap: NO candidate verifier executes here.
+            # Immutable reviewed base bytes are compared before any pip/alr use.
+            tree=$(git -C ../build-policy rev-parse HEAD^{tree})
+            case "$base:$tree" in
+              2f5239a0e264ca2bb4106cdb338d3eac25abf674:c440b9901e1003f06ae555b3a8a80d9874229680|5f71c9a6d5291adb032eb1a43954c5f9aaf047e6:cc8487634f66be422e835b95c2ee8cd57e952d45|aad0b1b65814ac472bf5a9ea1b266f47aa3baf06:be543978b6fe33cc7bb18c4c1ca58328ae741ee6) ;;
+              *) echo 'Unreviewed build-input bootstrap authority' >&2; exit 1 ;;
+            esac
+            for name in docs/requirements.txt alire.toml tests/alire.toml; do
+              test ! -L "$name"
+              test ! -L "$(dirname "$name")"
+              cmp -- "$name" "../build-policy/$name"
+            done
+            echo 'Literal reviewed build inputs verified; not policy approval.'
+          fi
+      - name: Checkout immutable historical regression source
+        uses: actions/checkout@v4
+        with:
+          ref: ec4d689eac748b7837abd4c3754c3090ca4bf814
+          path: historical
+          persist-credentials: false
       # The opencv_core 0.5.0 release commit (tag 0.5.0), temporarily
       # pinned as in the cross-platform CI; scripts/generate_docs.sh
       # verifies it.
@@ -37,6 +85,7 @@ jobs:
           repository: zackboll/opencv_core_ada
           ref: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
           path: core
+          persist-credentials: false
       - name: Record checkout identities
         run: |
           echo "Geometry: $(git rev-parse HEAD)"
@@ -61,26 +110,22 @@ jobs:
       - name: Install qualified documentation-only Markdown renderer
         run: |
           python3 -m venv .doc-tools/markdown
-          .doc-tools/markdown/bin/pip install -r docs/requirements.txt
+          .doc-tools/markdown/bin/pip install -r ../build-policy/docs/requirements.txt
           echo "DOC_PYTHON=$GITHUB_WORKSPACE/geometry/.doc-tools/markdown/bin/python" >> "$GITHUB_ENV"
-      - name: Test warning comparison
-        run: '"$DOC_PYTHON" -m unittest discover -s scripts -p ''test_compare_gnatdoc_warnings.py'' -v'
-      - name: Test documentation validator
-        run: '"$DOC_PYTHON" -m unittest discover -s scripts -p ''test_validate_docs.py'' -v'
-      - name: Test documentation coverage and comment-only checks
-        run: |
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_check_doc_coverage.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_check_comment_only.py' -v
-      - name: Test type links, theme and Ada highlighting
-        run: '"$DOC_PYTHON" -m unittest discover -s scripts -p ''test_link_gnatdoc_types.py'' -v'
       - name: Generate and validate public API and guides
         run: sh scripts/generate_docs.sh
-      - name: Qualify generated site against validator, coverage, navigation and guide mutations
+      - name: Generate historical output and run unchanged 232 regression tests
+        working-directory: historical
+        env:
+          GNATDOC_PREFIX: ${{ github.workspace }}/geometry/.doc-tools/gnatdoc-26.0.0
         run: |
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_validate_docs.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_check_doc_coverage.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_gnatdoc_navigation.py' -v
-          "$DOC_PYTHON" -m unittest discover -s scripts -p 'test_gnatdoc_guides.py' -v
+          alr -n pin opencv_core --use=../core
+          sh scripts/generate_docs.sh
+          PYTHONPATH="$PWD/scripts" "$DOC_PYTHON" -m unittest -v \
+            test_check_comment_only test_check_doc_coverage \
+            test_compare_gnatdoc_warnings test_gnatdoc_guides \
+            test_gnatdoc_navigation test_investigate_shared_gnatdoc_types \
+            test_link_gnatdoc_types test_validate_docs
       - name: Qualify deterministic fresh generation and idempotent enhancement
         run: |
           cp -a _site /tmp/documentation-first
@@ -109,12 +154,14 @@ jobs:
           repository: zackboll/opencv_core_ada
           ref: ccc2190f9bf0712d65a2b9d2983cde7ce68b4bae
           path: core-navigation
+          persist-credentials: false
       - name: Generate actual Core browser fixture
         working-directory: core-navigation
         env:
           GNATDOC_PREFIX: ${{ github.workspace }}/geometry/.doc-tools/gnatdoc-26.0.0
         run: sh scripts/generate_docs.sh
       - name: Qualify cross-repository declaration navigation in Chromium
+        working-directory: historical
         run: |
           npm install --prefix /tmp/doc-browser --no-package-lock playwright@1.64.1
           /tmp/doc-browser/node_modules/.bin/playwright install --with-deps chromium
@@ -134,6 +181,7 @@ jobs:
           node scripts/test_core_type_links_browser.cjs
           node scripts/test_gnatdoc_presentation_browser.cjs
           node scripts/test_gnatdoc_navigation_browser.cjs
+          node scripts/test_gnatdoc_guides_browser.cjs
       - name: Upload cross-repository browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -162,9 +210,14 @@ jobs:
         with:
           path: geometry/_site/
 
+  current-trust:
+    # Stable build check stays; publication additionally requires complete
+    # exact-candidate successor qualification, never the offline artifact.
+    uses: ./.github/workflows/documentation-additive-policy.yml
+
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
+    needs: [build, current-trust]
     runs-on: ubuntu-24.04
     permissions:
       pages: write

@@ -1,0 +1,129 @@
+name: Additive GNATdoc policy review (non-deployable)
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: additive-doc-policy-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    name: GNATdoc successor policy qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout exact candidate without credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+      - name: Checkout independently selected base policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          fetch-depth: 0
+          path: policy
+          persist-credentials: false
+      - name: Event-bound reviewed policy selection, never approval
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
+            git -C policy checkout --detach "$CANDIDATE_SHA^1"
+          fi
+          if test ! -f policy/scripts/select_gnatdoc_policy.py; then
+            # Literal, independently reviewed transition; never accept mutable
+            # main or a candidate manifest as authorization for bootstrap.
+            base=$(git -C policy rev-parse HEAD)
+            tree=$(git -C policy rev-parse HEAD^{tree})
+            case "$base:$tree" in
+              2f5239a0e264ca2bb4106cdb338d3eac25abf674:c440b9901e1003f06ae555b3a8a80d9874229680|5f71c9a6d5291adb032eb1a43954c5f9aaf047e6:cc8487634f66be422e835b95c2ee8cd57e952d45|aad0b1b65814ac472bf5a9ea1b266f47aa3baf06:be543978b6fe33cc7bb18c4c1ca58328ae741ee6) ;;
+              *) echo 'Unreviewed bootstrap base/tree' >&2; exit 1 ;;
+            esac
+            git -C policy fetch ../candidate "$CANDIDATE_SHA"
+            git -C policy checkout --detach "$CANDIDATE_SHA"
+          fi
+          python3 policy/scripts/select_gnatdoc_policy.py \
+            --repository "$GITHUB_WORKSPACE/candidate" \
+            --policy-checkout "$GITHUB_WORKSPACE/policy" \
+            --candidate "$CANDIDATE_SHA" --event "$GITHUB_EVENT_NAME" \
+            --event-path "$GITHUB_EVENT_PATH"
+          echo 'Selection is not a human policy-approval record.'
+      - name: Validate trusted build inputs before any candidate Alire or pip use
+        run: python3 -I policy/scripts/validate_gnatdoc_inputs.py --candidate "$GITHUB_WORKSPACE/candidate"
+      - name: Checkout immutable enhancer
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/ada-gnatdoc-enhancer
+          ref: 426f38852ef7dfff264f73ad01aab458f5e12b23
+          fetch-depth: 0
+          path: enhancer
+          persist-credentials: false
+      - name: Checkout immutable Core documentation source
+        uses: actions/checkout@v4
+        with:
+          repository: zackboll/opencv_core_ada
+          ref: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
+          fetch-depth: 0
+          path: core
+          persist-credentials: false
+      - name: Install qualified native and documentation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential libopencv-dev pkg-config unzip python3-venv
+          curl --fail --location --output /tmp/alire.zip https://github.com/alire-project/alire/releases/download/v2.1.1/alr-2.1.1-bin-x86_64-linux.zip
+          unzip /tmp/alire.zip -d /tmp/alire
+          sudo install -m 0755 /tmp/alire/bin/alr /usr/local/bin/alr
+          alr -n --force toolchain --select gnat_native=16.1.0 gprbuild=26.0.1
+          alr -n install --prefix=/tmp/gnatdoc gnatdoc_bin=26.0.0
+          git -C enhancer fetch origin main
+          python3 -m venv /tmp/policy-tools
+          /tmp/policy-tools/bin/pip install "$GITHUB_WORKSPACE/enhancer" markdown-it-py==3.0.0 mdurl==0.1.2 playwright==1.58.0
+          /tmp/policy-tools/bin/pip check
+          /tmp/policy-tools/bin/playwright install --with-deps chromium
+          npm install --prefix /tmp/doc-browser --no-package-lock playwright@1.64.1
+          /tmp/doc-browser/node_modules/.bin/playwright install --with-deps chromium
+          echo "CHROME=$(/tmp/policy-tools/bin/python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')" >> "$GITHUB_ENV"
+      - name: Test historical and successor policy, from selected policy checkout
+        working-directory: policy
+        run: |
+          /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_shared_gnatdoc_shadow.py -v
+          /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_additive_gnatdoc_policy.py -v
+          /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_select_gnatdoc_policy.py -v
+      - name: Historical and exact-current qualification, fixture and attacks
+        working-directory: policy
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          /tmp/policy-tools/bin/python scripts/run_additive_gnatdoc_review.py \
+            --workspace /tmp/additive-review \
+            --candidate-repository "$GITHUB_WORKSPACE/candidate" \
+            --candidate-revision "$CANDIDATE_SHA" \
+            --enhancer "$GITHUB_WORKSPACE/enhancer" \
+            --core "$GITHUB_WORKSPACE/core" --gnatdoc-prefix /tmp/gnatdoc \
+            --playwright-module /tmp/doc-browser/node_modules/playwright \
+            --chromium "$CHROME" ${POLICY_REVIEW_FLAG:-}
+      - name: Upload offline-only review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NON-DEPLOYABLE-additive-policy-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/additive-review/campaign.json
+            /tmp/additive-review/*selection.json
+            /tmp/additive-review/*.log
+            /tmp/additive-review/current/*.json
+            /tmp/additive-review/current/*.log
+            /tmp/additive-review/current/*.zip
+            /tmp/additive-review/fixture/*.json
+            /tmp/additive-review/fixture/*.log
+            /tmp/additive-review/fixture/*.zip
+            /tmp/additive-review/historical-qualification/*.json
+          if-no-files-found: warn
