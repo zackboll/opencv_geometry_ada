@@ -51,7 +51,8 @@ import tarfile
 import tempfile
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get("OPENCV_CROSS_SOURCE_ROOT",
+                           Path(__file__).resolve().parents[1])).resolve()
 
 TARGET_PATTERN = r"aarch64-(?:[A-Za-z0-9_]+-)?linux(?:-[A-Za-z0-9_]+)*"
 
@@ -69,11 +70,16 @@ PROFILES = ["release", "validation", "development"]
 BACKENDS = {"4": "imgproc", "5": "geometry"}
 
 # Prebuilt artifacts never enter a workspace.
-ARTIFACT = re.compile(r".*\.(?:ali|o|a|so(?:\.[0-9.]+)?)$")
+ARTIFACT = re.compile(
+    r".*\.(?:ali|o|a|so(?:\.[0-9.]+)?|dll|dylib|exe|cgpr|lexch|bexch)$")
 
 
 class ConfigurationError(Exception):
     """A failed cross prerequisite; never select a host substitute."""
+
+    def __init__(self, message, returncode=1):
+        super().__init__(message)
+        self.returncode = returncode if returncode > 0 else 128 - returncode
 
 
 def require(condition, message):
@@ -84,8 +90,10 @@ def require(condition, message):
 def run(args, **kwargs):
     result = subprocess.run(
         [str(arg) for arg in args], text=True, capture_output=True, **kwargs)
-    require(result.returncode == 0,
-            f"command failed: {args}\n{result.stdout}{result.stderr}")
+    if result.returncode:
+        raise ConfigurationError(
+            f"command failed: {args}\n{result.stdout}{result.stderr}",
+            result.returncode)
     return result.stdout.strip()
 
 
@@ -143,7 +151,13 @@ def tree(path, roots):
 
 def elf(path, readelf):
     """ELF64 little-endian AArch64; every member of an archive."""
-    details = run([readelf, "-h", path])
+    result = subprocess.run([str(readelf), "-h", str(path)], text=True,
+                            capture_output=True)
+    # Some readelf versions return success for an archive containing both
+    # ELF and non-ELF members. Do not silently accept the partial header set.
+    require(result.returncode == 0 and not result.stderr.strip(),
+            f"incomplete ELF inspection: {path}: {result.stderr}")
+    details = result.stdout
     for field, expected in [
             ("Machine", "AArch64"), ("Class", "ELF64"),
             ("Data", "2's complement, little endian")]:
@@ -615,15 +629,7 @@ def validate(require_core=True):
             "lacks")
 
     config = resolved(value("OPENCV_CROSS_GPR_CONFIG"))
-    gpr = re.sub(r"--[^\n]*", "", config.read_text())
-    for declaration, message in [
-            (f'for Target use "{target}";', "GPR target mismatch"),
-            (f'"{ada}"', "GPR Ada compiler mismatch"),
-            (f'"{cxx}"', "GPR C++ compiler mismatch"),
-            (f'"{runtime}/"', "GPR Ada runtime mismatch"),
-            ('for Driver use Compiler\'Driver ("C++");',
-             "GPR linker mismatch")]:
-        require(declaration in gpr, message)
+    check_configuration(config, target, ada, cxx, runtime)
     settings = dict(
         target=target, sysroot=str(sysroot), ada=ada, cxx=cxx,
         ada_version=ada_version, cxx_version=cxx_version,
@@ -646,6 +652,19 @@ def validate(require_core=True):
     if require_core:
         settings.update(core_prefix(settings))
     return settings
+
+
+def check_configuration(config, target, ada, cxx, runtime):
+    """Validate generated, reused and explicitly supplied configurations alike."""
+    gpr = re.sub(r"--[^\n]*", "", Path(config).read_text())
+    for declaration, message in [
+            (f'for Target use "{target}";', "GPR target mismatch"),
+            (f'"{ada}"', "GPR Ada compiler mismatch"),
+            (f'"{cxx}"', "GPR C++ compiler mismatch"),
+            (f'"{runtime}/"', "GPR Ada runtime mismatch"),
+            ('for Driver use Compiler\'Driver ("C++");',
+             "GPR linker mismatch")]:
+        require(declaration in gpr, message)
 
 
 def core_prefix(settings):
@@ -720,8 +739,10 @@ def logged(args, log, env, cwd=None):
     with log.open("w") as output:
         result = subprocess.run([str(arg) for arg in args], stdout=output,
                                 stderr=subprocess.STDOUT, env=env, cwd=cwd)
-    require(result.returncode == 0,
-            f"build step failed; diagnostics: {log}\n{log.read_text()}")
+    if result.returncode:
+        raise ConfigurationError(
+            f"build step failed; diagnostics: {log}\n{log.read_text()}",
+            result.returncode)
 
 
 TOOL_NAME = re.compile(
@@ -729,10 +750,26 @@ TOOL_NAME = re.compile(
     r"gnat[a-z]*)(?:-[0-9.]+)?")
 
 
-def check_trace(log, settings):
+def check_trace(log, settings, installed_library_dirs=()):
     """Every compiler, linker, binder and archiver invocation in a gprbuild
     -v trace belongs to the supplied target toolchain, and no compile names
-    a host include or library directory."""
+    a host include or library directory.
+
+    Installed consumers may supply exact, previously verified library
+    directories (PREFIX/lib/PROJECT). This exception is for -L only, never
+    includes, parent directories or arbitrary libraries beneath a prefix.
+    Production/probe callers retain the strict default.
+    """
+    libraries = set()
+    installation_roots = set()
+    for directory in installed_library_dirs:
+        directory = Path(directory)
+        require(directory.is_absolute() and directory.parent.name == "lib"
+                and ".." not in directory.parts,
+                f"invalid installed library directory: {directory}")
+        root = resolved(directory.parent.parent)
+        libraries.add(resolved(directory, [root]))
+        installation_roots.add(root)
     drivers = {settings["ada"], settings["cxx"]}
     ada_directory = str(Path(settings["ada"]).parent)
     prefix = settings["target"] + "-"
@@ -753,20 +790,42 @@ def check_trace(log, settings):
                     f"Ada tool outside the supplied toolchain in "
                     f"{log.name}: {line}")
         else:
-            require(name.startswith(prefix),
+            require(name.startswith(prefix)
+                    and str(Path(words[0]).parent) in {
+                        ada_directory, str(Path(settings["cxx"]).parent)},
                     f"archiver is not a target tool in {log.name}: {line}")
-        if "-c" not in words or not re.search(r"\.(?:adb|ads|cpp)$",
-                                              words[-1]):
-            continue
-        commands += 1
         for word in words:
+            installed_library = False
+            if libraries and word.startswith("-L"):
+                path = Path(word[2:])
+                canonical = path.resolve()
+                # Check both spellings: a path lexically under an approved
+                # prefix must not escape through symlinks or '..'. Exact
+                # equality also rejects nested directories and name collisions.
+                installed_library = (
+                    path in libraries and canonical == path
+                    and ".." not in path.parts)
+                if any(inside(path, root) or inside(canonical, root)
+                       for root in installation_roots):
+                    require(installed_library,
+                            f"unapproved installed library directory in "
+                            f"{log.name}: {word}")
+            # A target runtime can live under /usr/lib/gcc-cross. It was
+            # authenticated through GNATLS, a fresh probe and ELF checks;
+            # it is not a host library search path merely due to its prefix.
+            target_runtime = ("-L" + settings["runtime"].rstrip("/") + "/"
+                              if settings.get("runtime") else None)
             require(not re.match(r"-[IL]/usr/(?:local/)?(?:include|lib)\b",
                                  word) or word.startswith(
                                      ("-I" + settings["sysroot"],
-                                      "-L" + settings["sysroot"])),
+                                      "-L" + settings["sysroot"]))
+                    or (target_runtime and word.startswith(target_runtime))
+                    or installed_library,
                     f"host search directory in {log.name}: {word}")
             require("x86_64" not in word,
                     f"host architecture path in {log.name}: {word}")
+        if "-c" in words and re.search(r"\.(?:adb|ads|cpp)$", words[-1]):
+            commands += 1
     require(commands, f"no compile command in {log.name}")
     return commands
 
@@ -807,6 +866,68 @@ def extract(archive, work):
             source.extractall(work)
 
 
+def export_source(work):
+    """Exact clean Git export, or explicitly selected, sanitized archive tree.
+
+    A local .git marker is mandatory for Git discovery: never ask Git about
+    an unpacked tree inside an unrelated enclosing repository.
+    """
+    if (ROOT / ".git").exists():
+        git = ["git", "-c", f"safe.directory={ROOT}", "-C", ROOT]
+        require(resolved(run(git + ["rev-parse", "--show-toplevel"])) == ROOT,
+                "source root is not the Git checkout root")
+        require(not run(git + ["status", "--porcelain", "--untracked-files=all"]),
+                "the source checkout must be clean")
+        revision = run(git + ["rev-parse", "HEAD"])
+        work.mkdir(parents=True)
+        archive = work / "source.tar"
+        run(git + ["archive", "--output=" + str(archive), revision])
+        extract(archive, work)
+        archive.unlink()
+    else:
+        require(os.environ.get("OPENCV_CROSS_SOURCE_ROOT"),
+                "Git-free sources require explicit --source-root")
+        work.mkdir(parents=True)
+        excluded = {".git", "alire", "config", "obj", "lib", "bin",
+                    "__pycache__", ".venv"}
+        generated = re.compile(
+            r".*\.(?:ali|o|a|so(?:\.[0-9.]+)?|dll|exe|dylib|cgpr|"
+            r"lexch|bexch|pyc)$")
+
+        def ignore(directory, names):
+            return [name for name in names if name in excluded
+                    or generated.fullmatch(name)]
+
+        # Validate retained symlinks before copying; never import foreign
+        # source or generated state through an apparently harmless link.
+        for directory, directories, files in os.walk(ROOT, followlinks=False):
+            directories[:] = [name for name in directories
+                              if name not in ignore(directory, directories)]
+            for name in directories + files:
+                if name in ignore(directory, [name]):
+                    continue
+                path = Path(directory) / name
+                if path.is_symlink():
+                    target = resolved(path, [ROOT])
+                    require(not any(part in excluded for part in
+                                    target.relative_to(ROOT).parts)
+                            and not generated.fullmatch(target.name),
+                            "source symlink targets generated state")
+                    require(not path.is_dir(), "source directory symlink")
+        shutil.copytree(ROOT, work, dirs_exist_ok=True, ignore=ignore,
+                        symlinks=False)
+        identity = hashlib.sha256()
+        for path in sorted(work.rglob("*")):
+            if path.is_file():
+                identity.update(str(path.relative_to(work)).encode() + b"\0")
+                identity.update(bytes.fromhex(digest(path)))
+        revision = "staged-source-sha256:" + identity.hexdigest()
+    prebuilt = [str(path) for path in work.rglob("*")
+                if ARTIFACT.fullmatch(path.name)]
+    require(not prebuilt, f"prebuilt artifacts in the export: {prebuilt}")
+    return revision
+
+
 def workspace(mode, destination, settings):
     require(mode in ["--prepare", "--build"],
             "usage: --prepare|--build ABSOLUTE_WORKSPACE")
@@ -822,22 +943,11 @@ def workspace(mode, destination, settings):
                       Path(settings["core"])]:
         require(not inside(work, protected) and not inside(protected, work),
                 f"workspace overlaps {protected}")
-    git = ["git", "-c", f"safe.directory={ROOT}", "-C", ROOT]
-    require(not run(git + ["status", "--porcelain", "--untracked-files=all"]),
-            "the source checkout must be clean")
-    revision = run(git + ["rev-parse", "HEAD"])
     profile = os.environ.get("OPENCV_CROSS_PROFILE", "release")
     require(profile in PROFILES, f"invalid build profile: {profile}")
 
     # All checks have passed; the workspace is created only now.
-    work.mkdir(parents=True)
-    archive = work / "source.tar"
-    run(git + ["archive", "--output=" + str(archive), revision])
-    extract(archive, work)
-    archive.unlink()
-    prebuilt = [str(path) for path in work.rglob("*")
-                if ARTIFACT.fullmatch(path.name)]
-    require(not prebuilt, f"prebuilt artifacts in the export: {prebuilt}")
+    revision = export_source(work)
     (work / "source-revision.txt").write_text(revision + "\n")
     install_config = work / "config/opencv_geometry_install.gpr"
     require(not install_config.exists(), "stale target configuration")
@@ -852,7 +962,11 @@ def workspace(mode, destination, settings):
     (work / "config/opencv_geometry_config.gpr").write_text(
         config_text.replace('with "opencv_core.gpr";\n', ''))
     shutil.copyfile(settings["config"], work / "config/target.cgpr")
-    evidence = dict(settings, source_sha=revision, profile=profile,
+    git_source = not revision.startswith("staged-source-sha256:")
+    evidence = dict(settings, source_sha=revision if git_source else None,
+                    source_identity=revision,
+                    source_kind="git" if git_source else "staged-source",
+                    profile=profile,
                     qualification="CROSS_CONFIGURATION_ONLY")
     (work / "cross-evidence.json").write_text(
         json.dumps(evidence, indent=2, sort_keys=True) + "\n")
@@ -936,4 +1050,4 @@ if __name__ == "__main__":
         main(sys.argv[1:])
     except (ConfigurationError, OSError, ValueError) as failure:
         print(f"error: {failure}", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(getattr(failure, "returncode", 1))

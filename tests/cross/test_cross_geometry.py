@@ -5,12 +5,15 @@ target toolchain. These tests prove the fail-closed logic only; they are not
 target compiler, link or execution evidence.
 """
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 import shlex
+import shutil
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -19,6 +22,9 @@ SPEC = importlib.util.spec_from_file_location(
     "cross", ROOT / "scripts/cross_geometry.py")
 cross = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cross)
+sys.modules["cross_geometry"] = cross
+sys.path.insert(0, str(ROOT / "scripts"))
+import cross_install_geometry as installer
 
 TARGET = "aarch64-linux-gnu"
 IDENTITY = "GCC: (Fake 12.2.0-14) 12.2.0"
@@ -110,6 +116,17 @@ elif arguments[0] == "--cflags":
     print(" ".join(config["cflags"]))
 '''
 
+FAKE_GPRCONFIG = r'''#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+directory = Path(__file__).parent
+config = json.loads((directory / "gprconfig.json").read_text())
+(directory / "gprconfig-arguments.json").write_text(json.dumps(sys.argv[1:]))
+if config.get("status"):
+    sys.exit(config["status"])
+Path(sys.argv[sys.argv.index("-o") + 1]).write_text(config["text"])
+'''
+
 # A gprbuild stand-in: writes target-looking outputs and a -v style trace.
 FAKE_GPRBUILD = r'''#!/usr/bin/env python3
 import json, os, sys
@@ -157,6 +174,15 @@ prefix = Path([a for a in sys.argv if a.startswith("--prefix=")][0][9:])
 library = prefix / "lib" / project
 library.mkdir(parents=True, exist_ok=True)
 (library / f"lib{project}.a").write_text("")
+if project == "opencv_geometry":
+    (library / "libopencv_geometry_ada.a").write_text("")
+    (library / "opencv-geometry.ali").write_text('V "GNAT Lib v12"\n')
+    notices = prefix / "share/doc/opencv_geometry"
+    notices.mkdir(parents=True, exist_ok=True)
+    for name in ["LICENSE", "THIRD_PARTY_NOTICES"]:
+        source = Path(sys.argv[sys.argv.index("-P") + 1]).parent / name
+        if source.is_file():
+            (notices / name).write_bytes(source.read_bytes())
 (prefix / "share/gpr" / f"{project}.gpr").write_text(
     f'with "opencv_core";\nlibrary project {project} is\n'
     f'   for Source_Dirs use ("../../include/{project}");\n'
@@ -875,6 +901,380 @@ class CrossGeometryTests(unittest.TestCase):
     def test_installed_metadata_with_host_paths(self):
         self.install_config["link"] = "-L/usr/lib/x86_64-linux-gnu"
         self.reject_workspace("escapes|missing or invalid")
+
+    # Cross-install bootstrap controls. Synthetic tools prove orchestration,
+    # not vendor compilation; the existing negative-first preflight remains.
+
+    def bootstrap(self):
+        source = self.source_checkout()
+        for name in ["LICENSE", "THIRD_PARTY_NOTICES"]:
+            (source / name).write_text(name + " fixture\n")
+        subprocess.run(["git", "-C", str(source), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(source), "-c", "user.name=t",
+                        "-c", "user.email=t@example.invalid", "commit", "-qm",
+                        "notices"], check=True)
+        gprconfig = self.executable("gprconfig", FAKE_GPRCONFIG)
+        (self.tools / "gprconfig.json").write_text(json.dumps(
+            dict(text=self.config.read_text())))
+        env = dict(self.env, OPENCV_CROSS_GPRCONFIG=gprconfig,
+                   TMPDIR=str(self.base))
+        env.pop("OPENCV_CROSS_GPR_CONFIG")
+        arguments = ["--target", TARGET, "--toolchain-bin", str(self.tools),
+                     "--runtime", str(self.runtime), "--sysroot", str(self.sysroot),
+                     "--core-prefix", str(self.core), "--prefix", str(self.base / "installed"),
+                     "--source-root", str(source)]
+        return source, env, arguments
+
+    def test_direct_gprconfig_selection_and_reuse(self):
+        _, env, _ = self.bootstrap()
+        run = self.base / "bootstrap"
+        run.mkdir()
+        with patch.dict(os.environ, env, clear=True):
+            selected = installer.configuration(run, TARGET, self.ada, self.cxx,
+                                                self.runtime, self.core)
+            arguments = json.loads((self.tools / "gprconfig-arguments.json").read_text())
+            self.assertEqual(arguments, ["--batch", "--target=" + TARGET,
+                f"--config=Ada,,{self.runtime},{self.tools},GNAT",
+                f"--config=C++,,,{self.tools},{Path(self.cxx).name}", "-o", str(selected)])
+            durable = self.core / f"share/gprconfig/{TARGET}.cgpr"
+            durable.parent.mkdir()
+            shutil.copyfile(selected, durable)
+            self.assertEqual(installer.configuration(
+                run, TARGET, self.ada, self.cxx, self.runtime, self.core), durable)
+
+    def test_generated_configuration_cannot_select_wrong_drivers(self):
+        _, env, _ = self.bootstrap()
+        run = self.base / "bootstrap"
+        run.mkdir()
+        for old in [TARGET, self.ada, self.cxx, str(self.runtime),
+                    'for Driver use Compiler\'Driver ("C++");']:
+            with self.subTest(field=old), patch.dict(os.environ, env, clear=True):
+                (self.tools / "gprconfig.json").write_text(json.dumps(
+                    dict(text=self.config.read_text().replace(old, "wrong"))))
+                with self.assertRaisesRegex(cross.ConfigurationError, "GPR"):
+                    installer.configuration(run, TARGET, self.ada, self.cxx,
+                                            self.runtime, self.core)
+
+    def test_incompatible_core_configuration_is_not_reused(self):
+        _, env, _ = self.bootstrap()
+        durable = self.core / f"share/gprconfig/{TARGET}.cgpr"
+        durable.parent.mkdir()
+        durable.write_text(self.config.read_text().replace(str(self.runtime), "/foreign"))
+        run = self.base / "bootstrap"
+        run.mkdir()
+        with patch.dict(os.environ, env, clear=True):
+            self.assertEqual(installer.configuration(
+                run, TARGET, self.ada, self.cxx, self.runtime, self.core), run / "target.cgpr")
+
+    def test_gprconfig_failure_preserves_status_and_work(self):
+        _, env, arguments = self.bootstrap()
+        (self.tools / "gprconfig.json").write_text(json.dumps(dict(status=37)))
+        result = subprocess.run(["sh", str(ROOT / "scripts/cross_install_geometry.sh"),
+                                 *arguments], env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 37, result.stderr)
+        run = Path(result.stdout.split("Cross-install workspace: ")[1].splitlines()[0])
+        self.assertTrue((run / "gprconfig.log").is_file())
+        self.assertIn(str(run), result.stderr)
+
+    def test_install_prefix_safety_and_shared_core(self):
+        source, _, _ = self.bootstrap()
+        for prefix in [Path("relative"), Path("/"), source, source / "installed",
+                       self.sysroot, self.core / "nested", self.base]:
+            with self.subTest(prefix=prefix), self.assertRaises(cross.ConfigurationError):
+                installer.prefix_safety(prefix, source, self.sysroot, self.core)
+        self.assertEqual(installer.prefix_safety(
+            self.core, source, self.sysroot, self.core), self.core)
+        link = self.base / "prefix-link"
+        link.symlink_to(self.core)
+        with self.assertRaisesRegex(cross.ConfigurationError, "symlink"):
+            installer.prefix_safety(link, source, self.sysroot, self.core)
+
+    def test_publication_never_overwrites_or_follows_links(self):
+        staged = self.base / "stage"
+        (staged / "share/gpr").mkdir(parents=True)
+        conflict = staged / "share/gpr/opencv_core.gpr"
+        conflict.write_text("must not replace Core")
+        before = (self.core / "share/gpr/opencv_core.gpr").read_bytes()
+        with self.assertRaisesRegex(cross.ConfigurationError, "overwrite"):
+            installer.publish(staged, self.core)
+        self.assertEqual(before, (self.core / "share/gpr/opencv_core.gpr").read_bytes())
+        conflict.rename(staged / "share/gpr/opencv_geometry.gpr")
+        link = self.core / "share/gpr/opencv_geometry.gpr"
+        link.symlink_to(self.base / "absent")
+        with self.assertRaisesRegex(cross.ConfigurationError, "symlink"):
+            installer.publish(staged, self.core)
+
+    def test_archive_source_excludes_generated_state_and_enclosing_git(self):
+        enclosing = self.source_checkout()
+        source = enclosing / "archive"
+        (source / "src").mkdir(parents=True)
+        (source / "src/unit.adb").write_text("-- staged source\n")
+        for name in ["obj/stale.o", "lib/stale.a", "src/stale.ali", "alire/state",
+                     "config/native.gpr", "tests/config/native.gpr", "target.cgpr"]:
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("stale")
+        work = self.base / "export"
+        with patch.object(cross, "ROOT", source), patch.dict(
+                os.environ, {"OPENCV_CROSS_SOURCE_ROOT": str(source)}, clear=True):
+            revision = cross.export_source(work)
+        self.assertTrue(revision.startswith("staged-source-sha256:"))
+        self.assertEqual([str(path.relative_to(work)) for path in work.rglob("*")
+                          if path.is_file()], ["src/unit.adb"])
+        with patch.object(cross, "ROOT", source), patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(cross.ConfigurationError, "explicit"):
+                cross.export_source(self.base / "implicit")
+
+    def test_archive_symlink_escape_rejected(self):
+        source = self.base / "archive"
+        source.mkdir()
+        (source / "foreign.adb").symlink_to(self.config)
+        with patch.object(cross, "ROOT", source), patch.dict(
+                os.environ, {"OPENCV_CROSS_SOURCE_ROOT": str(source)}, clear=True):
+            with self.assertRaisesRegex(cross.ConfigurationError, "escapes"):
+                cross.export_source(self.base / "export")
+
+    def test_success_retains_configuration_logs_and_cleans_workspace(self):
+        source, env, arguments = self.bootstrap()
+        self.write_configs()
+        # Consumer implementation is independently exercised by real target
+        # qualification; this orchestration control substitutes that gate only.
+        class Consumers:
+            def qualify(inner, settings, core, geometry, work, logs, emulator):
+                self.assertTrue(Path(settings["config"]).is_file())
+                self.assertTrue((geometry / "share/gpr/opencv_geometry.gpr").is_file())
+                self.assertFalse(work.exists())
+                logs.mkdir()
+
+        with patch.dict(os.environ, env, clear=True), \
+                patch.object(installer.cross, "ROOT", source), \
+                patch.object(installer, "consumer_module", return_value=Consumers()), \
+                patch("sys.stdout", new_callable=io.StringIO) as output:
+            installer.install(arguments)
+        run = Path(output.getvalue().split("Cross-install workspace: ")[1].splitlines()[0])
+        self.assertFalse(run.exists())
+        prefix = self.base / "installed"
+        self.assertEqual((prefix / f"share/gprconfig/opencv_geometry-{TARGET}.cgpr").read_text(),
+                         self.config.read_text())
+        self.assertTrue((prefix / f"share/doc/opencv_geometry/cross-{TARGET}/production-build.log").is_file())
+
+    def test_shared_prefix_install_preserves_every_core_file(self):
+        source, env, arguments = self.bootstrap()
+        self.write_configs()
+        arguments[arguments.index("--prefix") + 1] = str(self.core)
+        before = {str(p.relative_to(self.core)): p.read_bytes()
+                  for p in self.core.rglob("*") if p.is_file()}
+        with patch.dict(os.environ, env, clear=True), \
+                patch.object(installer.cross, "ROOT", source), \
+                patch.object(installer, "consumer_module") as consumers:
+            consumers.return_value.qualify.return_value = {}
+            installer.install(arguments)
+        for name, data in before.items():
+            self.assertEqual((self.core / name).read_bytes(), data, name)
+        self.assertTrue((self.core / f"share/gprconfig/opencv_geometry-{TARGET}.cgpr").is_file())
+
+    def test_archive_partial_inspection_and_mixed_members_rejected(self):
+        archive = self.core / "lib/opencv_core/libopencv_core_ada.a"
+        for result in [subprocess.CompletedProcess([], 0,
+                "Class: ELF64\nData: 2's complement, little endian\nMachine: AArch64\n",
+                "readelf: non-ELF member"), subprocess.CompletedProcess([], 0,
+                "Class: ELF64\nClass: ELF32\nData: 2's complement, little endian\n"
+                "Machine: AArch64\nMachine: ARM\n", "")]:
+            with patch.object(cross.subprocess, "run", return_value=result), \
+                    self.assertRaises(cross.ConfigurationError):
+                cross.elf(archive, self.readelf)
+
+    def test_failed_build_and_failed_consumers_keep_diagnostics(self):
+        source, env, arguments = self.bootstrap()
+        self.write_configs()
+        self.executable("gprbuild", "#!/bin/sh\nexit 43\n")
+        with patch.dict(os.environ, env, clear=True), \
+                patch.object(cross, "ROOT", source), \
+                patch("sys.stdout", new_callable=io.StringIO) as output:
+            with self.assertRaises(cross.ConfigurationError) as error:
+                installer.install(arguments)
+        self.assertEqual(error.exception.returncode, 43)
+        run = Path(output.getvalue().split("Cross-install workspace: ")[1].splitlines()[0])
+        self.assertTrue((run / "build/toolchain-probe.log").exists())
+        shutil.rmtree(run)  # Only this test's owned failed workspace.
+        self.executable("gprbuild", FAKE_GPRBUILD)
+        with patch.dict(os.environ, env, clear=True), \
+                patch.object(cross, "ROOT", source), \
+                patch.object(installer, "consumer_module") as consumers, \
+                patch("sys.stdout", new_callable=io.StringIO) as output:
+            consumers.return_value.qualify.side_effect = cross.ConfigurationError("consumer gate", 47)
+            with self.assertRaises(cross.ConfigurationError) as error:
+                installer.install(arguments)
+        self.assertEqual(error.exception.returncode, 47)
+        run = Path(output.getvalue().split("Cross-install workspace: ")[1].splitlines()[0])
+        self.assertTrue((run / "build/production-build.log").exists())
+        self.assertTrue((self.base / "installed/share/gpr/opencv_geometry.gpr").exists())
+        shutil.rmtree(run)
+
+    def test_qualification_requires_fresh_prefix_and_automatic_generation(self):
+        source, env, arguments = self.bootstrap()
+        with patch.dict(os.environ, dict(env, OPENCV_CROSS_GPR_CONFIG=str(self.config)), clear=True), \
+                patch.object(cross, "ROOT", source):
+            with self.assertRaisesRegex(cross.ConfigurationError, "unset"):
+                installer.install(["--qualify", *arguments])
+        (self.base / "installed").mkdir()
+        with patch.dict(os.environ, env, clear=True), patch.object(cross, "ROOT", source):
+            with self.assertRaisesRegex(cross.ConfigurationError, "must not exist"):
+                installer.install(["--qualify", *arguments])
+
+    def test_qualification_checks_cleanup_and_relocates_only_copies(self):
+        source, env, arguments = self.bootstrap()
+        self.write_configs()
+        with patch.dict(os.environ, env, clear=True), \
+                patch.object(cross, "ROOT", source), \
+                patch.object(installer, "consumer_module") as consumers, \
+                patch("sys.stdout", new_callable=io.StringIO) as output:
+            def consumer(settings, core, geometry, work, logs, emulator):
+                self.assertTrue((core / "share/gpr/opencv_core.gpr").exists())
+                self.assertTrue(Path(settings["config"]).exists())
+                logs.mkdir(parents=True)
+                if "installed-work" == work.name:
+                    self.assertFalse(production().exists())
+            def production():
+                return Path(output.getvalue().split("Cross-install workspace: ")[1].splitlines()[0])
+            consumers.return_value.qualify.side_effect = consumer
+            installer.install(["--qualify", *arguments])
+        self.assertEqual(consumers.return_value.qualify.call_count, 3)
+        self.assertTrue((self.core / "share/gpr/opencv_core.gpr").exists())
+        evidence = Path(output.getvalue().split("Qualification evidence retained: ")[1].splitlines()[0])
+        self.assertTrue((evidence / "dispositions.txt").read_text().startswith("PASS"))
+        shutil.rmtree(evidence)
+
+    def test_host_linker_paths_and_foreign_target_archiver_rejected(self):
+        settings = self.check()
+        log = self.base / "link.log"
+        for command in [f"{self.cxx} -L/usr/lib/x86_64-linux-gnu file.o",
+                        f"/foreign/{TARGET}-ar cr library.a file.o"]:
+            log.write_text(f"{self.ada} -c unit.adb\n{command}\n")
+            with self.assertRaisesRegex(cross.ConfigurationError, "host|archiver"):
+                cross.check_trace(log, settings)
+        settings["runtime"] = "/usr/lib/gcc-cross/aarch64-linux-gnu/12"
+        log.write_text(f"{self.ada} -c unit.adb\n{self.cxx} "
+                       f"-L{settings['runtime']}/adalib/ file.o\n")
+        self.assertEqual(cross.check_trace(log, settings), 1)
+
+    def installed_trace(self, switches, directories=(), settings=None):
+        """Reach compiler/link processing with a valid selected-driver trace."""
+        log = self.base / "installed-consumer-build.log"
+        log.write_text(f"{self.ada} -c consumer.adb\n"
+                       f"{self.cxx} consumer.o {' '.join(switches)} -o consumer\n")
+        return cross.check_trace(log, settings or {
+            "ada": self.ada, "cxx": self.cxx, "target": TARGET,
+            "sysroot": str(self.sysroot), "runtime": str(self.runtime)},
+            directories)
+
+    def test_installed_trace_vendor_library_directories(self):
+        # No root access or vendor installation is needed. Only the prior
+        # existence/containment check is substituted for these virtual paths;
+        # actual trace parsing, canonical comparison and host rejection run.
+        core = Path("/usr/local/lib/aarch64-linux-gnu/ada")
+        geometry = Path("/usr/local/lib/aarch64-linux-gnu/geometry-r1")
+        directories = [core / "lib/opencv_core", core / "lib/opencv_core_shim",
+                       geometry / "lib/opencv_geometry",
+                       geometry / "lib/opencv_geometry_shim"]
+        with patch.object(cross, "resolved", side_effect=lambda path, roots=None: Path(path)):
+            for directory in directories:
+                with self.subTest(directory=directory):
+                    self.assertEqual(self.installed_trace(
+                        [f"-L{directory}/"], directories), 1)
+            for path in ["/usr/local/lib/unverified", "/usr/lib/unverified",
+                         str(core) + "-untrusted/lib/opencv_core",
+                         str(core / "lib/other"), str(core / "lib/opencv_core/nested"),
+                         str(core / "lib/opencv_core/../../../unverified"),
+                         str(core / "lib/opencv_core/../opencv_core_shim")]:
+                with self.subTest(path=path), self.assertRaisesRegex(
+                        cross.ConfigurationError, "host search|unapproved installed"):
+                    self.installed_trace(["-L" + path], directories)
+            for path in [core / "lib/opencv_core", Path("/usr/local/include"),
+                         Path("/usr/include/opencv4")]:
+                with self.subTest(include=path), self.assertRaisesRegex(
+                        cross.ConfigurationError, "host search directory"):
+                    self.installed_trace(["-I" + str(path)], directories)
+            with self.assertRaisesRegex(cross.ConfigurationError, "host search"):
+                self.installed_trace(["-L" + str(directories[0])])
+
+    def test_installed_trace_separate_shared_and_relocated_prefixes(self):
+        for core, geometry in [(self.base / "core", self.base / "geometry"),
+                               (self.base / "shared", self.base / "shared"),
+                               (self.base / "relocated/longer/core",
+                                self.base / "relocated/longer/geometry")]:
+            directories = [core / "lib/opencv_core", core / "lib/opencv_core_shim",
+                           geometry / "lib/opencv_geometry",
+                           geometry / "lib/opencv_geometry_shim"]
+            for directory in directories:
+                directory.mkdir(parents=True, exist_ok=True)
+            with self.subTest(core=core, geometry=geometry):
+                self.assertEqual(self.installed_trace(
+                    [f"-L{directory}/" for directory in directories], directories), 1)
+                for path in [core / "lib/other", core / "lib/opencv_core/nested",
+                             core / "lib/opencv_core/../../../outside"]:
+                    with self.subTest(path=path), self.assertRaisesRegex(
+                            cross.ConfigurationError, "unapproved installed"):
+                        self.installed_trace(["-L" + str(path)], directories)
+
+    def test_installed_trace_symlink_and_traversal_escapes(self):
+        directory = self.core / "lib/opencv_core"
+        outside = self.base / "outside"
+        outside.mkdir()
+        (directory / "escape").symlink_to(outside, target_is_directory=True)
+        (self.core / "lib/escape").symlink_to(outside, target_is_directory=True)
+        for path in [directory / "escape", self.core / "lib/escape",
+                     directory / "../../../outside"]:
+            with self.subTest(path=path), self.assertRaisesRegex(
+                    cross.ConfigurationError, "unapproved installed"):
+                self.installed_trace(["-L" + str(path)], [directory])
+        escaped_directory = self.core / "lib/escape"
+        with self.assertRaisesRegex(cross.ConfigurationError, "escapes"):
+            self.installed_trace(["-L" + str(escaped_directory)], [escaped_directory])
+
+    def test_installed_trace_keeps_sysroot_and_runtime_exceptions(self):
+        directory = self.core / "lib/opencv_core"
+        self.assertEqual(self.installed_trace([
+            "-I" + str(self.include), "-L" + str(self.library),
+            f"-L{self.runtime}/adalib/", "-L" + str(directory)], [directory]), 1)
+
+    def test_consumer_trace_uses_current_not_original_prefixes(self):
+        consumers = installer.consumer_module()
+        for label, shared in [("separate", False), ("shared", True),
+                              ("relocated/longer", False)]:
+            core = self.base / label / "core"
+            geometry = core if shared else self.base / label / "geometry"
+            directories = [core / "lib/opencv_core", core / "lib/opencv_core_shim",
+                           geometry / "lib/opencv_geometry",
+                           geometry / "lib/opencv_geometry_shim"]
+            for directory in directories:
+                directory.mkdir(parents=True, exist_ok=True)
+            for prefix in {core, geometry}:
+                (prefix / "share/gpr").mkdir(parents=True)
+            settings = dict(ada=self.ada, cxx=self.cxx, target=TARGET,
+                            sysroot=str(self.sysroot), runtime=str(self.runtime),
+                            readelf=self.readelf, identities=[IDENTITY],
+                            gprbuild=self.gprbuild, config=str(self.config),
+                            include=str(self.include), native_geometry_module="imgproc",
+                            core="/original/not-the-current-installation")
+            def logged(args, log, env, cwd=None):
+                log.write_text(f"{self.ada} -c consumer.adb\n{self.cxx} "
+                               + " ".join(f"-L{p}/" for p in directories) + "\n")
+            def checked(log, actual_settings, actual_directories):
+                self.assertEqual(actual_directories, directories)
+                self.assertEqual(cross.check_trace(log, actual_settings,
+                                                   actual_directories), 1)
+                raise RuntimeError("trace accepted; later ELF gates not simulated")
+            with self.subTest(label=label), \
+                    patch.object(consumers, "startup_identities", return_value=set()), \
+                    patch.object(consumers.subprocess, "run", return_value=
+                                 subprocess.CompletedProcess([], 0, "", "")), \
+                    patch.object(consumers.cross, "logged", side_effect=logged), \
+                    patch.object(consumers.cross, "check_trace", side_effect=checked):
+                with self.assertRaisesRegex(RuntimeError, "trace accepted"):
+                    consumers.qualify(settings, core, geometry,
+                                      self.base / label / "consumer-work",
+                                      self.base / label / "consumer-logs", None)
 
 
 if __name__ == "__main__":
