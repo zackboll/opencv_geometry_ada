@@ -1,5 +1,86 @@
 # GEOM-DOC-010 — additive API successor policy (candidate)
 
+## R3 trusted build inputs and 0.3.3 integration
+
+Independent review found two gaps in R2: a candidate could change the pip
+requirements file, and snapshot identity did not authorize Alire dependencies,
+actions or environment settings. A later current-trust failure did **not**
+prevent production's earlier candidate installation. R3 corrects that ordering,
+not merely the final status check.
+
+`validate_gnatdoc_inputs.py` is a standard-library-only preflight. It imports no
+candidate code and executes no package manager. `candidate_rules` invokes it
+before other candidate checks, and qualification invokes the real rules before
+any `alr pin`/build/generator. Requirements must be byte-identical to the selected
+reviewed policy, retaining the existing comment, `markdown-it-py==3.0.0` and
+`mdurl==0.1.2`. Missing files, symlinks, changed line endings, package additions,
+removals, versions, URLs, editable packages, indexes and pip options all fail.
+
+The tests manifest must also be byte-identical. The root manifest is compared
+byte-for-byte after replacing only its unique canonical root version line with
+the reviewed line. TOML parsing additionally rejects duplicate/ambiguous root
+versions. All other bytes are protected, including comments, crate identity,
+metadata, dependencies/platform constraints, actions, pins, environment and any
+unknown keys. Version syntax is canonical three-component nonnegative decimal
+without leading zeros or suffixes. Unchanged versions pass; the **only** reviewed
+exception is `0.3.2` to `0.3.3`, independently established by merged PR #56.
+This is not a general patch-release permission, downgrade permission or
+candidate exception list. A future release requires new independent review.
+The integrated policy itself contains 0.3.3, so normal candidates match it.
+
+Only disposable qualification source copies receive the documented Core pins
+(`../core` for root and `../../core` for tests). Initial validation forbids new
+committed pins; the post-build verifier requires exactly the candidate original
+plus that suffix, and strips exactly one known suffix for compatibility checks.
+An extra pin, modified suffix, or arbitrary manifest content remains rejected.
+The tests crate's existing parent-crate pin remains part of reviewed bytes.
+
+Production documentation checks out the exact event base separately. **Before**
+candidate Alire actions or pip dependency installation it runs only that base's
+preflight in Python isolated mode. In the first-policy transition, where main
+does not have that script, the workflow's literal reviewed commit/tree guard
+and shell `cmp` check all three inputs without loading any candidate verifier.
+Candidate input must then match those immutable reviewed base bytes exactly.
+Pip consumes the separate base's requirements file, never candidate requirements.
+Subsequent ordinary feature validation uses the independently reviewed base
+implementation. This ordering is tested by executing the actual workflow shell
+with valid and mutated disposable checkouts; no action or installation is run
+by that test. Candidate YAML still requires external review/enforcement: a PR
+cannot secure its own arbitrary workflow replacement merely by reporting green.
+
+Main `aad0b1b65814ac472bf5a9ea1b266f47aa3baf06`, tree
+`be543978b6fe33cc7bb18c4c1ca58328ae741ee6`, incorporates PR #55 (cross-install)
+and PR #56 (0.3.3 preparation). Their full diff, ten-path inventory, merge parents
+and exact final blob identities were inspected. Core `>=0.5.0 & <0.6.0`, public
+Ada/C ABI sources, test registrations and historical authority are unchanged.
+The selector explicitly verifies both merged PR parent pairs, all ten blobs,
+and ancestry back through PR #54; only this literal newer base/tree joins the
+earlier reviewed bootstrap pairs. Intermediate or arbitrary mutable-main bases
+are not authorized. Initial PR execution stays exploratory. First main push
+requires its actual first parent/event-before plus policy second parent; merge
+substitution protection now also covers both manifests and requirements.
+Later additive features retain independently sourced ordinary policy selection.
+`policy_approved` stays false on every execution path.
+
+The mutation catalog covers documentation versions/addition/deletion/index/
+editable/direct URL/options/missing/CRLF, Core constraint, extra dependency,
+pre-build/extra action, MSYS2 environment, unauthorized pin, AUnit/GNATprove/
+GNATcov, unknown key, duplicate/unreviewed version, missing manifests and
+manifest CRLF. Every attack first validates a real disposable candidate, changes
+one input, requires a specific policy ValueError (not a tool failure), restores
+all bytes, and independently revalidates. Both successor campaigns include this
+catalog in addition to all original 25 attacks; readiness requires every named
+input attack as well as the raised total. Historical 30-attack tests are intact.
+Additional focused tests exercise symlink substitution, temporary-pin isolation,
+valid authorized version-only change and unchanged inputs.
+
+Required-check names and maintainer rules below remain applicable. The R3
+protection query again returned main unprotected and zero rulesets. **No external
+settings were applied; BRANCH_PROTECTION_REQUIRED.** Independent approval,
+workflow/trust owner review, dismissal of stale approval, latest-push approval,
+required checks, and no force-push/deletion or silent bypass remain necessary.
+DO NOT MERGE remains in effect; no release/tag/index/GEOM-031 action is authorized.
+
 **Not approved. Tests do not authorize this policy. GEOM-031 remains blocked
 until independent review and merge of the dedicated policy PR.**
 

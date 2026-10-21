@@ -15,9 +15,12 @@ import subprocess
 
 PREDECESSOR = "2f5239a0e264ca2bb4106cdb338d3eac25abf674"
 SDK_BASE = "5f71c9a6d5291adb032eb1a43954c5f9aaf047e6"
+RELEASE_BASE = "aad0b1b65814ac472bf5a9ea1b266f47aa3baf06"
+CROSS_BASE = "e90da6ec345099a9e4833d4bed11be204602c5ac"
 BOOTSTRAP_TREES = {
     PREDECESSOR: "c440b9901e1003f06ae555b3a8a80d9874229680",
     SDK_BASE: "cc8487634f66be422e835b95c2ee8cd57e952d45",
+    RELEASE_BASE: "be543978b6fe33cc7bb18c4c1ca58328ae741ee6",
 }
 SDK_PARENTS = (PREDECESSOR, "43e7a398a5c154ef7d63e44d12c5251d6647dc3e")
 SDK_BLOBS = {
@@ -28,6 +31,18 @@ SDK_BLOBS = {
     "tests/macos/qualify_standalone_sdk.sh": "4cc6e7cebbad9988b7430a15cb584d2333fe454e",
 }
 MARKER = "scripts/run_additive_gnatdoc_review.py"
+RELEASE_BLOBS = {
+    "README.md": "f8e1027fb59e6f52b07128a07bd41e683ad7fb86",
+    "alire.toml": "494af4cb323712ef13d4cf2c6650eb5210f82ae0",
+    "docs/cross-install-geometry.md": "96bdd09ce9e3a79360629a4babd335e70d312ed5",
+    "docs/release-0.3.3-preparation.md": "385fb546b90d265029653bad0ae256f743a948b9",
+    "scripts/cross_geometry.py": "7b40645e25038f38124b0e1bd7c8f1b78ef3e64c",
+    "scripts/cross_install_geometry.py": "01a6b312fa08b8a2b8c54c409f3db2dd79f71fde",
+    "scripts/cross_install_geometry.sh": "171389b51111912e3114d1ee6c13aba76a91c8f9",
+    "tests/cross/qualify_geometry_cross_install.sh": "80aa76391efb0c5d2768b80f458b119e790a3a77",
+    "tests/cross/qualify_reference_consumers.py": "494c368961d9344bb7c8701b66bbd45c736ec31f",
+    "tests/cross/test_cross_geometry.py": "22e16eb08396f2b273ee27d1f036f9b9669f51c1",
+}
 
 
 def require(condition, message):
@@ -53,7 +68,20 @@ def reviewed_bootstrap(repository, revision):
     require(revision in BOOTSTRAP_TREES, "unreviewed first-policy bootstrap base")
     require(git(repository, "rev-parse", revision + "^{tree}") == BOOTSTRAP_TREES[revision],
             "reviewed bootstrap tree differs")
-    if revision == SDK_BASE:
+    if revision == RELEASE_BASE:
+        reviewed_bootstrap(repository, SDK_BASE)
+        for commit, parents in (
+            (CROSS_BASE, (SDK_BASE, "ff4089671cb11837416fe1aa9892018c5fa24fda")),
+            (RELEASE_BASE, (CROSS_BASE, "22dd0c08f849d0da6c7befe11e6a70a0ce76728c")),
+        ):
+            require(tuple(git(repository, "show", "-s", "--format=%P", commit).split()) == parents,
+                    "PR 55/56 merge ancestry differs")
+        require(set(git(repository, "diff", "--name-only", SDK_BASE, revision).splitlines()) ==
+                set(RELEASE_BLOBS), "PR 55/56 changed-file inventory differs")
+        for name, blob in RELEASE_BLOBS.items():
+            require(git(repository, "rev-parse", revision + ":" + name) == blob,
+                    "PR 55/56 reviewed bytes differ: " + name)
+    elif revision == SDK_BASE:
         require(tuple(git(repository, "show", "-s", "--format=%P", revision).split()) == SDK_PARENTS,
                 "PR 54 merge ancestry differs")
         require(set(git(repository, "diff", "--name-only", PREDECESSOR, revision).splitlines()) ==
@@ -99,7 +127,8 @@ def select(repository, event_name, event, candidate):
             # A merge may combine the reviewed base's build fixes, but cannot
             # introduce new verifier bytes absent from the reviewed policy PR.
             require(not git(repository, "diff", "--name-only", policy, candidate, "--",
-                            "scripts", ".github/workflows", "docs/evidence"),
+                            "scripts", ".github/workflows", "docs/evidence",
+                            "docs/requirements.txt", "alire.toml", "tests/alire.toml"),
                     "first main merge substituted verifier/workflow/evidence")
     require(policy != candidate or bootstrap, "candidate cannot select itself as ordinary policy")
     return {"event": event_name, "candidate": candidate, "base": base,

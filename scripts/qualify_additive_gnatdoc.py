@@ -19,13 +19,13 @@ from qualify_shared_gnatdoc_shadow import (
 )
 
 
-def source_rules(baseline, source, synthetic):
+def source_rules(baseline, source, synthetic, qualification_pins=False):
     if synthetic:
         from additive_gnatdoc_fixture import validate, NAME
         validate(source, ROOT)
         from additive_gnatdoc_policy import ADDITIONS
-        return candidate_rules(baseline, source, ADDITIONS | {NAME})
-    return candidate_rules(baseline, source)
+        return candidate_rules(baseline, source, ADDITIONS | {NAME}, qualification_pins)
+    return candidate_rules(baseline, source, qualification_pins=qualification_pins)
 
 
 def verify(workspace, repository, revision, policy_revision, synthetic=False):
@@ -40,7 +40,7 @@ def verify(workspace, repository, revision, policy_revision, synthetic=False):
         expected = original + ("\n[[pins]]\nopencv_core = { path='" + pin + "' }\n").encode()
         require(regular(source / name) == expected, "unauthorized build-clone manifest mutation")
     exact_snapshot(workspace / "baseline", repository, PREDECESSOR)
-    rules = source_rules(workspace / "baseline", source, synthetic)
+    rules = source_rules(workspace / "baseline", source, synthetic, qualification_pins=True)
     require(not git(source, "diff", "--name-only", "--", ".", ":(exclude)alire.toml",
                     ":(exclude)tests/alire.toml"), "tracked candidate files changed")
     require(sha(regular(workspace / "gnatdoc/bin/gnatdoc")) == GNATDOC_SHA256,

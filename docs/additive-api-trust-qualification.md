@@ -1,5 +1,47 @@
 # GEOM-DOC-010 — qualification progress and corrective disposition
 
+## R3 correction and exact-head evidence boundary
+
+Starting PR head: `c37acfb47271043d61e08d04f49bae80ea0be9a0`.
+Verified main: `aad0b1b65814ac472bf5a9ea1b266f47aa3baf06`, tree
+`be543978b6fe33cc7bb18c4c1ca58328ae741ee6`.
+Normal reconciliation merge: `6397a4768018ac730e10bd1f819e046b4c63212d`, tree
+`8dae5b8d8cde9f783890f28299e7d79e3fd276ee`. Parents are exactly starting policy
+and verified main. There were no conflicts or manual resolutions. Incoming paths:
+`README.md`, `alire.toml`, `docs/cross-install-geometry.md`,
+`docs/release-0.3.3-preparation.md`, `scripts/cross_geometry.py`,
+`scripts/cross_install_geometry.py`, `scripts/cross_install_geometry.sh`,
+`tests/cross/qualify_geometry_cross_install.sh`,
+`tests/cross/qualify_reference_consumers.py`, `tests/cross/test_cross_geometry.py`.
+PR #55 merge `e90da6ec345099a9e4833d4bed11be204602c5ac` precedes PR #56 main;
+their changes were inspected and retained, not redesigned. Root version is 0.3.3;
+Core constraint, production source/GPR/API/ABI, tests and original evidence match
+reviewed main. Existing tags are not modified.
+
+R3-001 freezes documentation dependency bytes and moves independently sourced
+production preflight before Alire/pip use, with pip reading the base checkout.
+R3-002 freezes both Alire manifests except a unique, canonical root version-only
+0.3.2→0.3.3 transition established by PR #56. Candidate commit hashes are no
+longer mistaken for authorization of executable build configuration. The shared
+validator is standard-library-only; qualification validates before introducing
+the exact two disposable Core pins. Tests independently check pin/restoration
+boundaries and execute actual production-bootstrap preflight shell.
+
+New focused tests and both extended adversarial campaigns use the real policy
+path in disposable candidates, require input-specific rejection, restore bytes
+and validate again. No unrelated subprocess/package/compiler failure qualifies
+as an attack. Requirements and manifest attack coverage, version semantics and
+execution order are detailed in the policy document. Readiness requires the new
+named attacks without lowering the original historical or successor thresholds.
+
+R2 hosted runs 39357428899 and 39357429017 are now completed successfully; they
+are earlier-head evidence, not R3 final-head results. All R3 local/hosted totals,
+final tested SHA/tree, reports and artifact identities will be recorded on the
+existing PR after actual execution. This avoids a self-referential report-only
+commit that would invalidate the exact-head campaign. Until those gates finish,
+do not infer R3 success from R1/R2. Independent human approval is still required.
+Main remains unprotected with no rulesets observed; settings were not applied.
+
 **DO NOT MERGE: independent review is required. GEOM-031 remains blocked.**
 
 ## R2 reconciliation and bootstrap qualification

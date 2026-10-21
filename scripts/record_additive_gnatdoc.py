@@ -68,9 +68,13 @@ def record(workspace, repository, revision, policy_revision, historical_workspac
         require(len(browser["history"]) == 16 and
                 all(sum(h["width"] == w and h["theme"] == t for h in browser["history"]) == 4
                     for w in (1280, 390) for t in ("light", "dark")), "history coverage missing")
+        from gnatdoc_input_mutations import ATTACKS
+        require({"trusted_input_" + a[0] for a in ATTACKS} <=
+                {a["name"] for a in reports["negative"]["attacks"]},
+                "trusted-input attacks missing")
         require(reports["negative"]["restored_and_verified"] and
                 reports["negative"]["executed"] == len(reports["negative"]["attacks"]) and
-                reports["negative"]["executed"] >= 25 and
+                reports["negative"]["executed"] >= 25 + len(ATTACKS) and
                 all(a["restored_and_verified"] and a["rejection"] for a in reports["negative"]["attacks"]),
                 "incomplete successor attack/restoration evidence")
         require(historical_verify(workspace, historical_workspace) ==

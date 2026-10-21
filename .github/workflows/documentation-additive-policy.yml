@@ -44,7 +44,7 @@ jobs:
             base=$(git -C policy rev-parse HEAD)
             tree=$(git -C policy rev-parse HEAD^{tree})
             case "$base:$tree" in
-              2f5239a0e264ca2bb4106cdb338d3eac25abf674:c440b9901e1003f06ae555b3a8a80d9874229680|5f71c9a6d5291adb032eb1a43954c5f9aaf047e6:cc8487634f66be422e835b95c2ee8cd57e952d45) ;;
+              2f5239a0e264ca2bb4106cdb338d3eac25abf674:c440b9901e1003f06ae555b3a8a80d9874229680|5f71c9a6d5291adb032eb1a43954c5f9aaf047e6:cc8487634f66be422e835b95c2ee8cd57e952d45|aad0b1b65814ac472bf5a9ea1b266f47aa3baf06:be543978b6fe33cc7bb18c4c1ca58328ae741ee6) ;;
               *) echo 'Unreviewed bootstrap base/tree' >&2; exit 1 ;;
             esac
             git -C policy fetch ../candidate "$CANDIDATE_SHA"
@@ -56,6 +56,8 @@ jobs:
             --candidate "$CANDIDATE_SHA" --event "$GITHUB_EVENT_NAME" \
             --event-path "$GITHUB_EVENT_PATH"
           echo 'Selection is not a human policy-approval record.'
+      - name: Validate trusted build inputs before any candidate Alire or pip use
+        run: python3 -I policy/scripts/validate_gnatdoc_inputs.py --candidate "$GITHUB_WORKSPACE/candidate"
       - name: Checkout immutable enhancer
         uses: actions/checkout@v4
         with:

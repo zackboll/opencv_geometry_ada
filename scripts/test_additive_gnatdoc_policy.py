@@ -195,5 +195,127 @@ class AdditivePolicyTests(unittest.TestCase):
                          "stale/substituted candidate commit")
 
 
+class TrustedInputTests(unittest.TestCase):
+    # Separate real disposable Git checkout; no candidate package manager runs.
+    def setUp(self):
+        import subprocess
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.candidate = Path(self.temp.name) / "candidate"
+        subprocess.run(["git", "clone", "--quiet", "--shared", str(ROOT), str(self.candidate)], check=True)
+        AdditivePolicyTests.copy(self, self.candidate)
+
+    def validate(self):
+        return candidate_rules(ROOT, self.candidate)
+
+    def test_unchanged_build_inputs_accepted(self):
+        self.validate()
+
+    def test_reviewed_version_only_release_accepted(self):
+        from unittest.mock import patch
+        import subprocess
+        reviewed = Path(self.temp.name) / "reviewed"
+        subprocess.run(["git", "clone", "--quiet", "--shared", str(ROOT), str(reviewed)], check=True)
+        AdditivePolicyTests.copy(self, reviewed)
+        path = reviewed / "alire.toml"
+        path.write_bytes(path.read_bytes().replace(b'0.3.3', b'0.3.2'))
+        with patch("additive_gnatdoc_policy.ROOT", reviewed):
+            self.validate()
+        self.assertEqual((self.candidate / "alire.toml").read_bytes(), regular(ROOT / "alire.toml"))
+
+    def test_substituted_requirements_symlink_rejected_and_restored(self):
+        path = self.candidate / "docs/requirements.txt"
+        original = path.read_bytes()
+        before = self.validate()
+        replacement = Path(self.temp.name) / "replacement.txt"
+        replacement.write_bytes(original)
+        try:
+            path.unlink()
+            path.symlink_to(replacement)
+            with self.assertRaisesRegex(ValueError, "trusted build input is substituted: docs/requirements.txt"):
+                self.validate()
+        finally:
+            path.unlink()
+            path.write_bytes(original)
+        self.assertEqual(path.read_bytes(), original)
+        self.assertEqual(self.validate(), before)
+
+    def test_only_exact_temporary_qualification_pins_accepted(self):
+        from validate_gnatdoc_inputs import PINS
+        originals = {name: (self.candidate / name).read_bytes() for name in PINS}
+        before = self.validate()
+        try:
+            for name, pin in PINS.items():
+                (self.candidate / name).write_bytes(originals[name] +
+                    ("\n[[pins]]\nopencv_core = { path='" + pin + "' }\n").encode())
+            self.assertEqual(candidate_rules(ROOT, self.candidate, qualification_pins=True), before)
+            path = self.candidate / "alire.toml"
+            pinned = path.read_bytes()
+            path.write_bytes(pinned.replace(b"../core", b"../untrusted"))
+            with self.assertRaisesRegex(ValueError, "qualification Core pin differs: alire.toml"):
+                candidate_rules(ROOT, self.candidate, qualification_pins=True)
+            path.write_bytes(pinned)
+        finally:
+            for name, original in originals.items():
+                (self.candidate / name).write_bytes(original)
+        self.assertTrue(all((self.candidate / n).read_bytes() == b for n, b in originals.items()))
+        self.assertEqual(self.validate(), before)
+
+    def test_production_bootstrap_preflight_before_execution(self):
+        import os
+        import subprocess
+        import textwrap
+        base = "aad0b1b65814ac472bf5a9ea1b266f47aa3baf06"
+        policy = Path(self.temp.name) / "build-policy"
+        subprocess.run(["git", "clone", "--quiet", "--shared", str(ROOT), str(policy)], check=True)
+        subprocess.run(["git", "-C", str(policy), "checkout", "--quiet", "--detach", base], check=True)
+        workflow = regular(ROOT / ".github/workflows/documentation.yml").decode()
+        step = workflow.split("      - name: Preflight before candidate dependency installation or Alire actions\n", 1)[1]
+        shell = textwrap.dedent(step.split("        run: |\n", 1)[1].split("      - name:", 1)[0])
+        env = {**os.environ, "GITHUB_EVENT_NAME": "pull_request",
+               "GITHUB_WORKSPACE": self.temp.name,
+               "CANDIDATE_SHA": git(self.candidate, "rev-parse", "HEAD").decode().strip()}
+        def run():
+            return subprocess.run(["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", shell],
+                                  cwd=self.candidate, env=env, capture_output=True, text=True)
+        # The script refers to geometry in the workspace, as Actions does.
+        geometry = Path(self.temp.name) / "geometry"
+        self.candidate.rename(geometry)
+        self.candidate = geometry
+        self.assertEqual(run().returncode, 0)
+        for name, new in (("docs/requirements.txt", b"--index-url https://untrusted.invalid/\n"),
+                          ("alire.toml", b'\n[[actions]]\ntype="pre-build"\ncommand=["false"]\n')):
+            with self.subTest(name=name):
+                path = geometry / name
+                original = path.read_bytes()
+                try:
+                    path.write_bytes(original + new)
+                    result = run()
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn(name, result.stdout + result.stderr)
+                    self.assertTrue("differ" in result.stdout or "EOF" in result.stderr)
+                finally:
+                    path.write_bytes(original)
+                self.assertEqual(path.read_bytes(), original)
+                self.assertEqual(run().returncode, 0)
+        preflight_position = workflow.index("Preflight before candidate")
+        self.assertLess(preflight_position, workflow.index("alr -n pin"))
+        self.assertLess(preflight_position, workflow.index("pip install -r"))
+        self.assertIn("pip install -r ../build-policy/docs/requirements.txt", workflow)
+
+
+def input_test(attack):
+    def test(self):
+        from gnatdoc_input_mutations import observe
+        result = observe(self.candidate, self.validate, attack)
+        self.assertTrue(result["restored_and_verified"])
+    return test
+
+
+from gnatdoc_input_mutations import ATTACKS
+for _attack in ATTACKS:
+    setattr(TrustedInputTests, "test_reject_" + _attack[0], input_test(_attack))
+
+
 if __name__ == "__main__":
     unittest.main()

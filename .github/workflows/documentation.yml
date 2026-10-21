@@ -30,6 +30,46 @@ jobs:
           path: geometry
           fetch-depth: 0
           persist-credentials: false
+      - name: Checkout independent build-input authority
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          path: build-policy
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preflight before candidate dependency installation or Alire actions
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
+            git -C ../build-policy checkout --detach "$CANDIDATE_SHA^1"
+          fi
+          base=$(git -C ../build-policy rev-parse HEAD)
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git merge-base --is-ancestor "$base" "$CANDIDATE_SHA"
+          if test "$GITHUB_EVENT_NAME" = push; then
+            test "$GITHUB_REF" = refs/heads/main
+            test "$(git rev-parse "$CANDIDATE_SHA^1")" = "$base"
+          fi
+          if test -f ../build-policy/scripts/validate_gnatdoc_inputs.py; then
+            # Only the independently selected base provides executable preflight.
+            python3 -I ../build-policy/scripts/validate_gnatdoc_inputs.py \
+              --candidate "$GITHUB_WORKSPACE/geometry"
+          else
+            # First policy bootstrap: NO candidate verifier executes here.
+            # Immutable reviewed base bytes are compared before any pip/alr use.
+            tree=$(git -C ../build-policy rev-parse HEAD^{tree})
+            case "$base:$tree" in
+              2f5239a0e264ca2bb4106cdb338d3eac25abf674:c440b9901e1003f06ae555b3a8a80d9874229680|5f71c9a6d5291adb032eb1a43954c5f9aaf047e6:cc8487634f66be422e835b95c2ee8cd57e952d45|aad0b1b65814ac472bf5a9ea1b266f47aa3baf06:be543978b6fe33cc7bb18c4c1ca58328ae741ee6) ;;
+              *) echo 'Unreviewed build-input bootstrap authority' >&2; exit 1 ;;
+            esac
+            for name in docs/requirements.txt alire.toml tests/alire.toml; do
+              test ! -L "$name"
+              test ! -L "$(dirname "$name")"
+              cmp -- "$name" "../build-policy/$name"
+            done
+            echo 'Literal reviewed build inputs verified; not policy approval.'
+          fi
       - name: Checkout immutable historical regression source
         uses: actions/checkout@v4
         with:
@@ -70,7 +110,7 @@ jobs:
       - name: Install qualified documentation-only Markdown renderer
         run: |
           python3 -m venv .doc-tools/markdown
-          .doc-tools/markdown/bin/pip install -r docs/requirements.txt
+          .doc-tools/markdown/bin/pip install -r ../build-policy/docs/requirements.txt
           echo "DOC_PYTHON=$GITHUB_WORKSPACE/geometry/.doc-tools/markdown/bin/python" >> "$GITHUB_ENV"
       - name: Generate and validate public API and guides
         run: sh scripts/generate_docs.sh

@@ -81,6 +81,17 @@ def qualify(workspace, repository, revision, policy_revision, synthetic=False):
     root = workspace / "first"
     spec = source / "src/opencv-geometry.ads"
     try:
+        from gnatdoc_input_mutations import ATTACKS, observe
+        from additive_gnatdoc_policy import ADDITIONS
+        allowed = ADDITIONS
+        if synthetic:
+            from additive_gnatdoc_fixture import NAME
+            allowed = ADDITIONS | {NAME}
+        for attack in ATTACKS:
+            report["attacks"].append(observe(root, lambda: candidate_rules(
+                workspace / "baseline", root, allowed), attack))
+            write(workspace / "negative-progress.json", report)
+        require(check() == initial, "trusted-input campaign restoration differs")
         mutation("published signature modification", {spec: lambda b: b.replace(
             b"type Affine_Row_Index is range 1 .. 2;", b"type Affine_Row_Index is range 1 .. 3;")})
         mutation("published declaration removal", {spec: lambda b: b.replace(

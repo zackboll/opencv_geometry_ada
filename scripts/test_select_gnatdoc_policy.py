@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from select_gnatdoc_policy import (
-    select, reviewed_bootstrap, git, PREDECESSOR, SDK_BASE,
+    select, reviewed_bootstrap, git, PREDECESSOR, SDK_BASE, RELEASE_BASE,
 )
 
 ROOT = Path(__file__).absolute().parents[1]
@@ -110,6 +110,29 @@ class SelectionTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError):
             select(self.repo, "push", {"ref": "refs/heads/main", "before": SDK_BASE,
                                        "after": merged}, merged)
+
+    def test_release_initial_pr_is_exact_and_unapproved(self):
+        result = self.pr(RELEASE_BASE, self.policy)
+        self.assertEqual(result["base_tree"], "be543978b6fe33cc7bb18c4c1ca58328ae741ee6")
+        self.assertTrue(result["bootstrap_exploratory"])
+        self.assertFalse(result["policy_approved"])
+
+    def test_release_first_merge_selects_actual_policy_parent(self):
+        merged = self.commit(git(self.repo, "rev-parse", self.policy + "^{tree}"),
+                             (RELEASE_BASE, self.policy))
+        result = select(self.repo, "push", {"ref": "refs/heads/main", "before": RELEASE_BASE,
+                                           "after": merged}, merged)
+        self.assertEqual(result["policy_revision"], self.policy)
+        self.assertTrue(result["bootstrap_exploratory"])
+        self.assertFalse(result["policy_approved"])
+
+    def test_release_blob_and_ancestry_controls(self):
+        from select_gnatdoc_policy import RELEASE_BLOBS, CROSS_BASE
+        with patch.dict(RELEASE_BLOBS, {"alire.toml": "0" * 40}):
+            with self.assertRaisesRegex(ValueError, "reviewed bytes differ: alire.toml"):
+                reviewed_bootstrap(self.repo, RELEASE_BASE)
+        with self.assertRaisesRegex(ValueError, "unreviewed first-policy"):
+            reviewed_bootstrap(self.repo, CROSS_BASE)
 
 
 if __name__ == "__main__":
