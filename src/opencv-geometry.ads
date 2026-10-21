@@ -17,8 +17,9 @@ with OpenCV.Core;
 --
 --  Ownership: every operation here is a function whose inputs are not
 --  modified. Results are Ada-owned values, arrays and records; none refers
---  to native storage. The one exception is Get_Rotation_Matrix_2D, which
---  returns an OpenCV.Core.Mat with Core's ordinary Mat ownership.
+--  to native storage. Get_Rotation_Matrix_2D and To_Mat instead return
+--  independent OpenCV.Core.Mat allocations with Core's ordinary ownership.
+--  Typed transform imports copy coefficients from Mat into Ada-owned values.
 --
 --  Errors: input that the binding rejects, failures reported by OpenCV and
 --  non-finite native results raise OpenCV.OpenCV_Error, as each declaration
@@ -1436,6 +1437,117 @@ package OpenCV.Geometry is
    --  The perspective transform that maps every point to itself.
    Identity_Perspective_Transform : constant Perspective_Transform_2D :=
      ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0));
+
+   --  Copies an affine value into a newly allocated Core-owned Mat. Element
+   --  (R - 1, C - 1) receives Transform (R, C). Later Mat assignment follows
+   --  Core's ordinary shallow-copy semantics; this allocation shares no
+   --  preexisting storage. Available with Core 0.5.0 and later 0.5.x.
+   --  @param Transform The 1-based 2x3 affine coefficients; all finite.
+   --  @return An independent 2x3 Float64, one-channel Mat, with Core lifetime.
+   --  @exception OpenCV_Error A non-finite coefficient or Core failure.
+   function To_Mat (Transform : Affine_Transform_2D) return OpenCV.Core.Mat;
+
+   --  Copies a homography into a newly allocated Core-owned Mat, without
+   --  normalization. Element (R - 1, C - 1) receives Transform (R, C).
+   --  Later Mat assignment retains Core's ordinary shallow-copy semantics.
+   --  Available with Core 0.5.0 and later 0.5.x, on either native backend.
+   --  @param Transform The 1-based 3x3 homogeneous coefficients; all finite.
+   --  @return An independent 3x3 Float64, one-channel Mat, with Core lifetime.
+   --  @exception OpenCV_Error A non-finite coefficient or Core failure.
+   function To_Mat
+     (Transform : Perspective_Transform_2D) return OpenCV.Core.Mat;
+
+   --  Copies a nonempty, exactly two-dimensional 2x3 Float64 C1 Mat into
+   --  Ada-owned coefficients. Checked typed access supports non-contiguous
+   --  Regions. No Float32 conversion, borrowed storage or native pointer is
+   --  involved. Subsequent source changes or finalization cannot affect the
+   --  result. Available with Core 0.5.0 and later 0.5.x.
+   --  @param Matrix The 0-based Mat; element (R - 1, C - 1) becomes (R, C).
+   --  @return An independent affine value, preserving coefficient values.
+   --  @exception OpenCV_Error Wrong shape, dimensions, depth or channels,
+   --    empty input, any non-finite coefficient, or Core access failure.
+   function Affine_From_Mat
+     (Matrix : OpenCV.Core.Mat) return Affine_Transform_2D;
+
+   --  Copies a nonempty, exactly two-dimensional 3x3 Float64 C1 Mat into
+   --  an Ada-owned homography, without normalization. Checked typed access
+   --  supports non-contiguous Regions. The result survives source mutation,
+   --  rebinding and finalization. No Float32 conversion is performed.
+   --  Available with Core 0.5.0 and later 0.5.x, on either native backend.
+   --  @param Matrix The 0-based Mat; element (R - 1, C - 1) becomes (R, C).
+   --  @return An independent perspective value, preserving coefficients.
+   --  @exception OpenCV_Error Wrong shape, dimensions, depth or channels,
+   --    empty input, any non-finite coefficient, or Core access failure.
+   function Perspective_From_Mat
+     (Matrix : OpenCV.Core.Mat) return Perspective_Transform_2D;
+
+   --  Geometry-owned equivalent of Get_Rotation_Matrix_2D, reusing that
+   --  operation and Affine_From_Mat rather than a second rotation algorithm.
+   --  Positive angles follow OpenCV's image-coordinate convention. The center
+   --  is invariant; finite zero and negative scales remain accepted. Angles
+   --  are reduced modulo a full turn before native evaluation in either unit.
+   --  @param Center Finite rotation center.
+   --  @param Angle Finite rotation angle in Units.
+   --  @param Scale Finite isotropic scale, default 1.0.
+   --  @param Units Degrees by default, or explicit Radians.
+   --  @return A 1-based, Ada-owned 2x3 binary64 affine value.
+   --  @exception OpenCV_Error Invalid input, non-finite native coefficients,
+   --    or a failure of the underlying rotation or Mat conversion.
+   function Get_Rotation_Affine_Transform_2D
+     (Center : OpenCV.Float32_Point;
+      Angle  : OpenCV.Float64_Value;
+      Scale  : OpenCV.Float64_Value := 1.0;
+      Units  : OpenCV.Angle_Unit := OpenCV.Degrees) return Affine_Transform_2D;
+
+   --  Applies First, then Second: the homogeneous product Second * First,
+   --  with implicit last row (0, 0, 1). Neither operand is modified. All
+   --  inputs must be finite. Binary64 multiplication and left-to-right
+   --  addition are guarded before evaluation: every product and partial sum
+   --  must have magnitude at most 1.0E+300. This conservative envelope can
+   --  reject a representable final result that needs larger intermediates;
+   --  rounding and gradual underflow are ordinary binary64 arithmetic.
+   --  @param First The affine mapping applied first, in 1-based coordinates.
+   --  @param Second The affine mapping applied second.
+   --  @return An Ada-owned affine value with the composed coefficients.
+   --  @exception OpenCV_Error Non-finite input or an unsafe intermediate.
+   function Compose
+     (First, Second : Affine_Transform_2D) return Affine_Transform_2D;
+
+   --  Applies First, then Second: full homogeneous product Second * First.
+   --  No normalization is performed, including for non-unit (3, 3) results
+   --  produced by OpenCV 4.12+ and 5.x. Neither operand is modified. Finite
+   --  inputs and the guarded binary64 1.0E+300 intermediate envelope of the
+   --  affine overload are required; gradual underflow is not trapped.
+   --  @param First The 1-based homography applied first.
+   --  @param Second The 1-based homography applied second.
+   --  @return The Ada-owned, unnormalized composed homography.
+   --  @exception OpenCV_Error Non-finite input or an unsafe intermediate.
+   function Compose
+     (First, Second : Perspective_Transform_2D)
+      return Perspective_Transform_2D;
+
+   --  Numerically guarded inverse through Core's public LU inversion. Let S
+   --  be the maximum coefficient magnitude and B = Transform / S. Require
+   --  1.0E-280 <= S <= 1.0E+280, every nonzero B coefficient at least
+   --  1.0E-100 in magnitude, and |det B| >= 1.0E-24 before native inversion.
+   --  Require a finite native inverse, infinity-norm condition estimate
+   --  ||B|| * ||inverse B|| <= 1.0E+8, and both identity-product residuals
+   --  at most 1.0E-10 per coefficient. Rescaling preserves the inverse of
+   --  the original matrix, not an arbitrary projectively equivalent value.
+   --  Nonzero inverse coefficients must be normal binary64 and at most
+   --  1.0E+300 in magnitude. Both original-scale identity products must also
+   --  pass the residual test with guarded arithmetic. These conservative
+   --  gates reject unsafe and ill-conditioned cases, not all invertible
+   --  matrices; they are numerical checks, not an exact-arithmetic proof.
+   --  Input and output (3, 3) are never forced to one. This does not change
+   --  Invert_Affine_Transform's native singular-to-zero behavior.
+   --  @param Transform Finite 1-based 3x3 homography; unchanged on failure.
+   --  @return An Ada-owned binary64 inverse at the original matrix scale.
+   --  @exception OpenCV_Error Singular or rejected numerical envelope,
+   --    unsuccessful native inversion, non-finite result, failed residual
+   --    or condition check, or Core failure.
+   function Invert_Perspective_Transform
+     (Transform : Perspective_Transform_2D) return Perspective_Transform_2D;
 
    --  Affine transform that maps each Source point to the Destination point
    --  at the same position, computed by cv::getAffineTransform. Source and

@@ -62,6 +62,71 @@ on request, and is reduced modulo a full turn in either unit. Positive
 angles turn counterclockwise as seen on an image whose origin is the
 top-left corner, with Y pointing down.
 
+## Typed Mat interchange and composition
+
+[To_Mat](api:To_Mat) allocates an independent Core-owned Float64 C1 Mat:
+2x3 for affine, 3x3 for perspective. Transform `(R, C)` maps directly to
+Mat `(R - 1, C - 1)`. [Affine_From_Mat](api:Affine_From_Mat) and
+[Perspective_From_Mat](api:Perspective_From_Mat) require exactly that shape,
+two dimensions, Float64 depth and one channel. Empty/default Mats, Float32,
+NaN and either infinity are rejected with `OpenCV.OpenCV_Error`. Checked
+typed access supports non-contiguous Regions without assuming row layout.
+The result is an Ada-owned copy, unaffected by source mutation, rebinding or
+finalization. Each conversion back to Mat allocates again; later ordinary Mat
+assignment still shares storage according to Core's existing semantics.
+These helpers require no Core version beyond the existing 0.5.0 floor.
+
+[Get_Rotation_Affine_Transform_2D](api:Get_Rotation_Affine_Transform_2D)
+returns the same rotation as the Mat operation, as an Ada value. It preserves
+degree/radian full-turn reduction, center invariance, image-coordinate sign,
+and finite zero/negative scale support; it does not duplicate native rotation.
+
+[Compose](api:Compose) means **apply First, then Second**, hence
+`Second * First` for column vectors. Affine composition uses the implicit
+last row `(0, 0, 1)`; perspective composition multiplies all nine coefficients.
+It never normalizes `(3, 3)`, including native OpenCV 4.12+/5.x homographies.
+All input coefficients are validated, and binary64 multiplication and
+left-to-right addition are checked **before** evaluation. Each product and
+absolute-operand sum must fit a conservative `1.0E+300` budget. Cancellation
+does not rescue a rejected partial sum. This intentionally rejects some
+representable results with excessively large intermediates. Rounding and
+gradual underflow follow binary64 arithmetic; there is no saturation or
+clamping. Existing point-mapping bounds are unchanged.
+
+## Numerically guarded perspective inversion
+
+[Invert_Perspective_Transform](api:Invert_Perspective_Transform) uses public
+Core LU inversion, reading its discriminated `Inverse` only after checking
+`Invertible`. It rejects singular/unsafe results, never an all-zero placeholder.
+The existing affine inverse's native singular-to-zero semantics are unchanged.
+
+The numerical envelope is deliberately conservative:
+
+1. All inputs are finite. Set `S = max abs H(R,C)`, requiring
+   `1.0E-280 <= S <= 1.0E+280`, and temporarily form `B = H / S`.
+2. Each nonzero normalized coefficient must have magnitude at least
+   `1.0E-100`; require `abs det B >= 1.0E-24` before native inversion.
+   This bounds direct 3x3 determinant/cofactor/reciprocal arithmetic; it is
+   **not** an absolute determinant test on the arbitrarily scaled homography.
+3. Require finite native inverse coefficients and the scale-independent
+   infinity-norm condition estimate `||B||inf * ||inverse B||inf <= 1.0E+8`.
+4. Independently evaluate **both** `B * inverse B` and `inverse B * B` in
+   guarded binary64 arithmetic. Each identity coefficient residual must be
+   at most `1.0E-10` (an absolute coefficient error, not a condition-scaled
+   tolerance that could conceal inaccurate inverses).
+5. Divide the inverse by `S`, preserving the inverse of the original matrix,
+   with no `(3, 3)` normalization. Reject rescaling overflow risk and any
+   nonzero inverse coefficient below binary64's smallest normal value.
+   Require both original-scale identity products to pass the same residual
+   checks and arithmetic budget as well.
+
+Well-conditioned matrices with very large/small common scale can therefore
+pass, including negative scales and `(3, 3) /= 1`; ill-conditioned matrices,
+extreme dynamic ranges, and unrepresentable inverses raise `OpenCV_Error`.
+The gates establish measured residual/conditioning requirements, not exact
+arithmetic or a guarantee for every invertible matrix. Point round trips
+still incur binary32 rounding and must avoid singular denominators.
+
 ## Example
 
 The example builds a scale-and-translate transform from three
@@ -123,9 +188,32 @@ procedure Affine_And_Perspective is
      Transform_Point (Homography, (X => 1.0, Y => 1.0));
 
    --  A 90 degree rotation about the origin, as a 2 x 3 Float64 Mat.
-   Rotation : constant OpenCV.Core.Mat :=
+   Rotation           : constant OpenCV.Core.Mat :=
      Get_Rotation_Matrix_2D (Center => (X => 0.0, Y => 0.0), Angle => 90.0);
+   Rotation_Value     : constant Affine_Transform_2D :=
+     Get_Rotation_Affine_Transform_2D ((0.0, 0.0), 90.0);
+   --  Apply rotation first, then the scale-and-translate mapping.
+   Combined           : constant Affine_Transform_2D :=
+     Compose (Rotation_Value, Affine);
+   Warp_Matrix        : constant OpenCV.Core.Mat := To_Mat (Combined);
+   Homography_Inverse : constant Perspective_Transform_2D :=
+     Invert_Perspective_Transform (Homography);
+   Identity           : constant Perspective_Transform_2D :=
+     Compose (Homography, Homography_Inverse);
 begin
+   pragma Assert (Affine_From_Mat (Rotation) = Rotation_Value);
+   pragma Assert (Affine_From_Mat (Warp_Matrix) = Combined);
+   pragma Assert (Perspective_From_Mat (To_Mat (Homography)) = Homography);
+   for R in Identity'Range (1) loop
+      for C in Identity'Range (2) loop
+         pragma
+           Assert
+             (Near
+                (Identity (R, C),
+                 Identity_Perspective_Transform (R, C),
+                 1.0E-10));
+      end loop;
+   end loop;
    pragma Assert (Near (Affine (1, 1), 2.0, 1.0E-9));
    pragma Assert (Near (Affine (2, 2), 3.0, 1.0E-9));
    pragma Assert (Near (Affine (1, 3), 10.0, 1.0E-9));

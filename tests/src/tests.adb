@@ -41,6 +41,7 @@ with Subdiv2D_Bounds_Tests;
 with Subdiv2D_Navigation_Tests;
 with Subdiv2D_Voronoi_Tests;
 with Versioned_Feature_Tests;
+with Transform_Utilities_Tests;
 
 procedure Tests is
 
@@ -93,6 +94,7 @@ begin
    Suite.Add_Test (Float32_Fit_Tests.Suite);
    Suite.Add_Test (Float32_Convex_Intersection_Tests.Suite);
    Suite.Add_Test (Versioned_Feature_Tests.Suite);
+   Suite.Add_Test (Transform_Utilities_Tests.Suite);
    --  An optional name prefix selects focused tests (e.g. "Subdiv2D").
    --  Run consumes the filter synchronously, before this local goes away.
    if Ada.Command_Line.Argument_Count = 1 then

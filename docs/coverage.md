@@ -184,11 +184,29 @@ operations; consult each binding's documented support and safety contract.
 | `minEnclosingConvexPolygon` | 4.13 | Deferred: in each examined release (4.13.0, 4.14.0, 5.0.0), finite input can make the native code read out of bounds. Every k = 3 call whose hull has more than three vertices and area of at least 1e-6 does; so does some small-scale k ≥ 4 input. No known preflight avoids reimplementing the algorithm. Upstream PR 30111, open and unreleased, turns the observed reads into `cv::Exception` but still returns non-minimal polygons. See [research](versioned-features-research.md#task-016-minenclosingconvexpolygon-safety-gate). |
 | `Subdiv2D(Rect2f)`, `Subdiv2D::initDelaunay(Rect2f)` | 4.13 | Universally bound: `Subdiv2D.Create_Float32` / `Reset_Float32`. Private initialization backport on 4.6–4.12, native on 4.13+/5.x. Native capability remains False before 4.13. |
 
+## Ada transform utilities (GEOM-031)
+
+These public helpers use Core 0.5.0's existing public API and Ada value
+arithmetic, with no new C ABI or Ada dependency. Both native backends are
+supported. Returned Mats can be consumed by Imgproc warp operations; Geometry
+does not depend on the Imgproc Ada crate.
+
+| Public Ada operation | Implementation and contract |
+| --- | --- |
+| `To_Mat` (affine and perspective) | Independent Core-owned 2x3 or 3x3 Float64 C1 allocation; finite coefficients only. |
+| `Affine_From_Mat`, `Perspective_From_Mat` | Copy exact-shape, 2-D Float64 C1 Mats, including strided Regions, to independent Ada values. Classify before reading non-finite elements. |
+| `Get_Rotation_Affine_Transform_2D` | Reuses `Get_Rotation_Matrix_2D` and typed conversion; retains angle, scale and center semantics. |
+| `Compose` (affine and perspective) | Apply First then Second (`Second * First`); guarded binary64 arithmetic, no homography normalization. |
+| `Invert_Perspective_Transform` | Scale-aware, condition- and residual-checked Core LU inverse; unsafe or singular matrices raise, unlike the unchanged affine singular-to-zero API. |
+
+The [transform guide](guides/affine-and-perspective-geometry.md) specifies the
+accepted numerical envelope and executable examples.
+
 ## Unbound modes of bound operations
 
 | Native mode | Status | Reason |
 | --- | --- | --- |
-| `moments` of a raster image (`binaryImage`) | Excluded | Needs image input. Geometry takes Ada point collections and has no image or Mat input API. |
+| `moments` of a raster image (`binaryImage`) | Excluded | Needs image input. Geometry takes Ada point collections; its narrow transform-Mat conversion is not an image API. |
 | `boundingRect` of a grayscale image | Excluded | Needs image input, as above. |
 | `matchShapes` of grayscale images | Excluded | Needs image input, as above. |
 | Point sets of `Point2f` (`CV_32F`) in `minEnclosingTriangle` | Deferred | OpenCV's search can fail to return; see [Float32 point sets](#float32-cv_32f-point-sets). |
