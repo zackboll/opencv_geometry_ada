@@ -1529,7 +1529,9 @@ package OpenCV.Geometry is
    --  Numerically guarded inverse through Core's public LU inversion. Let S
    --  be the maximum coefficient magnitude and B = Transform / S. Require
    --  1.0E-280 <= S <= 1.0E+280, every nonzero B coefficient at least
-   --  1.0E-100 in magnitude, and |det B| >= 1.0E-24 before native inversion.
+   --  1.0E-100 in magnitude, and |det B| >= 1.0E-12 before native inversion.
+   --  The determinant floor exceeds rounding uncertainty of the bounded
+   --  direct 3x3 formula, including native contraction/reassociation.
    --  Require a finite native inverse, infinity-norm condition estimate
    --  ||B|| * ||inverse B|| <= 1.0E+8, and both identity-product residuals
    --  at most 1.0E-10 per coefficient. Rescaling preserves the inverse of

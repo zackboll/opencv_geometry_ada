@@ -554,38 +554,43 @@ package body Transform_Utilities_Tests is
          null;
       end Attempt;
    begin
-      for Case_Id in 1 .. 9 loop
+      for Case_Id in 1 .. 10 loop
          case Case_Id is
-            when 1 =>
+            when 1  =>
                null; --  all zero
 
-            when 2 =>
+            when 2  =>
                X := ((1.0, 2.0, 3.0), (2.0, 4.0, 6.0), (0.0, 0.0, 1.0));
 
-            when 3 =>
+            when 3  =>
                X := ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 0.0));
 
-            when 4 =>
+            when 4  =>
                X := Identity_Perspective_Transform;
                X (3, 3) := 1.0E-12;
 
-            when 5 =>
+            when 5  =>
                X := Identity_Perspective_Transform;
                X (3, 3) := 1.0E-30;
 
-            when 6 =>
+            when 6  =>
                X := (others => (others => 1.0E+300));
 
-            when 7 =>
+            when 7  =>
                X := (others => (others => 1.0E-300));
 
-            when 8 =>
+            when 8  =>
                X := Identity_Perspective_Transform;
                X (1, 2) := 1.0E-200;
 
-            when 9 =>
+            when 9  =>
                X :=
                  ((1.0, 1.0, 0.0), (1.0, 1.0 + 1.0E-14, 0.0), (0.0, 0.0, 1.0));
+
+            when 10 =>
+               --  Condition number alone would accept this; the independent
+               --  determinant floor intentionally rejects its native risk.
+               X := ((1.0, 0.0, 0.0), (0.0, 1.0E-7, 0.0), (0.0, 0.0, 1.0E-7));
          end case;
          declare
             Saved : constant Perspective_Transform_2D := X;

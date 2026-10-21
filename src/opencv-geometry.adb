@@ -2116,14 +2116,18 @@ package body OpenCV.Geometry is
       end loop;
       --  |B_ij| <= 1. Every nonzero triple product is >= 1e-300.
       --  The six determinant terms and their sums cannot overflow. The
-      --  determinant floor protects native direct 3x3 reciprocal arithmetic;
-      --  conditioning and independent residuals below are the accuracy gates.
+      --  With entries bounded by one, each product is <= 1, each minor <= 2
+      --  and each determinant partial sum <= 6. Fewer than 32 binary64
+      --  roundings contribute much less than 1e-13 absolute uncertainty,
+      --  even allowing contraction/reassociation in native code. The 1e-12
+      --  floor thus protects the native reciprocal, not just Ada's formula.
+      --  Conditioning and both independent residuals are the accuracy gates.
       Determinant :=
         B (1, 1)
         * (B (2, 2) * B (3, 3) - B (2, 3) * B (3, 2))
         - B (1, 2) * (B (2, 1) * B (3, 3) - B (2, 3) * B (3, 1))
         + B (1, 3) * (B (2, 1) * B (3, 2) - B (2, 2) * B (3, 1));
-      if abs Determinant < 1.0E-24 then
+      if abs Determinant < 1.0E-12 then
          raise OpenCV.OpenCV_Error
            with "Singular or unsafe normalized determinant";
       end if;

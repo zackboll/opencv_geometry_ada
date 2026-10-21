@@ -105,9 +105,13 @@ The numerical envelope is deliberately conservative:
 1. All inputs are finite. Set `S = max abs H(R,C)`, requiring
    `1.0E-280 <= S <= 1.0E+280`, and temporarily form `B = H / S`.
 2. Each nonzero normalized coefficient must have magnitude at least
-   `1.0E-100`; require `abs det B >= 1.0E-24` before native inversion.
+   `1.0E-100`; require `abs det B >= 1.0E-12` before native inversion.
    This bounds direct 3x3 determinant/cofactor/reciprocal arithmetic; it is
    **not** an absolute determinant test on the arbitrarily scaled homography.
+   With entries bounded by one, products are at most one, minors at most two
+   and determinant partial sums at most six. Fewer than 32 binary64 roundings
+   contribute much less than `1.0E-13` absolute uncertainty, so the floor
+   also leaves margin for differing Ada/native contraction or reassociation.
 3. Require finite native inverse coefficients and the scale-independent
    infinity-norm condition estimate `||B||inf * ||inverse B||inf <= 1.0E+8`.
 4. Independently evaluate **both** `B * inverse B` and `inverse B * B` in
