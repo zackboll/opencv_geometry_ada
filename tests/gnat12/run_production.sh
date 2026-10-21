@@ -21,7 +21,7 @@
 # Prints PASS on success; any failed check exits nonzero.
 set -eu
 
-expected_tests=547
+expected_tests=562
 expected_opencv=4.6.0
 expected_gcc=12.2.0
 expected_ada_lib='V "GNAT Lib v12"'
