@@ -137,8 +137,8 @@ check_dependencies tests/bin/tests
 DYLD_PRINT_LIBRARIES=1 tests/bin/tests \
     > "$evidence/aunit.log" 2> "$evidence/aunit-dyld.log"
 cat "$evidence/aunit.log"
-grep -E '^Total Tests Run: *547$' "$evidence/aunit.log"
-grep -E '^Successful Tests: *547$' "$evidence/aunit.log"
+grep -E '^Total Tests Run: *562$' "$evidence/aunit.log"
+grep -E '^Successful Tests: *562$' "$evidence/aunit.log"
 grep -E '^Failed Assertions: *0$' "$evidence/aunit.log"
 grep -E '^Unexpected Errors: *0$' "$evidence/aunit.log"
 grep -F libopencv_geometry_shim "$evidence/aunit-dyld.log"
@@ -205,4 +205,4 @@ for mode in installed relocated; do
         "$evidence/$mode-consumer-dyld.log"
     if grep -F "$root/" "$evidence/$mode-consumer-dyld.log"; then exit 1; fi
 done
-echo 'PASS standalone GPR SDK linking, 547/547 AUnit, installed and relocated consumers'
+echo 'PASS standalone GPR SDK linking, 562/562 AUnit, installed and relocated consumers'

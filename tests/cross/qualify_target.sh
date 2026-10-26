@@ -32,7 +32,7 @@ fail() {
     exit 1
 }
 
-expected_tests=547
+expected_tests=562
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH='' cd -- "$here/../.." && pwd)
 test "$#" -eq 1 || fail "usage: qualify_target.sh EVIDENCE"

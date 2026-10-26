@@ -87,17 +87,23 @@
           "title": "Affine and perspective transformations",
           "declarations": [
             "Affine_Row_Index",
+            "Affine_From_Mat",
             "Affine_Transform_2D",
+            "Compose",
             "Get_Affine_Transform",
             "Get_Perspective_Transform",
             "Get_Rotation_Matrix_2D",
+            "Get_Rotation_Affine_Transform_2D",
             "Identity_Affine_Transform",
             "Identity_Perspective_Transform",
             "Invert_Affine_Transform",
+            "Invert_Perspective_Transform",
+            "Perspective_From_Mat",
             "Perspective_Row_Index",
             "Perspective_Solve_Method",
             "Perspective_Transform_2D",
             "Transform_Column_Index",
+            "To_Mat",
             "Transform_Point",
             "Transform_Points"
           ]

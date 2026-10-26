@@ -1846,6 +1846,330 @@ package body OpenCV.Geometry is
         and then Value <= OpenCV.Float64_Value'Last;
    end Is_Finite_Public_Float64;
 
+   procedure Require_Finite (Value : OpenCV.Float64_Value) is
+      pragma Suppress (Validity_Check);
+   begin
+      if not Is_Finite_Public_Float64 (Value) then
+         raise OpenCV.OpenCV_Error with "Transform coefficient is not finite";
+      end if;
+   end Require_Finite;
+
+   function To_Mat (Transform : Affine_Transform_2D) return OpenCV.Core.Mat is
+      pragma Suppress (Validity_Check);
+   begin
+      for Value of Transform loop
+         Require_Finite (Value);
+      end loop;
+      return
+         Matrix : OpenCV.Core.Mat :=
+           OpenCV.Core.Create (2, 3, (OpenCV.Core.Float64, 1))
+      do
+         for R in Transform'Range (1) loop
+            for C in Transform'Range (2) loop
+               OpenCV.Core.Float64_Access.Set
+                 (Matrix, Integer (R) - 1, Integer (C) - 1, Transform (R, C));
+            end loop;
+         end loop;
+      end return;
+   end To_Mat;
+
+   function To_Mat
+     (Transform : Perspective_Transform_2D) return OpenCV.Core.Mat
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      for Value of Transform loop
+         Require_Finite (Value);
+      end loop;
+      return
+         Matrix : OpenCV.Core.Mat :=
+           OpenCV.Core.Create (3, 3, (OpenCV.Core.Float64, 1))
+      do
+         for R in Transform'Range (1) loop
+            for C in Transform'Range (2) loop
+               OpenCV.Core.Float64_Access.Set
+                 (Matrix, Integer (R) - 1, Integer (C) - 1, Transform (R, C));
+            end loop;
+         end loop;
+      end return;
+   end To_Mat;
+
+   procedure Validate_Transform_Mat
+     (Matrix : OpenCV.Core.Mat; Row_Count : Positive)
+   is
+      use type OpenCV.Core.Depth_Type;
+      use type OpenCV.Core.Channel_Count;
+   begin
+      if Matrix.Is_Empty
+        or else Matrix.Dimension_Count /= 2
+        or else Matrix.Rows /= Row_Count
+        or else Matrix.Columns /= 3
+        or else Matrix.Depth /= OpenCV.Core.Float64
+        or else Matrix.Channels /= 1
+      then
+         raise OpenCV.OpenCV_Error
+           with
+             "Transform requires a nonempty 2D Float64 C1 Mat of exact shape";
+      end if;
+   end Validate_Transform_Mat;
+
+   function Finite_Element
+     (Matrix : OpenCV.Core.Mat; Row, Column : Integer)
+      return OpenCV.Float64_Value
+   is
+      use type OpenCV.Core.Float64_Access.Float64_Classification;
+   begin
+      if OpenCV.Core.Float64_Access.Classify (Matrix, Row, Column)
+        /= OpenCV.Core.Float64_Access.Finite
+      then
+         raise OpenCV.OpenCV_Error with "Transform Mat element is not finite";
+      end if;
+      return OpenCV.Core.Float64_Access.Get (Matrix, Row, Column);
+   end Finite_Element;
+
+   function Affine_From_Mat
+     (Matrix : OpenCV.Core.Mat) return Affine_Transform_2D
+   is
+      Result : Affine_Transform_2D;
+   begin
+      Validate_Transform_Mat (Matrix, 2);
+      for R in Result'Range (1) loop
+         for C in Result'Range (2) loop
+            Result (R, C) :=
+              Finite_Element (Matrix, Integer (R) - 1, Integer (C) - 1);
+         end loop;
+      end loop;
+      return Result;
+   end Affine_From_Mat;
+
+   function Perspective_From_Mat
+     (Matrix : OpenCV.Core.Mat) return Perspective_Transform_2D
+   is
+      Result : Perspective_Transform_2D;
+   begin
+      Validate_Transform_Mat (Matrix, 3);
+      for R in Result'Range (1) loop
+         for C in Result'Range (2) loop
+            Result (R, C) :=
+              Finite_Element (Matrix, Integer (R) - 1, Integer (C) - 1);
+         end loop;
+      end loop;
+      return Result;
+   end Perspective_From_Mat;
+
+   function Get_Rotation_Affine_Transform_2D
+     (Center : OpenCV.Float32_Point;
+      Angle  : OpenCV.Float64_Value;
+      Scale  : OpenCV.Float64_Value := 1.0;
+      Units  : OpenCV.Angle_Unit := OpenCV.Degrees) return Affine_Transform_2D
+   is
+      pragma Suppress (Validity_Check);
+   begin
+      return
+        Affine_From_Mat (Get_Rotation_Matrix_2D (Center, Angle, Scale, Units));
+   end Get_Rotation_Affine_Transform_2D;
+
+   --  A deliberately conservative arithmetic budget, well below binary64
+   --  overflow even after rounding of a guard division/subtraction. Addition
+   --  budgets absolute operands, so it can reject large cancelling terms.
+   Arithmetic_Limit : constant OpenCV.Float64_Value := 1.0E+300;
+
+   function Safe_Product
+     (Left, Right : OpenCV.Float64_Value) return OpenCV.Float64_Value
+   is
+      use type OpenCV.Float64_Value;
+      Larger  : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Max (abs Left, abs Right);
+      Smaller : constant OpenCV.Float64_Value :=
+        OpenCV.Float64_Value'Min (abs Left, abs Right);
+      Product : OpenCV.Float64_Value;
+   begin
+      --  Callers have already validated all coefficients. Division here
+      --  cannot overflow or underflow: Larger is in [1, binary64'Last].
+      if Larger > 1.0 and then Smaller > Arithmetic_Limit / Larger then
+         raise OpenCV.OpenCV_Error with "Unsafe transform multiplication";
+      end if;
+      Product := Left * Right;
+      if abs Product > Arithmetic_Limit then
+         raise OpenCV.OpenCV_Error with "Transform product exceeds budget";
+      end if;
+      return Product;
+   end Safe_Product;
+
+   function Safe_Sum
+     (Left, Right : OpenCV.Float64_Value) return OpenCV.Float64_Value
+   is
+      use type OpenCV.Float64_Value;
+   begin
+      if abs Left > Arithmetic_Limit - abs Right then
+         raise OpenCV.OpenCV_Error with "Unsafe transform addition";
+      end if;
+      return Left + Right;
+   end Safe_Sum;
+
+   function Compose
+     (First, Second : Perspective_Transform_2D) return Perspective_Transform_2D
+   is
+      pragma Suppress (Validity_Check);
+      Result : Perspective_Transform_2D := (others => (others => 0.0));
+   begin
+      for Value of First loop
+         Require_Finite (Value);
+      end loop;
+      for Value of Second loop
+         Require_Finite (Value);
+      end loop;
+      for R in Result'Range (1) loop
+         for C in Result'Range (2) loop
+            for K in Perspective_Row_Index loop
+               Result (R, C) :=
+                 Safe_Sum
+                   (Result (R, C),
+                    Safe_Product
+                      (Second (R, Transform_Column_Index (K)), First (K, C)));
+            end loop;
+         end loop;
+      end loop;
+      return Result;
+   end Compose;
+
+   function Compose
+     (First, Second : Affine_Transform_2D) return Affine_Transform_2D
+   is
+      pragma Suppress (Validity_Check);
+      A, B    : Perspective_Transform_2D := Identity_Perspective_Transform;
+      Product : Perspective_Transform_2D;
+      Result  : Affine_Transform_2D;
+   begin
+      for R in First'Range (1) loop
+         for C in First'Range (2) loop
+            A (Perspective_Row_Index (R), C) := First (R, C);
+            B (Perspective_Row_Index (R), C) := Second (R, C);
+         end loop;
+      end loop;
+      Product := Compose (A, B);
+      for R in Result'Range (1) loop
+         for C in Result'Range (2) loop
+            Result (R, C) := Product (Perspective_Row_Index (R), C);
+         end loop;
+      end loop;
+      return Result;
+   end Compose;
+
+   function Infinity_Norm
+     (Matrix : Perspective_Transform_2D) return OpenCV.Float64_Value
+   is
+      use type OpenCV.Float64_Value;
+      Norm, Row_Sum : OpenCV.Float64_Value := 0.0;
+   begin
+      for R in Matrix'Range (1) loop
+         Row_Sum := 0.0;
+         for C in Matrix'Range (2) loop
+            Row_Sum := Safe_Sum (Row_Sum, abs Matrix (R, C));
+         end loop;
+         Norm := OpenCV.Float64_Value'Max (Norm, Row_Sum);
+      end loop;
+      return Norm;
+   end Infinity_Norm;
+
+   procedure Check_Inverse_Residual (Left, Right : Perspective_Transform_2D) is
+      use type OpenCV.Float64_Value;
+      Product : constant Perspective_Transform_2D := Compose (Right, Left);
+   begin
+      for R in Product'Range (1) loop
+         for C in Product'Range (2) loop
+            if abs (Product (R, C) - Identity_Perspective_Transform (R, C))
+              > 1.0E-10
+            then
+               raise OpenCV.OpenCV_Error with "Inverse residual exceeds 1e-10";
+            end if;
+         end loop;
+      end loop;
+   end Check_Inverse_Residual;
+
+   function Invert_Perspective_Transform
+     (Transform : Perspective_Transform_2D) return Perspective_Transform_2D
+   is
+      pragma Suppress (Validity_Check);
+      use type OpenCV.Float64_Value;
+      Scale              : OpenCV.Float64_Value := 0.0;
+      B, Inverse, Result : Perspective_Transform_2D;
+      Determinant        : OpenCV.Float64_Value;
+      --  IEEE binary64 smallest normal, not Ada's model small number.
+      Minimum_Normal     : constant OpenCV.Float64_Value := 2.0**(-1022);
+   begin
+      for Value of Transform loop
+         Require_Finite (Value);
+         Scale := OpenCV.Float64_Value'Max (Scale, abs Value);
+      end loop;
+      if Scale < 1.0E-280 or else Scale > 1.0E+280 then
+         raise OpenCV.OpenCV_Error with "Inverse scale outside [1e-280,1e280]";
+      end if;
+      for R in B'Range (1) loop
+         for C in B'Range (2) loop
+            B (R, C) := Transform (R, C) / Scale;
+            if Transform (R, C) /= 0.0 and then abs B (R, C) < 1.0E-100 then
+               raise OpenCV.OpenCV_Error
+                 with "Inverse coefficient dynamic range";
+            end if;
+         end loop;
+      end loop;
+      --  |B_ij| <= 1. Every nonzero triple product is >= 1e-300.
+      --  The six determinant terms and their sums cannot overflow. The
+      --  With entries bounded by one, each product is <= 1, each minor <= 2
+      --  and each determinant partial sum <= 6. Fewer than 32 binary64
+      --  roundings contribute much less than 1e-13 absolute uncertainty,
+      --  even allowing contraction/reassociation in native code. The 1e-12
+      --  floor thus protects the native reciprocal, not just Ada's formula.
+      --  Conditioning and both independent residuals are the accuracy gates.
+      Determinant :=
+        B (1, 1)
+        * (B (2, 2) * B (3, 3) - B (2, 3) * B (3, 2))
+        - B (1, 2) * (B (2, 1) * B (3, 3) - B (2, 3) * B (3, 1))
+        + B (1, 3) * (B (2, 1) * B (3, 2) - B (2, 2) * B (3, 1));
+      if abs Determinant < 1.0E-12 then
+         raise OpenCV.OpenCV_Error
+           with "Singular or unsafe normalized determinant";
+      end if;
+      declare
+         Native : constant OpenCV.Core.Inversion_Result :=
+           OpenCV.Core.Invert (To_Mat (B));
+      begin
+         if not Native.Invertible then
+            raise OpenCV.OpenCV_Error
+              with "Native perspective inversion failed";
+         end if;
+         Inverse := Perspective_From_Mat (Native.Inverse);
+      end;
+      if Safe_Product (Infinity_Norm (B), Infinity_Norm (Inverse)) > 1.0E+8
+      then
+         raise OpenCV.OpenCV_Error
+           with "Inverse condition estimate exceeds 1e8";
+      end if;
+      Check_Inverse_Residual (B, Inverse);
+      Check_Inverse_Residual (Inverse, B);
+      for R in Result'Range (1) loop
+         for C in Result'Range (2) loop
+            if Scale < 1.0
+              and then abs Inverse (R, C) > Arithmetic_Limit * Scale
+            then
+               raise OpenCV.OpenCV_Error
+                 with "Inverse rescaling overflow risk";
+            end if;
+            Result (R, C) := Inverse (R, C) / Scale;
+            if Inverse (R, C) /= 0.0
+              and then abs Result (R, C) < Minimum_Normal
+            then
+               raise OpenCV.OpenCV_Error
+                 with "Inverse rescaling underflow risk";
+            end if;
+         end loop;
+      end loop;
+      Check_Inverse_Residual (Transform, Result);
+      Check_Inverse_Residual (Result, Transform);
+      return Result;
+   end Invert_Perspective_Transform;
+
    --  Raises OpenCV_Error with Count_Message unless Points has exactly Count
    --  points, and with Finite_Message unless every coordinate is finite.
    procedure Validate_Correspondence
