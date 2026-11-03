@@ -1,0 +1,12 @@
+RUN obj/docs-example/example
+EXIT_STATUS=0
+RUN obj/docs-examples/contours_and_moments
+EXIT_STATUS=0
+RUN obj/docs-examples/fitting_and_intersections
+EXIT_STATUS=0
+RUN obj/docs-examples/affine_and_perspective
+EXIT_STATUS=0
+RUN obj/docs-examples/delaunay_and_voronoi
+EXIT_STATUS=0
+RUN obj/docs-examples/compatibility_and_safety
+EXIT_STATUS=0

@@ -1,0 +1,82 @@
+{
+  "pristine": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": {
+      "bytes": 122273,
+      "sha256": "55e4ac751c5e9167d957fcaf32295a645909ce564825ccff1eb95a80ec5fae62"
+    },
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": {
+      "bytes": 42672,
+      "sha256": "018538fdbef120204f8cdf7bdccebf787fce4a48e42de8c4f5ccd38e5ff4c56f"
+    },
+    "api/gnatdoc.css": {
+      "bytes": 1222,
+      "sha256": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e"
+    },
+    "api/index.html": {
+      "bytes": 725,
+      "sha256": "e5132ce2c3804326c83f7b73827770ec30467b10a67f520146667bbda8adfd23"
+    }
+  },
+  "site": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": {
+      "bytes": 183529,
+      "sha256": "2206ae295a6b8b59c8faa7b7025bd960192fd43665ac5536429afa3570eb67ad"
+    },
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": {
+      "bytes": 70186,
+      "sha256": "37ab378103af90ad7c748b09efa761fa8d27c24032e64d36d0aed5f2054556bc"
+    },
+    "api/gnatdoc-navigation.js": {
+      "bytes": 5459,
+      "sha256": "6c8f6e7561f2bd26c1467c233be5fc49bc827cf9eeb742418c52a4e1e58ab33e"
+    },
+    "api/gnatdoc-theme.css": {
+      "bytes": 7156,
+      "sha256": "1ff7eb160cbba4ee3a9b4dc4dc185331bf3eb4697be80c0e80d170b827fd0ad3"
+    },
+    "api/gnatdoc.css": {
+      "bytes": 1222,
+      "sha256": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e"
+    },
+    "api/index.html": {
+      "bytes": 86115,
+      "sha256": "a9cf9f1235e158f8491a8fc02daa07ca7516b23c2845ea9966262141f4c99060"
+    },
+    "api/presentation.json": {
+      "bytes": 150983,
+      "sha256": "efebacef0cc62640d2ae566ec41e7768e76d5de488b7cc1e0142fe3906b4b607"
+    },
+    "api/type-crossrefs.json": {
+      "bytes": 17462,
+      "sha256": "4bb6b68b38cf6bf763889c3f4ff65b705bde44bcfea4b9af0883ce66c1e7b5de"
+    },
+    "guides/affine-and-perspective-geometry.html": {
+      "bytes": 18788,
+      "sha256": "b56833dd8e195e2c5b453eeaff049b4ec2fcb5428a2929cd2bc3fd33ea5d460a"
+    },
+    "guides/compatibility-ownership-and-safety.html": {
+      "bytes": 14660,
+      "sha256": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c"
+    },
+    "guides/delaunay-and-voronoi.html": {
+      "bytes": 17633,
+      "sha256": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3"
+    },
+    "guides/geometry-fundamentals-and-contours.html": {
+      "bytes": 14788,
+      "sha256": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b"
+    },
+    "guides/gnatdoc-guides.css": {
+      "bytes": 1601,
+      "sha256": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc"
+    },
+    "guides/shape-fitting-and-intersections.html": {
+      "bytes": 15281,
+      "sha256": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83"
+    },
+    "index.html": {
+      "bytes": 4531,
+      "sha256": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from pathlib import Path; import additive_gnatdoc_policy as p; root=Path("/home/zboll/git/geometry-gnatdoc-001-evidence/policy-main"); candidate=Path("/home/zboll/git/geometry-gnatdoc-001-evidence/policy-mutation"); path=candidate/".github/workflows/documentation.yml"; old=path.read_bytes(); path.write_bytes(old+b"\n# Migration probe: harmless comment only.\n"); print(p.candidate_rules(root,candidate))
+                                                                                                                                                                                                                                                                                                                                                                                       ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/zboll/git/geometry-gnatdoc-001-evidence/policy-main/scripts/additive_gnatdoc_policy.py", line 170, in candidate_rules
+    require(regular(candidate / name) == regular(ROOT / name),
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            "protected verification component changed: " + name)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zboll/git/geometry-gnatdoc-001-evidence/policy-main/scripts/investigate_shared_gnatdoc_types.py", line 42, in require
+    raise ValueError(message)
+ValueError: protected verification component changed: .github/workflows/documentation.yml

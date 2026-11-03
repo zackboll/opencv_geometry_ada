@@ -1,0 +1,12 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+138 !== 130
+
+    at /home/zboll/git/opencv_geometry_ada/scripts/test_gnatdoc_navigation_browser.cjs:59:14 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 138,
+  expected: 130,
+  operator: 'strictEqual'
+}
+EXIT_STATUS=1
