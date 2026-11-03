@@ -1,0 +1,18 @@
+test_01_unrelated_scripts_workflows_and_new_executables_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_01_unrelated_scripts_workflows_and_new_executables_rejected) ... ok
+test_02_missing_configuration_and_generator_mutation_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_02_missing_configuration_and_generator_mutation_rejected) ... ok
+test_03_permissions_selector_core_and_install_substitutions_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_03_permissions_selector_core_and_install_substitutions_rejected) ... ok
+test_04_build_dependencies_and_unrelated_migration_inputs_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_04_build_dependencies_and_unrelated_migration_inputs_rejected) ... ok
+test_05_substituted_corrupt_wrong_version_wheels_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_05_substituted_corrupt_wrong_version_wheels_rejected) ... ok
+test_06_historical_evidence_and_existing_declarations_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_06_historical_evidence_and_existing_declarations_rejected) ... ok
+test_07_changed_candidate_commit_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_07_changed_candidate_commit_rejected) ... ok
+test_08_scope_recognition_is_not_output_approval (test_gnatdoc_migration_policy.MigrationPolicyTests.test_08_scope_recognition_is_not_output_approval) ... ok
+test_09_contemporary_test_repair_scope (test_gnatdoc_migration_policy.MigrationPolicyTests.test_09_contemporary_test_repair_scope) ... ok
+test_10_source_editable_floating_and_wrong_installed_version_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_10_source_editable_floating_and_wrong_installed_version_rejected) ... ok
+test_11_incorrect_resolved_core_and_lock_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_11_incorrect_resolved_core_and_lock_rejected) ... ok
+test_missing_or_altered_coverage_and_warnings_fail_closed (test_gnatdoc_migration_policy.OutputBoundaryTests.test_missing_or_altered_coverage_and_warnings_fail_closed) ... ok
+test_missing_or_altered_native_anchor_rejected (test_gnatdoc_migration_policy.OutputBoundaryTests.test_missing_or_altered_native_anchor_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 2.026s
+
+OK

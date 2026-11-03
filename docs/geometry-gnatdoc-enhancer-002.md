@@ -204,6 +204,33 @@ erase the bootstrap blocker. Use READY_FOR_MAINTAINER_REVIEW only after complete
 successor qualification and explicit remaining bootstrap requirements; until then
 this proposal is CORRECTIVE_WORK_REQUIRED.
 
+Exact changed-file inventory (relative to the starting tree):
+
+- `.github/workflows/documentation-additive-policy.yml`
+- `scripts/additive_gnatdoc_policy.py`
+- `scripts/gnatdoc_migration_policy.py`
+- `scripts/qualify_additive_gnatdoc.py`
+- `scripts/test_gnatdoc_migration_policy.py`
+- `docs/geometry-gnatdoc-enhancer-002.md`
+- `docs/evidence/geometry-gnatdoc-002/` contains only qualification logs listed in
+  the PR's exact diff inventory; it is not loaded as policy authority.
+
+Reproduction in a clean, independently acquired proposal checkout:
+
+```sh
+python3 -m unittest discover -s scripts -p test_gnatdoc_migration_policy.py -v
+python3 -m unittest discover -s scripts -p test_select_gnatdoc_policy.py -v
+```
+
+Run the two historical modules with the pinned Markdown Python against
+`20d5da104dcb156833e194067979dd6682a6d912/scripts`, as specified in the proposed
+workflow. For full campaign reproduction, use the existing
+`scripts/run_additive_gnatdoc_review.py` from the independent proposal checkout,
+an isolated historical enhancer environment, exact proposal candidate SHA,
+qualified Core/GNATdoc/Playwright/Chromium paths and a short new `/tmp` workspace.
+`--policy-review` labels this exploratory proposal run; it does not authorize
+the proposal under the old selected-base policy or enable deployment.
+
 ## Follow-up after independent establishment
 
 First submit the focused current-source test repair described above. Retain
