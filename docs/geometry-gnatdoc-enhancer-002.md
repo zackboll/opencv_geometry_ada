@@ -2,6 +2,12 @@
 
 **Disposition: CORRECTIVE_WORK_REQUIRED — bootstrap authorization outstanding.**
 
+GitHub also rejected publishing this branch: the available OAuth App credential
+lacks `workflow` scope for `.github/workflows/documentation-additive-policy.yml`.
+No PR or exact-head hosted qualification exists for this proposal. A maintainer
+must publish the reviewed local branch using an already authorized credential;
+this task does not grant permission to change authentication or protections.
+
 This branch proposes policy for a later migration; it does not perform one.
 PR #58 is unchanged and must not be merged as a completed migration. No branch
 protection, required check, production generator, build manifest, source,
@@ -182,13 +188,23 @@ The separate `successor-policy` checkout was clean for proposal tests:
   site-free policy checkout; validator suite: 68 tests, 28 generated-site skips.
   These synthetic passes do not replace generated-site qualification.
 
+Focused tests were repeated in the clean `final-policy` checkout at
+`11861670e50376b1f45dc5238873aeb7610e4859` (13 policy, 14 selector tests, all
+passing). The long exploratory campaign is bound to earlier implementation
+commit `a7616e4db05842b3e879cd145af25f6f3dbc49fd`, not the final delivery head;
+its historical component reports identify the immutable predecessor, not this
+proposal as approved. Final-head focused checks are re-run at handoff. A complete
+final-head successor campaign remains required even if that earlier run finishes.
+
 An initial run against uncommitted files correctly rejected differing executable
 inputs. A historical test retry without Markdown errored; the pinned-environment
 retry passed. A full campaign reached successful historical native/library/AUnit/
 example/test qualification, then failed launching Chromium because its temporary
 Unix socket path exceeded the OS limit. It was not counted as tamper rejection.
-A short `/tmp` workspace retry is recorded separately; its outcome and exact-head
-hosted runs must be checked in the PR evidence before any readiness claim.
+A short `/tmp` workspace retry is recorded separately. It has passed the original
+historical browser suites and all 30 historical adversarial mutations with
+restoration. Its full outcome remains pending; exact-head hosted runs are blocked
+by the rejected workflow push. No readiness claim follows from these components.
 
 The full successor campaign, migrated positive fixture and production compatibility
 are not claimed qualified by the unit tests. In particular the base-owned legacy

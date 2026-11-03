@@ -1,0 +1,567 @@
+{
+  "consumer_tested": "2f5239a0e264ca2bb4106cdb338d3eac25abf674",
+  "executed": 30,
+  "mutations": [
+    {
+      "name": "modified authority transition",
+      "observed_sha256": "084c410e13aca99478933dcf5d69c05992ec82f9589a8b6e2038d092b34dbfcb",
+      "original_sha256": "ddf461928a5fc7a3ab4fc9ed0248c237aa465e581249708a5390496b7b447cb5",
+      "rejection": "authority transition digest differs",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "missing authority transition",
+      "observed": true,
+      "rejection": "missing file: /tmp/gd002/historical-qualification/first/docs/evidence/gnatdoc009b/authority-transition.json"
+    },
+    {
+      "name": "altered historical occurrence ledger",
+      "observed_sha256": "8a427ddeb933e36c44ba37588d23e8cb22cd62a234a9dcdc15245c0f070ca18d",
+      "original_sha256": "944c44d8147a53f4508db28c7c204c2a03989a748de33b9c8c48f34566ddab93",
+      "rejection": "historical evidence differs: docs/evidence/gnatdoc009/type-link-occurrences.json",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "Core 0.5.1 substitution",
+      "observed_sha256": "9a20113c25a09eef34359962de5c3dd62c84a4fdcd88811a32ed95786ab48491",
+      "original_sha256": "9f001f95697dadcd30314e959babda21388ee06033aadaf0b132e29017629a33",
+      "rejection": "authority bytes differ: docs/shared-gnatdoc-shadow.toml",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "browser fixture substituted for Core source",
+      "observed_sha256": "f650e461a0bada2b07ee55bd0e3617bde5d452861622081bfff85dbe4df8308d",
+      "original_sha256": "9f001f95697dadcd30314e959babda21388ee06033aadaf0b132e29017629a33",
+      "rejection": "authority bytes differ: docs/shared-gnatdoc-shadow.toml",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "altered public Ada declaration",
+      "observed_sha256": "354f18ec195f9a279bdcf0a918b29d8d3ae883313efbdc98ccbf61fb815ff800",
+      "original_sha256": "979c3a93b723bf55e62f17cf42917a7125436754daf3dedb358aa9510365f607",
+      "rejection": "staged source changed",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "forged current authored native binding",
+      "observed_sha256": "8f5386b479ebb85e8dc70b3776e3053c53319f86b0e2079e2d7d55206842b452",
+      "original_sha256": "f27075f25e202167a9c4c85e74534ea5d993b5fe6c4ee11b7939c123953d17df",
+      "rejection": "derived current contract differs",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "forged current configuration",
+      "observed_sha256": "d9446f421f74f021a79f46c060b381097cd9da2c69ed4d2fedc30f828002678f",
+      "original_sha256": "b87ba8354ff3e56dfa65e14c6466e1d9b82e25369179b3fbe049a4ca7133a7c2",
+      "rejection": "derived current contract differs",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "changed current source with matching staged declaration",
+      "observed_sha256": "0c98c2a2ae8bb280acf24a8ecad220bd62851eedf0f7a298ea929751c98c5b1d",
+      "original_sha256": "979c3a93b723bf55e62f17cf42917a7125436754daf3dedb358aa9510365f607",
+      "rejection": "current source differs from exact HEAD: src/opencv-geometry.ads",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "tampered reconstructed native output",
+      "observed_sha256": "8b5b60ecaa789b50b85674891cc1b0761bf892365442604c1f4d29bf619be940",
+      "original_sha256": "e5132ce2c3804326c83f7b73827770ec30467b10a67f520146667bbda8adfd23",
+      "rejection": "fresh native reconstruction differs",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "wrong-but-existing native Core anchor",
+      "observed_sha256": "52e3e611e425566201fdc622d7a568e10df3f499f96160f53ee04aaf406b45c7",
+      "original_sha256": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "cross-package declaration substitution",
+      "observed_sha256": "c2fa7767ab80ceaec876831a1719fc05f1b701edd5ee78251cbeac8d115714bb",
+      "original_sha256": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+      "rejection": "published file differs from reconstructed output: api/index.html",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "forged type identity",
+      "observed_sha256": "dd188f7c020e3b16ab151fe6dce6fe808f4c27a3fefcdadcad5bc39328ce56c3",
+      "original_sha256": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "forged external URL",
+      "observed_sha256": "ea79fa6302e8e65bcfe7c460bb060c77fde556248d839ba2b0c383ed027d3561",
+      "original_sha256": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "missing category assignment",
+      "observed_sha256": "d7e290b77e885441919a2f2db8de57a5bea40bfad52339a4fa15e3b809d2e106",
+      "original_sha256": "be3a9dc45808c7bc3007b66130117208a13ba02130f4c1224ea981a6e28cf8f0",
+      "rejection": "authority bytes differ: docs/api-categories.json",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "duplicated category assignment",
+      "observed_sha256": "86cbc989c2ba0e2f8b32a24c697e2ded578a5504f4cbb3c6f42a29a93afe6b4d",
+      "original_sha256": "be3a9dc45808c7bc3007b66130117208a13ba02130f4c1224ea981a6e28cf8f0",
+      "rejection": "authority bytes differ: docs/api-categories.json",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "wrong overload full profile",
+      "observed_sha256": "cb43d2b40f58c473b82fc1faa2a84615ae3802d3dacc8f9617474d9fd820104f",
+      "original_sha256": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "altered authored guide",
+      "observed_sha256": "b92e9c68cf2baab307136d1c0ce9e0de345d2154728cde508d191cb9476f34f1",
+      "original_sha256": "c41de934d81b070a90cfa0ffa381c289704ff9fa7aab3189c10e8cf2ec53d433",
+      "rejection": "authority bytes differ: docs/guides/delaunay-and-voronoi.md",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "altered executable source",
+      "observed_sha256": "06f7ffaa9b0d4e686ebf8a45d8a82c2a057b3c8700a251e753d2e3316dfe3d6a",
+      "original_sha256": "b3a3d8b812255b4df5ac3a30e473ae416a9dca08ddc76b83733919cc8b6d4bb8",
+      "rejection": "authority bytes differ: docs/example.adb",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "changed compiled-example ownership",
+      "observed_sha256": "c097740493e44ebead1bfe98bfe38a9e5e73377ade37464727cbca6209ed71b6",
+      "original_sha256": "62a5cacfb86ece2017045e6354d6a9ce47b3d9706dd16873c2437b854dcb59ea",
+      "rejection": "historical evidence differs: docs/evidence/gnatdoc009b/geometry-authored.json",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "output manifest rewritten to authorize tampering",
+      "observed_sha256": "1e7b2876b5badb538386c785ba233634caecf5eace653cde7e0fd69d3ee95673",
+      "original_sha256": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+      "rejection": "enhanced output does not match source/manifest",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "coordinated output and manifest authorization forgery",
+      "observed": true,
+      "rejection": "enhanced output does not match source/manifest"
+    },
+    {
+      "name": "nondeterministic generated asset",
+      "observed_sha256": "073307af7582e886ec762df84a19c265bf40053ec0fde5345485b6a0e16947e4",
+      "original_sha256": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+      "rejection": "published file differs from reconstructed output: api/gnatdoc-navigation.js",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "unexpected generated file",
+      "observed": true,
+      "rejection": "unapproved output file: unexpected.html"
+    },
+    {
+      "name": "invalid symlink",
+      "observed": true,
+      "rejection": "symlink published: /tmp/gd002/historical-qualification/first/_site/escape"
+    },
+    {
+      "name": "path traversal in dependency configuration",
+      "observed_sha256": "5efa78864f95a555201bbf4c036a1aff8e95479334e605a7379f3fdbcb853b53",
+      "original_sha256": "9f001f95697dadcd30314e959babda21388ee06033aadaf0b132e29017629a33",
+      "rejection": "authority bytes differ: docs/shared-gnatdoc-shadow.toml",
+      "restored_output_sha256": {
+        "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+        "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+        "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+        "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+        "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+        "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+        "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+        "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+        "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+        "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+        "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+        "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+        "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+        "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+      }
+    },
+    {
+      "name": "partial publication after failed enhancement",
+      "observed": true,
+      "rejection": "unapproved output file: unexpected.html",
+      "restored": true
+    },
+    {
+      "name": "modified installed asset",
+      "observed": true,
+      "rejection": "modified installed enhancer asset/module"
+    },
+    {
+      "name": "old/wrong enhancer commit",
+      "observed": true,
+      "rejection": "wrong enhancer commit"
+    },
+    {
+      "name": "incorrect Alire resolution",
+      "observed": true,
+      "rejection": "incorrect Alire Core resolution"
+    }
+  ],
+  "qualification_sha256": "7295444f074ac9a632edcea73da28a50b745bf42d7837fb6aef2ea595c37b70e",
+  "restored_and_verified": true,
+  "restored_shadow_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+    "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "run_id": "124a83fd-fede-4265-acd3-d42c5396ffec",
+  "status": "pass",
+  "tested_shadow_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "c60c75ecfb86173b557a98bc1d999ccc1e5fbd30cecb8b8c43ea7da47327584c",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "32f58242532e9647085d7a4b9c72355143c49343d3e9a2d2c35e589f8b42c5c9",
+    "api/presentation.json": "a203b811fd569e285640323192be74321cda289ad5481dbd709686b603f322aa",
+    "guides/affine-and-perspective-geometry.html": "c11ab615347c6a52751d7451f2d93478ede73c824b761f0a3be17435909c5396",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  }
+}
