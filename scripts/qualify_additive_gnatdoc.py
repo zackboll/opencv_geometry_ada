@@ -98,6 +98,9 @@ def production_generate(session, source, prefix):
         env["DOC_PYTHON"] = python
     session.run(["sh", "scripts/generate_docs.sh"], source,
                 env=env)
+    if "DOC_PYTHON" in env:
+        session.run([env["DOC_PYTHON"], "-I", ROOT / "scripts/gnatdoc_migration_policy.py",
+                     "--wheel", wheel], ROOT)
     return file_hashes(source / "_site")
 
 

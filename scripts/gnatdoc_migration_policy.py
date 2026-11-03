@@ -35,6 +35,7 @@ INSTALL = '''          python3 -m venv .doc-tools/markdown
           echo "DOC_PYTHON=$GITHUB_WORKSPACE/geometry/.doc-tools/markdown/bin/python" >> "$GITHUB_ENV"
 '''
 GENERATE = '''          sh scripts/generate_docs.sh
+          "$DOC_PYTHON" -I ../build-policy/scripts/gnatdoc_migration_policy.py --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
 '''
 DETERMINISM = '''          cp -a _site /tmp/documentation-first
           sh scripts/generate_docs.sh
@@ -42,6 +43,7 @@ DETERMINISM = '''          cp -a _site /tmp/documentation-first
           "$DOC_PYTHON" -m ada_gnatdoc_enhancer enhance --config docs/gnatdoc-enhancer.toml --source-root . --site _site
           "$DOC_PYTHON" -m ada_gnatdoc_enhancer verify --config docs/gnatdoc-enhancer.toml --source-root . --site _site
           diff -r /tmp/documentation-first _site
+          "$DOC_PYTHON" -I ../build-policy/scripts/gnatdoc_migration_policy.py --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
 '''
 STEP_BODIES = {
     "Install qualified documentation-only Markdown renderer": INSTALL,

@@ -10,6 +10,7 @@ from gnatdoc_migration_policy import (
     ROOT, WHEEL, MIGRATION, CONFIGURATION, TEST_REPAIRS, WORKFLOW,
     envelope, migration_workflow, migration_generator, verify_wheel, native_output,
     verify_current_commit,
+    installed_wheel,
 )
 from additive_gnatdoc_policy import (
     candidate_rules, historical_inputs, inventory, compatible, exact_snapshot, coverage,
@@ -164,6 +165,24 @@ class MigrationPolicyTests(unittest.TestCase):
         self.mutate("scripts/check_doc_coverage.py")
         with self.assertRaisesRegex(ValueError, "unapproved migration verification files"):
             envelope(ROOT, self.candidate)
+
+    def test_10_source_editable_floating_and_wrong_installed_version_rejected(self):
+        import json
+        from unittest.mock import Mock
+        distribution = Mock()
+        distribution.version = "0.1.4"
+        with patch("gnatdoc_migration_policy.verify_wheel"), patch(
+                "gnatdoc_migration_policy.importlib.metadata.distribution", return_value=distribution):
+            with self.assertRaisesRegex(ValueError, "installed enhancer version differs"):
+                installed_wheel(Path("unused.whl"))
+            distribution.version = "0.1.5"
+            for record in ({}, {"dir_info": {"editable": True}},
+                           {"vcs_info": {"requested_revision": "main"}},
+                           {"archive_info": {"hashes": {"sha256": "0" * 64}}}):
+                distribution.read_text.return_value = json.dumps(record)
+                with self.subTest(record=record), self.assertRaisesRegex(
+                        ValueError, "installed enhancer is not the official wheel"):
+                    installed_wheel(Path("unused.whl"))
 
 
 class OutputBoundaryTests(unittest.TestCase):
