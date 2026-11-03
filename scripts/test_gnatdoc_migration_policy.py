@@ -184,6 +184,25 @@ class MigrationPolicyTests(unittest.TestCase):
                         ValueError, "installed enhancer is not the official wheel"):
                     installed_wheel(Path("unused.whl"))
 
+    def test_11_incorrect_resolved_core_and_lock_rejected(self):
+        from unittest.mock import Mock
+        from qualify_shared_gnatdoc_shadow import resolved_core
+        session = Mock()
+        source, core = Path("/qualification/geometry"), Path("/qualification/core")
+        session.run.return_value = "/untrusted/core"
+        with self.assertRaisesRegex(ValueError, "incorrect Alire Core resolution"):
+            resolved_core(session, source, core)
+        session.run.return_value = str(core)
+        lock = b'''[[solution.state]]
+crate="opencv_core"
+fulfilment="linked"
+[solution.state.link]
+path="../wrong-core"
+'''
+        with patch("qualify_shared_gnatdoc_shadow.regular", return_value=lock):
+            with self.assertRaisesRegex(ValueError, "incorrect Core lock"):
+                resolved_core(session, source, core)
+
 
 class OutputBoundaryTests(unittest.TestCase):
     def test_missing_or_altered_native_anchor_rejected(self):

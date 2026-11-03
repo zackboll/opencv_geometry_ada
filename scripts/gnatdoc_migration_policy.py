@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 VERSION = "0.1.5"
 WHEEL = "ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl"
 WHEEL_SHA256 = "d712d330f213fc1909a66c47bc2c7e5e15d5ec687222bea3c4922f5243db4247"
-WHEEL_URL = "https://github.com/zackboll/ada-gnatdoc-enhancer/releases/download/v0.1.5/" + WHEEL
 WORKFLOW = ".github/workflows/documentation.yml"
 CONFIGURATION = frozenset({"docs/gnatdoc-enhancer.toml", "docs/gnatdoc-authored.json"})
 TEST_REPAIRS = frozenset({
