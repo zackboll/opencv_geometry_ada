@@ -31,8 +31,8 @@ def source_rules(baseline, source, synthetic, qualification_pins=False):
 def verify(workspace, repository, revision, policy_revision, synthetic=False):
     policy_tree = policy_identity(policy_revision)
     source = workspace / "source"
-    require(git(source, "rev-parse", "HEAD").decode().strip() == revision,
-            "stale/substituted candidate commit")
+    from gnatdoc_migration_policy import verify_current_commit
+    verify_current_commit(source, revision)
     git(repository, "merge-base", "--is-ancestor", policy_revision, revision)
     tree = exact_snapshot(source, repository, revision, pins=True)
     for name, pin in (("alire.toml", "../core"), ("tests/alire.toml", "../../core")):
@@ -85,10 +85,19 @@ def verify(workspace, repository, revision, policy_revision, synthetic=False):
 
 
 def production_generate(session, source, prefix):
-    # The candidate copy is byte-checked against the protected historical
-    # generator before execution; source-matching helpers are likewise frozen.
+    # The historical shadow tool environment is never the production release.
+    import os
+    from gnatdoc_migration_policy import CONFIGURATION
+    env = {"GNATDOC_PREFIX": str(prefix)}
+    if all((source / name).is_file() for name in CONFIGURATION):
+        python = os.environ.get("PRODUCTION_DOC_PYTHON")
+        wheel = os.environ.get("PRODUCTION_DOC_WHEEL")
+        require(python and wheel, "independent official-wheel production environment missing")
+        session.run([python, "-I", ROOT / "scripts/gnatdoc_migration_policy.py",
+                     "--wheel", wheel], ROOT)
+        env["DOC_PYTHON"] = python
     session.run(["sh", "scripts/generate_docs.sh"], source,
-                env={"GNATDOC_PREFIX": str(prefix)})
+                env=env)
     return file_hashes(source / "_site")
 
 
@@ -104,6 +113,11 @@ def verify_production(workspace, source):
             require(b".invalid" not in regular(source / "_site" / name),
                     "offline destination in production output")
     cov = coverage(source, source / "_site", source / "obj/docs/gnatdoc.log")
+    from gnatdoc_migration_policy import native_output
+    native_output(source, workspace / "pristine-first", source / "_site")
+    # Candidate validator/test edits never replace this base-owned validator.
+    from validate_docs import validate
+    validate(source / "_site", root=source, core=workspace / "core")
     return {"site_sha256": observed, "coverage": cov, "deployable_output": True}
 
 
