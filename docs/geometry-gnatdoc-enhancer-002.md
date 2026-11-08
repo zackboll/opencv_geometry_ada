@@ -2,11 +2,37 @@
 
 **Disposition: CORRECTIVE_WORK_REQUIRED — bootstrap authorization outstanding.**
 
-GitHub also rejected publishing this branch: the available OAuth App credential
-lacks `workflow` scope for `.github/workflows/documentation-additive-policy.yml`.
-No PR or exact-head hosted qualification exists for this proposal. A maintainer
-must publish the reviewed local branch using an already authorized credential;
-this task does not grant permission to change authentication or protections.
+## R2 publication and corrective qualification
+
+The prior credential blocker is resolved. The maintainer-published branch was
+fetched and verified unchanged at original head
+`906def7fb2f9971525365a2f24169d2c09c59d54`, tree
+`f02c50067bcbb92d538d81eef33779efaf91441c`. Latest main still matches the
+baseline below. [PR #59](https://github.com/zackboll/opencv_geometry_ada/pull/59)
+is non-draft with auto-merge disabled. No rewrite, rebase or forced push occurred.
+
+The original full exploratory campaign completed after the previous handoff:
+historical and current components, browsers and attacks passed, but its positive
+additive fixture failed the new independent production validator. This is a real
+successor-policy defect, not the expected bootstrap rejection: nested theme and
+navigation checks used their policy-checkout default sources even though
+`validate(..., root=source)` selected the exact fixture source. The new fixture
+overloads therefore failed `source profile not unique`.
+
+R2 threads explicit source/category paths through the base-owned navigation and
+theme checks, preserving all exact HTML, asset, profile and ownership checks.
+Default production calls are unchanged. Added regressions verify context
+propagation and continued tamper rejection. The migration file allowance is
+unchanged; both corrected verifier helpers remain protected from candidates.
+No current-source test expectation or historical authority hash is repaired.
+
+Original-head exact qualification is running in clean `original-policy` checkout
+under `/home/zboll/git/geometry-gnatdoc-002r2-evidence/`, campaign `/tmp/gd2r2`.
+The correction requires a complete new final-head campaign, not reuse of the old
+passing components. The sections below retain original delivery history; this
+R2 section supersedes their publication/pending statements. Final identities,
+results, changed-file inventory, hosted checks and decision are recorded in the
+R2 evidence and PR after qualification, avoiding self-referential commit hashes.
 
 This branch proposes policy for a later migration; it does not perform one.
 PR #58 is unchanged and must not be merged as a completed migration. No branch

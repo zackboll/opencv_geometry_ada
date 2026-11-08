@@ -50,6 +50,7 @@ class MigrationPolicyTests(unittest.TestCase):
         for name in ("scripts/configure_opencv.sh", ".github/workflows/documentation-additive-policy.yml",
                      "scripts/select_gnatdoc_policy.py", "scripts/validate_gnatdoc_inputs.py",
                      "scripts/gnatdoc_migration_policy.py", "scripts/run_additive_gnatdoc_review.py",
+                     "scripts/enhance_gnatdoc_navigation.py", "scripts/install_gnatdoc_theme.py",
                      "scripts/qualify_additive_gnatdoc.py", "scripts/new_verifier.py",
                      ".github/workflows/new-publication.yml"):
             with self.subTest(name=name):
@@ -205,6 +206,55 @@ path="../wrong-core"
 
 
 class OutputBoundaryTests(unittest.TestCase):
+    def test_navigation_checks_use_explicit_source_not_policy_checkout(self):
+        import enhance_gnatdoc_navigation as navigation
+        from install_gnatdoc_theme import themed
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            api = root / "site/api"
+            api.mkdir(parents=True)
+            source, categories = root / "src", root / "docs/api-categories.json"
+            with patch.object(navigation, "entries", return_value=[]) as entries:
+                native, _ = navigation.native_index(api, source, categories)
+                rendered = navigation.augmented(themed(native), api, source, categories)
+                (api / "index.html").write_text(rendered)
+                (api / "gnatdoc-navigation.js").write_bytes(navigation.ASSET.read_bytes())
+                self.assertEqual(navigation.check_navigation(api, source, categories), 0)
+                self.assertTrue(entries.call_args_list)
+                self.assertTrue(all(call.args == (api, source, categories)
+                                    for call in entries.call_args_list))
+                (api / "index.html").write_text(rendered + "<!-- tampered -->")
+                with self.assertRaisesRegex(ValueError, "unapproved navigation shell"):
+                    navigation.check_navigation(api, source, categories)
+
+    def test_theme_checks_forward_explicit_navigation_source(self):
+        import json
+        import hashlib
+        import install_gnatdoc_theme as theme
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            api = root / "api"
+            api.mkdir()
+            source, categories = root / "src", root / "docs/api-categories.json"
+            native = '<html>' + theme.NATIVE + '<body>native</body>'
+            rendered = theme.themed(native)
+            (api / "index.html").write_text(rendered)
+            (api / "gnatdoc-navigation.js").write_text("fixture")
+            (api / "gnatdoc.css").write_bytes(b"native stylesheet")
+            (api / "gnatdoc-theme.css").write_bytes(theme.ASSET.read_bytes())
+            (api / "presentation.json").write_text(json.dumps({
+                "version": 1, "pages": {"index.html": native},
+                "native_css": hashlib.sha256(b"native stylesheet").hexdigest()}))
+            with patch("enhance_gnatdoc_navigation.check_navigation") as check, patch(
+                    "enhance_gnatdoc_navigation.augmented", return_value=rendered) as augment:
+                theme.check_theme(api, source, categories)
+                check.assert_called_once_with(api, source_root=source, categories_path=categories)
+                augment.assert_called_once_with(rendered, api, source_root=source,
+                                                categories_path=categories)
+                check.side_effect = ValueError("source/native mismatch")
+                with self.assertRaisesRegex(ValueError, "source/native mismatch"):
+                    theme.check_theme(api, source, categories)
+
     def test_missing_or_altered_native_anchor_rejected(self):
         # Exercise the actual independent HTML reader, not a forged count report.
         with tempfile.TemporaryDirectory() as folder:

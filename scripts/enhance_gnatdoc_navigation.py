@@ -187,16 +187,16 @@ def browser(packages):
     return "".join(parts)
 
 
-def native_index(api):
-    packages = entries(api)
+def native_index(api, source_root=ROOT / "src", categories_path=CATEGORIES):
+    packages = entries(api, source_root, categories_path)
     units = "".join(f"<li><a href={page} target=document-content>{package}</a>"
                     for package, page, _ in packages)
     return INDEX_START + units + INDEX_END, packages
 
 
-def augmented(text, api):
+def augmented(text, api, source_root=ROOT / "src", categories_path=CATEGORIES):
     """The approved navigation index for a native (themed) index text."""
-    _, packages = native_index(api)
+    _, packages = native_index(api, source_root, categories_path)
     marker = "<h2 id=compilation-units>"
     require(text.count(marker) == 1 and text.count("<body class=main>") == 1,
             "unsupported native index structure")
@@ -204,11 +204,11 @@ def augmented(text, api):
                 .replace("<body class=main>", SCRIPT + "<body class=main>", 1))
 
 
-def check_navigation(api):
+def check_navigation(api, source_root=ROOT / "src", categories_path=CATEGORIES):
     from install_gnatdoc_theme import themed
-    native, packages = native_index(api)
+    native, packages = native_index(api, source_root, categories_path)
     require((api / "index.html").read_text(encoding="utf-8") ==
-            augmented(themed(native), api),
+            augmented(themed(native), api, source_root, categories_path),
             "unapproved navigation shell, links, controls or scripts")
     require((api / "gnatdoc-navigation.js").read_bytes() == ASSET.read_bytes(),
             "navigation asset differs from repository script")
