@@ -69,7 +69,7 @@ class AdditivePolicyTests(unittest.TestCase):
             candidate = Path(folder)
             (candidate / "docs").mkdir()
             original = read(ROOT / "docs/api-categories.json")
-            for attack in ("reassign", "duplicate", "missing", "unknown"):
+            for attack in ("reassign", "duplicate", "missing", "unknown", "wrong-package"):
                 with self.subTest(attack=attack):
                     value = copy.deepcopy(original)
                     groups = value["packages"][0]["categories"]
@@ -79,6 +79,9 @@ class AdditivePolicyTests(unittest.TestCase):
                         groups[0]["declarations"].append(groups[0]["declarations"][0])
                     elif attack == "missing":
                         groups[0]["declarations"].pop()
+                    elif attack == "wrong-package":
+                        value["packages"][1]["categories"][0]["declarations"].append(
+                            groups[0]["declarations"].pop())
                     else:
                         groups[0]["declarations"].append("Unknown")
                     (candidate / "docs/api-categories.json").write_text(json.dumps(value))
@@ -92,12 +95,30 @@ class AdditivePolicyTests(unittest.TestCase):
             (candidate / "docs").mkdir()
             value = read(ROOT / "docs/api-categories.json")
             group = next(g for g in value["packages"][0]["categories"] if g["id"] == "transforms")
-            group["declarations"].append("Compose")
+            name = "Documentation_Category_Probe"
+            self.assertNotIn(name.lower(), {r["name"].lower()
+                             for rows in self.original.values() for r in rows})
+            self.assertNotIn(name.lower(), {n.lower() for p in value["packages"]
+                             for g in p["categories"] for n in g["declarations"]})
+            group["declarations"].append(name)
             (candidate / "docs/api-categories.json").write_text(json.dumps(value))
-            current = copy.deepcopy(self.original)
-            current["opencv.geometry"].append({"name": "Compose"})
+            shutil.copytree(ROOT / "src", candidate / "src")
+            spec = candidate / "src/opencv-geometry.ads"
+            original = spec.read_text()
+            marker = "end OpenCV.Geometry;"
+            self.assertEqual(original.count(marker), 1)
+            spec.write_text(original.replace(marker,
+                f"--  Controlled documentation category fixture.\n"
+                f"--  @return True for the fixture.\n"
+                f"function {name} return Boolean;\n\n" + marker))
+            current = inventory(candidate)
+            added = compatible(self.original, current, {name})
+            self.assertEqual([(row["package"], row["name"]) for row in added],
+                             [("opencv.geometry", name)])
             owners = categories(ROOT, candidate, current)
-            self.assertEqual(owners["OpenCV.Geometry", "Compose"], "transforms")
+            self.assertEqual(owners["OpenCV.Geometry", name], "transforms")
+            self.assertEqual(set(owners) - set(categories(ROOT, ROOT, self.original)),
+                             {("OpenCV.Geometry", name)})
 
     def test_exact_snapshot_rejects_source_tamper(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -108,6 +129,7 @@ class AdditivePolicyTests(unittest.TestCase):
                 exact_snapshot(root, ROOT, PREDECESSOR)
 
     def test_manifest_derivation_has_only_scoped_input_changes(self):
+        from additive_gnatdoc_policy import EVOLVING_AUTHORED, sha, file_hashes
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root / "api").mkdir()
@@ -116,17 +138,86 @@ class AdditivePolicyTests(unittest.TestCase):
             import json
             derived = json.loads(payload)
             original = read(ROOT / "docs/evidence/gnatdoc009b/geometry-authored.json")
+            self.assertEqual(derived["native_sha256"], file_hashes(root))
             self.assertNotEqual(derived.pop("native_sha256"), original.pop("native_sha256"))
+            for name in EVOLVING_AUTHORED:
+                self.assertEqual(derived["inputs"].pop(name), sha(regular(ROOT / name)))
+                original["inputs"].pop(name)
             self.assertEqual(derived, original)
             self.assertIn(b"current-authored.json", config)
 
     def test_each_protected_script_still_uses_historical_authority(self):
-        from additive_gnatdoc_policy import TRUSTED_SCRIPTS, TRANSITION, check_files
+        from additive_gnatdoc_policy import TRUSTED_SCRIPTS, TRANSITION, check_files, BASE
         authority = read(ROOT / TRANSITION)
         self.assertEqual(len(TRUSTED_SCRIPTS), 23)
         for name in TRUSTED_SCRIPTS:
             with self.subTest(name=name):
-                check_files(ROOT, {name: authority["baseline_files_sha256"][name]})
+                with tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder)
+                    target = root / name
+                    target.parent.mkdir(parents=True)
+                    target.write_bytes(git(ROOT, "show", f"{BASE}:{name}"))
+                    expected = {name: authority["baseline_files_sha256"][name]}
+                    check_files(root, expected)
+                    target.write_bytes(target.read_bytes() + b"\n# unapproved\n")
+                    with self.assertRaisesRegex(ValueError, "authority bytes differ"):
+                        check_files(root, expected)
+
+    def test_duplicate_overload_identity_rejected(self):
+        changed = copy.deepcopy(self.original)
+        row = next(r for r in changed["opencv.geometry"] if r["name"] == "Transform_Point")
+        changed["opencv.geometry"].append(copy.deepcopy(row))
+        with self.assertRaisesRegex(ValueError, "removed or modified"):
+            compatible(self.original, changed)
+
+    def test_current_contract_requires_exact_source_and_native_binding(self):
+        import json
+        import subprocess
+        from additive_gnatdoc_policy import EVOLVING_AUTHORED, sha, file_hashes
+        from gnatdoc_migration_policy import verify_current_commit
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source, native = root / "source", root / "native"
+            subprocess.run(["git", "clone", "--quiet", "--shared", str(ROOT), str(source)], check=True)
+            revision = git(source, "rev-parse", "HEAD").decode().strip()
+            exact_snapshot(source, ROOT, revision)
+            verify_current_commit(source, revision)
+            with self.assertRaisesRegex(ValueError, "stale/substituted"):
+                verify_current_commit(source, PREDECESSOR)
+            (native / "api").mkdir(parents=True)
+            page = native / "api/index.html"
+            page.write_text("controlled pristine native fixture")
+            payload, config = authored_contract(source, native)
+            expected = json.loads(payload)
+            self.assertEqual(expected["native_sha256"], file_hashes(native))
+            for name in sorted(EVOLVING_AUTHORED):
+                with self.subTest(name=name):
+                    path = source / name
+                    original = path.read_bytes()
+                    self.assertEqual(expected["inputs"][name], sha(original))
+                    try:
+                        path.write_bytes(original + b"\nUnauthorized content\n")
+                        with self.assertRaisesRegex(ValueError, "snapshot changed"):
+                            exact_snapshot(source, ROOT, revision)
+                        self.assertNotEqual(authored_contract(source, native)[0], payload)
+                        path.unlink()
+                        substitute = root / "substitute"
+                        substitute.write_bytes(original)
+                        path.symlink_to(substitute)
+                        with self.assertRaises(ValueError):
+                            authored_contract(source, native)
+                    finally:
+                        if path.is_symlink():
+                            path.unlink()
+                        path.write_bytes(original)
+                    exact_snapshot(source, ROOT, revision)
+            page.write_text("incorrect native binding")
+            rebound, rebound_config = authored_contract(source, native)
+            self.assertNotEqual(rebound, payload)
+            self.assertNotEqual(rebound_config, config)
+            self.assertNotEqual(json.loads(rebound)["native_sha256"], expected["native_sha256"])
+            # The derivation is not authorization: exact snapshot checks above and
+            # qualify_additive_gnatdoc.verify's reconstructed-native check are mandatory.
 
     def test_recorder_missing_evidence_is_nonready(self):
         from record_additive_gnatdoc import record

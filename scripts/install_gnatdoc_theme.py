@@ -33,7 +33,7 @@ def themed(text):
     return text.replace(NATIVE, NATIVE + METADATA, 1)
 
 
-def check_theme(api):
+def check_theme(api, source_root=None, categories_path=None):
     manifest_path = api / 'presentation.json'
     require(manifest_path.is_file(), 'missing presentation integrity manifest')
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
@@ -49,8 +49,10 @@ def check_theme(api):
         expected = themed(manifest['pages'][name])
         if name == 'index.html' and (api / 'gnatdoc-navigation.js').exists():
             from enhance_gnatdoc_navigation import augmented, check_navigation
-            check_navigation(api)
-            expected = augmented(expected, api)
+            context = {} if source_root is None else {
+                'source_root': source_root, 'categories_path': categories_path}
+            check_navigation(api, **context)
+            expected = augmented(expected, api, **context)
         require(skeleton(path.read_text(encoding='utf-8')) == expected,
                 f'unapproved non-snippet presentation change: {name}')
     print(f'Theme: {len(paths)} API pages verified; asset/metadata errors: 0')

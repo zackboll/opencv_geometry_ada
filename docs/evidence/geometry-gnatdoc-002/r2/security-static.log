@@ -1,0 +1,18 @@
+UNCHANGED AUTHORITY/PRODUCTION INPUT scripts/select_gnatdoc_policy.py
+UNCHANGED AUTHORITY/PRODUCTION INPUT scripts/validate_gnatdoc_inputs.py
+UNCHANGED AUTHORITY/PRODUCTION INPUT scripts/run_additive_gnatdoc_review.py
+UNCHANGED AUTHORITY/PRODUCTION INPUT scripts/qualify_shared_gnatdoc_shadow.py
+UNCHANGED AUTHORITY/PRODUCTION INPUT .github/workflows/documentation.yml
+UNCHANGED AUTHORITY/PRODUCTION INPUT .github/workflows/documentation-shared-shadow.yml
+UNCHANGED AUTHORITY/PRODUCTION INPUT scripts/generate_docs.sh
+UNCHANGED AUTHORITY/PRODUCTION INPUT alire.toml
+UNCHANGED AUTHORITY/PRODUCTION INPUT tests/alire.toml
+UNCHANGED AUTHORITY/PRODUCTION INPUT docs/requirements.txt
+CANDIDATE PROTECTED scripts/enhance_gnatdoc_navigation.py
+CANDIDATE PROTECTED scripts/install_gnatdoc_theme.py
+CANDIDATE PROTECTED scripts/gnatdoc_migration_policy.py
+CANDIDATE PROTECTED scripts/qualify_additive_gnatdoc.py
+CANDIDATE PROTECTED scripts/select_gnatdoc_policy.py
+FINITE ALLOWANCE ['.github/workflows/documentation.yml', 'docs/documentation.md', 'docs/gnatdoc-authored.json', 'docs/gnatdoc-enhancer.toml', 'scripts/generate_docs.sh', 'scripts/test_additive_gnatdoc_policy.py', 'scripts/test_check_doc_coverage.py', 'scripts/test_gnatdoc_navigation.py', 'scripts/test_gnatdoc_navigation_browser.cjs', 'scripts/test_shared_gnatdoc_shadow.py', 'scripts/test_validate_docs.py', 'scripts/validate_docs.py']
+PR READ-ONLY; PAGES MAIN-ONLY; TWO QUALIFICATION DEPENDENCIES PRESERVED
+NATIVE GNATDOC SHA256 d256f0ece2f181046dfeb3ce490d7aa5c994992550c78da14e9065d453aa52c5

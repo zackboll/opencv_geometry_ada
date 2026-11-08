@@ -6,7 +6,7 @@ import unittest
 import json
 
 from qualify_shared_gnatdoc_shadow import (
-    ROOT, TRANSITION, REVIEWED, EVIDENCE, CONFIG, git, check_files, trusted_inputs,
+    ROOT, BASE, TRANSITION, REVIEWED, EVIDENCE, CONFIG, git, check_files, trusted_inputs,
     registered_cases, aunit_results, staged_contract,
     TRUSTED_SCRIPTS,
 )
@@ -16,12 +16,14 @@ class TrustTests(unittest.TestCase):
     def trust_copy(self, root):
         transition = json.loads((ROOT / TRANSITION).read_text())
         names = set(transition["baseline_files_sha256"]) | {TRANSITION, CONFIG}
-        names.update(git(ROOT, "ls-tree", "-r", "--name-only", REVIEWED, "--",
-                         "docs/evidence/gnatdoc009", EVIDENCE).decode().splitlines())
+        evidence = set(git(ROOT, "ls-tree", "-r", "--name-only", REVIEWED, "--",
+                           "docs/evidence/gnatdoc009", EVIDENCE).decode().splitlines())
+        names.update(evidence)
         for name in names:
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / name, target)
+            revision = REVIEWED if name in evidence or name == CONFIG else BASE
+            target.write_bytes(git(ROOT, "show", f"{revision}:{name}"))
 
     def test_current_implementation_changes_do_not_rewrite_history(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -52,13 +54,14 @@ class TrustTests(unittest.TestCase):
             root = Path(directory)
             self.trust_copy(root)
             suite = root / "tests/src/contour_geometry_tests.adb"
+            before = len(registered_cases(root))
             text = suite.read_text()
             text = text.replace("      return Result'Access;", """      Result.Add_Test
         (Caller.Create ("Future legitimate regression", C_ABI_Validation'Access));
       return Result'Access;""", 1)
             suite.write_text(text)
             trusted_inputs(root)
-            self.assertEqual(len(registered_cases(root)), len(registered_cases(ROOT)) + 1)
+            self.assertEqual(len(registered_cases(root)), before + 1)
 
     def test_historical_ledger_and_reviewed_results_are_immutable(self):
         for name in ("docs/evidence/gnatdoc009/type-link-occurrences.json",
@@ -105,8 +108,29 @@ class TrustTests(unittest.TestCase):
             self.assertIn(b'current-authored.json', config)
 
     def test_reviewed_contracts_and_baseline(self):
-        transition = trusted_inputs()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.trust_copy(root)
+            transition = trusted_inputs(root)
         self.assertEqual(transition["historical_classification"]["BLOCKED-source-backed-reference-lost"], 1)
+
+    def test_current_authored_files_are_not_historical_authority(self):
+        from additive_gnatdoc_policy import EVOLVING_AUTHORED
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.trust_copy(root)
+            trusted_inputs(root)
+            for name in sorted(EVOLVING_AUTHORED):
+                with self.subTest(name=name):
+                    path = root / name
+                    original = path.read_bytes()
+                    current = (ROOT / name).read_bytes()
+                    # Also exercises the original revision, where current == historical.
+                    path.write_bytes(current + b"\n-- unauthorized historical replacement\n")
+                    with self.assertRaisesRegex(ValueError, "authority bytes differ"):
+                        trusted_inputs(root)
+                    path.write_bytes(original)
+            trusted_inputs(root)
 
     def test_path_traversal_rejected(self):
         with self.assertRaisesRegex(ValueError, "path traversal"):

@@ -1,0 +1,113 @@
+test_01_unrelated_scripts_workflows_and_new_executables_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_01_unrelated_scripts_workflows_and_new_executables_rejected) ... ok
+test_02_missing_configuration_and_generator_mutation_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_02_missing_configuration_and_generator_mutation_rejected) ... ok
+test_03_permissions_selector_core_and_install_substitutions_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_03_permissions_selector_core_and_install_substitutions_rejected) ... ok
+test_04_build_dependencies_and_unrelated_migration_inputs_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_04_build_dependencies_and_unrelated_migration_inputs_rejected) ... ok
+test_05_substituted_corrupt_wrong_version_wheels_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_05_substituted_corrupt_wrong_version_wheels_rejected) ... ok
+test_06_historical_evidence_and_existing_declarations_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_06_historical_evidence_and_existing_declarations_rejected) ... ok
+test_07_changed_candidate_commit_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_07_changed_candidate_commit_rejected) ... ok
+test_08_scope_recognition_is_not_output_approval (test_gnatdoc_migration_policy.MigrationPolicyTests.test_08_scope_recognition_is_not_output_approval) ... ok
+test_09_contemporary_test_repair_scope (test_gnatdoc_migration_policy.MigrationPolicyTests.test_09_contemporary_test_repair_scope) ... ok
+test_10_source_editable_floating_and_wrong_installed_version_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_10_source_editable_floating_and_wrong_installed_version_rejected) ... ok
+test_11_incorrect_resolved_core_and_lock_rejected (test_gnatdoc_migration_policy.MigrationPolicyTests.test_11_incorrect_resolved_core_and_lock_rejected) ... ok
+test_missing_or_altered_coverage_and_warnings_fail_closed (test_gnatdoc_migration_policy.OutputBoundaryTests.test_missing_or_altered_coverage_and_warnings_fail_closed) ... ok
+test_missing_or_altered_native_anchor_rejected (test_gnatdoc_migration_policy.OutputBoundaryTests.test_missing_or_altered_native_anchor_rejected) ... ok
+test_navigation_checks_use_explicit_source_not_policy_checkout (test_gnatdoc_migration_policy.OutputBoundaryTests.test_navigation_checks_use_explicit_source_not_policy_checkout) ... ok
+test_theme_checks_forward_explicit_navigation_source (test_gnatdoc_migration_policy.OutputBoundaryTests.test_theme_checks_forward_explicit_navigation_source) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 2.827s
+
+OK
+Theme: 1 API pages verified; asset/metadata errors: 0
+test_first_main_push_cannot_be_squash_or_unrelated_parent (test_select_gnatdoc_policy.SelectionTests.test_first_main_push_cannot_be_squash_or_unrelated_parent) ... ok
+test_first_main_push_uses_policy_second_parent (test_select_gnatdoc_policy.SelectionTests.test_first_main_push_uses_policy_second_parent) ... ok
+test_first_push_cannot_substitute_verifier_tree (test_select_gnatdoc_policy.SelectionTests.test_first_push_cannot_substitute_verifier_tree) ... ok
+test_initial_pr_on_reviewed_sdk_main_is_exploratory (test_select_gnatdoc_policy.SelectionTests.test_initial_pr_on_reviewed_sdk_main_is_exploratory) ... ok
+test_later_feature_uses_independent_base (test_select_gnatdoc_policy.SelectionTests.test_later_feature_uses_independent_base) ... ok
+test_manual_first_merge_uses_same_actual_ancestry (test_select_gnatdoc_policy.SelectionTests.test_manual_first_merge_uses_same_actual_ancestry) ... ok
+test_original_predecessor_remains_explicit (test_select_gnatdoc_policy.SelectionTests.test_original_predecessor_remains_explicit) ... ok
+test_pr_candidate_must_match_event (test_select_gnatdoc_policy.SelectionTests.test_pr_candidate_must_match_event) ... ok
+test_push_before_must_be_actual_first_parent (test_select_gnatdoc_policy.SelectionTests.test_push_before_must_be_actual_first_parent) ... ok
+test_release_blob_and_ancestry_controls (test_select_gnatdoc_policy.SelectionTests.test_release_blob_and_ancestry_controls) ... ok
+test_release_first_merge_selects_actual_policy_parent (test_select_gnatdoc_policy.SelectionTests.test_release_first_merge_selects_actual_policy_parent) ... ok
+test_release_initial_pr_is_exact_and_unapproved (test_select_gnatdoc_policy.SelectionTests.test_release_initial_pr_is_exact_and_unapproved) ... ok
+test_reviewed_tree_mismatch_fails_closed (test_select_gnatdoc_policy.SelectionTests.test_reviewed_tree_mismatch_fails_closed) ... ok
+test_unknown_bootstrap_commit_is_not_mutable_main_authority (test_select_gnatdoc_policy.SelectionTests.test_unknown_bootstrap_commit_is_not_mutable_main_authority) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.856s
+
+OK
+test_postcondition_is_removed_from_the_profile (test_validate_docs.AspectTest.test_postcondition_is_removed_from_the_profile) ... ok
+test_profile_without_aspects_is_unchanged (test_validate_docs.AspectTest.test_profile_without_aspects_is_unchanged) ... ok
+test_with_inside_parentheses_is_not_an_aspect (test_validate_docs.AspectTest.test_with_inside_parentheses_is_not_an_aspect) ... ok
+test_broken_declaration_anchor_is_rejected (test_validate_docs.GeneratedSiteTest.test_broken_declaration_anchor_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_changed_landing_example_is_rejected (test_validate_docs.GeneratedSiteTest.test_changed_landing_example_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_core_package_only_link_is_rejected (test_validate_docs.GeneratedSiteTest.test_core_package_only_link_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_corrupted_link_manifest_is_rejected (test_validate_docs.GeneratedSiteTest.test_corrupted_link_manifest_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_cross_page_link_to_own_page_is_rejected (test_validate_docs.GeneratedSiteTest.test_cross_page_link_to_own_page_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_fabricated_core_fragment_is_rejected (test_validate_docs.GeneratedSiteTest.test_fabricated_core_fragment_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_generated_site_is_accepted (test_validate_docs.GeneratedSiteTest.test_generated_site_is_accepted) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_guides_may_not_link_to_other_sites (test_validate_docs.GeneratedSiteTest.test_guides_may_not_link_to_other_sites) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_injected_script_is_rejected (test_validate_docs.GeneratedSiteTest.test_injected_script_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_internal_package_publication_is_rejected (test_validate_docs.GeneratedSiteTest.test_internal_package_publication_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_landing_page_must_link_every_guide (test_validate_docs.GeneratedSiteTest.test_landing_page_must_link_every_guide) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_missing_stylesheet_is_rejected (test_validate_docs.GeneratedSiteTest.test_missing_stylesheet_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_missing_subdivision_page_is_rejected (test_validate_docs.GeneratedSiteTest.test_missing_subdivision_page_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_modified_description_outside_snippets_is_rejected (test_validate_docs.GeneratedSiteTest.test_modified_description_outside_snippets_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_modified_native_declaration_text_is_rejected (test_validate_docs.GeneratedSiteTest.test_modified_native_declaration_text_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_removed_convex_hull_overload_is_rejected (test_validate_docs.GeneratedSiteTest.test_removed_convex_hull_overload_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_removed_highlighting_qualification_is_rejected (test_validate_docs.GeneratedSiteTest.test_removed_highlighting_qualification_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_removed_liveness_warning_is_rejected (test_validate_docs.GeneratedSiteTest.test_removed_liveness_warning_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_removed_task_safety_statement_is_rejected (test_validate_docs.GeneratedSiteTest.test_removed_task_safety_statement_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_removed_type_link_is_rejected (test_validate_docs.GeneratedSiteTest.test_removed_type_link_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_removed_voronoi_facets_overload_is_rejected (test_validate_docs.GeneratedSiteTest.test_removed_voronoi_facets_overload_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_section_moved_between_packages_is_rejected (test_validate_docs.GeneratedSiteTest.test_section_moved_between_packages_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_stray_presentation_file_is_rejected (test_validate_docs.GeneratedSiteTest.test_stray_presentation_file_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_tampered_guide_is_rejected (test_validate_docs.GeneratedSiteTest.test_tampered_guide_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_tampered_theme_asset_is_rejected (test_validate_docs.GeneratedSiteTest.test_tampered_theme_asset_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_wrong_but_existing_cross_page_destination_is_rejected (test_validate_docs.GeneratedSiteTest.test_wrong_but_existing_cross_page_destination_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_wrong_but_existing_type_destination_is_rejected (test_validate_docs.GeneratedSiteTest.test_wrong_but_existing_type_destination_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_wrong_existing_core_symbol_is_rejected (test_validate_docs.GeneratedSiteTest.test_wrong_existing_core_symbol_is_rejected) ... skipped 'needs the pinned guide renderer and a generated site; run scripts/generate_docs.sh with DOC_PYTHON'
+test_broken_fragment_is_rejected (test_validate_docs.SyntheticSiteTest.test_broken_fragment_is_rejected) ... ok
+test_changed_overload_profile_is_rejected (test_validate_docs.SyntheticSiteTest.test_changed_overload_profile_is_rejected) ... ok
+test_comment_rendered_in_another_overload_is_rejected (test_validate_docs.SyntheticSiteTest.test_comment_rendered_in_another_overload_is_rejected) ... ok
+test_declaration_moved_to_the_other_package_is_rejected (test_validate_docs.SyntheticSiteTest.test_declaration_moved_to_the_other_package_is_rejected) ... ok
+test_description_text_only_in_a_declaration_is_rejected (test_validate_docs.SyntheticSiteTest.test_description_text_only_in_a_declaration_is_rejected) ... ok
+test_duplicate_id_is_rejected (test_validate_docs.SyntheticSiteTest.test_duplicate_id_is_rejected) ... ok
+test_duplicate_package_page_is_rejected (test_validate_docs.SyntheticSiteTest.test_duplicate_package_page_is_rejected) ... ok
+test_event_handler_is_rejected (test_validate_docs.SyntheticSiteTest.test_event_handler_is_rejected) ... ok
+test_external_link_in_api_page_is_rejected (test_validate_docs.SyntheticSiteTest.test_external_link_in_api_page_is_rejected) ... ok
+test_fragment_into_the_other_package_page_is_checked (test_validate_docs.SyntheticSiteTest.test_fragment_into_the_other_package_page_is_checked) ... ok
+test_index_redirected_to_existing_file_is_rejected (test_validate_docs.SyntheticSiteTest.test_index_redirected_to_existing_file_is_rejected) ... ok
+test_index_swapped_package_targets_are_rejected (test_validate_docs.SyntheticSiteTest.test_index_swapped_package_targets_are_rejected) ... ok
+test_index_target_change_is_rejected (test_validate_docs.SyntheticSiteTest.test_index_target_change_is_rejected) ... ok
+test_internal_package_page_is_rejected (test_validate_docs.SyntheticSiteTest.test_internal_package_page_is_rejected) ... ok
+test_internal_unit_name_is_rejected (test_validate_docs.SyntheticSiteTest.test_internal_unit_name_is_rejected) ... ok
+test_javascript_url_is_rejected (test_validate_docs.SyntheticSiteTest.test_javascript_url_is_rejected) ... ok
+test_landing_example_must_match_compiled_example (test_validate_docs.SyntheticSiteTest.test_landing_example_must_match_compiled_example) ... ok
+test_landing_must_link_to_api_reference (test_validate_docs.SyntheticSiteTest.test_landing_must_link_to_api_reference) ... ok
+test_machine_local_path_is_rejected (test_validate_docs.SyntheticSiteTest.test_machine_local_path_is_rejected) ... ok
+test_missing_child_package_page_is_rejected (test_validate_docs.SyntheticSiteTest.test_missing_child_package_page_is_rejected) ... ok
+test_missing_package_description_text_is_rejected (test_validate_docs.SyntheticSiteTest.test_missing_package_description_text_is_rejected) ... ok
+test_missing_representative_declaration_is_rejected (test_validate_docs.SyntheticSiteTest.test_missing_representative_declaration_is_rejected) ... ok
+test_missing_stylesheet_is_rejected (test_validate_docs.SyntheticSiteTest.test_missing_stylesheet_is_rejected) ... ok
+test_native_fixture_is_accepted (test_validate_docs.SyntheticSiteTest.test_native_fixture_is_accepted) ... ok
+test_path_traversal_is_rejected (test_validate_docs.SyntheticSiteTest.test_path_traversal_is_rejected) ... ok
+test_published_private_declaration_is_rejected (test_validate_docs.SyntheticSiteTest.test_published_private_declaration_is_rejected) ... ok
+test_removed_overload_section_is_rejected (test_validate_docs.SyntheticSiteTest.test_removed_overload_section_is_rejected) ... ok
+test_rendered_aspect_is_rejected (test_validate_docs.SyntheticSiteTest.test_rendered_aspect_is_rejected) ... ok
+test_representative_declaration_in_wrong_package_is_rejected (test_validate_docs.SyntheticSiteTest.test_representative_declaration_in_wrong_package_is_rejected) ... ok
+test_root_absolute_link_is_rejected (test_validate_docs.SyntheticSiteTest.test_root_absolute_link_is_rejected) ... ok
+test_script_is_rejected (test_validate_docs.SyntheticSiteTest.test_script_is_rejected) ... ok
+test_shim_symbol_is_rejected (test_validate_docs.SyntheticSiteTest.test_shim_symbol_is_rejected) ... ok
+test_stray_file_is_rejected (test_validate_docs.SyntheticSiteTest.test_stray_file_is_rejected) ... ok
+test_unapproved_landing_destination_is_rejected (test_validate_docs.SyntheticSiteTest.test_unapproved_landing_destination_is_rejected) ... ok
+test_unknown_representative_package_is_rejected (test_validate_docs.SyntheticSiteTest.test_unknown_representative_package_is_rejected) ... ok
+test_unmatched_heading_is_rejected (test_validate_docs.SyntheticSiteTest.test_unmatched_heading_is_rejected) ... ok
+test_validation_does_not_modify_the_site (test_validate_docs.SyntheticSiteTest.test_validation_does_not_modify_the_site) ... ok
+
+----------------------------------------------------------------------
+Ran 68 tests in 0.129s
+
+OK (skipped=28)

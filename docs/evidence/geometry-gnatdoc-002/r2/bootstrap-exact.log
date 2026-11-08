@@ -1,0 +1,5 @@
+UNTOUCHED BASE {'declarations': 138, 'added': [], 'aunit_registered': 562}
+SELECTION {'event': 'pull_request', 'candidate': '906def7fb2f9971525365a2f24169d2c09c59d54', 'base': 'e3f676489edaf0ce8a30ebc2cb7ce22ca1db4972', 'base_tree': '27f527ce707846c9f997b0d7bce7f0a420d659b8', 'policy_revision': 'e3f676489edaf0ce8a30ebc2cb7ce22ca1db4972', 'policy_tree': '27f527ce707846c9f997b0d7bce7f0a420d659b8', 'bootstrap_exploratory': False, 'policy_approved': False}
+EXPECTED LEGACY REJECTION protected verification component changed: .github/workflows/documentation-additive-policy.yml
+SELECTION {'event': 'pull_request', 'candidate': '4a54a6556acedabc1d11d47e165ebadd2feb759c', 'base': 'e3f676489edaf0ce8a30ebc2cb7ce22ca1db4972', 'base_tree': '27f527ce707846c9f997b0d7bce7f0a420d659b8', 'policy_revision': 'e3f676489edaf0ce8a30ebc2cb7ce22ca1db4972', 'policy_tree': '27f527ce707846c9f997b0d7bce7f0a420d659b8', 'bootstrap_exploratory': False, 'policy_approved': False}
+EXPECTED LEGACY REJECTION authority bytes differ: scripts/enhance_gnatdoc_navigation.py

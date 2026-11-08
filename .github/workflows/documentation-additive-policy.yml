@@ -74,6 +74,13 @@ jobs:
           fetch-depth: 0
           path: core
           persist-credentials: false
+      - name: Checkout matching historical policy test inputs
+        uses: actions/checkout@v4
+        with:
+          ref: 20d5da104dcb156833e194067979dd6682a6d912
+          fetch-depth: 0
+          path: historical-policy-tests
+          persist-credentials: false
       - name: Install qualified native and documentation tools
         run: |
           sudo apt-get update
@@ -94,13 +101,23 @@ jobs:
       - name: Test historical and successor policy, from selected policy checkout
         working-directory: policy
         run: |
-          /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_shared_gnatdoc_shadow.py -v
-          /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_additive_gnatdoc_policy.py -v
+          /tmp/policy-tools/bin/python -m unittest discover -s ../historical-policy-tests/scripts -p test_shared_gnatdoc_shadow.py -v
+          /tmp/policy-tools/bin/python -m unittest discover -s ../historical-policy-tests/scripts -p test_additive_gnatdoc_policy.py -v
           /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_select_gnatdoc_policy.py -v
+          test -f scripts/test_gnatdoc_migration_policy.py
+          /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_gnatdoc_migration_policy.py -v
+      - name: Prepare separate official-wheel environment for production qualification
+        run: |
+          python3 -m venv /tmp/production-doc-tools
+          /tmp/production-doc-tools/bin/pip install -r policy/docs/requirements.txt
+          curl --fail --location --output /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl https://github.com/zackboll/ada-gnatdoc-enhancer/releases/download/v0.1.5/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
+          /tmp/production-doc-tools/bin/python -I policy/scripts/gnatdoc_migration_policy.py --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl --install
       - name: Historical and exact-current qualification, fixture and attacks
         working-directory: policy
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PRODUCTION_DOC_PYTHON: /tmp/production-doc-tools/bin/python
+          PRODUCTION_DOC_WHEEL: /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
         run: |
           /tmp/policy-tools/bin/python scripts/run_additive_gnatdoc_review.py \
             --workspace /tmp/additive-review \

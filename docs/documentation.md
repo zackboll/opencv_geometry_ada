@@ -288,7 +288,7 @@ Undocumented items are ratcheted in `docs/gnatdoc-coverage-baseline.txt`
 exactly like warnings (`--fail-on-removed`, `--write-baseline`); attachment
 errors and member mismatches can never be baselined. `generate_docs.sh` runs
 the check after validation; `--report` prints coverage per package and per
-item kind. The inventory has 452 items: 2 package descriptions, 130
+item kind. The historical DOC-002 inventory had 452 items: 2 package descriptions, 130
 declarations, 145 parameters, 76 function returns, 39 enumeration literals
 and 60 record components and discriminants.
 
@@ -300,11 +300,13 @@ Subdiv2D package description and put the formulas in code spans.
 
 ### Current status: zero warnings, complete coverage
 
-Since GEOMETRY-DOC-002D, GNATdoc reports zero warnings and all 452 items are
-documented: both package descriptions, 130 declarations (76 functions, 3
-procedures, 45 types, 2 subtypes, 4 constants), 145 parameters, 76 function
-returns, 39 enumeration literals and 60 components and discriminants, in
-`OpenCV.Geometry` (307) and `OpenCV.Geometry.Subdiv2D` (145). Both baselines
+GEOMETRY-DOC-002D reached zero warnings and complete historical coverage.
+At the GEOMETRY-DOC-TEST-001 base (`1c2a89c`), the current source instead has
+138 declarations, including 87 subprograms, in two public packages: all 481
+documentation elements are covered, with zero warnings. Its category manifest
+owns 112 distinct package-qualified declaration names; overloads account for
+the 138 separate entries. These figures describe that source, not permanent
+test expectations. Both baselines
 are empty and `generate_docs.sh` fails if either records an identity again,
 so a new public declaration must be documented completely in the same
 change. Neither the zero count nor full coverage proves that every statement
@@ -312,6 +314,18 @@ is correct; the per-phase records in the campaign progress file list what
 was verified against the body, the shim and exact OpenCV sources, the
 statements added after that verification, and the findings for the
 maintainers.
+
+Current regression tests derive identities from the public specifications and
+reviewed category manifest, then match complete profiles, source-order overloads,
+package ownership and discovered native destinations. Chromium visits every
+entry rather than accepting a matching total. Parameters, returns, record fields,
+discriminants and enumeration literals remain individually checked. Historical
+fixed-count suites still execute against their original immutable source/output.
+Historical authored-input hashes are never refreshed: those tests materialize
+their matching Git bytes. Current qualification rebinds only the successor
+policy's explicitly evolving affine guide/example and pristine native hashes;
+all other historical fields and authored inputs remain frozen, and exact-source,
+substitution and mutation checks remain mandatory.
 
 `scripts/check_comment_only.py BASE [TARGET]` proves that a documentation
 change altered only comments. It compares two committed revisions (`TARGET`
@@ -407,7 +421,7 @@ DOC_URL=http://127.0.0.1:8073/ node scripts/test_gnatdoc_presentation_browser.cj
 ## Package- and operation-level API browser (GEOMETRY-DOC-004)
 
 Core's browser searches 195 packages and Imgproc's the declarations of one
-package. Geometry publishes two packages with 130 declarations, so its
+package. Geometry publishes two packages (historically 130 declarations), so its
 browser works per package and per declaration.
 `enhance_gnatdoc_navigation.py` changes only `api/index.html`, adding:
 
@@ -466,7 +480,7 @@ declaration has exactly one entry and that enhancement is idempotent.
 
 `scripts/test_gnatdoc_navigation_browser.cjs` (optional Playwright and
 Chrome, as above) qualifies the browser at 1280 and 390 pixels in light and
-dark: the 130 entries, 2 package sections and 12 categories; searches for
+dark: every source-derived entry, package section and reviewed category; searches for
 `cOnVeX_hUlL`, `voronoi`, `subdiv2d insert`, `fit ellipse`, `perspective`,
 `nearest`, `moments`, `intersection` and `native capability`; a search
 confined to one package; overload labels, no-results and Clear; frame
