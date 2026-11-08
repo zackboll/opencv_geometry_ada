@@ -14,7 +14,10 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from check_doc_coverage import check_site, main, parameter_names
+from check_doc_coverage import check_site, main, parameter_names, discriminant_names
+from investigate_shared_gnatdoc_types import sections
+from link_gnatdoc_types import Sources
+from validate_docs import _kind, _profile, without_aspects
 
 ROOT = Path(__file__).resolve().parent.parent
 PAGE = "d" * 64 + ".html"
@@ -423,12 +426,46 @@ class GeneratedCoverageTest(unittest.TestCase):
 
     def test_generated_site_inventory_matches_source(self):
         self.assertEqual(self.errors, [])
-        kinds = list(self.items.values())
-        self.assertEqual(kinds.count("function") + kinds.count("procedure"), 79)
-        self.assertEqual(kinds.count("package"), 2)
-        self.assertEqual(len(kinds) - kinds.count("parameter") - kinds.count("return")
-                         - kinds.count("literal") - kinds.count("component")
-                         - kinds.count("package"), 130)
+        self.assertEqual(self.missing, [])
+        sources = Sources(ROOT / "src")
+        expected, native = {}, {}
+        for owner, package in sources.packages.items():
+            spelling = next(p for p in self.pages if p.lower() == owner)
+            expected[f"{spelling}: package: description"] = "package"
+            for declaration in package.top:
+                signature, name = declaration["signature"], declaration["name"]
+                kind = _kind(signature)
+                profile = _profile(without_aspects(signature)) if kind in {
+                    "function", "procedure"} else None
+                label = f"{spelling}: {profile or kind + ' ' + name}"
+                expected[label + ": description"] = kind
+                native[owner, signature] = declaration
+                if kind in {"function", "procedure"}:
+                    for parameter in parameter_names(signature):
+                        expected[f"{label}: parameter {parameter}"] = "parameter"
+                    if kind == "function":
+                        expected[label + ": return"] = "return"
+                elif kind == "type":
+                    members = [d["name"] for d in package.declarations
+                               if d["scope"].rpartition(".")[0] == declaration["scope"]]
+                    is_enum = " is (" in signature and "record" not in signature
+                    names = members if is_enum else list(dict.fromkeys(
+                        discriminant_names(signature) + members))
+                    member_kind = "literal" if is_enum else "component"
+                    for member in names:
+                        expected[f"{label}: {member_kind} {member}"] = member_kind
+        self.assertEqual(self.items, expected)
+        matched, destinations = set(), set()
+        for (owner, anchor), (page, name, snippet) in sections(self.site).items():
+            declaration = sources.packages[owner.lower()].match(snippet.text)
+            identity = (owner.lower(), declaration["signature"])
+            self.assertEqual(name, declaration["name"])
+            self.assertNotIn(identity, matched, "duplicate source/native declaration")
+            self.assertNotIn((page, anchor), destinations)
+            self.assertEqual(self.pages[owner].name, page)
+            matched.add(identity)
+            destinations.add((page, anchor))
+        self.assertEqual(matched, set(native))
 
     def test_removing_a_rendered_description_is_detected(self):
         self.remove_description("OpenCV.Geometry.Subdiv2D", "Find_Nearest")
