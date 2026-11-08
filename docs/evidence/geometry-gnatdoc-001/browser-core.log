@@ -1,9 +1,0 @@
-Checking 1280px OpenCV.Rect
-Checking 1280px OpenCV.Angle_Unit
-Checking 1280px OpenCV.Core.Mat
-PASS 1280px Geometry -> real Core declarations/reload/back/forward
-Checking 390px OpenCV.Rect
-Checking 390px OpenCV.Angle_Unit
-Checking 390px OpenCV.Core.Mat
-PASS 390px Geometry -> real Core declarations/reload/back/forward
-EXIT_STATUS=0
