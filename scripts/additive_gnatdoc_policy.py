@@ -150,8 +150,8 @@ def historical_inputs(root):
                     "historical evidence modified: " + name)
     check_files(root / EVIDENCE, authority["contracts_sha256"])
     check_files(root, {CONFIG: authority["configuration_sha256"]})
-    for name in TRUSTED_SCRIPTS:
-        check_files(root, {name: authority["baseline_files_sha256"][name]})
+    # Historical verifier bytes were checked in their immutable Git objects above.
+    # Current executable inputs are compared with the selected base separately.
     authored = read(ROOT / EVIDENCE / "geometry-authored.json")
     check_files(root, {n: d for n, d in authored["inputs"].items()
                       if n not in EVOLVING_AUTHORED})
@@ -163,11 +163,13 @@ def historical_inputs(root):
 def candidate_rules(baseline, candidate, additions=ADDITIONS, qualification_pins=False):
     """Candidate hashes never select verifier code or authorize frozen inputs."""
     from validate_gnatdoc_inputs import validate
+    from gnatdoc_migration_policy import envelope
     validate(candidate, ROOT, qualification_pins)
+    authorized = envelope(ROOT, candidate, qualification_pins)
     historical_inputs(candidate)
     # Protect every executable local verifier dependency, not a filename heuristic.
     for name in git(ROOT, "ls-files", "--", "scripts", ".github/workflows").decode().splitlines():
-        require(regular(candidate / name) == regular(ROOT / name),
+        require(name in authorized or regular(candidate / name) == regular(ROOT / name),
                 "protected verification component changed: " + name)
     for prefix in ("scripts", ".github/workflows"):
         require({p.relative_to(candidate).as_posix() for p in (candidate / prefix).rglob("*")

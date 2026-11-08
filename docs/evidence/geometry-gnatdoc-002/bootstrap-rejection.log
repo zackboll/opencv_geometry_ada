@@ -1,0 +1,2 @@
+Untouched selected base: {'declarations': 138, 'added': [], 'aunit_registered': 562}
+Expected old-policy rejection: protected verification component changed: .github/workflows/documentation-additive-policy.yml

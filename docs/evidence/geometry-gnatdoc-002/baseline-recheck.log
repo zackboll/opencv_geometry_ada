@@ -1,0 +1,4 @@
+declarations: 138
+coverage: {'documented': 481, 'items': 481, 'missing': 0, 'warnings': 0, 'by_kind': {'package': 2, 'type': 45, 'component': 60, 'object': 4, 'function': 84, 'parameter': 158, 'return': 84, 'procedure': 3, 'literal': 39, 'subtype': 2}}
+preserved native declarations: 138
+category ownership entries: 112

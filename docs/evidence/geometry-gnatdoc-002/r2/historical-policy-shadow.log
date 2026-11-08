@@ -1,0 +1,21 @@
+test_additional_current_test_registration_is_not_frozen (test_shared_gnatdoc_shadow.TrustTests.test_additional_current_test_registration_is_not_frozen) ... ok
+test_authored_guides_remain_immutable (test_shared_gnatdoc_shadow.TrustTests.test_authored_guides_remain_immutable) ... ok
+test_current_implementation_changes_do_not_rewrite_history (test_shared_gnatdoc_shadow.TrustTests.test_current_implementation_changes_do_not_rewrite_history) ... ok
+test_current_registrations_and_executed_cases (test_shared_gnatdoc_shadow.TrustTests.test_current_registrations_and_executed_cases) ... ok
+test_duplicate_authority_keys_rejected (test_shared_gnatdoc_shadow.TrustTests.test_duplicate_authority_keys_rejected) ... ok
+test_each_trusted_verifier_dependency_change_is_rejected (test_shared_gnatdoc_shadow.TrustTests.test_each_trusted_verifier_dependency_change_is_rejected) ... ok
+test_historical_blocked_report_cannot_qualify_new_enhancer (test_shared_gnatdoc_shadow.TrustTests.test_historical_blocked_report_cannot_qualify_new_enhancer) ... ok
+test_historical_ledger_and_reviewed_results_are_immutable (test_shared_gnatdoc_shadow.TrustTests.test_historical_ledger_and_reviewed_results_are_immutable) ... ok
+test_history_occurrence_classification_is_still_blocked (test_shared_gnatdoc_shadow.TrustTests.test_history_occurrence_classification_is_still_blocked) ... ok
+test_missing_transition_rejected (test_shared_gnatdoc_shadow.TrustTests.test_missing_transition_rejected) ... ok
+test_modified_transition_rejected (test_shared_gnatdoc_shadow.TrustTests.test_modified_transition_rejected) ... ok
+test_path_traversal_rejected (test_shared_gnatdoc_shadow.TrustTests.test_path_traversal_rejected) ... ok
+test_readiness_missing_evidence_fails_closed (test_shared_gnatdoc_shadow.TrustTests.test_readiness_missing_evidence_fails_closed) ... ok
+test_readiness_records_early_failure_in_new_workspace (test_shared_gnatdoc_shadow.TrustTests.test_readiness_records_early_failure_in_new_workspace) ... ok
+test_reviewed_contracts_and_baseline (test_shared_gnatdoc_shadow.TrustTests.test_reviewed_contracts_and_baseline) ... ok
+test_run_local_contract_only_rebinds_native_bytes (test_shared_gnatdoc_shadow.TrustTests.test_run_local_contract_only_rebinds_native_bytes) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 14.356s
+
+OK

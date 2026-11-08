@@ -1,0 +1,19 @@
+test_first_main_push_cannot_be_squash_or_unrelated_parent (test_select_gnatdoc_policy.SelectionTests.test_first_main_push_cannot_be_squash_or_unrelated_parent) ... ok
+test_first_main_push_uses_policy_second_parent (test_select_gnatdoc_policy.SelectionTests.test_first_main_push_uses_policy_second_parent) ... ok
+test_first_push_cannot_substitute_verifier_tree (test_select_gnatdoc_policy.SelectionTests.test_first_push_cannot_substitute_verifier_tree) ... ok
+test_initial_pr_on_reviewed_sdk_main_is_exploratory (test_select_gnatdoc_policy.SelectionTests.test_initial_pr_on_reviewed_sdk_main_is_exploratory) ... ok
+test_later_feature_uses_independent_base (test_select_gnatdoc_policy.SelectionTests.test_later_feature_uses_independent_base) ... ok
+test_manual_first_merge_uses_same_actual_ancestry (test_select_gnatdoc_policy.SelectionTests.test_manual_first_merge_uses_same_actual_ancestry) ... ok
+test_original_predecessor_remains_explicit (test_select_gnatdoc_policy.SelectionTests.test_original_predecessor_remains_explicit) ... ok
+test_pr_candidate_must_match_event (test_select_gnatdoc_policy.SelectionTests.test_pr_candidate_must_match_event) ... ok
+test_push_before_must_be_actual_first_parent (test_select_gnatdoc_policy.SelectionTests.test_push_before_must_be_actual_first_parent) ... ok
+test_release_blob_and_ancestry_controls (test_select_gnatdoc_policy.SelectionTests.test_release_blob_and_ancestry_controls) ... ok
+test_release_first_merge_selects_actual_policy_parent (test_select_gnatdoc_policy.SelectionTests.test_release_first_merge_selects_actual_policy_parent) ... ok
+test_release_initial_pr_is_exact_and_unapproved (test_select_gnatdoc_policy.SelectionTests.test_release_initial_pr_is_exact_and_unapproved) ... ok
+test_reviewed_tree_mismatch_fails_closed (test_select_gnatdoc_policy.SelectionTests.test_reviewed_tree_mismatch_fails_closed) ... ok
+test_unknown_bootstrap_commit_is_not_mutable_main_authority (test_select_gnatdoc_policy.SelectionTests.test_unknown_bootstrap_commit_is_not_mutable_main_authority) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.587s
+
+OK

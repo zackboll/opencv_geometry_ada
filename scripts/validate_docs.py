@@ -373,8 +373,8 @@ def _presentation_errors(api, root, core, packages, type_links):
     errors = []
     try:
         with contextlib.redirect_stdout(io.StringIO()):
-            check_theme(api)
-            check_navigation(api)
+            check_theme(api, root / "src", root / "docs/api-categories.json")
+            check_navigation(api, root / "src", root / "docs/api-categories.json")
         process(api, root / "src", core, check=True, quiet=True,
                 minimum_internal=MINIMUM_INTERNAL_LINKS,
                 minimum_external=MINIMUM_CORE_LINKS)
@@ -487,7 +487,8 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
             from enhance_gnatdoc_navigation import augmented
             from install_gnatdoc_theme import themed
             try:
-                native = augmented(themed(native), api)
+                native = augmented(themed(native), api, root / "src",
+                                   root / "docs/api-categories.json")
             except (CrossReferenceError, ValueError, OSError) as error:
                 errors.append(f"navigation integrity: {error}")
         if index.read_text(encoding="utf-8") != native:
