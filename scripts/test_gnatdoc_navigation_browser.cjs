@@ -12,6 +12,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const {execFileSync} = require('node:child_process');
+const source = process.env.DOC_SOURCE || path.resolve(__dirname, '..');
+// Independent source/native oracle; never infer expected entries from browser output.
+const inventory = JSON.parse(execFileSync(process.env.DOC_PYTHON || 'python3', ['-c', `
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from test_gnatdoc_navigation import expected_inventory
+print(json.dumps(expected_inventory(Path(sys.argv[2]), Path(sys.argv[1]))))
+`, source, process.env.DOC_SITE || path.join(source, '_site')], {encoding: 'utf8'}));
 const root = process.env.DOC_URL || 'http://127.0.0.1:8073/';
 const base = root + 'api/index.html';
 const evidence = process.env.DOC_EVIDENCE ||
@@ -56,11 +66,36 @@ async function expectDeclaration(page, name, packageName) {
       // Default: the first package page loads; every declaration is listed once.
       await page.goto(base);
       await packageShown(page, 'OpenCV.Geometry');
-      assert.equal(await page.locator('#api-browser li[data-op]').count(), 130);
-      assert.equal(await page.locator('#api-browser section[data-package]').count(), 2);
-      assert.equal(await page.locator('#api-browser details').count(), 12);
+      assert.equal(await page.locator('#api-browser li[data-op]').count(), inventory.length);
+      assert.equal(await page.locator('#api-browser section[data-package]').count(),
+                   new Set(inventory.map(row => row.package)).size);
+      assert.equal(await page.locator('#api-browser details').count(),
+                   new Set(inventory.map(row => row.category_id)).size);
       assert.notEqual(await page.evaluate(() => document.activeElement.id), 'api-search');
       const search = page.getByLabel('Search packages, operations and types');
+      const actual = await page.locator('#api-browser li[data-op]').evaluateAll(items =>
+        items.map(li => ({package: li.dataset.package, name: li.dataset.op,
+          overload: Number(li.dataset.overload || 0),
+          category_id: li.closest('details').dataset.category,
+          href: li.querySelector('a').getAttribute('href'),
+          profile: li.querySelector('a').title})));
+      assert.deepEqual(actual, inventory.map(({package: owner, name, overload,
+        category_id, href, profile}) => ({package: owner, name, overload,
+        category_id, href, profile})));
+      // Click every declaration and every overload, including current transforms.
+      // Compare the actual frame URL, owner, heading and full native profile.
+      for (const entry of inventory) {
+        await search.fill(entry.name);
+        const selector = `li[data-package="${entry.package}"][data-op="${entry.name}"]` +
+          (entry.overload ? `[data-overload="${entry.overload}"]` : '');
+        await page.locator(`#api-browser ${selector} > a`).click();
+        await expectDeclaration(page, entry.name, entry.package);
+        const content = page.frame({name: 'document-content'});
+        assert.equal(content.url(), new URL(entry.href, base).href);
+        assert.equal((await content.locator(':target + pre').textContent()).trim(),
+                     entry.native_text.trim());
+      }
+      await search.fill('');
 
       // Case-insensitive identifier, word, package and category searches.
       for (const [query, expected] of [
@@ -92,7 +127,7 @@ async function expectDeclaration(page, name, packageName) {
       assert.equal(await page.locator('#api-results').textContent(), 'No matching declarations.');
       assert.equal(await visible(page).count(), 0);
       await page.getByRole('button', {name: 'Clear', exact: true}).click();
-      assert.equal(await visible(page).count(), 130);
+      assert.equal(await visible(page).count(), inventory.length);
       assert.equal(await page.evaluate(() => document.activeElement.id), 'api-search');
 
       // Selection navigates the frame to the native anchor and is bookmarkable,
@@ -180,6 +215,23 @@ async function expectDeclaration(page, name, packageName) {
     const page = await disabled.newPage();
     await page.goto(base);
     assert.equal(await page.locator('#api-search-controls').isHidden(), true);
+    for (const entry of inventory) {
+      const group = page.locator(`#api-browser details[data-category="${entry.category_id}"]`);
+      if (await group.getAttribute('open') === null) await group.locator('summary').click();
+      const selector = `li[data-package="${entry.package}"][data-op="${entry.name}"]` +
+        (entry.overload ? `[data-overload="${entry.overload}"]` : '');
+      await page.locator(`#api-browser ${selector} > a`).click();
+      const content = page.frame({name: 'document-content'});
+      await content.waitForURL(new URL(entry.href, base).href);
+      assert.equal(await content.locator('h1').textContent(), entry.package);
+      assert.equal(await content.locator('h4:target').textContent(), entry.name);
+      assert.equal((await content.locator(':target + pre').textContent()).trim(),
+                   entry.native_text.trim());
+    }
+    // Restore collapsed state for the original progressive-enhancement checks.
+    while (await page.locator('#api-browser details[open]').count()) {
+      await page.locator('#api-browser details[open]').first().locator('summary').click();
+    }
     await page.locator('#api-browser details[data-category="subdivision-voronoi"] > summary')
       .click();
     await page.locator('#api-browser li[data-op="Voronoi_Facets"] > a').first().click();
@@ -190,7 +242,8 @@ async function expectDeclaration(page, name, packageName) {
       .waitFor();
     await page.screenshot({path: `${evidence}/browser-no-javascript.png`});
     await disabled.close();
-    console.log(`Navigation browser qualification passed; screenshots in ${evidence}`);
+    console.log(`Navigation browser qualification passed: ${inventory.length} source/native ` +
+      `destinations in four viewport/theme combinations and without JavaScript; screenshots in ${evidence}`);
   } finally {
     await browser.close();
   }

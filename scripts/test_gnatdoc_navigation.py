@@ -11,14 +11,69 @@ import re
 import shutil
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from enhance_gnatdoc_navigation import (CATEGORIES, check_navigation, enhance,
                                         entries, load_categories)
-from link_gnatdoc_types import CrossReferenceError
+from link_gnatdoc_types import CrossReferenceError, Sources
+from investigate_shared_gnatdoc_types import sections
 from validate_docs import DocumentationError, validate
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def expected_inventory(site, root=ROOT):
+    """Test oracle: public source order + reviewed membership + native destinations.
+
+    Never read the enhanced index or call the navigation generator for expectations.
+    Full source profiles include aspects; native snippets are matched under GNATdoc's
+    documented aspect/elision rules, not by name or guessed anchor hashes.
+    """
+    sources = Sources(root / "src")
+    manifest = json.loads((root / "docs/api-categories.json").read_text())
+    native = sections(site)
+    destinations = {}
+    for (owner, anchor), (page, name, snippet) in native.items():
+        declaration = sources.packages[owner.lower()].match(snippet.text)
+        assert name == declaration["name"], "native heading differs from source"
+        key = (owner.lower(), declaration["signature"])
+        assert key not in destinations, "duplicate native declaration"
+        destinations[key] = (f"{page}#{anchor}", snippet.text)
+    result, seen = [], set()
+    assert {p["package"].lower() for p in manifest["packages"]} == set(sources.packages)
+    for package in manifest["packages"]:
+        owner = package["package"]
+        source = sources.packages[owner.lower()]
+        membership = {}
+        for group in package["categories"]:
+            for name in group["declarations"]:
+                assert name not in membership, "duplicate category membership"
+                membership[name] = group
+        assert set(membership) == {d["name"] for d in source.top}, "category ownership differs"
+        totals = Counter(d["name"] for d in source.top)
+        order = Counter()
+        rows = []
+        for declaration in source.top:
+            name, signature = declaration["name"], declaration["signature"]
+            order[name] += 1
+            key = (owner.lower(), signature)
+            href, native_text = destinations[key]
+            seen.add(key)
+            kind = signature.split()[0]
+            rows.append({"package": owner, "name": name,
+                         "kind": kind if kind in {"function", "procedure", "type", "subtype"}
+                         else "constant",
+                         "profile": " ".join(signature.split()).replace(" : =", " :=").rstrip(";"),
+                         "overload": order[name] if totals[name] > 1 else 0,
+                         "overloads": totals[name], "href": href,
+                         "category": membership[name]["title"],
+                         "category_id": membership[name]["id"], "native_text": native_text})
+        for group in package["categories"]:
+            result.extend(sorted((r for r in rows if r["category_id"] == group["id"]),
+                                 key=lambda r: (r["name"].lower(), r["overload"])))
+    assert seen == set(destinations), "unexpected native declarations"
+    return result
 
 
 class CategoryManifestTest(unittest.TestCase):
@@ -39,7 +94,9 @@ class CategoryManifestTest(unittest.TestCase):
         self.assertEqual([name for name, _ in packages],
                          ["OpenCV.Geometry", "OpenCV.Geometry.Subdiv2D"])
         self.assertEqual([len(categories) for _, categories in packages], [7, 5])
-        self.assertEqual(len(owner), 106)
+        sources = Sources(ROOT / "src")
+        self.assertEqual({(p.lower(), n) for p, n in owner},
+                         {(p, d["name"]) for p, s in sources.packages.items() for d in s.top})
         self.assertEqual(owner[("OpenCV.Geometry", "Convex_Hull")], "hulls-convexity")
         self.assertEqual(owner[("OpenCV.Geometry", "Is_Natively_Supported")],
                          "capability")
@@ -111,15 +168,51 @@ class GeneratedNavigationTest(unittest.TestCase):
             self.assertEqual({item["href"] for item in items},
                              {f"{page}#{anchor}" for anchor in anchors})
             self.assertTrue(all(item["package"] == package for item in items))
-        self.assertEqual(total, 130)
+        expected = expected_inventory(self.site)
+        actual = [item for _, _, groups in packages for _, _, group in groups for item in group]
+        self.assertEqual(actual, [{k: v for k, v in row.items()
+                                  if k not in {"category_id", "native_text"}} for row in expected])
+        self.assertEqual(total, len(expected))
         index = self.index.read_text(encoding="utf-8")
-        self.assertEqual(index.count("<li data-package="), 130)
+        self.assertEqual(index.count("<li data-package="), len(expected))
         geometry = [item for _, _, groups in packages[:1] for _, _, group in groups
                     for item in group]
         hulls = [i for i in geometry if i["name"] == "Convex_Hull"]
         self.assertEqual([(i["overload"], i["overloads"]) for i in hulls],
                          [(1, 2), (2, 2)])
         self.assertIn("overload 2 of 2", index)
+
+    def test_source_native_oracle_rejects_declaration_mutations(self):
+        native = sections(self.site)
+        (owner, anchor), (page, name, _) = next(iter(native.items()))
+        path = self.api / page
+        original = path.read_text()
+        section = re.search(r'<h4 id=' + re.escape(anchor) + r'>.*?(?=<h4 |\Z)',
+                            original, re.S)[0]
+        for attack in ("missing", "duplicate", "profile", "wrong-owner"):
+            with self.subTest(attack=attack):
+                try:
+                    if attack == "missing":
+                        changed = original.replace(section, "", 1)
+                    elif attack == "duplicate":
+                        changed = original + section
+                    elif attack == "profile":
+                        changed = original.replace(f'>{name}</span>', '>Invented_Name</span>', 1)
+                        # The heading and snippet must disagree even without highlighting.
+                        changed = changed.replace(f'>{name}</h4>', '>Invented_Name</h4>', 1)
+                    else:
+                        changed = original.replace(f'<h1>{owner}</h1>', '<h1>OpenCV.Wrong</h1>')
+                    self.assertNotEqual(changed, original)
+                    path.write_text(changed)
+                    with self.assertRaises((AssertionError, ValueError, KeyError)):
+                        expected_inventory(self.site)
+                finally:
+                    path.write_text(original)
+
+    def test_fabricated_anchor_is_rejected(self):
+        href = expected_inventory(self.site)[0]["href"]
+        self.edit(href, href.split("#")[0] + "#fabricated-native-anchor")
+        self.assertRejected()
 
     def test_enhancement_is_idempotent(self):
         before = {p.name: p.read_bytes() for p in self.api.iterdir()}
