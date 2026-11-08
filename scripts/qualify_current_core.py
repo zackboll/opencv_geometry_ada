@@ -380,4 +380,3 @@ if __name__ == '__main__':
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--expect', type=Path)
     qualify(parser.parse_args())
-

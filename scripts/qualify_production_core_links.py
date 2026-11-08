@@ -192,4 +192,3 @@ def source_native_types(core, native, wanted):
                 "native_snippet_sha256": digest(html.unescape(section[3]).encode())}
     require(set(result) == set(wanted), "Core source/native target census incomplete")
     return result
-

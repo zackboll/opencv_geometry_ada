@@ -267,9 +267,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--install", action="store_true")
+    for name in ("source", "pristine", "site", "core", "core-native"):
+        parser.add_argument("--" + name, type=Path)
     args = parser.parse_args()
     verify_wheel(args.wheel)
     if args.install:
         subprocess.run([sys.executable, "-m", "pip", "install", "--no-index", "--no-deps",
                         "--only-binary=:all:", "--force-reinstall", str(args.wheel)], check=True)
     print(json.dumps(installed_wheel(args.wheel), sort_keys=True))
+    paths = (args.source, args.pristine, args.site, args.core, args.core_native)
+    if any(paths):
+        require(all(paths) and not args.install, "complete independent validation paths required")
+        # Isolated Python deliberately omits script-directory imports. Add only
+        # this selected-base directory, never the candidate or its working dir.
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import os
+        os.environ["PRODUCTION_DOC_WHEEL"] = str(args.wheel.absolute())
+        result = validate_migration_site(*paths)
+        print(json.dumps({"direct_link_validation": "pass", "publisher": result["publisher"]},
+                         sort_keys=True))

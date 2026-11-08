@@ -119,10 +119,17 @@ def verify_production(workspace, source):
     from gnatdoc_migration_policy import native_output
     native_output(source, workspace / "pristine-first", source / "_site")
     # Candidate validator/test edits never replace this base-owned validator.
-    from gnatdoc_migration_policy import CONFIGURATION, validate_migration_site
+    from gnatdoc_migration_policy import CONFIGURATION
     if all((source / name).is_file() for name in CONFIGURATION):
-        validate_migration_site(source, workspace / "pristine-first", source / "_site",
-                                workspace / "core", workspace / "core-native")
+        import os
+        import subprocess
+        python = os.environ.get("PRODUCTION_DOC_PYTHON")
+        require(python, "independent official-wheel validation environment missing")
+        subprocess.run([python, "-I", ROOT / "scripts/gnatdoc_migration_policy.py",
+                        "--wheel", os.environ["PRODUCTION_DOC_WHEEL"],
+                        "--source", source, "--pristine", workspace / "pristine-first",
+                        "--site", source / "_site", "--core", workspace / "core",
+                        "--core-native", workspace / "core-native"], check=True)
     else:
         from validate_docs import validate
         validate(source / "_site", root=source, core=workspace / "core")
