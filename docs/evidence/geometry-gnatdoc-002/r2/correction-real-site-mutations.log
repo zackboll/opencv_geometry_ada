@@ -1,0 +1,19 @@
+POSITIVE EXACT-SOURCE FIXTURE {'packages': 2, 'pages': 9, 'sections': 140, 'subprograms': 89}
+altered native anchor REJECTED missing anchor in api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html: #c236238682a374faa6658f1540a6d6e49b083a627be9caa08f8399a917736866
+missing anchor in api/index.html: 4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#c236238682a374faa6658f1540a6d6e49b083
+RESTORED altered native anchor
+missing declaration REJECTED navigation integrity: native section coverage mismatch
+API index does not match the pinned GNATdoc layout and approved navigation
+presentation integrity: native section coverage mismatch
+guide integrity: native section coverage mismatch
+OpenCV.Geometry: declaration sections differ from the public so
+RESTORED missing declaration
+modified type destination REJECTED presentation integrity: type identity/destination/markup mismatch: Affine_Transform_2D
+RESTORED modified type destination
+WRONG SOURCE CONTEXT REJECTED navigation integrity: source profile not unique: function Policy_Probe
+  (Value : OpenCV.Float64_Value) return Affine_Transform_2D
+
+API index does not match the pinned GNATdoc layout and approved navigation
+presentation integrity: source profile not unique: function Policy_Probe
+  (Value : OpenCV.Fl
+Coverage {'documented': 487, 'items': 487, 'missing': 0, 'warnings': 0, 'by_kind': {'package': 2, 'type': 45, 'component': 60, 'object': 4, 'function': 86, 'parameter': 160, 'return': 86, 'procedure': 3, 'literal': 39, 'subtype': 2}}

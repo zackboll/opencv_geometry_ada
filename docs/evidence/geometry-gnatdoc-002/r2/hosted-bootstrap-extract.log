@@ -1,0 +1,7 @@
+2026-11-08T03:23:45.3829616Z [command]/usr/bin/git checkout --progress --force e3f676489edaf0ce8a30ebc2cb7ce22ca1db4972
+2026-11-08T03:25:27.9101175Z test -f scripts/test_gnatdoc_migration_policy.py
+2026-11-08T03:25:27.9101692Z /tmp/policy-tools/bin/python -m unittest discover -s scripts -p test_gnatdoc_migration_policy.py -v
+2026-11-08T03:25:41.8351909Z Ran 16 tests in 13.724s
+2026-11-08T03:26:20.8867627Z Ran 47 tests in 38.948s
+2026-11-08T03:26:21.9284411Z Ran 14 tests in 0.951s
+2026-11-08T03:26:21.9441188Z ##[error]Process completed with exit code 1.

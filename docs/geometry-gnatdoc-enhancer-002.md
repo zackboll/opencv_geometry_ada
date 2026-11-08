@@ -26,13 +26,130 @@ propagation and continued tamper rejection. The migration file allowance is
 unchanged; both corrected verifier helpers remain protected from candidates.
 No current-source test expectation or historical authority hash is repaired.
 
-Original-head exact qualification is running in clean `original-policy` checkout
-under `/home/zboll/git/geometry-gnatdoc-002r2-evidence/`, campaign `/tmp/gd2r2`.
-The correction requires a complete new final-head campaign, not reuse of the old
-passing components. The sections below retain original delivery history; this
-R2 section supersedes their publication/pending statements. Final identities,
-results, changed-file inventory, hosted checks and decision are recorded in the
-R2 evidence and PR after qualification, avoiding self-referential commit hashes.
+Original-head exact qualification uses clean `original-policy` checkout under
+`/home/zboll/git/geometry-gnatdoc-002r2-evidence/`, campaign `/tmp/gd2r2`.
+Correction commit `4a54a6556acedabc1d11d47e165ebadd2feb759c`, tree
+`fc01359b101f28cb434adf3ed56488e42d66c3aa`, was normally pushed and qualified
+from separate clean `corrected-policy`, campaign `/tmp/gd2r2f`. A final
+report/evidence commit must itself receive a fresh complete campaign; earlier
+component successes never substitute for exact-final-head qualification.
+The sections below retain original delivery history; this R2 section supersedes
+their publication/pending statements. Final identities and completed results
+belong in PR #59 and the external R2 evidence ledger, avoiding self-referential
+commit hashes and repeated evidence-only head changes.
+
+### R2 local evidence and reproducible commands
+
+At the correction head, 15 successor tests and 14 selector tests pass. Unchanged
+historical tests pass at their matching immutable merge (16 shadow, 47 additive).
+The existing validator suite passes 68 tests with 28 generated-site skips in the
+site-free policy checkout; these skips are not generated-site qualification.
+Real generated-site checks additionally accept the independent positive fixture
+(140 declarations, 89 subprograms, 487/487 documented elements) and reject anchor,
+declaration and type-destination mutations, restoring the original after each.
+The current reference independently retains 138 declarations, 87 subprograms,
+481/481 items, 112 category owners and zero warnings. Final campaigns must
+rebuild both ordinary and fixture sites and independently record all results.
+
+The official wheel was freshly installed using the policy installer in a separate
+R2 environment; digest, installed origin and complete module/asset bytes pass.
+Actual corrupted-wheel and installed-module mutations are rejected, and restored
+contents reverify. The historical development tool remains confined to the
+unchanged historical/offline campaign, never the official production environment.
+No production enhancer configuration is introduced in this PR.
+
+Qualification commands (clean, detached checkout of the exact head; new short
+workspace; paths are the retained local qualification environments):
+
+```sh
+PY=/home/zboll/git/geometry-gnatdoc-002-evidence/historical-tools/bin/python
+"$PY" -m unittest discover -s scripts -p test_gnatdoc_migration_policy.py -v
+"$PY" -m unittest discover -s scripts -p test_select_gnatdoc_policy.py -v
+"$PY" scripts/run_additive_gnatdoc_review.py \
+  --workspace /tmp/gd2r2final \
+  --candidate-repository /home/zboll/git/opencv_geometry_ada \
+  --candidate-revision "$(git rev-parse HEAD)" \
+  --enhancer /home/zboll/git/geometry-gnatdoc-002-evidence/historical-enhancer \
+  --core /home/zboll/git/geometry-gnatdoc-001-evidence/core-0.5.0 \
+  --gnatdoc-prefix /home/zboll/git/opencv_geometry_ada/.doc-tools/gnatdoc-26.0.0 \
+  --playwright-module /home/zboll/git/geometry-gnatdoc-001-evidence/browser/node_modules/playwright \
+  --chromium /home/zboll/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome \
+  --policy-review
+```
+
+The campaign records exact subprocess commands, exit codes, logs/digests, source
+and site identities, compiled/runnable examples, AUnit registrations/results,
+native reconstruction, determinism/idempotence, eight browser cells, history,
+adversarial rejection/restoration, positive additive fixture and independent
+recorders. Python 3.13.5, Alire 2.1.1, GNAT 16.1.0, GPRbuild Alire 26.0.1,
+GNATdoc 26.0.0, exact Core 0.5.0 source, Markdown 3.0.0/mdurl 0.1.2, Python
+Playwright 1.58.0 and Node Playwright 1.64.1 remain unchanged locally. Chromium
+is the same retained 1248 executable used for the successful earlier long
+campaign; no failed assertion is retried with altered policy or tool versions.
+
+### Hosted results and bootstrap classification
+
+Original published head:
+
+- [successor policy 42442260860](https://github.com/zackboll/opencv_geometry_ada/actions/runs/42442260860): failure;
+- [documentation 42442260964](https://github.com/zackboll/opencv_geometry_ada/actions/runs/42442260964): cancelled after the correction push;
+- [historical shadow 42442260884](https://github.com/zackboll/opencv_geometry_ada/actions/runs/42442260884): cancelled after the correction push;
+- [original push platform CI 42441933909](https://github.com/zackboll/opencv_geometry_ada/actions/runs/42441933909): success, not documentation qualification.
+
+Correction head:
+
+- [successor policy 42442528716](https://github.com/zackboll/opencv_geometry_ada/actions/runs/42442528716): failure;
+- [documentation 42442528701](https://github.com/zackboll/opencv_geometry_ada/actions/runs/42442528701): build success, current-trust failure, deploy skipped;
+- [historical shadow 42442528690](https://github.com/zackboll/opencv_geometry_ada/actions/runs/42442528690): pending at report snapshot.
+
+Raw run-log ZIPs (rather than the incomplete job-log API) confirm the exact
+successor failure: the checkout selects old base `e3f6764`; the 16 historical,
+47 historical additive and 14 selector tests pass, then
+`test -f scripts/test_gnatdoc_migration_policy.py` exits 1 because that test does
+not exist in the selected old base. This is an additional explicit bootstrap
+constraint, not a failed proposal test or toolchain failure. It is not skipped,
+renamed or falsely satisfied. No candidate verifier is substituted.
+
+Independent old-base checks against unchanged main pass (138 declarations, 562
+AUnit registrations). Against original `906def7`, candidate rules reject
+`protected verification component changed: .github/workflows/documentation-additive-policy.yml`.
+Against corrected `4a54a65`, the earlier historical-byte gate rejects
+`authority bytes differ: scripts/enhance_gnatdoc_navigation.py`. Both are real,
+reproduced old-policy rejections; their order differs because the correction
+changes a historical verifier helper. A maintainer cannot infer authorization
+from independent proposal tests or from the absence of branch protection.
+
+### Maintainer decision record (not an approval)
+
+**Requested decision:** after reviewing the exact final PR head/tree and its
+completed independent qualification ledger, decide whether to establish these
+successor policy bytes as the base authority despite the documented old-base
+rejections. No decision is made by this report or by the agent.
+
+**Consequences if approved and merged by a maintainer:** subsequent ordinary PRs
+select this merged base and still cannot alter their own verifier/selector.
+Historical fixed-byte evidence remains bound to its immutable checkout; new
+source is checked against its own exact commit and base-owned verifiers.
+The transition's own main-push check still selects the older first parent;
+approval is not permission to deploy from a failed transition or skip any gate.
+No migration, new dependency, publication privilege or current-source expectation
+repair is authorized here. `GEOMETRY-DOC-TEST-001` remains a separate follow-up.
+
+**Not yet ready at report snapshot:** original, correction and final-head complete
+campaign outcomes, positive-fixture recorders, final-head hosted checks and any
+non-bootstrap failures must be inspected and recorded in PR #59. Keep
+CORRECTIVE_WORK_REQUIRED until technical failures are resolved; use
+HOSTED_CI_PENDING only if local qualification passes and hosted evidence remains
+pending. READY_FOR_MAINTAINER_DECISION requires complete independent technical
+qualification with only the reproduced legacy bootstrap decision remaining.
+
+The exact changed-file inventory is the PR diff against main. R2 adds source-root
+context plumbing to `scripts/enhance_gnatdoc_navigation.py`,
+`scripts/install_gnatdoc_theme.py` and `scripts/validate_docs.py`, regression tests
+only in `scripts/test_gnatdoc_migration_policy.py`, this report and the separately
+named R2 evidence files. The finite migration allowance is unchanged; no existing
+current-source test constants, historical evidence, selector, build manifest,
+production generator/workflow or Ada/C++ source is modified by R2.
 
 This branch proposes policy for a later migration; it does not perform one.
 PR #58 is unchanged and must not be merged as a completed migration. No branch
