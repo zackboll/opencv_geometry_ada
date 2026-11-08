@@ -2,6 +2,48 @@
 
 **Disposition: CORRECTIVE_WORK_REQUIRED — bootstrap authorization outstanding.**
 
+### Resumption outcome: environmental qualification blocker
+
+At technical head `08823cf4e37910776c9140dab09534332d80f3de`, tree
+`a48366a8925260a048e33f12686e9f6cd63aaa2e`, every hosted workflow completed.
+Historical shadow, platform PR/push, SDK, installed consumers, AArch64, GNAT 12
+and cross controls passed. Documentation build passed and deployment was skipped;
+the two successor/current-trust checks failed the diagnosed old-base test-file
+guard described below. No unexpected hosted test failure was observed.
+
+The interrupted agent session lost the `/tmp` qualification workspaces before
+final recorders completed. A fresh unchanged-head retry used persistent
+`/home/zboll/gd2r2` and independent ordinary/fixture tracks
+`/home/zboll/g2c` and `/home/zboll/g2f`, with completed records copied into the
+external R2 evidence directory. Both ordinary and fixture generation, AUnit,
+examples, source/native validation, coverage and determinism passed. All eight
+browser profiles passed 7,008 ordinary and 7,104 fixture assertions. The fresh
+historical campaign passed its 30 attacks, 6,904 browser assertions and recorder.
+
+**The final adversarial restoration did not qualify.** Source files disappeared
+during verification, then the ordinary/fixture workspace roots disappeared.
+The ordinary campaign recorded 48 attacks before failing restoration with
+`missing file: /home/zboll/g2c/source/docs/evidence/gnatdoc009b/authority-transition.json`.
+The fixture campaign recorded 47 before production regeneration failed during
+restoration. Neither result is a successful negative-test campaign; no final
+independent successor recorder passed. The serial retry also lost its source
+workspace while a browser process was running. The removal cause is not
+established and must not be called an expected legacy-policy rejection.
+
+Failure logs, completed component records, commands and hashes survive under
+`/home/zboll/git/geometry-gnatdoc-002r2-evidence/`, especially
+`environmental-blocker.json`, `parallel-components/`, `persistent-records/` and
+`surviving-evidence-sha256.json`. No missing source tree was reconstructed into
+an active qualification run. This report-only follow-up does not change verifier
+bytes or constitute exact-final-head campaign qualification.
+
+**Required next action:** identify and prevent workspace removal, then rerun
+complete qualification from the final published head with every restoration
+check and independent recorder. Retain the real failures; do not promote earlier
+component passes to readiness. The explicit maintainer bootstrap decision remains
+necessary but is not yet the sole obstacle. READY_FOR_MAINTAINER_DECISION and
+HOSTED_CI_PENDING are therefore not appropriate dispositions.
+
 ## R2 publication and corrective qualification
 
 The prior credential blocker is resolved. The maintainer-published branch was
