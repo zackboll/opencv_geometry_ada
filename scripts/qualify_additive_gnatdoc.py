@@ -119,8 +119,13 @@ def verify_production(workspace, source):
     from gnatdoc_migration_policy import native_output
     native_output(source, workspace / "pristine-first", source / "_site")
     # Candidate validator/test edits never replace this base-owned validator.
-    from validate_docs import validate
-    validate(source / "_site", root=source, core=workspace / "core")
+    from gnatdoc_migration_policy import CONFIGURATION, validate_migration_site
+    if all((source / name).is_file() for name in CONFIGURATION):
+        validate_migration_site(source, workspace / "pristine-first", source / "_site",
+                                workspace / "core", workspace / "core-native")
+    else:
+        from validate_docs import validate
+        validate(source / "_site", root=source, core=workspace / "core")
     return {"site_sha256": observed, "coverage": cov, "deployable_output": True}
 
 

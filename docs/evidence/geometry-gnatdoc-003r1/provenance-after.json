@@ -1,0 +1,49 @@
+{
+  "repository": "zackboll/opencv_core_ada",
+  "deployment": {
+    "id": 7507096111,
+    "sha": "b4253d4af31f0bacd6c6e2828d4657a9842cb71e",
+    "ref": "main",
+    "environment": "github-pages",
+    "created_at": "2026-11-03T00:32:33Z"
+  },
+  "status": {
+    "id": 21214766598,
+    "state": "success",
+    "environment_url": "https://zackboll.github.io/opencv_core_ada/",
+    "log_url": "https://github.com/zackboll/opencv_core_ada/actions/runs/41549115123/job/125646931477",
+    "created_at": "2026-11-03T00:33:01Z"
+  },
+  "run": {
+    "id": 41549115123,
+    "run_attempt": 1,
+    "workflow_id": 381418512,
+    "head_sha": "b4253d4af31f0bacd6c6e2828d4657a9842cb71e",
+    "head_branch": "main",
+    "event": "push",
+    "path": ".github/workflows/documentation.yml",
+    "conclusion": "success"
+  },
+  "jobs": {
+    "build": 125631909538,
+    "deploy": 125646931477
+  },
+  "source": "b4253d4af31f0bacd6c6e2828d4657a9842cb71e",
+  "tree": "0b8eaacc41535a6b914c36c6d293839850d7dc29",
+  "artifacts": {
+    "review": {
+      "id": 13193622594,
+      "name": "ada-api-b4253d4af31f0bacd6c6e2828d4657a9842cb71e",
+      "sha256": "daf733ed62fa4ad41cf22afbb817468497e90f55b78754217043198694ab151f",
+      "size_in_bytes": 1322264,
+      "expires_at": "2027-01-31T23:55:53Z"
+    },
+    "pages": {
+      "id": 13193152869,
+      "name": "github-pages",
+      "sha256": "5e45119190269d7621936d4ed2457636026f6ba9e1eb2be1ad0d4f68dbce986c",
+      "size_in_bytes": 1076789,
+      "expires_at": "2026-12-03T00:32:29Z"
+    }
+  }
+}
