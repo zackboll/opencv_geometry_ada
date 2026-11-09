@@ -15,6 +15,58 @@ the remaining roadmap are kept in
 
 ## Reproduce on Linux — pinned generation environment
 
+### Official v0.1.5 migration — blocked at the first compatibility gate
+
+PR #58's migration candidate uses the production configuration and authored
+manifest independently derived from selected main
+`05c6680cdf4f9fe544cfbbab21cf13eab41d0112`. Its generator and documentation
+workflow are the exact outputs of that base's `migration_generator` and
+`migration_workflow`, including the main-only `current-trust` routing and
+unchanged Pages dependencies. This is **not a qualified production migration**.
+
+The official, non-editable wheel is `ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl`,
+SHA-256 `d712d330f213fc1909a66c47bc2c7e5e15d5ec687222bea3c4922f5243db4247`.
+The selected-base installer checks its archive digest, installed origin, version
+and all installed module/asset bytes. Production must not use an editable or
+development-source installation.
+
+The candidate maps all eight referenced Core types to authenticated native HTTPS
+declaration pages/fragments with `target="_top"`, not symbol queries or the
+historical shadow's offline `.invalid` destinations. Source authority remains
+exact Core 0.5.0, `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f`.
+The fresh publisher check authenticated source
+`b4253d4af31f0bacd6c6e2828d4657a9842cb71e`, documentation run `41549115123`,
+deployment `7507096111`, review artifact `13193622594` and Pages artifact
+`13193152869`; both referenced live pages matched authenticated artifact bytes.
+These observations are qualification evidence, not future acceptance pins.
+
+Fresh native generation and source checks pass: two public packages,
+138 declarations, 481/481 documented elements, zero warnings, and eight exact
+Core source/native identities. Both configuration files match the independent
+derivation, and the selected-base changed-file envelope accepts this candidate.
+However, the standard generator stops at enhancer inventory:
+
+```text
+gnatdoc-enhancer: missing source directory: qualification-public
+```
+
+The base-owned finite configuration requires
+`[sources] directories = ["qualification-public"]`. Neither the exact generator
+template nor its workflow stages that directory. A clean checkout therefore
+cannot execute the approved enhancement sequence. Changing the configuration to
+`src` would violate `direct_configuration`; adding a staging command is rejected
+as `production generator is not the release-backed template`; committing staged
+sources is outside the finite migration allowlist. No such bypass is applied.
+
+Status: **CORRECTIVE_WORK_REQUIRED**. The selected-base staging/template
+incompatibility needs an authorized resolution before implementation can
+continue. The candidate validator has not been adapted, and enhancer dry-run,
+enhancement, verification, full-site reconstruction, determinism/idempotence,
+current/historical/synthetic campaigns and browser qualification are not claimed.
+No full campaigns should run while this early compatibility gate remains blocked.
+The legacy reproduction notes below describe the prior pipeline, not a passing
+invocation of this unfinished candidate.
+
 ### Cross-repository declaration bookmarks
 
 Core references now use stable, fully qualified symbol URLs, for example

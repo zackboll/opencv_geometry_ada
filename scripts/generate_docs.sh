@@ -75,17 +75,11 @@ echo "GNATdoc: $warnings documentation warnings (see obj/docs/gnatdoc.log)"
 python3 scripts/compare_gnatdoc_warnings.py --fail-on-removed \
     docs/gnatdoc-warning-baseline.txt obj/docs/gnatdoc.log
 cp docs/index.html _site/index.html
-# Presentation: theme metadata, source-backed type links, then Ada coloring.
-# Each step verifies the previous ones and records what it changed. Core
-# types are verified against the qualified Core checkout above.
-python3 scripts/install_gnatdoc_theme.py _site/api
-python3 scripts/link_gnatdoc_types.py _site/api --core "$core"
-python3 scripts/highlight_gnatdoc_ada.py _site/api --core "$core"
-# Package- and operation-level browser in the native index; declaration pages
-# are unchanged.
-python3 scripts/enhance_gnatdoc_navigation.py _site/api
-# Developer guides with compiled examples and verified API anchors.
-"$python" scripts/render_gnatdoc_guides.py _site
+# The independent policy workflow supplies the verified official wheel environment.
+"$python" -m ada_gnatdoc_enhancer inventory --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+"$python" -m ada_gnatdoc_enhancer enhance --dry-run --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+"$python" -m ada_gnatdoc_enhancer enhance --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+"$python" -m ada_gnatdoc_enhancer verify --config docs/gnatdoc-enhancer.toml --source-root . --site _site
 "$python" scripts/validate_docs.py _site --core "$core"
 # Declaration, overload and member documentation coverage, with the same ratchet.
 python3 scripts/check_doc_coverage.py --fail-on-removed \

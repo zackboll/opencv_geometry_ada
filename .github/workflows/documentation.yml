@@ -111,9 +111,13 @@ jobs:
         run: |
           python3 -m venv .doc-tools/markdown
           .doc-tools/markdown/bin/pip install -r ../build-policy/docs/requirements.txt
+          curl --fail --location --output /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl https://github.com/zackboll/ada-gnatdoc-enhancer/releases/download/v0.1.5/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
+          .doc-tools/markdown/bin/python -I ../build-policy/scripts/gnatdoc_migration_policy.py --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl --install
           echo "DOC_PYTHON=$GITHUB_WORKSPACE/geometry/.doc-tools/markdown/bin/python" >> "$GITHUB_ENV"
       - name: Generate and validate public API and guides
-        run: sh scripts/generate_docs.sh
+        run: |
+          sh scripts/generate_docs.sh
+          "$DOC_PYTHON" -I ../build-policy/scripts/gnatdoc_migration_policy.py --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
       - name: Generate historical output and run unchanged 232 regression tests
         working-directory: historical
         env:
@@ -131,12 +135,10 @@ jobs:
           cp -a _site /tmp/documentation-first
           sh scripts/generate_docs.sh
           diff -r /tmp/documentation-first _site
-          python3 scripts/install_gnatdoc_theme.py _site/api
-          python3 scripts/link_gnatdoc_types.py _site/api --core ../core
-          python3 scripts/highlight_gnatdoc_ada.py _site/api --core ../core
-          python3 scripts/enhance_gnatdoc_navigation.py _site/api
-          "$DOC_PYTHON" scripts/render_gnatdoc_guides.py _site
+          "$DOC_PYTHON" -m ada_gnatdoc_enhancer enhance --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+          "$DOC_PYTHON" -m ada_gnatdoc_enhancer verify --config docs/gnatdoc-enhancer.toml --source-root . --site _site
           diff -r /tmp/documentation-first _site
+          "$DOC_PYTHON" -I ../build-policy/scripts/gnatdoc_migration_policy.py --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
       - name: Compile and run the landing-page and guide examples
         run: |
           alr exec -- gprbuild -P docs/example.gpr
