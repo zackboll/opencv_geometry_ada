@@ -123,6 +123,9 @@ def shell_commands(text):
     lines, whole-line comments, indentation and continuation layout are free.
     Unknown shell syntax fails closed; no candidate helper/download is allowed.
     """
+    require(not any(line.lstrip().startswith("#") and line.endswith("\\")
+                    for line in text.splitlines()), "unsafe shell comment continuation")
+    require("\x00" not in text and "\r" not in text, "unsafe shell control character")
     text = text.replace("\\\n", " ")
     # Preserve quoted whitespace/expansion exactly. shlex is only a syntax
     # check: it must not erase quote boundaries used by the shell.
