@@ -1,0 +1,25 @@
+{
+  "declaration_snippets": 138,
+  "files": 14,
+  "html_pages": 9,
+  "linked_external_types": 104,
+  "linked_local_types": 182,
+  "linked_types": 286,
+  "links": 791,
+  "mode": "enhanced",
+  "public_packages": 2,
+  "unrendered_renderer_exceptions": 0
+}
+{
+  "declaration_snippets": 138,
+  "files": 14,
+  "html_pages": 9,
+  "linked_external_types": 104,
+  "linked_local_types": 182,
+  "linked_types": 286,
+  "links": 791,
+  "mode": "verified",
+  "public_packages": 2,
+  "unrendered_renderer_exceptions": 0
+}
+PASS_determinism_idempotence

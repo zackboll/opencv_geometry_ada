@@ -1,0 +1,16 @@
+{
+  "candidate": "4bf9f8e3198b353f8482261ba46dc1402d8a9c62",
+  "disposition": "HOSTED_CI_PENDING",
+  "failures": [],
+  "hosted_and_human_approval": "not inferred from local tests",
+  "local_qualification_complete": true,
+  "non_deployable": true,
+  "policy_approved": false,
+  "policy_revision": "6b05ac951e9e29d5ba05802f1ebe196040fdb437",
+  "qualification_sha256": "76a17015468a700304c871029506c9bc1a7e70b75e9881f1f7a53d037423c444",
+  "report_sha256": {
+    "browser": "ef46cad5b1d6689c471c2e79bee03753baaf4159927e4ce4963b50930f6e5dfa",
+    "negative": "6aa2802b4bc5cbecc7cf2a8f9fe2120473e051c7f77ce30907994d151971857c"
+  },
+  "synthetic_not_for_release": true
+}

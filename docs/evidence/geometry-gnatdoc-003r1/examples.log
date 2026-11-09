@@ -1,0 +1,34 @@
+Setup
+   [mkdir]        object directory for project Example
+Compile
+   [Ada]          example.adb
+Bind
+   [gprbind]      example.bexch
+   [Ada]          example.ali
+Link
+   [link]         example.adb
+Setup
+   [mkdir]        object directory for project Examples
+Compile
+   [Ada]          contours_and_moments.adb
+   [Ada]          fitting_and_intersections.adb
+   [Ada]          affine_and_perspective.adb
+   [Ada]          delaunay_and_voronoi.adb
+   [Ada]          compatibility_and_safety.adb
+Bind
+   [gprbind]      contours_and_moments.bexch
+   [Ada]          contours_and_moments.ali
+   [gprbind]      fitting_and_intersections.bexch
+   [Ada]          fitting_and_intersections.ali
+   [gprbind]      affine_and_perspective.bexch
+   [Ada]          affine_and_perspective.ali
+   [gprbind]      delaunay_and_voronoi.bexch
+   [Ada]          delaunay_and_voronoi.ali
+   [gprbind]      compatibility_and_safety.bexch
+   [Ada]          compatibility_and_safety.ali
+Link
+   [link]         contours_and_moments.adb
+   [link]         fitting_and_intersections.adb
+   [link]         affine_and_perspective.adb
+   [link]         delaunay_and_voronoi.adb
+   [link]         compatibility_and_safety.adb

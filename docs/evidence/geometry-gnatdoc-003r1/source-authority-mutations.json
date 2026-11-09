@@ -1,0 +1,17 @@
+{
+  "restored_and_verified": true,
+  "mutations": [
+    {
+      "mutation": "modified-source",
+      "rejection": "SOURCE_AUTHORITY_CHANGED: Core witness is not clean exact 0.5.0"
+    },
+    {
+      "mutation": "modified-native",
+      "rejection": "SOURCE_AUTHORITY_CHANGED: Core native differs"
+    },
+    {
+      "mutation": "missing-native-anchor",
+      "rejection": "SOURCE_AUTHORITY_CHANGED: Core native differs"
+    }
+  ]
+}

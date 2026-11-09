@@ -1,0 +1,41 @@
+{
+  "restored_and_verified": true,
+  "mutations": [
+    {
+      "mutation": "wrong-host",
+      "rejection": "migration configuration is not the finite direct-link policy"
+    },
+    {
+      "mutation": "wrong-existing-fragment",
+      "rejection": "migration configuration is not the finite direct-link policy"
+    },
+    {
+      "mutation": "wrong-target",
+      "rejection": "migration configuration is not the finite direct-link policy"
+    },
+    {
+      "mutation": "broadened-hosts",
+      "rejection": "migration configuration is not the finite direct-link policy"
+    },
+    {
+      "mutation": "source-scope",
+      "rejection": "migration configuration is not the finite direct-link policy"
+    },
+    {
+      "mutation": "forged-identity-with-rehashed-manifest",
+      "rejection": "migration output differs from independent native reconstruction"
+    },
+    {
+      "mutation": "missing-top-with-rehashed-manifest",
+      "rejection": "migration output differs from independent native reconstruction"
+    },
+    {
+      "mutation": "wrong-url-with-rehashed-manifest",
+      "rejection": "migration output differs from independent native reconstruction"
+    },
+    {
+      "mutation": "wrong-profile-with-rehashed-manifest",
+      "rejection": "migration output differs from independent native reconstruction"
+    }
+  ]
+}

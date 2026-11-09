@@ -1,0 +1,151 @@
+{
+  "requestInterception": false,
+  "profiles": [
+    {
+      "width": 1280,
+      "colorScheme": "light",
+      "javaScriptEnabled": true,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    },
+    {
+      "width": 1280,
+      "colorScheme": "light",
+      "javaScriptEnabled": false,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    },
+    {
+      "width": 1280,
+      "colorScheme": "dark",
+      "javaScriptEnabled": true,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    },
+    {
+      "width": 1280,
+      "colorScheme": "dark",
+      "javaScriptEnabled": false,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    },
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "javaScriptEnabled": true,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    },
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "javaScriptEnabled": false,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    },
+    {
+      "width": 390,
+      "colorScheme": "dark",
+      "javaScriptEnabled": true,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    },
+    {
+      "width": 390,
+      "colorScheme": "dark",
+      "javaScriptEnabled": false,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104,
+      "localOccurrences": 182,
+      "operationSelections": 138
+    }
+  ],
+  "failures": [],
+  "status": "pass"
+}

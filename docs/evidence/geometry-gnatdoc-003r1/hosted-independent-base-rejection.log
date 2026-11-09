@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/runner/work/opencv_geometry_ada/opencv_geometry_ada/policy/scripts/qualify_additive_gnatdoc.py", line 266, in <module>
+    qualify(parser.parse_args())
+  File "/home/runner/work/opencv_geometry_ada/opencv_geometry_ada/policy/scripts/qualify_additive_gnatdoc.py", line 173, in qualify
+    source_rules(baseline, source, args.synthetic)
+  File "/home/runner/work/opencv_geometry_ada/opencv_geometry_ada/policy/scripts/qualify_additive_gnatdoc.py", line 28, in source_rules
+    return candidate_rules(baseline, source, qualification_pins=qualification_pins)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/opencv_geometry_ada/opencv_geometry_ada/policy/scripts/additive_gnatdoc_policy.py", line 168, in candidate_rules
+    authorized = envelope(ROOT, candidate, qualification_pins)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/opencv_geometry_ada/opencv_geometry_ada/policy/scripts/gnatdoc_migration_policy.py", line 127, in envelope
+    require(protected <= MIGRATION,
+  File "/home/runner/work/opencv_geometry_ada/opencv_geometry_ada/policy/scripts/gnatdoc_migration_policy.py", line 56, in require
+    raise ValueError(message)
+ValueError: unapproved migration verification files: ['scripts/additive_gnatdoc_policy.py', 'scripts/gnatdoc_migration_policy.py', 'scripts/qualify_additive_gnatdoc.py', 'scripts/qualify_current_core.py', 'scripts/qualify_production_core_links.py', 'scripts/test_current_core.py', 'scripts/test_native_core_links_browser.cjs', 'scripts/test_native_core_policy.py']

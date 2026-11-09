@@ -1,0 +1,18 @@
+{
+  "consumer_tested": "2f5239a0e264ca2bb4106cdb338d3eac25abf674",
+  "disposition": "HOSTED_CI_PENDING",
+  "enhancer": "426f38852ef7dfff264f73ad01aab458f5e12b23",
+  "failures": [],
+  "full_shadow_qualification": true,
+  "hosted_exact_head": "must be checked against immutable Actions run, never inferred locally",
+  "non_deployable": true,
+  "production_https_verified": false,
+  "production_migration_ready": false,
+  "qualification_sha256": "edc4e69b8a0417e93d2fb52bc9197137b3b44a4f5cf971c9101b3b7fbc2c8fcf",
+  "reports_sha256": {
+    "browser": "be76064dd3e29bbb232161a556e301e00720495c9316335119b26724d0380646",
+    "negative": "2d8b9d6508f89503863d650c05698c925b9711e18027ec6f47c0929452d3ed06",
+    "original-browser": "efe9cb04ec3a8b5ac1bebfda48372fd7e0375b3654bc568fd8a83f9e180deb5e"
+  },
+  "run_id": "c122e047-e2e9-485d-9957-e9bcfe8b9e04"
+}

@@ -1,0 +1,55 @@
+{
+  "source_revision": "294df5a5ad29be2face494258659ec54dca3ffd8",
+  "wheel_sha256": "d712d330f213fc1909a66c47bc2c7e5e15d5ec687222bea3c4922f5243db4247",
+  "external_types": {
+    "opencv.angle_unit": {
+      "occurrences": 2,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#de966a6db4e74e15e102452acbe5bc993997dbac4c699aa33af780a80d47ad8d",
+      "signature": "type Angle_Unit is (Radians, Degrees);"
+    },
+    "opencv.core.mat": {
+      "occurrences": 5,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/6913f2e7169ad4fb9224d4d93fd20e50615a317c7374a7e469bab89cdd6bb7e9.html#292b48d25d5af7f9173c36aa1336fe26305f00cc0f86b23654029fc9374ba1a2",
+      "signature": "type Mat is tagged private;"
+    },
+    "opencv.float32_point": {
+      "occurrences": 24,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#3d6364074d584f6286e97dac0bb60e1eb9fd2d52ae631e75a7c16779818db534",
+      "signature": "type Float32_Point is record"
+    },
+    "opencv.float32_value": {
+      "occurrences": 6,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#2a7a1855b17dcb7dc415f3793f59bddac5f5d1ff9d7bf5a6da6a6fcac560fb1e",
+      "signature": "subtype Float32_Value is Interfaces.IEEE_Float_32;"
+    },
+    "opencv.float64_value": {
+      "occurrences": 49,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#0985f6cd46f42219d78cc5076cd83f338a25b4a40d6f5b77e19423d17fb02f49",
+      "signature": "subtype Float64_Value is Interfaces.IEEE_Float_64;"
+    },
+    "opencv.point_array": {
+      "occurrences": 1,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#da696e09a1f1b297516365244e16533e23cca626f26df4bb3f727a64beb697b0",
+      "signature": "type Point_Array is array (Natural range <>) of Point;"
+    },
+    "opencv.rect": {
+      "occurrences": 5,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#f30f290ea232c7e470884adf6d6264130071cb9222114c245b16529dbb204786",
+      "signature": "type Rect is record"
+    },
+    "opencv.rotated_rect": {
+      "occurrences": 12,
+      "url": "https://zackboll.github.io/opencv_core_ada/api/ea2ebcbc108269c77d7c6d44d2dabdfb5f6d0179ad5622b1be3cbceaee5c44aa.html#998a8afc13ef5c9f3b1601ed43af72a9414c1a3128933accdc3562635bb982eb",
+      "signature": "type Rotated_Rect is record"
+    }
+  },
+  "external_occurrences": 104,
+  "baseline_internal": 178,
+  "new_internal": 182,
+  "declarations": 138,
+  "coverage": 481,
+  "aunit": 562,
+  "examples": 6,
+  "policy_approved": false,
+  "production_enabled": false
+}
