@@ -1,0 +1,38 @@
+{
+  "qualified_implementation": "6b05ac951e9e29d5ba05802f1ebe196040fdb437",
+  "historical": {
+    "complete": true,
+    "negative_mutations": 30,
+    "original_python_tests": 232
+  },
+  "current": {
+    "component": "pass",
+    "browser_profiles": 8,
+    "negative_mutations": 49,
+    "restored": true,
+    "browser": "pass: 8 profiles, 138 derived declarations",
+    "independent_recorder_complete": true
+  },
+  "synthetic": {
+    "component": "pass",
+    "declarations": 140,
+    "aunit": 563,
+    "negative_mutations": 49,
+    "browser": "pass: 8 profiles, 140 derived declarations",
+    "restored": true,
+    "independent_recorder_complete": true
+  },
+  "direct_links": {
+    "types": 8,
+    "occurrences": 104,
+    "browser_profiles": 8,
+    "target": "_top",
+    "incoming_symbol_urls": "preserved with existing Core JavaScript router"
+  },
+  "approval": false,
+  "production_migration": false,
+  "pages_deployed": false,
+  "pr58_modified": false,
+  "hosted": "19 success, 3 skipped, 3 failure: protected-policy bootstrap x2, MacPorts provisioning x1",
+  "recorder_disposition": "HOSTED_CI_PENDING is the unchanged recorder label; exact-head CI actually settled with 3 failures documented separately"
+}

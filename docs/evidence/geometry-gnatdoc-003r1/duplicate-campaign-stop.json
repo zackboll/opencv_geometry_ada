@@ -1,0 +1,10 @@
+{
+  "reason": "Stop duplicate campaign before repeating already-qualified synthetic attacks; retain all outputs. Assemble existing unchanged independent recorders with separately completed synthetic workspace. No interrupted run counted as pass.",
+  "stopped": [
+    "/tmp/g3r1 duplicate synthetic browser",
+    "run_additive_gnatdoc_review outer driver"
+  ],
+  "completed_current_workspace": "/tmp/g3r1/current",
+  "completed_synthetic_component_and_49_attacks": "/tmp/g3fix",
+  "continuing_browser": "/tmp/g3fix"
+}

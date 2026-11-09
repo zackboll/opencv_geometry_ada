@@ -1,0 +1,8 @@
+{
+  "workflow": "42536639033",
+  "job": "128902282495",
+  "name": "Standalone macports ARM64 / Core 0.5.0",
+  "failure": "MacPorts-2.11.5-26-Tahoe.pkg installer script failed; Port opencv4 not found; follow-up missing evidence artifact",
+  "classification": "unrelated platform provisioning failure; not a native-link qualification pass",
+  "files_changed_for_workaround": []
+}

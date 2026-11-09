@@ -1,0 +1,415 @@
+{
+  "attacks": [
+    {
+      "mutated_sha256": "6f4f769b666b146eead9b36b3fc794a1f33cbdda2ef802eaf470fdd3f8aa929f",
+      "name": "trusted_input_markdown_version",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "c0263bfc2908cd391a75a461419b2e75155970b1f27bad20d6239bb30e90f198",
+      "name": "trusted_input_markdown_added",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "a7ecd5dc95c18869165b01f1390f986d19e4f5dfb714ca122b7eee90a2cf6e19",
+      "name": "trusted_input_markdown_deleted",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "af162d403c4975b0e1ecc29f9ab2c371cffea802922f3d38043c2620e9b0f15b",
+      "name": "trusted_input_pip_index",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "cd964e1c8838633b443d503fa4db4d1fa3bace0b8e6592b9301fcfbe0675115b",
+      "name": "trusted_input_pip_editable",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "308b53f075aa5e2e5e4652cd4e54325b846cbd0c202b6366cb1039ec6709c143",
+      "name": "trusted_input_pip_url",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "9e05ab538db005dc87c444030c5d86418d51a6d4f257147aa05f59a2f4d464df",
+      "name": "trusted_input_pip_option",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": null,
+      "name": "trusted_input_requirements_missing",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input missing: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "cf694a0e76eb9877b01649807973379cd0943d1f829d82f866974e6800d06faf",
+      "name": "trusted_input_requirements_crlf",
+      "observed": true,
+      "original_sha256": "42439bccef3cf40f69561e86afa035b4f6fa04080033765a25d8ab3175cc4d92",
+      "rejection": "trusted build input changed: docs/requirements.txt",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "53e8b375b26bc92d71dc7073b1712ec9b26da2916d7a70efe9de2b4b7a5fcb4f",
+      "name": "trusted_input_core_constraint",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input changed: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "da1e09f5412c12375f56c6b16cdf8e8783ce2c36c82f91b300193723305a43e7",
+      "name": "trusted_input_alire_dependency",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input changed: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "9866f28417e1b865138ff64b943c42ee08eba7172a5b13ea1e6056854630272b",
+      "name": "trusted_input_prebuild_action",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input changed: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "2f901a5bf366a3b9d1c5578cddd8b56fbedab2fb6446a984e02ef571cf660364",
+      "name": "trusted_input_unexpected_action",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input changed: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "5cec8cd2a85a93ed038e6acdbde949c944c61e74a6766e4835babf2f1992e9f2",
+      "name": "trusted_input_msys_environment",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input changed: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "683e7ffba543eb9ed23c5ff5ab93db4c7f7f4e363cb780102041d5a31ea5707b",
+      "name": "trusted_input_unauthorized_pin",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input changed: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "c7952e8ef53a96edce890c1e758fb5f14e2596ece32c0c1d3f13719a7eb7f909",
+      "name": "trusted_input_aunit_dependency",
+      "observed": true,
+      "original_sha256": "a7452189cdae3bdf1a04df95087a2de38f16c8c342730085adbc0b4984918afe",
+      "rejection": "trusted build input changed: tests/alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "fc5abce573eee53aa05fc7511bb99ba7cf69df64da71bd60de14291fa140c108",
+      "name": "trusted_input_gnatprove_dependency",
+      "observed": true,
+      "original_sha256": "a7452189cdae3bdf1a04df95087a2de38f16c8c342730085adbc0b4984918afe",
+      "rejection": "trusted build input changed: tests/alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "d5ee5d445dfac2f3a98199c28af5760948f01ce641b5fd74e94c7c7a6831b6f8",
+      "name": "trusted_input_gnatcov_dependency",
+      "observed": true,
+      "original_sha256": "a7452189cdae3bdf1a04df95087a2de38f16c8c342730085adbc0b4984918afe",
+      "rejection": "trusted build input changed: tests/alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "7fe933c71a617f4750b14df8d9114de9c96d103c91a5a26b068c161a6f1a33bf",
+      "name": "trusted_input_unknown_manifest_key",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input changed: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "8e266ce2cd9254eb4216a56efa2d01219bac2a69d99ed337b1787793a78b479c",
+      "name": "trusted_input_duplicate_version",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "root manifest invalid TOML: Cannot overwrite a value (at line 4, column 18)",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "24c97c35657596fcd445229d14cdc0a91089d1d59c2ec9fe542c540f89552ec9",
+      "name": "trusted_input_unreviewed_version",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "root manifest unreviewed version transition",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": null,
+      "name": "trusted_input_tests_manifest_missing",
+      "observed": true,
+      "original_sha256": "a7452189cdae3bdf1a04df95087a2de38f16c8c342730085adbc0b4984918afe",
+      "rejection": "trusted build input missing: tests/alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": null,
+      "name": "trusted_input_root_manifest_missing",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "trusted build input missing: alire.toml",
+      "restored_and_verified": true
+    },
+    {
+      "mutated_sha256": "249721ce3cae896e1ecac5cb6242098a7c6777b41714b5da5d28b6ec55251ca1",
+      "name": "trusted_input_manifest_crlf",
+      "observed": true,
+      "original_sha256": "150264f21b55c00d6cf93d6898e1c35a0e024a775ce7bca1060484b4664e439b",
+      "rejection": "root manifest ambiguous version field",
+      "restored_and_verified": true
+    },
+    {
+      "name": "published signature modification",
+      "observed_sha256": {
+        "source/src/opencv-geometry.ads": "01e2a127cc663109dcb7110b02358f7dbadfe67f52a040d769ce6b401c759eba"
+      },
+      "rejection": "candidate snapshot changed: src/opencv-geometry.ads",
+      "restored_and_verified": true
+    },
+    {
+      "name": "published declaration removal",
+      "observed_sha256": {
+        "source/src/opencv-geometry.ads": "7706a58312828b4ebaa4053c7ec457cd206afba8afc9a6b79de51737a676640a"
+      },
+      "rejection": "candidate snapshot changed: src/opencv-geometry.ads",
+      "restored_and_verified": true
+    },
+    {
+      "name": "duplicate declaration",
+      "observed_sha256": {
+        "source/src/opencv-geometry.ads": "1d16849e5d5b3dbeda1dcd1dd16e3654b31dd2f905ca087f1417f4a8969f66cd"
+      },
+      "rejection": "candidate snapshot changed: src/opencv-geometry.ads",
+      "restored_and_verified": true
+    },
+    {
+      "name": "staged source/native mismatch",
+      "observed_sha256": {
+        "first/qualification-public/src/opencv-geometry.ads": "ec30e329c8ad4ca801b8ce12994999847ca4fdf78ba270e0d94f954aee7ac649"
+      },
+      "rejection": "staged source/native mismatch",
+      "restored_and_verified": true
+    },
+    {
+      "name": "missing category entry",
+      "observed_sha256": {
+        "first/docs/api-categories.json": "7c1125bd88e42f49a894d61bf5a562f59b485bcbd46d4fa1cec8a7b1ed74aef2"
+      },
+      "rejection": "candidate snapshot changed: docs/api-categories.json",
+      "restored_and_verified": true
+    },
+    {
+      "name": "duplicate category entry",
+      "observed_sha256": {
+        "first/docs/api-categories.json": "cf8bfcaabd0b4677393b9cfd09300fc6d8dd0a351e3dcd9bd21aba14cd8412c3"
+      },
+      "rejection": "candidate snapshot changed: docs/api-categories.json",
+      "restored_and_verified": true
+    },
+    {
+      "name": "unapproved category reassignment",
+      "observed_sha256": {
+        "first/docs/api-categories.json": "5393bc38db2a4c4fcb3182b0da448069d0f8e5d47786c6b4a0ef8b200842f78d"
+      },
+      "rejection": "candidate snapshot changed: docs/api-categories.json",
+      "restored_and_verified": true
+    },
+    {
+      "name": "unapproved guide modification",
+      "observed_sha256": {
+        "first/docs/guides/delaunay-and-voronoi.md": "ceaaedb50f5b31192f4fe2ef3406f021be1cbcdc0c3a823dbdc43fbb60604444"
+      },
+      "rejection": "candidate snapshot changed: docs/guides/delaunay-and-voronoi.md",
+      "restored_and_verified": true
+    },
+    {
+      "name": "approved path changed after snapshot",
+      "observed_sha256": {
+        "first/docs/guides/affine-and-perspective-geometry.md": "d99098036fd58e37580aa6e1d713750c138ef540af216336dc1bb3f656060882"
+      },
+      "rejection": "candidate snapshot changed: docs/guides/affine-and-perspective-geometry.md",
+      "restored_and_verified": true
+    },
+    {
+      "name": "unapproved example modification",
+      "observed_sha256": {
+        "first/docs/examples/delaunay_and_voronoi.adb": "7941d297d6a0e7d64ba70aaf01802559368b4a5764fff40f0bc00df12cd34d6c"
+      },
+      "rejection": "candidate snapshot changed: docs/examples/delaunay_and_voronoi.adb",
+      "restored_and_verified": true
+    },
+    {
+      "name": "approved example changed after snapshot",
+      "observed_sha256": {
+        "first/docs/examples/affine_and_perspective.adb": "33a6a282f132199de81f313eddc6fe6f3e40652aa807de2553b69ee0e3be2664"
+      },
+      "rejection": "candidate snapshot changed: docs/examples/affine_and_perspective.adb",
+      "restored_and_verified": true
+    },
+    {
+      "name": "forged authored-input manifest",
+      "observed_sha256": {
+        "first/current-authored.json": "ceaa7d673ebf558d0cc55d305a097cd9ca9190b34f11fa4b68a6adbe95c91bee"
+      },
+      "rejection": "forged authored input contract",
+      "restored_and_verified": true
+    },
+    {
+      "name": "modified historical authority",
+      "observed_sha256": {
+        "first/docs/evidence/gnatdoc009b/authority-transition.json": "084c410e13aca99478933dcf5d69c05992ec82f9589a8b6e2038d092b34dbfcb"
+      },
+      "rejection": "candidate snapshot changed: docs/evidence/gnatdoc009b/authority-transition.json",
+      "restored_and_verified": true
+    },
+    {
+      "name": "modified historical evidence",
+      "observed_sha256": {
+        "first/docs/evidence/gnatdoc009b/qualified/readiness.json": "365ead9faa18ef58a7988e09dc62fd51e96d5bb067f13dcd5dd79d603d7c5071"
+      },
+      "rejection": "candidate snapshot changed: docs/evidence/gnatdoc009b/qualified/readiness.json",
+      "restored_and_verified": true
+    },
+    {
+      "name": "protected historical verifier",
+      "observed_sha256": {
+        "first/scripts/check_comment_only.py": "b02e68ce2c392c7861bf8accfa4f10883c21660d9102880304e19fd8906756b3"
+      },
+      "rejection": "candidate snapshot changed: scripts/check_comment_only.py",
+      "restored_and_verified": true
+    },
+    {
+      "name": "substituted successor verifier",
+      "observed_sha256": {
+        "first/scripts/additive_gnatdoc_policy.py": "01cedd18825aa82e15a77ba2f5ed480a4f6defd727788e2f9a78c94f553568fd"
+      },
+      "rejection": "candidate snapshot changed: scripts/additive_gnatdoc_policy.py",
+      "restored_and_verified": true
+    },
+    {
+      "name": "falsified AUnit execution",
+      "observed_sha256": {
+        "aunit.log": "a792c3b9bb979e0b9fa384dedbc506a2087e9d043010314ace35044ba01253b2"
+      },
+      "rejection": "AUnit executed cases differ from registrations",
+      "restored_and_verified": true
+    },
+    {
+      "name": "falsified AUnit totals",
+      "observed_sha256": {
+        "aunit.log": "16b39a6be9d802191fdefc6e6c91858d56f28ed10b92d49979fe7f2eb6928ca0"
+      },
+      "rejection": "AUnit totals differ: Failed Assertions",
+      "restored_and_verified": true
+    },
+    {
+      "name": "wrong Core type destination",
+      "observed_sha256": {
+        "first/_site/api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "155ab25880fdc3505f62aba2a130ebf12da0d4f1253febf01ad60bffa4a34f2d"
+      },
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+      "restored_and_verified": true
+    },
+    {
+      "name": "wrong-but-valid native anchor",
+      "observed_sha256": {
+        "first/_site/api/index.html": "4e853f4881f2aa54f02dbd157e7937fbce0691e5a042a0f9bac59ecedd300672"
+      },
+      "rejection": "published file differs from reconstructed output: api/index.html",
+      "restored_and_verified": true
+    },
+    {
+      "name": "native profile tamper",
+      "observed_sha256": {
+        "first/_site/api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "eb2c7f69c439485fa9b87ee2e5f8a0cd2efe2a1ad8276c6932202f84db70121d"
+      },
+      "rejection": "published file differs from reconstructed output: api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html",
+      "restored_and_verified": true
+    },
+    {
+      "name": "coordinated output and matching forged manifest",
+      "observed_sha256": {
+        "first/_site/api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "9d0e4ef4c334243c42e57ef99ce78352872c9485f893920a437ad30c602ff645",
+        "first/_site/api/presentation.json": "eaba81422da3b2bfac93e341579f34e643c06ed5346e304f995585bcc104fc60"
+      },
+      "rejection": "enhanced output does not match source/manifest",
+      "restored_and_verified": true
+    },
+    {
+      "name": "forged current native acquisition",
+      "observed_sha256": {
+        "pristine-first/api/index.html": "d93060210d3dcaece74614c9e6682811b33bc38a0a385d177a48cc2b46870223"
+      },
+      "rejection": "native acquisitions differ",
+      "restored_and_verified": true
+    },
+    {
+      "name": "incorrect existing overload identity",
+      "observed": true,
+      "rejection": "published declaration order changed",
+      "restored_and_verified": true
+    },
+    {
+      "name": "stale/substituted candidate commit",
+      "observed": true,
+      "rejection": "stale/substituted candidate commit",
+      "restored_and_verified": true
+    }
+  ],
+  "candidate": "6b05ac951e9e29d5ba05802f1ebe196040fdb437",
+  "executed": 49,
+  "qualification_sha256": "1a792b0262cd6d9f6f0156e4575fd68480e71fcfe4aa00dac2e2695635147b81",
+  "restored_and_verified": true,
+  "run_id": "2465990c-dafe-41ee-b9cd-b25d2c3abce5",
+  "site_sha256": {
+    "api/4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html": "245ac2ae73ce9348a9bd5db56f138fac31556b753bb42734aaed74bde94da649",
+    "api/6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html": "0f3967d25f19131bd9bc69255d1ccd2a6af5251ad698760a35836e81eca55b5d",
+    "api/gnatdoc-navigation.js": "b3fb428b507844d6be76fb40156058d39a5b5f57004bde04e33b0411f68504cd",
+    "api/gnatdoc-theme.css": "cf06637732a8b047a7191bfb991a5c3da7cd31a52076876880d5f8a3f63929bc",
+    "api/gnatdoc.css": "e86c483e8a66f80bd653129c7ceeec99e63848ecfc308e98ea9de1693fd32e0e",
+    "api/index.html": "046979befcf446c0fdd356cfbeabdcc06d1306640d2b1bd5b4c57ab20ad91432",
+    "api/presentation.json": "6f2357d8a486a82510e1233d7b7adcda4fca7f0a919b797896d888b0b2bd1b35",
+    "guides/affine-and-perspective-geometry.html": "b56833dd8e195e2c5b453eeaff049b4ec2fcb5428a2929cd2bc3fd33ea5d460a",
+    "guides/compatibility-ownership-and-safety.html": "cbaf4f82fd791ac1394566e4e2677f23e2c3eb3119f98b335f7ba2fcb94e854c",
+    "guides/delaunay-and-voronoi.html": "e47d3dd0af18a4035481698e826207b3cd6b76e93369e93ba8df527d27e94be3",
+    "guides/geometry-fundamentals-and-contours.html": "1388217ef07bb56171bd6f1f220663b766d1f074c323ecaaa12cb901ab12992b",
+    "guides/gnatdoc-guides.css": "8461dad011b761734cbeaeaeca741b0cf45f777efe6dc381802ef0d1fe0ad3bc",
+    "guides/shape-fitting-and-intersections.html": "3e2aff4b934d764bb7cf440e31d1411e352d3047540162d919c85eee44880a83",
+    "index.html": "5db416e22306bdc0df26567173002a94da4184d7e9f2ce9a046a86d20617011b"
+  },
+  "status": "pass"
+}

@@ -1,0 +1,58 @@
+[
+  {
+    "weakening": "artifact digest",
+    "detected": true,
+    "test": "ArtifactMutations.test_wrong_digest_and_tampered_bytes_rejected",
+    "failure_count": 1,
+    "error_count": 0
+  },
+  {
+    "weakening": "live stale",
+    "detected": true,
+    "test": "ArtifactMutations.test_stale_public_https_content_rejected",
+    "failure_count": 1,
+    "error_count": 0
+  },
+  {
+    "weakening": "public profile",
+    "detected": true,
+    "test": "DeployedSourceMutations.test_changed_profile_rejected",
+    "failure_count": 1,
+    "error_count": 0
+  },
+  {
+    "weakening": "owner",
+    "detected": true,
+    "test": "NativeDestinationMutations.test_wrong_owner_page_rejected",
+    "failure_count": 1,
+    "error_count": 0
+  },
+  {
+    "weakening": "artifact inventory",
+    "detected": true,
+    "test": "ArtifactMutations.test_review_and_pages_inventories_must_match",
+    "failure_count": 1,
+    "error_count": 0
+  },
+  {
+    "weakening": "tree",
+    "detected": true,
+    "test": "ProvenanceMutations.test_fetched_tree_must_match_api_tree",
+    "failure_count": 1,
+    "error_count": 0
+  },
+  {
+    "weakening": "race",
+    "detected": true,
+    "test": "GeometryQualification.test_mid_qualification_redeployment_rejected",
+    "failure_count": 1,
+    "error_count": 0
+  },
+  {
+    "weakening": "workflow",
+    "detected": true,
+    "test": "ProvenanceMutations.test_artifact_ownership_source_and_workflow_identity",
+    "failure_count": 1,
+    "error_count": 0
+  }
+]

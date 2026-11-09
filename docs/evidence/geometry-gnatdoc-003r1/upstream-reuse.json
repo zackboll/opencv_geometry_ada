@@ -1,0 +1,82 @@
+{
+  "upstream_commit": "a777f331cda1a00dc00d5173206779dffd4721c4",
+  "checks": [
+    {
+      "function": "GitHubCore",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "ordered",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "select_deployment",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "artifact_identity",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "provenance",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "check_member",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "authenticated",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "review_members",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "pages_members",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "deployed_declarations",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "native_destination",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "verify_publication",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "NoRedirect",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "fetch",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "git",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "source_native_types",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "CommandError",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "command",
+      "exact_upstream_ast": true
+    },
+    {
+      "function": "safe_path",
+      "exact_upstream_ast": true
+    }
+  ],
+  "source_native_adapter": "Source renamed to existing Geometry Package; all matching logic retained"
+}
