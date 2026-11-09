@@ -9,6 +9,9 @@ import argparse
 import json
 import os
 from pathlib import Path
+import threading
+from functools import partial
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import sys
 
 from gnatdoc_migration_policy import (
@@ -87,6 +90,13 @@ def run(args):
         result = validate_migration_site(source, args.workspace / "native", source / "_site",
                                          core, args.workspace / "core-native")
         write(args.workspace / "independent-validation.json", result)
+        write(args.workspace / "referenced-types.json", json.loads(regular(
+            ROOT / "docs/evidence/geometry-gnatdoc-003r1/referenced-types.json")))
+        write(args.workspace / "occurrences.json", [
+            {"identity": row["referenced_type"], "href": row["shared"]["href"],
+             "package": row["package"], "native_page": row["native_page"],
+             "native_anchor": row["native_anchor"]}
+            for row in result["comparison"]["type_references"]])
         report["publisher"] = result["publisher"]
         report["comparison"] = {k: v for k, v in result["comparison"].items()
                                 if k not in ("type_references", "navigation")}
@@ -100,6 +110,27 @@ def run(args):
         report["examples"] = 6
         output = session.run(["alr", "-n", "run"], source / "tests")
         report["aunit"] = aunit_results(source, output)
+        session.run([sys.executable, "-m", "unittest", "-v", "test_migration_preview"], ROOT,
+                    env={"PYTHONPATH": str(ROOT / "scripts"),
+                         "GEOMETRY_MIGRATION_PREVIEW": str(args.workspace)})
+        if args.playwright_module:
+            browser_env = {"PLAYWRIGHT_MODULE": str(args.playwright_module),
+                           "CORE_LINK_WORKSPACE": str(args.workspace)}
+            session.run(["node", ROOT / "scripts/test_native_core_links_browser.cjs"], ROOT,
+                        env=browser_env)
+            report["native_browser"] = json.loads(regular(args.workspace / "focused-browser.json"))
+            server = ThreadingHTTPServer(("127.0.0.1", 0), partial(
+                SimpleHTTPRequestHandler, directory=str(source / "_site")))
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                session.run(["node", ROOT / "scripts/test_gnatdoc_guides_browser.cjs"], ROOT,
+                            env={**browser_env, "CHROME": "/usr/bin/google-chrome",
+                                 "DOC_URL": f"http://127.0.0.1:{server.server_port}/",
+                                 "DOC_EVIDENCE": str(args.workspace / "authored-browser")})
+            finally:
+                server.shutdown()
+                server.server_close()
+            report["authored_browser_cells"] = 8
         report["status"] = "pass"
         report["disposition"] = "PRODUCTION_PREVIEW_ONLY_NOT_BOOTSTRAP_APPROVAL"
     except Exception as error:
@@ -114,4 +145,6 @@ if __name__ == "__main__":
     for name in ("workspace", "core", "gnatdoc-prefix", "wheel"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--policy-revision", required=True)
+    parser.add_argument("--playwright-module", type=Path,
+                        help="existing Playwright 1.64.1 module; requires /usr/bin/google-chrome")
     run(parser.parse_args())
