@@ -70,12 +70,29 @@ class DocumentationRoutingTests(unittest.TestCase):
 
     def test_historical_tests_attacks_and_selector_unchanged(self):
         for name in ("scripts/select_gnatdoc_policy.py", "scripts/run_additive_gnatdoc_review.py",
-                     "scripts/adversarial_additive_gnatdoc.py", "scripts/gnatdoc_migration_policy.py"):
+                     "scripts/adversarial_additive_gnatdoc.py"):
             with self.subTest(name=name):
                 self.assertEqual((ROOT / name).read_bytes(), subprocess.check_output(
                     ["git", "-C", str(ROOT), "show", BASE + ":" + name]))
         self.assertIn("test_shared_gnatdoc_shadow.py -v", self.policy)
         self.assertIn("test_additive_gnatdoc_policy.py -v", self.policy)
+
+    def test_migration_policy_transition_is_not_self_authorized(self):
+        # Protected policy evolves only through explicit bootstrap review. The
+        # old authority must still reject this transition, never label it green.
+        with tempfile.TemporaryDirectory() as folder:
+            policy = Path(folder) / "policy"
+            subprocess.run(["git", "clone", "--quiet", "--shared", str(ROOT), str(policy)], check=True)
+            subprocess.run(["git", "-C", str(policy), "checkout", "--quiet", "--detach",
+                            "05c6680cdf4f9fe544cfbbab21cf13eab41d0112"], check=True)
+            program = ("import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); "
+                       "from gnatdoc_migration_policy import envelope; "
+                       "envelope(Path(sys.argv[2]), Path(sys.argv[3]))")
+            result = subprocess.run([sys.executable, "-I", "-c", program, str(policy / "scripts"),
+                                     str(policy), str(ROOT)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unapproved migration verification files", result.stderr)
+            self.assertIn("scripts/gnatdoc_migration_policy.py", result.stderr)
 
     def test_event_matrix(self):
         scenarios = (

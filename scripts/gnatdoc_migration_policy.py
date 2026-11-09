@@ -5,6 +5,7 @@ import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -84,16 +85,131 @@ def migration_workflow(reviewed):
 
 
 def migration_generator(reviewed):
-    """Replace only the duplicated enhancement block; preserve native gates."""
+    """Example implementation, NOT the authorization authority.
+
+    The envelope below checks bounded commands and the separate production
+    campaign checks their actual effects. Comments/layout are not policy.
+    """
+    reviewed = reviewed.replace("cp docs/index.html _site/index.html\n", "")
     start = reviewed.index("# Presentation: theme metadata,")
     end = reviewed.index("# Declaration, overload and member documentation coverage", start)
-    return reviewed[:start] + '''# The independent policy workflow supplies the verified official wheel environment.
+    return reviewed[:start] + STAGING + '''# The independent policy workflow supplies the verified official wheel environment.
 "$python" -m ada_gnatdoc_enhancer inventory --config docs/gnatdoc-enhancer.toml --source-root . --site _site
 "$python" -m ada_gnatdoc_enhancer enhance --dry-run --config docs/gnatdoc-enhancer.toml --source-root . --site _site
 "$python" -m ada_gnatdoc_enhancer enhance --config docs/gnatdoc-enhancer.toml --source-root . --site _site
 "$python" -m ada_gnatdoc_enhancer verify --config docs/gnatdoc-enhancer.toml --source-root . --site _site
 "$python" scripts/validate_docs.py _site --core "$core"
 ''' + reviewed[end:]
+
+
+PUBLIC = ("opencv-geometry.ads", "opencv-geometry-subdiv2d.ads")
+STAGING = '''# Generated build input: recreate exactly the two public specifications.
+test ! -L "$root/qualification-public"
+rm -rf -- "$root/qualification-public"
+mkdir "$root/qualification-public"
+for name in opencv-geometry.ads opencv-geometry-subdiv2d.ads; do
+    test ! -L "src/$name"
+    test -f "src/$name"
+    cp -- "src/$name" "qualification-public/$name"
+done
+'''
+
+
+def shell_commands(text):
+    """Finite shell vocabulary, not execution or a security guess at shell ASTs.
+
+    Keep control operators, expansion spellings and quoting intact. Only blank
+    lines, whole-line comments, indentation and continuation layout are free.
+    Unknown shell syntax fails closed; no candidate helper/download is allowed.
+    """
+    text = text.replace("\\\n", " ")
+    return tuple(" ".join(line.split()) for line in text.splitlines()
+                 if line.strip() and not line.lstrip().startswith("#"))
+
+
+def bounded_commands(actual, required, label):
+    # shlex validates balanced quotes without discarding shell operators. The
+    # literal bounded vocabulary also prevents eval, substitutions and suffixes.
+    shlex.split(actual, comments=True)
+    observed, expected = shell_commands(actual), shell_commands(required)
+    require(observed == expected, label + ": missing, reordered or unauthorized command")
+
+
+def generator_contract(policy, candidate):
+    """Named native gates plus a bounded integration program, not file equality.
+
+    Native acquisition/toolchain/Core/ratchets retain the reviewed commands.
+    The replaceable integration region has its own finite capabilities. Actual
+    staging, pristine input, dry-run, output and idempotence are checked again
+    from an independent checkout; passing this syntax check is not approval.
+    """
+    reviewed = regular(policy / "scripts/generate_docs.sh").decode()
+    actual = regular(candidate / "scripts/generate_docs.sh").decode()
+    start = reviewed.index("# Presentation: theme metadata,")
+    end = reviewed.index("# Declaration, overload and member documentation coverage", start)
+    native = reviewed[:start].replace("cp docs/index.html _site/index.html\n", "")
+    commands = shell_commands(actual)
+    prefix, suffix = shell_commands(native), shell_commands(reviewed[end:])
+    require(commands[:len(prefix)] == prefix,
+            "production generator native/toolchain/Core/warning gates differ")
+    require(commands[-len(suffix):] == suffix,
+            "production generator coverage/zero-gap gates differ")
+    middle = commands[len(prefix):-len(suffix)]
+    enhancement = '''
+"$python" -m ada_gnatdoc_enhancer inventory --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+"$python" -m ada_gnatdoc_enhancer enhance --dry-run --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+"$python" -m ada_gnatdoc_enhancer enhance --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+"$python" -m ada_gnatdoc_enhancer verify --config docs/gnatdoc-enhancer.toml --source-root . --site _site
+"$python" scripts/validate_docs.py _site --core "$core"
+'''
+    # Staging may precede acquisition or sit immediately before enhancement;
+    # currently the bounded recipe deliberately places it at the latter boundary.
+    bounded_commands("\n".join(middle), STAGING + enhancement,
+                     "production generator integration")
+
+
+def workflow_contract(reviewed, actual):
+    """Keep all security structure; validate only three bounded run programs.
+
+    YAML outside those bodies (permissions/events/needs/checkout selection and
+    immutable regression jobs) cannot change. Within a body formatting and
+    comments are irrelevant, but every critical command must execute in order.
+    This needs no candidate-controlled YAML parser or additional dependency.
+    """
+    def extract(text):
+        bodies = {}
+        for name in STEP_BODIES:
+            marker = "      - name: " + name + "\n"
+            require(text.count(marker) == 1, "documentation workflow step identity differs")
+            start = text.index(marker) + len(marker)
+            end = text.find("      - name:", start)
+            require(end != -1 and text[start:end].startswith("        run: |\n"),
+                    "documentation workflow step settings differ")
+            body = text[start + len("        run: |\n"):end]
+            require(all(not line.strip() or line.startswith("          ")
+                        for line in body.splitlines()), "documentation workflow body escapes run")
+            bodies[name] = body
+            text = text[:start] + "        run: |\n          POLICY_BODY\n" + text[end:]
+        return text, bodies
+    skeleton, bodies = extract(actual)
+    expected, _ = extract(migration_workflow(reviewed))
+    require(skeleton == expected, "production documentation workflow security structure differs")
+    for name, required in STEP_BODIES.items():
+        bounded_commands(bodies[name], required, "production documentation workflow " + name)
+
+
+def staged_public(source):
+    """Exact bytes and complete inventory; generated staging is never authority."""
+    directory = source / "qualification-public"
+    require(directory.is_dir() and not directory.is_symlink(), "unsafe public staging directory")
+    require({p.name for p in directory.iterdir()} == set(PUBLIC),
+            "unexpected public staging inventory")
+    require(not any(n.startswith("qualification-public/") for n in file_set(source)),
+            "public staging must not be committed")
+    for name in PUBLIC:
+        require(regular(directory / name) == regular(source / "src" / name),
+                "migration staged source differs: " + name)
+    return {name: hashlib.sha256(regular(directory / name)).hexdigest() for name in PUBLIC}
 
 
 def file_set(root):
@@ -138,12 +254,8 @@ def envelope(policy, candidate, qualification_pins=False):
     require(changed <= MIGRATION,
             "migration includes unrelated files: " + repr(sorted(changed - MIGRATION)))
     require(CONFIGURATION <= file_set(candidate), "migration configuration missing")
-    require(regular(candidate / WORKFLOW).decode() ==
-            migration_workflow(regular(policy / WORKFLOW).decode()),
-            "production documentation workflow is not the release-backed template")
-    require(regular(candidate / "scripts/generate_docs.sh").decode() ==
-            migration_generator(regular(policy / "scripts/generate_docs.sh").decode()),
-            "production generator is not the release-backed template")
+    workflow_contract(regular(policy / WORKFLOW).decode(), regular(candidate / WORKFLOW).decode())
+    generator_contract(policy, candidate)
     for name in CONFIGURATION:
         regular(candidate / name)
     return protected
@@ -218,6 +330,59 @@ def direct_configuration(source, pristine, published):
     return authored, config
 
 
+def validate_local_site(source, site, core):
+    """Production validator adapter, never a substitute for publisher validation.
+
+    The manifest is untrusted: native bytes must match the independently
+    derived authored contract and source inventory, and every final file must
+    equal reconstruction. Live publisher authentication remains mandatory in
+    validate_migration_site from the separately selected checkout.
+    """
+    import shutil
+    from compare_shared_gnatdoc_geometry import file_hashes
+    from additive_gnatdoc_policy import current_output, inventory, EVIDENCE
+    from ada_gnatdoc_enhancer.config import load
+    from ada_gnatdoc_enhancer.pipeline import enhance, verify
+    staged_public(source)
+    # This is a policy-owned set of source/native identities, not candidate URLs.
+    published = json.loads(regular(ROOT / "docs/evidence/geometry-gnatdoc-003r1/referenced-types.json"))
+    configuration = load(source, "docs/gnatdoc-enhancer.toml")
+    with tempfile.TemporaryDirectory(prefix="geometry-local-validation-") as folder:
+        pristine = Path(folder) / "native"
+        (pristine / "api").mkdir(parents=True)
+        manifest = json.loads(regular(site / "api/presentation.json"))
+        for name, content in manifest["original_api_html"].items():
+            require(name.startswith("api/") and Path(name).name == name[4:]
+                    and name.endswith(".html"), "unsafe native manifest filename")
+            (pristine / name).write_text(content)
+        shutil.copyfile(site / "api/gnatdoc.css", pristine / "api/gnatdoc.css")
+        authored, expected = direct_configuration(source, pristine, published)
+        require(regular(source / "docs/gnatdoc-authored.json") == authored,
+                "migration authored contract differs")
+        require(tomllib.loads(regular(source / "docs/gnatdoc-enhancer.toml").decode()) == expected,
+                "migration configuration is not the finite direct-link policy")
+        verify(configuration, site)
+        reconstructed = Path(folder) / "reconstructed"
+        shutil.copytree(pristine, reconstructed)
+        enhance(configuration, reconstructed)
+        require(file_hashes(site) == file_hashes(reconstructed),
+                "migration output differs from independent native reconstruction")
+        core_types = json.loads(regular(ROOT / EVIDENCE / "core-0.5.0-types.json"))
+        # Check Core source bytes even at this local, non-publisher gate.
+        from qualify_shared_gnatdoc_shadow import check_files, CORE
+        require(git(core, "rev-parse", "HEAD").decode().strip() == CORE,
+                "Core source release differs")
+        core_spec = json.loads(regular(ROOT / EVIDENCE / "core-0.5.0-input.json"))
+        check_files(core, core_spec["source_sha256"])
+        comparison = current_output(source, pristine, site, core_types, published)
+        count = native_output(source, pristine, site)
+        return {"packages": 2, "pages": len(list(site.rglob("*.html"))),
+                "sections": count, "subprograms": sum(
+                    row["kind"] in ("function", "procedure")
+                    for rows in inventory(source).values()
+                    for row in rows), "comparison": comparison}
+
+
 def validate_migration_site(source, pristine, site, core, core_native, publisher=None):
     """Selected-base validation, never candidate validate_docs.py or output authority.
 
@@ -242,19 +407,23 @@ def validate_migration_site(source, pristine, site, core, core_native, publisher
                 "migration authored contract differs")
         require(tomllib.loads(regular(source / "docs/gnatdoc-enhancer.toml").decode()) == expected,
                 "migration configuration is not the finite direct-link policy")
-        for name in ("opencv-geometry.ads", "opencv-geometry-subdiv2d.ads"):
-            require(regular(source / "qualification-public" / name) == regular(source / "src" / name),
-                    "migration staged source differs")
+        staged_public(source)
         from ada_gnatdoc_enhancer.config import load
         from ada_gnatdoc_enhancer.pipeline import enhance, verify
         configuration = load(source, "docs/gnatdoc-enhancer.toml")
         reconstructed = work / "site"
         shutil.copytree(pristine, reconstructed)
-        enhance(configuration, reconstructed)
         from compare_shared_gnatdoc_geometry import file_hashes
+        original = file_hashes(pristine)
+        enhance(configuration, reconstructed, dry_run=True)
+        require(file_hashes(reconstructed) == original, "dry-run changed pristine native input")
+        enhance(configuration, reconstructed)
         require(file_hashes(site) == file_hashes(reconstructed),
                 "migration output differs from independent native reconstruction")
         verify(configuration, site)
+        state = file_hashes(site)
+        enhance(configuration, site)
+        require(file_hashes(site) == state, "production enhancement is not byte-idempotent")
         core_types = json.loads(regular(ROOT / EVIDENCE / "core-0.5.0-types.json"))
         comparison = current_output(source, pristine, site, core_types, published)
         native_output(source, pristine, site)
