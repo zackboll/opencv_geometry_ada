@@ -111,7 +111,7 @@ class MigrationPolicyTests(unittest.TestCase):
             text = path.read_text()
             if name == WORKFLOW:
                 text = text.replace('          sh scripts/generate_docs.sh',
-                                    '          # production acquisition\n          sh scripts/generate_docs.sh')
+                                    '          # production acquisition\n          sh scripts/generate_docs.sh', 1)
             else:
                 text = text.replace(' --source-root . --site _site',
                                     ' \\\n    --source-root . --site _site')
