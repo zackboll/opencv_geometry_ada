@@ -133,6 +133,22 @@ class MigrationPolicyTests(unittest.TestCase):
                     envelope(ROOT, self.candidate)
         path.write_text(original)
 
+    def test_bounded_additional_integrity_commands_are_not_template_equality(self):
+        self.migration()
+        path = self.candidate / 'scripts/generate_docs.sh'
+        text = path.read_text().replace(
+            '    cp -- "src/$name" "qualification-public/$name"',
+            '    cp -- "src/$name" "qualification-public/$name"\n'
+            '    cmp -- "src/$name" "qualification-public/$name"')
+        path.write_text(text)
+        workflow = self.candidate / WORKFLOW
+        workflow.write_text(workflow.read_text().replace(
+            '          sh scripts/generate_docs.sh',
+            '          sh scripts/generate_docs.sh\n'
+            '          "$DOC_PYTHON" -m ada_gnatdoc_enhancer inventory '
+            '--config docs/gnatdoc-enhancer.toml --source-root . --site _site', 1))
+        self.assertTrue(envelope(ROOT, self.candidate))
+
     def test_missing_workflow_validation_and_determinism_commands_rejected(self):
         self.migration()
         path = self.candidate / WORKFLOW

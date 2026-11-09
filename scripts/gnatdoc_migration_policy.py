@@ -141,6 +141,16 @@ def bounded_commands(actual, required, label):
     require(observed == expected, label + ": missing, reordered or unauthorized command")
 
 
+def command_sequence(actual, required, optional, label):
+    """Require ordered effects while permitting bounded extra integrity checks."""
+    shlex.split(actual, comments=True)
+    observed = shell_commands(actual)
+    require(all(command in required or command in optional for command in observed),
+            label + ": unauthorized command")
+    require(tuple(command for command in observed if command not in optional) == required,
+            label + ": missing or reordered command")
+
+
 def generator_contract(policy, candidate):
     """Named native gates plus a bounded integration program, not file equality.
 
@@ -168,10 +178,14 @@ def generator_contract(policy, candidate):
 "$python" -m ada_gnatdoc_enhancer verify --config docs/gnatdoc-enhancer.toml --source-root . --site _site
 "$python" scripts/validate_docs.py _site --core "$core"
 '''
-    # Staging may precede acquisition or sit immediately before enhancement;
-    # currently the bounded recipe deliberately places it at the latter boundary.
-    bounded_commands("\n".join(middle), STAGING + enhancement,
-                     "production generator integration")
+    # Extra byte checks are capabilities, not arbitrary shell snippets. This
+    # admits materially different staging implementations without authorizing
+    # a new candidate helper or weakening the independent staging/output gate.
+    command_sequence("\n".join(middle), shell_commands(STAGING + enhancement), {
+        'cmp -- "src/$name" "qualification-public/$name"',
+        'test -f "qualification-public/$name"',
+        'test ! -L "qualification-public/$name"',
+    }, "production generator integration")
 
 
 def workflow_contract(reviewed, actual):
@@ -201,7 +215,13 @@ def workflow_contract(reviewed, actual):
     expected, _ = extract(migration_workflow(reviewed))
     require(skeleton == expected, "production documentation workflow security structure differs")
     for name, required in STEP_BODIES.items():
-        bounded_commands(bodies[name], required, "production documentation workflow " + name)
+        optional = {
+            'test ! -L /tmp/' + WHEEL,
+            '"$DOC_PYTHON" -m ada_gnatdoc_enhancer inventory --config docs/gnatdoc-enhancer.toml --source-root . --site _site',
+            '"$DOC_PYTHON" -m ada_gnatdoc_enhancer verify --config docs/gnatdoc-enhancer.toml --source-root . --site _site',
+        } - set(shell_commands(required))
+        command_sequence(bodies[name], shell_commands(required), optional,
+                         "production documentation workflow " + name)
 
 
 def staged_public(source):

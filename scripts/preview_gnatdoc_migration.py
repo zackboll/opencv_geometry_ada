@@ -18,7 +18,7 @@ from gnatdoc_migration_policy import (
     ROOT, CONFIGURATION, WORKFLOW, installed_wheel, migration_generator,
     staged_public, validate_migration_site, envelope, regular, git, require,
 )
-from additive_gnatdoc_policy import policy_identity, coverage
+from additive_gnatdoc_policy import policy_identity, candidate_rules, exact_snapshot, coverage
 from compare_shared_gnatdoc_geometry import file_hashes, write
 from qualify_shared_gnatdoc_shadow import Session, CORE, EXAMPLES, native, aunit_results
 
@@ -67,6 +67,8 @@ def run(args):
         report["candidate"] = git(source, "rev-parse", "HEAD").decode().strip()
         report["candidate_tree"] = git(source, "rev-parse", "HEAD^{tree}").decode().strip()
         report["files"] = sorted(envelope(ROOT, source))
+        report["source_rules"] = candidate_rules(ROOT, source)
+        exact_snapshot(source, source, report["candidate"])
         for target, pin in ((source, "../core"), (source / "tests", "../../core")):
             session.run(["alr", "-n", "pin", "opencv_core", "--use=" + pin], target)
         env = {"DOC_PYTHON": sys.executable, "GNATDOC_PREFIX": str(args.gnatdoc_prefix)}
@@ -110,6 +112,7 @@ def run(args):
         report["examples"] = 6
         output = session.run(["alr", "-n", "run"], source / "tests")
         report["aunit"] = aunit_results(source, output)
+        exact_snapshot(source, source, report["candidate"], pins=True)
         session.run([sys.executable, "-m", "unittest", "-v", "test_migration_preview"], ROOT,
                     env={"PYTHONPATH": str(ROOT / "scripts"),
                          "GEOMETRY_MIGRATION_PREVIEW": str(args.workspace)})
