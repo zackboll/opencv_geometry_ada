@@ -1,0 +1,11 @@
+{
+  "branch": "policy/geometry-gnatdoc-003-core-bookmarks",
+  "head": "294df5a",
+  "task_specific_commits": 0,
+  "pull_request": null,
+  "evidence_workspace": "/home/zboll/git/geometry-gnatdoc-003-evidence",
+  "inventory_path": "/home/zboll/git/geometry-gnatdoc-003r1-evidence/preserved-003-inventory.json",
+  "inventory_sha256": "95bbb1e4ea03dec0f25386c0498eac90e9c2cb19577bb7de4f200bb2b9c66b71",
+  "preserved_files": 7578,
+  "active_qualification_processes_at_start": []
+}

@@ -211,8 +211,9 @@ jobs:
           path: geometry/_site/
 
   current-trust:
-    # Stable build check stays; publication additionally requires complete
-    # exact-candidate successor qualification, never the offline artifact.
+    # PR policy qualification belongs to the independent additive-policy workflow.
+    # Main push/manual publication still requires exact-candidate qualification.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     uses: ./.github/workflows/documentation-additive-policy.yml
 
   deploy:

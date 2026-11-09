@@ -221,7 +221,7 @@ def authored_contract(candidate, pristine):
     return payload, config
 
 
-def current_output(source, pristine, shadow, core):
+def current_output(source, pristine, shadow, core, published_types=None):
     """Independent source matcher/resolver; no shared-tool inventory authority."""
     oracle = entries(pristine / "api", source / "src", source / "docs/api-categories.json")
     native, rendered = sections(pristine), sections(shadow)
@@ -263,7 +263,13 @@ def current_output(source, pristine, shadow, core):
             href = destination["page"] + "#" + destination["anchor"]
             if external:
                 href = f'https://core.invalid/{core["revision"]}/api/' + href
+                if published_types is not None:
+                    require(identity in published_types, "unqualified published Core identity")
+                    href = published_types[identity]["url"]
             require(actual[position]["href"] == href, "wrong native type destination")
+            require(actual[position]["target"] ==
+                    ("_top" if external and published_types is not None else None),
+                    "wrong type navigation target")
             rows.append({"package": owner, "declaration": name, "native_page": page,
                          "native_anchor": anchor, "offset": position[0], "end": position[1],
                          "referenced_type": identity, "shared": actual[position],

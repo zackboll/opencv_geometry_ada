@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -197,13 +199,90 @@ def installed_wheel(path):
     return {"version": VERSION, "wheel_sha256": WHEEL_SHA256}
 
 
+def direct_configuration(source, pristine, published):
+    """Finite policy-owned configuration; candidate URLs cannot grant permission."""
+    from additive_gnatdoc_policy import authored_contract
+    from qualify_current_core import REFERENCED_TYPES
+    require(set(published) == REFERENCED_TYPES, "unqualified Core type inventory")
+    authored, shadow = authored_contract(source, pristine)
+    config = tomllib.loads(shadow.decode())
+    config.pop("external_dependencies")
+    config["presentation"].update({
+        "external_type_target": "_top",
+        "theme_css_source": "docs/assets/gnatdoc-theme.css",
+        "theme_css_sha256": hashlib.sha256(regular(ROOT / "docs/assets/gnatdoc-theme.css")).hexdigest(),
+    })
+    config["guides"]["manifest"] = "docs/gnatdoc-authored.json"
+    config["security"]["external_hosts"] = ["github.com", "zackboll.github.io"]
+    config["external_types"] = {identity: proof["url"] for identity, proof in sorted(published.items())}
+    return authored, config
+
+
+def validate_migration_site(source, pristine, site, core, core_native, publisher=None):
+    """Selected-base validation, never candidate validate_docs.py or output authority.
+
+    Native bytes come from the independently generated input, not presentation.json.
+    Reconstruct with the integrity-checked official wheel and finite configuration,
+    then independently resolve every occurrence/overload and recheck publication.
+    The optional transport is for offline negative tests, not a policy CLI input.
+    """
+    import os
+    import shutil
+    from additive_gnatdoc_policy import current_output, coverage, EVIDENCE
+    from qualify_current_core import authority, GitHubCore, provenance, verify_publication
+    installed_wheel(Path(os.environ["PRODUCTION_DOC_WHEEL"]))
+    approved = authority(core, core_native)
+    with tempfile.TemporaryDirectory(prefix="geometry-direct-") as folder:
+        work = Path(folder)
+        publisher = publisher or GitHubCore(work / "witness")
+        before = provenance(publisher)
+        published, _, _ = verify_publication(publisher, before, approved, work / "publisher")
+        authored, expected = direct_configuration(source, pristine, published)
+        require(regular(source / "docs/gnatdoc-authored.json") == authored,
+                "migration authored contract differs")
+        require(tomllib.loads(regular(source / "docs/gnatdoc-enhancer.toml").decode()) == expected,
+                "migration configuration is not the finite direct-link policy")
+        for name in ("opencv-geometry.ads", "opencv-geometry-subdiv2d.ads"):
+            require(regular(source / "qualification-public" / name) == regular(source / "src" / name),
+                    "migration staged source differs")
+        from ada_gnatdoc_enhancer.config import load
+        from ada_gnatdoc_enhancer.pipeline import enhance, verify
+        configuration = load(source, "docs/gnatdoc-enhancer.toml")
+        reconstructed = work / "site"
+        shutil.copytree(pristine, reconstructed)
+        enhance(configuration, reconstructed)
+        from compare_shared_gnatdoc_geometry import file_hashes
+        require(file_hashes(site) == file_hashes(reconstructed),
+                "migration output differs from independent native reconstruction")
+        verify(configuration, site)
+        core_types = json.loads(regular(ROOT / EVIDENCE / "core-0.5.0-types.json"))
+        comparison = current_output(source, pristine, site, core_types, published)
+        native_output(source, pristine, site)
+        coverage(source, site, source / "obj/docs/gnatdoc.log")
+        require(before == provenance(publisher), "CORE_DEPLOYMENT_RACE: publication changed during validation")
+        return {"comparison": comparison, "publisher": before, "production_enabled": False}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--install", action="store_true")
+    for name in ("source", "pristine", "site", "core", "core-native"):
+        parser.add_argument("--" + name, type=Path)
     args = parser.parse_args()
     verify_wheel(args.wheel)
     if args.install:
         subprocess.run([sys.executable, "-m", "pip", "install", "--no-index", "--no-deps",
                         "--only-binary=:all:", "--force-reinstall", str(args.wheel)], check=True)
     print(json.dumps(installed_wheel(args.wheel), sort_keys=True))
+    paths = (args.source, args.pristine, args.site, args.core, args.core_native)
+    if any(paths):
+        require(all(paths) and not args.install, "complete independent validation paths required")
+        # Isolated Python deliberately omits script-directory imports. Add only
+        # this selected-base directory, never the candidate or its working dir.
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import os
+        os.environ["PRODUCTION_DOC_WHEEL"] = str(args.wheel.absolute())
+        result = validate_migration_site(*paths)
+        print(json.dumps({"direct_link_validation": "pass", "publisher": result["publisher"]},
+                         sort_keys=True))

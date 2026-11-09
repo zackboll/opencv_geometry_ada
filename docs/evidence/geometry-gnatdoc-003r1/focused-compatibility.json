@@ -1,0 +1,55 @@
+{
+  "native_declarations": 138,
+  "external_preserved": 104,
+  "local_preserved": 178,
+  "additional_local_constant_type_links": [
+    {
+      "offset": 37,
+      "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#a0893b8da763652282fa398e6ef799cc1bbdfc73759b02bdddfcbc104ea56c9a",
+      "identity": "opencv.geometry.affine_transform_2d",
+      "target": null,
+      "end": 56,
+      "spelling": "Affine_Transform_2D",
+      "declaration": [
+        "OpenCV.Geometry",
+        "c2a2c036a31acde9ac05af070d12fa04c52b26d9d4988e9b09eac09f8bbbfb0f"
+      ]
+    },
+    {
+      "offset": 42,
+      "href": "4f90dae6ae3d13b7eca2073a4084d7aafc29ca4b1a5df10de478124a1cd77135.html#d5b98bc1260cc18e18848a7786d3c2f516a248fe03c1a4f80dffcb2816e4c141",
+      "identity": "opencv.geometry.perspective_transform_2d",
+      "target": null,
+      "end": 66,
+      "spelling": "Perspective_Transform_2D",
+      "declaration": [
+        "OpenCV.Geometry",
+        "2a2e46a1606d4825df18a6f8fb38902eabd47d5af13b1beafbacbd411bdfb9d7"
+      ]
+    },
+    {
+      "offset": 19,
+      "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#4f4ba2bc1497150545680c01c96c8a1e137be7dae83c261885d4ca66f8e5d11e",
+      "identity": "opencv.geometry.subdiv2d.edge_id",
+      "target": null,
+      "end": 26,
+      "spelling": "Edge_Id",
+      "declaration": [
+        "OpenCV.Geometry.Subdiv2D",
+        "3c48db0c5299a605f0d26dd0ebd163b063d7ab476d41cf5919b2d64b120e564b"
+      ]
+    },
+    {
+      "offset": 21,
+      "href": "6321b5997b10c36deb354676b6e21d46f8606071335cecd36f62445f6e701534.html#dd050c3c0687b6ef8dd3fa3345b429f52beaa94e575a53319b505a97f530c9a2",
+      "identity": "opencv.geometry.subdiv2d.vertex_id",
+      "target": null,
+      "end": 30,
+      "spelling": "Vertex_Id",
+      "declaration": [
+        "OpenCV.Geometry.Subdiv2D",
+        "d569763fc23e0795e109ff3b9ca11449a1335a7cab718b146e96cd98048a6eb8"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "requestInterception": false,
+  "profiles": [
+    {
+      "width": 1280,
+      "javaScriptEnabled": true,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104
+    },
+    {
+      "width": 1280,
+      "javaScriptEnabled": false,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104
+    },
+    {
+      "width": 390,
+      "javaScriptEnabled": true,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104
+    },
+    {
+      "width": 390,
+      "javaScriptEnabled": false,
+      "types": [
+        "opencv.angle_unit",
+        "opencv.core.mat",
+        "opencv.float32_point",
+        "opencv.float32_value",
+        "opencv.float64_value",
+        "opencv.point_array",
+        "opencv.rect",
+        "opencv.rotated_rect"
+      ],
+      "occurrences": 104
+    }
+  ],
+  "failures": [],
+  "status": "pass"
+}

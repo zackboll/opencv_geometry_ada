@@ -1,0 +1,6 @@
+{
+  "policy": "294df5a",
+  "candidate": "6b05ac9",
+  "rejection": "unapproved migration verification files: ['scripts/additive_gnatdoc_policy.py', 'scripts/gnatdoc_migration_policy.py', 'scripts/qualify_additive_gnatdoc.py', 'scripts/qualify_current_core.py', 'scripts/qualify_production_core_links.py', 'scripts/test_current_core.py', 'scripts/test_native_core_links_browser.cjs', 'scripts/test_native_core_policy.py']",
+  "approval": false
+}
