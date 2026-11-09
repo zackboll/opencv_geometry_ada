@@ -5,6 +5,7 @@ import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -123,7 +124,12 @@ def shell_commands(text):
     Unknown shell syntax fails closed; no candidate helper/download is allowed.
     """
     text = text.replace("\\\n", " ")
-    return tuple(" ".join(line.split()) for line in text.splitlines()
+    # Preserve quoted whitespace/expansion exactly. shlex is only a syntax
+    # check: it must not erase quote boundaries used by the shell.
+    def normalized(line):
+        return re.sub(r'''"(?:\\.|[^"\\])*"|'[^']*'|[ \t]+''',
+                      lambda m: " " if m[0][0] in " \t" else m[0], line.strip())
+    return tuple(normalized(line) for line in text.splitlines()
                  if line.strip() and not line.lstrip().startswith("#"))
 
 

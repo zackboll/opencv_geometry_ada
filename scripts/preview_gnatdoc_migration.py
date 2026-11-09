@@ -9,15 +9,13 @@ import argparse
 import json
 import os
 from pathlib import Path
-import shutil
-import subprocess
 import sys
 
 from gnatdoc_migration_policy import (
     ROOT, CONFIGURATION, WORKFLOW, installed_wheel, migration_generator,
     staged_public, validate_migration_site, envelope, regular, git, require,
 )
-from additive_gnatdoc_policy import policy_identity, inventory, coverage
+from additive_gnatdoc_policy import policy_identity, coverage
 from compare_shared_gnatdoc_geometry import file_hashes, write
 from qualify_shared_gnatdoc_shadow import Session, CORE, EXAMPLES, native, aunit_results
 

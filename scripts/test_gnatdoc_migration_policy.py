@@ -10,7 +10,7 @@ from gnatdoc_migration_policy import (
     ROOT, WHEEL, MIGRATION, CONFIGURATION, TEST_REPAIRS, WORKFLOW,
     envelope, migration_workflow, migration_generator, verify_wheel, native_output,
     verify_current_commit,
-    installed_wheel, staged_public, PUBLIC, generator_contract, workflow_contract,
+    installed_wheel, staged_public, PUBLIC,
 )
 from additive_gnatdoc_policy import (
     candidate_rules, historical_inputs, inventory, compatible, exact_snapshot, coverage,
@@ -130,6 +130,20 @@ class MigrationPolicyTests(unittest.TestCase):
                 self.assertIn(token, original)
                 path.write_text(original.replace(token, 'UNAUTHORIZED', 1))
                 with self.assertRaisesRegex(ValueError, 'generator'):
+                    envelope(ROOT, self.candidate)
+        path.write_text(original)
+
+    def test_missing_workflow_validation_and_determinism_commands_rejected(self):
+        self.migration()
+        path = self.candidate / WORKFLOW
+        original = path.read_text()
+        for token in ('sh scripts/generate_docs.sh', 'diff -r /tmp/documentation-first _site',
+                      '-m ada_gnatdoc_enhancer enhance', '-m ada_gnatdoc_enhancer verify',
+                      'python -I ../build-policy/scripts/gnatdoc_migration_policy.py'):
+            with self.subTest(token=token):
+                self.assertIn(token, original)
+                path.write_text(original.replace(token, 'UNAUTHORIZED', 1))
+                with self.assertRaisesRegex(ValueError, 'workflow'):
                     envelope(ROOT, self.candidate)
         path.write_text(original)
 
