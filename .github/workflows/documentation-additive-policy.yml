@@ -122,6 +122,7 @@ jobs:
             flags+=(--compatibility-workspace /tmp/old-policy)
           fi
           python3 -I "$orchestration/scripts/documentation_policy_transition.py" \
+            --expected-mode "$EXPECTED_MODE" \
             --policy-checkout "$GITHUB_WORKSPACE/policy" \
             --repository "$GITHUB_WORKSPACE/candidate" --candidate "$CANDIDATE_SHA" \
             --event "$GITHUB_EVENT_NAME" --event-path "$GITHUB_EVENT_PATH" "${flags[@]}"
@@ -231,6 +232,7 @@ jobs:
             --core "$GITHUB_WORKSPACE/core" --gnatdoc-prefix /tmp/gnatdoc \
             --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl \
             --playwright-module /tmp/doc-browser/node_modules/playwright
+          cp -a /tmp/proposed-review/current/source/_site _site
           /tmp/production-doc-tools/bin/python -m unittest discover -s scripts -p 'test_*.py' -v
           /tmp/production-doc-tools/bin/python -m unittest discover -s tests/ci -v
           node --test tests/ci/test_policy_provenance.cjs

@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-from documentation_policy_transition import accepted, inventory, protected, route
+from documentation_policy_transition import accepted, compatibility, inventory, protected, route
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -105,6 +105,42 @@ class TransitionTests(unittest.TestCase):
                      "docs/evidence/forged.json", "docs/requirements.txt", "alire.toml",
                      "docs_api.gpr", "docs/shared-gnatdoc-shadow.toml"):
             self.assertTrue(protected(name), name)
+
+
+class IndependentCompatibilityTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.folder = Path(self.temp.name)
+        self.base = "23701d526bd0870de5fb126c2ecdd0b9c24913e2"
+        self.policy = self.folder / "policy"
+        self.candidate = self.folder / "candidate"
+        for path, revision in ((self.policy, self.base), (self.candidate, "HEAD")):
+            subprocess.run(["git", "clone", "--quiet", "--shared", str(ROOT), str(path)], check=True)
+            subprocess.run(["git", "-C", str(path), "checkout", "--quiet", "--detach", revision], check=True)
+        self.selection = {"base": self.base, "candidate": subprocess.check_output(
+            ["git", "-C", str(self.candidate), "rev-parse", "HEAD"], text=True).strip()}
+
+    def test_old_rejection_is_evidence_not_candidate_approval(self):
+        result = compatibility(self.candidate, self.selection, self.folder / "analysis", self.policy)
+        self.assertEqual(result["old_policy"]["status"], "rejected")
+        self.assertNotEqual(result["old_policy"]["exit"], 0)
+        self.assertFalse(result["policy_approved"])
+        self.assertTrue(result["non_deployable"])
+        self.assertNotEqual(result["projection"], self.selection["candidate"])
+
+    def test_dependency_and_source_failures_remain_blocking_in_maintenance(self):
+        attacks = {"docs/requirements.txt": lambda b: b + b"evil-package==1\n",
+                   "src/opencv-geometry.ads": lambda b: b.replace(b"Contour", b"Forged_Contour", 1)}
+        for index, (name, mutate) in enumerate(attacks.items()):
+            path = self.candidate / name
+            before = path.read_bytes()
+            try:
+                path.write_bytes(mutate(before))
+                with self.assertRaises((ValueError, subprocess.CalledProcessError)):
+                    compatibility(self.candidate, self.selection, self.folder / str(index), self.policy)
+            finally:
+                path.write_bytes(before)
 
 
 if __name__ == "__main__":
