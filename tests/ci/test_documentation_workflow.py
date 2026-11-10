@@ -178,6 +178,8 @@ class CurrentDocumentationRoutingTests(unittest.TestCase):
         self.assertIn("pip install -r baseline/docs/requirements.txt", self.policy)
         preview = self.policy.split("      - name: Execute real production migration preview\n", 1)[1]
         self.assertIn("GH_TOKEN: ${{ github.token }}", preview.split("      - name:", 1)[0])
+        campaign = self.policy.split("      - name: One historical, exact-current and synthetic technical campaign\n", 1)[1]
+        self.assertIn("GH_TOKEN: ${{ github.token }}", campaign.split("      - name:", 1)[0])
 
     def test_single_technical_acceptance_and_pages_event_matrix(self):
         self.assertEqual(self.workflow.count("name: Documentation policy acceptance"), 1)

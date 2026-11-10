@@ -100,6 +100,7 @@ jobs:
           POLICY_SHA: ${{ steps.selection.outputs.policy_revision }}
           PRODUCTION_DOC_PYTHON: /tmp/production-doc-tools/bin/python
           PRODUCTION_DOC_WHEEL: /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
+          GH_TOKEN: ${{ github.token }}
         run: |
           flags=()
           if test "$POLICY_SHA" = "$CANDIDATE_SHA"; then
