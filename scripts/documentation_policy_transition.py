@@ -141,14 +141,11 @@ def main():
     parser.add_argument("--event", required=True)
     parser.add_argument("--event-path", type=Path, required=True)
     parser.add_argument("--policy-checkout", type=Path, required=True)
-    parser.add_argument("--expected-mode", choices=("ordinary", "maintenance"))
     parser.add_argument("--compatibility-workspace", type=Path)
     args = parser.parse_args()
     require(git(args.repository, "rev-parse", "HEAD") == args.candidate, "candidate checkout differs")
     require(not git(args.repository, "status", "--porcelain"), "candidate checkout dirty")
     result = route(args.repository, args.event, json.loads(args.event_path.read_text()), args.candidate)
-    if args.expected_mode:
-        require(result["mode"] == args.expected_mode, "independent changed-file inventories disagree")
     require(git(args.policy_checkout, "rev-parse", "HEAD") == result["base"], "independent base differs")
     if args.compatibility_workspace:
         result["compatibility"] = compatibility(args.repository, result, args.compatibility_workspace,

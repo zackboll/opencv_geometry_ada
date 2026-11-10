@@ -174,6 +174,8 @@ class CurrentDocumentationRoutingTests(unittest.TestCase):
         self.assertIn("preview_gnatdoc_migration.py", self.policy)
         self.assertEqual(self.policy.count("python scripts/run_additive_gnatdoc_review.py"), 1)
         self.assertNotIn("/tmp/old-policy/projection", self.policy)
+        self.assertFalse((ROOT / ".github/workflows/documentation-shared-shadow.yml").exists())
+        self.assertIn("pip install -r baseline/docs/requirements.txt", self.policy)
 
     def test_single_technical_acceptance_and_pages_event_matrix(self):
         self.assertEqual(self.workflow.count("name: Documentation policy acceptance"), 1)

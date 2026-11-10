@@ -69,6 +69,12 @@ class TransitionTests(unittest.TestCase):
         result = self.selection(self.commit())
         self.assertEqual(result["mode"], "ordinary")  # strict qualification must reject it
 
+    def test_ordinary_ada_implementation_retains_strict_base(self):
+        self.write("src/ordinary.adb", "passing implementation fixture\n")
+        result = self.selection(self.commit())
+        self.assertEqual(result["mode"], "ordinary")
+        self.assertEqual(result["policy_revision"], self.base)
+
     def test_stale_or_short_candidate_is_rejected(self):
         self.write("docs/documentation.md", "new\n")
         head = self.commit()
@@ -158,6 +164,19 @@ class IndependentCompatibilityTests(unittest.TestCase):
             finally:
                 subprocess.run(["git", "-C", str(self.candidate), "reset", "--hard",
                                 self.selection["candidate"]], check=True, capture_output=True)
+
+    def test_unexpected_baseline_crash_is_not_expected_rejection(self):
+        from unittest.mock import patch
+        run = subprocess.run
+
+        def crash(argv, **kwargs):
+            if "-c" in argv and kwargs.get("capture_output"):
+                return subprocess.CompletedProcess(argv, 1, "", "RuntimeError: verifier crashed")
+            return run(argv, **kwargs)
+
+        with patch("documentation_policy_transition.subprocess.run", side_effect=crash):
+            with self.assertRaisesRegex(ValueError, "unexpected baseline failure"):
+                compatibility(self.candidate, self.selection, self.folder / "crash", self.policy)
 
 
 if __name__ == "__main__":

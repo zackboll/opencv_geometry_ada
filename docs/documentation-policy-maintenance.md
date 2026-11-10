@@ -36,6 +36,10 @@ qualification. Diagnostic artifacts never authorize changes or substitute for
 executed tests. The existing legacy `--policy-review` driver switch only permits
 technical self-testing; it requires no review or external configuration.
 
+The former standalone historical-shadow PR workflow is removed: the same
+immutable historical qualification, original browser suites, adversarial
+mutations and recorder already execute inside this single technical campaign.
+
 ## Publication and security boundary
 
 PR jobs use read-only credentials with checkout credential persistence disabled.
