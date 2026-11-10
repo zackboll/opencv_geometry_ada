@@ -143,7 +143,9 @@ class IndependentCompatibilityTests(unittest.TestCase):
         self.assertNotEqual(result["old_policy"]["exit"], 0)
         self.assertNotIn("policy_approved", result)
         self.assertTrue(result["non_deployable"])
-        self.assertNotEqual(result["projection"], self.selection["candidate"])
+        tree = subprocess.check_output(["git", "-C", str(self.candidate), "rev-parse", "HEAD^{tree}"],
+                                       text=True).strip()
+        self.assertNotEqual(result["projection_tree"], tree)
 
     def test_dependency_and_source_failures_remain_blocking_in_maintenance(self):
         attacks = {"docs/requirements.txt": lambda b: b + b"evil-package==1\n",

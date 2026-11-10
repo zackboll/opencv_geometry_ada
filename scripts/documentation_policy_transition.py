@@ -114,17 +114,7 @@ def compatibility(repository, selection, workspace, policy=ROOT):
     git(projection, "restore", "--source=" + selection["base"], "--staged", "--worktree", "--", *paths)
     checked = rules(projection)
     require(checked.returncode == 0, "old-policy source/security compatibility failed: " + checked.stderr)
-    tree = git(projection, "write-tree")
-    env = {**os.environ, "GIT_AUTHOR_NAME": "Compatibility projection",
-           "GIT_COMMITTER_NAME": "Compatibility projection",
-           "GIT_AUTHOR_EMAIL": "projection@invalid.example",
-           "GIT_COMMITTER_EMAIL": "projection@invalid.example",
-           "GIT_AUTHOR_DATE": "2026-11-10T00:00:00Z", "GIT_COMMITTER_DATE": "2026-11-10T00:00:00Z"}
-    revision = subprocess.check_output([
-        "git", "-C", str(projection), "commit-tree", tree, "-p", selection["base"]],
-        input="NON-DEPLOYABLE old-policy compatibility projection\n", text=True, env=env).strip()
-    git(projection, "reset", "--hard", revision)
-    report.update({"projection": revision, "projection_tree": tree,
+    report.update({"projection_tree": git(projection, "write-tree"),
                    "restored_paths": list(paths), "baseline_compatibility": "pass"})
     (workspace / "compatibility.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
