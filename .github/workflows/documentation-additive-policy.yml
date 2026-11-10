@@ -117,6 +117,7 @@ jobs:
         working-directory: candidate
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           /tmp/production-doc-tools/bin/python scripts/preview_gnatdoc_migration.py \
             --workspace /tmp/production-preview --policy-revision "$CANDIDATE_SHA" \
@@ -127,6 +128,7 @@ jobs:
         working-directory: candidate
         env:
           GEOMETRY_MIGRATION_PREVIEW: /tmp/production-preview
+          GH_TOKEN: ${{ github.token }}
         run: |
           cp -a /tmp/technical-review/current/source/_site _site
           if test ! -d /tmp/production-preview; then
