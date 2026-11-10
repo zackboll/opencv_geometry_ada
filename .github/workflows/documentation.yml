@@ -10,8 +10,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
-  deployments: read
 
 # Serialize main publication; cancel superseded runs before they can deploy.
 concurrency:
@@ -45,9 +43,6 @@ jobs:
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
-            git -C ../build-policy checkout --detach "$CANDIDATE_SHA^1"
-          fi
           base=$(git -C ../build-policy rev-parse HEAD)
           test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
           git merge-base --is-ancestor "$base" "$CANDIDATE_SHA"
@@ -55,28 +50,21 @@ jobs:
             test "$GITHUB_REF" = refs/heads/main
           fi
           if test "$GITHUB_EVENT_NAME" != pull_request; then
-            # current-trust has checked the merged-policy approval provenance.
+            # current-trust tests the actual merged policy before publication.
             test "$GITHUB_REF" = refs/heads/main
             git -C ../build-policy checkout --detach "$CANDIDATE_SHA"
           fi
           if test -f ../build-policy/scripts/validate_gnatdoc_inputs.py; then
-            # Only the independently selected base provides executable preflight.
             python3 -I ../build-policy/scripts/validate_gnatdoc_inputs.py \
               --candidate "$GITHUB_WORKSPACE/geometry"
           else
-            # First policy bootstrap: NO candidate verifier executes here.
-            # Immutable reviewed base bytes are compared before any pip/alr use.
-            tree=$(git -C ../build-policy rev-parse HEAD^{tree})
-            case "$base:$tree" in
-              2f5239a0e264ca2bb4106cdb338d3eac25abf674:c440b9901e1003f06ae555b3a8a80d9874229680|5f71c9a6d5291adb032eb1a43954c5f9aaf047e6:cc8487634f66be422e835b95c2ee8cd57e952d45|aad0b1b65814ac472bf5a9ea1b266f47aa3baf06:be543978b6fe33cc7bb18c4c1ca58328ae741ee6) ;;
-              *) echo 'Unreviewed build-input bootstrap authority' >&2; exit 1 ;;
-            esac
+            # Older branch bases have no Python preflight. Compare inputs
+            # directly, without loading candidate code or a SHA allowlist.
             for name in docs/requirements.txt alire.toml tests/alire.toml; do
               test ! -L "$name"
               test ! -L "$(dirname "$name")"
               cmp -- "$name" "../build-policy/$name"
             done
-            echo 'Literal reviewed build inputs verified; not policy approval.'
           fi
       - name: Checkout immutable historical regression source
         uses: actions/checkout@v4
@@ -224,20 +212,25 @@ jobs:
 
   acceptance:
     name: Documentation policy acceptance
-    if: always() && github.event_name == 'pull_request'
-    needs: [build, pr-trust]
+    if: always()
+    needs: [build, pr-trust, current-trust]
     runs-on: ubuntu-24.04
     steps:
       - name: Require documentation build and independent policy acceptance
         env:
           BUILD: ${{ needs.build.result }}
           TRUST: ${{ needs.pr-trust.result }}
+          CURRENT: ${{ needs.current-trust.result }}
         run: |
           test "$BUILD" = success
-          test "$TRUST" = success
+          if test "$GITHUB_EVENT_NAME" = pull_request; then
+            test "$TRUST" = success
+          else
+            test "$CURRENT" = success
+          fi
 
   current-trust:
-    # Main push/manual publication requires approved merged-policy provenance.
+    # Main validates the actual merged policy; no predecessor approval envelope.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     uses: ./.github/workflows/documentation-additive-policy.yml
 

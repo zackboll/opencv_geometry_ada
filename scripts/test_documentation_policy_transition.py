@@ -47,7 +47,7 @@ class TransitionTests(unittest.TestCase):
         result = self.selection(head, labels=[{"name": "policy-approved"}])
         self.assertEqual(result["mode"], "ordinary")
         self.assertEqual(result["policy_revision"], self.base)
-        self.assertFalse(result["policy_approved"])
+        self.assertNotIn("policy_approved", result)
 
     def test_verifier_substitution_cannot_claim_ordinary(self):
         self.write("scripts/verifier.py", "pass\n")
@@ -86,19 +86,29 @@ class TransitionTests(unittest.TestCase):
         result = route(self.repo, "push", {"ref": "refs/heads/main", "before": self.base,
                                            "after": merge}, merge)
         self.assertEqual(result["mode"], "maintenance")
-        self.assertEqual(result["policy_revision"], self.base)
-        self.assertFalse(result["policy_approved"])
+        self.assertEqual(result["policy_revision"], merge)
+        self.assertNotIn("policy_approved", result)
 
     def test_all_gate_results_fail_closed(self):
         states = ("success", "failure", "cancelled", "skipped", "pending", "rejected")
         for technical in states:
-            for approval in states:
-                for build in states:
-                    self.assertEqual(accepted("maintenance", technical, approval, build),
-                                     technical == approval == build == "success")
-                    self.assertEqual(accepted("ordinary", technical, approval, build),
-                                     technical == build == "success" and approval == "skipped")
-        self.assertFalse(accepted("candidate-approved", "success", "success", "success"))
+            for build in states:
+                self.assertEqual(accepted(build, technical), build == technical == "success")
+
+    def test_policy_change_selects_proposed_technical_tests_without_authorization(self):
+        self.write("scripts/verifier.py", "new legitimate implementation\n")
+        head = self.commit()
+        result = self.selection(head)
+        self.assertEqual(result["mode"], "maintenance")
+        self.assertEqual(result["policy_revision"], head)
+        self.assertNotIn("policy_approved", result)
+
+    def test_main_ordinary_and_manual_use_actual_merged_policy(self):
+        self.write("src/ordinary.adb", "passing implementation fixture\n")
+        head = self.commit()
+        for event, payload in (("push", {"ref": "refs/heads/main", "before": self.base, "after": head}),
+                               ("workflow_dispatch", {"ref": "refs/heads/main"})):
+            self.assertEqual(route(self.repo, event, payload, head)["policy_revision"], head)
 
     def test_security_inputs_and_policy_dependencies_are_protected(self):
         for name in ("scripts/new.py", ".github/scripts/new.cjs", "tests/ci/test_gate.py",
@@ -125,7 +135,7 @@ class IndependentCompatibilityTests(unittest.TestCase):
         result = compatibility(self.candidate, self.selection, self.folder / "analysis", self.policy)
         self.assertEqual(result["old_policy"]["status"], "rejected")
         self.assertNotEqual(result["old_policy"]["exit"], 0)
-        self.assertFalse(result["policy_approved"])
+        self.assertNotIn("policy_approved", result)
         self.assertTrue(result["non_deployable"])
         self.assertNotEqual(result["projection"], self.selection["candidate"])
 

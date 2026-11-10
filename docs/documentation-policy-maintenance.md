@@ -1,118 +1,73 @@
-# Documentation policy maintenance (GEOMETRY-DOC-CI-STABILIZE-001)
+# Documentation technical CI
 
-## Trust modes
+`Documentation policy acceptance` is the single acceptance check. It requires
+the documentation build and technical qualification to succeed. There are no
+required reviewers, approval environments, approval API calls, bootstrap
+authorization records or branch-protection prerequisites.
 
-The independently checked-out PR base computes a NUL-delimited, no-renames
-Git diff against the exact event head. Both sides of a rename, removals, new
-files, scripts, workflow helpers, CI tests, evidence, assets, build inputs and
-documentation baselines are included. Labels, uploaded manifests and proposed
-policy configuration do not choose a mode. Both technical jobs recompute the
-inventory; no GitHub file-list truncation is used for PR mode selection.
+## Qualification
 
-Ordinary candidates run the existing independent base-policy campaign unchanged:
-historical qualification, actual source/native comparison, examples, AUnit,
-coverage, publisher authentication, browser matrices and negative mutations.
+The event's exact candidate and base commits determine a NUL-delimited Git diff
+with renames disabled. Script, workflow, CI-test, evidence, asset, configuration
+and build-input changes select policy maintenance. Labels and uploaded manifests
+do not select the path.
 
-Protected candidates run a separate **non-deployable** maintenance qualification:
+- **Ordinary PRs:** run the existing strict, independently checked-out base-policy
+  campaign against the actual candidate.
+- **Policy changes:** run independent baseline input/source compatibility and
+  security tests, then one proposed-policy campaign. A disposable source
+  compatibility projection restores baseline verifier/workflow/test bytes;
+  requirements, historical evidence, assets and warning/coverage baselines are
+  not replaced. Only known old-envelope rejection is diagnostic; unexpected
+  baseline failures or projected source/security regressions remain blocking.
+  Base-owned negative test bytes also challenge proposed verifier modules.
+- **Production preview:** policy changes execute the real official-wheel
+  migration preview, deterministic native generation/reconstruction, publisher
+  and Core link validation, coverage, compiled examples, AUnit, output mutations
+  and browser matrices. Proposed tests run on actual generated documentation.
+- **Main:** qualify its actual merged policy and source, not the old policy's
+  prohibition on replacing verifier files. No commit/tree bootstrap allowlist or
+  approval-history audit is involved.
 
-1. Record the actual old-policy verdict, exit code and diagnostic in
-   `compatibility.json`. Rejection is evidence, **not a passed old-policy test**.
-2. Build a disposable compatibility projection using the proposed source and
-   old verifier/workflow/CI-test bytes. Dependency inputs, historical evidence,
-   assets and baselines are **not** replaced. Independent old-policy rules and
-   the complete old-policy executable campaign must pass on this projection.
-   Its commit/tree are recorded; it is not the PR candidate or a release.
-3. Challenge proposed modules with base-owned negative test bytes. Execute
-   proposed-policy historical/current/synthetic campaigns and negative mutations,
-   then the released-wheel executable production preview and actual-site attacks.
-   No test changes or candidate-written JSON establish approval.
-4. Require the separately configured maintainer environment. That job checks out
-   **no source**, executes no candidate code, and receives no write permissions.
-5. Verify GitHub's approval history and live exact head/base, not a local approval
-   file. The stable `Documentation policy acceptance` PR check also requires the
-   documentation `build`; failure, cancellation, rejected approval or a skipped
-   protected gate cannot produce acceptance.
+There is one historical/current/synthetic campaign per qualification job, not
+separate full baseline and proposed campaigns. The baseline static compatibility
+and negative-test checks are deliberately separate from proposed executable
+qualification. Diagnostic artifacts never authorize changes or substitute for
+executed tests. The existing legacy `--policy-review` driver switch only permits
+technical self-testing; it requires no review or external configuration.
 
-There is no automatic approval, blanket failure suppression or Pages artifact in
-the maintenance workflow. A deliberately malicious replacement verifier must
-still face independent old-policy source qualification, old negative tests and
-explicit human review. CI is not a sandbox for native code: these jobs use
-disposable GitHub-hosted runners, read-only tokens and no environment secrets.
+## Publication and security boundary
 
-This intentionally does not authorize new dependencies or rewrite historical
-trust anchors. Such a change failing independent compatibility requires a
-separate, explicitly reviewed contract correction, not an unrestricted allowlist.
+PR jobs use read-only credentials with checkout credential persistence disabled.
+No privileged `pull_request_target` execution or blanket failure suppression is
+used. Official enhancer wheel digest/installed-byte verification, pinned Core
+sources, native declarations/destinations, coverage, warning, browser and security
+checks remain blocking.
 
-## Main publication
+Pages is main-only. Main's build waits for successful current qualification.
+`deploy.needs: [build, current-trust]` is preserved; failure, cancellation or skip
+of either prerequisite blocks deployment. Only the deployment job receives Pages
+and OIDC write permissions. Its existing `github-pages` environment is the Pages
+publication target, not a reviewer gate introduced by this change.
 
-`current-trust` runs before main's build. Its base-owned metadata verifier audits
-first-parent transitions back to authorized contract merge
-`23701d526bd0870de5fb126c2ecdd0b9c24913e2` (PR #63, reviewed head
-`0007f8d557aae51593560675b96c161542348164`, tree
-`04363fb712f15514f7ba11909c595176e4907b62`). For later protected transitions it
-requires a two-parent merge, an exact-head merged PR, a successful documentation
-workflow including technical qualification, environment approval and stable
-acceptance, approval before merge, and no protected merge-only substitutions.
-Missing/expired API records, truncation, direct protected pushes, rejected reviews,
-superseded main and unauthorized transitions fail closed. Keep workflow records
-for this audit; deleting them can intentionally block later publication.
+These are technical tests, not a sandbox or a guarantee against arbitrary
+malicious workflow replacements. Untrusted native/candidate code runs on
+disposable read-only-token runners without publication secrets. No repository
+reviewer/protection configuration is necessary for green CI.
 
-Only after that check does qualification/build use the approved merged policy.
-`deploy.needs: [build, current-trust]`, the main-only Pages guards, deployment
-environment, Pages permissions and deployment action are preserved. Deployment
-action failures remain failures. No Pages deployment is part of this task.
+## Focused reproduction
 
-## Required external configuration — NOT configured by this PR
-
-Verified at task resumption: the only environment was `github-pages`; main had
-neither branch protection nor repository rulesets. No configuration mutation or
-approval has been performed by the agent.
-
-An administrator must:
-
-- Create `documentation-policy-maintenance`, with explicit maintainer users as
-  required reviewers, administrator bypass disabled, and **no secrets**. Restrict
-  reviewers to administrators/maintainers. Self-review prevention is recommended
-  when another maintainer exists; no bot or workflow automatically approves.
-- Require `Documentation policy acceptance` on main, from GitHub Actions, with
-  up-to-date branches, stale approval dismissal and no merge bypass. Protect
-  workflow/policy changes with independently enforced maintainer/CODEOWNER review
-  (or an organization-required workflow pinned outside the candidate). A check
-  name alone cannot prevent a malicious PR from replacing its own workflow.
-- Require merge commits for protected transitions; squash/rebase policy merges
-  intentionally fail the publication provenance check.
-- Preserve the existing main-only `github-pages` environment restrictions.
-- Ensure read-only Actions tokens can read environment configuration and run
-  approval history. API permission failure is blocking, never assumed approval.
-
-The workflow verifies required-reviewer configuration, disabled bypass, actual
-maintainer role, live head/base and server-side approval. An absent or weak
-environment fails configuration; a correctly configured environment waits for
-approval after technical success. Skipped jobs are not enforcement.
-
-## One-time installation boundary
-
-The existing approved main lacks this orchestration. Only that literal base
-commit **and** tree permit exploratory candidate orchestration for this PR.
-The workflow itself computes the initial changed-file mode with Git. Old policy
-validators still execute from a separate clean approved base. This is not
-approval of the router, does not permit unknown bases, and does not authorize
-merging this PR. External workflow review and maintainer environment approval are
-required. After merge, subsequent runs execute orchestration from their base.
-
-## Reproduction
-
-From a clean exact commit, run:
+From a clean committed checkout:
 
 ```sh
 python3 -m unittest discover -s scripts -p test_documentation_policy_transition.py -v
 python3 -m unittest discover -s tests/ci -v
-node --test tests/ci/test_policy_provenance.cjs
 actionlint .github/workflows/documentation.yml .github/workflows/documentation-additive-policy.yml
 git diff --check
 ```
 
-Existing tool environments and SHA-bound production/historical evidence from
-PR #63 remain reusable for unchanged native, publisher, browser and adversarial
-implementations. New hosted environment approval and actual Pages failure results
-must not be inferred from local routing/API simulations. PR #58 remains untouched.
+The workflow contains the pinned tool installation and exact production-preview
+commands. Existing SHA-bound native/browser/adversarial evidence can be reused
+locally when those implementations are unchanged; hosted CI still runs the
+appropriate technical campaign for its exact candidate. No Pages deployment or
+PR #58 modification is part of CI stabilization.

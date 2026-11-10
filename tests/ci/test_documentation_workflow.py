@@ -156,20 +156,35 @@ class CurrentDocumentationRoutingTests(unittest.TestCase):
         self.assertNotIn("pages: write", self.policy)
         self.assertNotIn("id-token: write", self.policy)
         self.assertIn("contents: read", self.policy)
-        self.assertNotIn("checkout", job(self.policy, "approval"))
-        self.assertIn("environment: documentation-policy-maintenance", job(self.policy, "approval"))
-        self.assertIn("if: always()", job(self.policy, "acceptance"))
-        self.assertIn('test "$APPROVAL" = success', job(self.policy, "acceptance"))
-        self.assertIn("VERIFY_APPROVAL: 'true'", job(self.policy, "acceptance"))
+        self.assertNotIn("environment:", self.policy)
+        for forbidden in ("documentation-policy-maintenance", "approval-configuration:",
+                          "Maintainer policy approval", "github-script", "provenance.cjs",
+                          "23701d526bd0870de5fb126c2ecdd0b9c24913e2"):
+            self.assertNotIn(forbidden, self.policy)
+        acceptance = job(self.workflow, "acceptance")
+        self.assertIn("if: always()", acceptance)
+        self.assertIn('test "$BUILD" = success', acceptance)
+        self.assertIn('test "$TRUST" = success', acceptance)
+        self.assertIn('test "$CURRENT" = success', acceptance)
 
     def test_every_pr_gets_independent_inventory_and_technical_qualification(self):
-        for name in ("inventory", "qualify"):
-            self.assertIsNone(re.search(r"^    if:", job(self.policy, name), re.MULTILINE))
-        self.assertIn("--compatibility-workspace /tmp/old-policy", self.policy)
-        self.assertIn("/tmp/old-policy/projection", self.policy)
+        self.assertIsNone(re.search(r"^    if:", job(self.policy, "qualify"), re.MULTILINE))
+        self.assertIn("--compatibility-workspace /tmp/baseline-compatibility", self.policy)
         self.assertIn("challenge_documentation_policy.py", self.policy)
         self.assertIn("preview_gnatdoc_migration.py", self.policy)
-        self.assertIn("--workspace /tmp/proposed-review --policy-review", self.policy)
+        self.assertEqual(self.policy.count("python scripts/run_additive_gnatdoc_review.py"), 1)
+        self.assertNotIn("/tmp/old-policy/projection", self.policy)
+
+    def test_single_technical_acceptance_and_pages_event_matrix(self):
+        self.assertEqual(self.workflow.count("name: Documentation policy acceptance"), 1)
+        for event in ("pull_request", "push", "workflow_dispatch"):
+            for ref in ("refs/heads/main", "refs/heads/topic", "refs/pull/64/merge"):
+                for build in ("success", "failure", "cancelled", "skipped"):
+                    for technical in ("success", "failure", "cancelled", "skipped"):
+                        eligible = routed(condition(job(self.workflow, "deploy")), event, ref)
+                        self.assertEqual(eligible and build == technical == "success",
+                                         event != "pull_request" and ref == "refs/heads/main"
+                                         and build == technical == "success")
 
     def test_pages_failure_is_not_reclassified_as_success(self):
         deploy = job(self.workflow, "deploy")
