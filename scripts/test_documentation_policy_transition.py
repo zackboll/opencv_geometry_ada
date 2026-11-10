@@ -131,7 +131,8 @@ class IndependentCompatibilityTests(unittest.TestCase):
 
     def test_dependency_and_source_failures_remain_blocking_in_maintenance(self):
         attacks = {"docs/requirements.txt": lambda b: b + b"evil-package==1\n",
-                   "src/opencv-geometry.ads": lambda b: b.replace(b"Contour", b"Forged_Contour", 1)}
+                   "src/opencv-geometry.ads": lambda b: b.replace(
+                       b"subtype Contour is", b"subtype Forged_Contour is", 1)}
         for index, (name, mutate) in enumerate(attacks.items()):
             path = self.candidate / name
             before = path.read_bytes()
