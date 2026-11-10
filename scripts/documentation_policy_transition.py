@@ -60,6 +60,8 @@ def compatibility(repository, selection, workspace, policy=ROOT):
     """
     require(git(policy, "rev-parse", "HEAD") == selection["base"], "compatibility authority differs")
     require(not git(policy, "status", "--porcelain"), "compatibility authority dirty")
+    require(git(repository, "rev-parse", "HEAD") == selection["candidate"], "compatibility candidate differs")
+    require(not git(repository, "status", "--porcelain"), "compatibility candidate dirty")
     require(not workspace.exists(), "compatibility workspace must be new")
     workspace.mkdir(parents=True)
     subprocess.run([sys.executable, "-I", policy / "scripts/validate_gnatdoc_inputs.py",

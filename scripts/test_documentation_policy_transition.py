@@ -137,10 +137,16 @@ class IndependentCompatibilityTests(unittest.TestCase):
             before = path.read_bytes()
             try:
                 path.write_bytes(mutate(before))
+                subprocess.run(["git", "-C", str(self.candidate), "add", name], check=True)
+                subprocess.run(["git", "-C", str(self.candidate), "-c", "user.name=Fixture",
+                                "-c", "user.email=fixture@invalid.example", "commit", "-qm", "attack"], check=True)
+                selection = {**self.selection, "candidate": subprocess.check_output(
+                    ["git", "-C", str(self.candidate), "rev-parse", "HEAD"], text=True).strip()}
                 with self.assertRaises((ValueError, subprocess.CalledProcessError)):
-                    compatibility(self.candidate, self.selection, self.folder / str(index), self.policy)
+                    compatibility(self.candidate, selection, self.folder / str(index), self.policy)
             finally:
-                path.write_bytes(before)
+                subprocess.run(["git", "-C", str(self.candidate), "reset", "--hard",
+                                self.selection["candidate"]], check=True, capture_output=True)
 
 
 if __name__ == "__main__":
