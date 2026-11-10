@@ -16,7 +16,7 @@ import sys
 
 from gnatdoc_migration_policy import (
     ROOT, CONFIGURATION, WORKFLOW, installed_wheel, migration_generator,
-    staged_public, validate_migration_site, envelope, regular, git, require,
+    staged_public, validate_migration_site, envelope, regular, git, require, migration_workflow,
 )
 from additive_gnatdoc_policy import policy_identity, candidate_rules, exact_snapshot, coverage
 from compare_shared_gnatdoc_geometry import file_hashes, write
@@ -48,8 +48,11 @@ def run(args):
         session.clone(ROOT, args.policy_revision, source)
         session.clone(args.core, CORE, core)
         git(ROOT, "merge-base", "--is-ancestor", MAIN, args.policy_revision)
-        for name in sorted(CONFIGURATION | {WORKFLOW, "docs/documentation.md"}):
+        for name in sorted(CONFIGURATION | {"docs/documentation.md"}):
             (source / name).write_bytes(git(ROOT, "show", MIGRATION + ":" + name))
+        # Apply the approved migration bodies to the CURRENT security skeleton;
+        # a historical migration PR must not undo later publication controls.
+        (source / WORKFLOW).write_text(migration_workflow(regular(ROOT / WORKFLOW).decode()))
         (source / "scripts/generate_docs.sh").write_text(
             migration_generator(regular(ROOT / "scripts/generate_docs.sh").decode()))
         path = source / "scripts/validate_docs.py"

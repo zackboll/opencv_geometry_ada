@@ -1,65 +1,141 @@
 name: Additive GNATdoc policy review (non-deployable)
 
 on:
-  pull_request:
   workflow_call:
 
 permissions:
   contents: read
+  actions: read
+  deployments: read
 
 concurrency:
   group: additive-doc-policy-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  qualify:
-    name: GNATdoc successor policy qualification
+  inventory:
+    name: Independent policy inventory
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    outputs:
+      mode: ${{ steps.inventory.outputs.mode }}
+      base: ${{ steps.inventory.outputs.base }}
     steps:
-      - name: Checkout exact candidate without credentials
-        uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           path: candidate
           persist-credentials: false
-      - name: Checkout independently selected base policy
-        uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
           fetch-depth: 0
           path: policy
           persist-credentials: false
-      - name: Event-bound reviewed policy selection, never approval
+      - name: Select exact independent orchestration
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
             git -C policy checkout --detach "$CANDIDATE_SHA^1"
           fi
-          if test ! -f policy/scripts/select_gnatdoc_policy.py; then
-            # Literal, independently reviewed transition; never accept mutable
-            # main or a candidate manifest as authorization for bootstrap.
-            base=$(git -C policy rev-parse HEAD)
-            tree=$(git -C policy rev-parse HEAD^{tree})
-            case "$base:$tree" in
-              2f5239a0e264ca2bb4106cdb338d3eac25abf674:c440b9901e1003f06ae555b3a8a80d9874229680|5f71c9a6d5291adb032eb1a43954c5f9aaf047e6:cc8487634f66be422e835b95c2ee8cd57e952d45|aad0b1b65814ac472bf5a9ea1b266f47aa3baf06:be543978b6fe33cc7bb18c4c1ca58328ae741ee6) ;;
-              *) echo 'Unreviewed bootstrap base/tree' >&2; exit 1 ;;
-            esac
-            git -C policy fetch ../candidate "$CANDIDATE_SHA"
-            git -C policy checkout --detach "$CANDIDATE_SHA"
+          orchestration=policy
+          if test ! -f policy/scripts/documentation_policy_transition.py; then
+            # One-time exploratory orchestration, never policy approval. The
+            # existing old policy still supplies all compatibility validators.
+            test "$(git -C policy rev-parse HEAD)" = 23701d526bd0870de5fb126c2ecdd0b9c24913e2
+            test "$(git -C policy rev-parse HEAD^{tree})" = 04363fb712f15514f7ba11909c595176e4907b62
+            orchestration=candidate
           fi
-          python3 policy/scripts/select_gnatdoc_policy.py \
-            --repository "$GITHUB_WORKSPACE/candidate" \
+          echo "ORCHESTRATION=$orchestration" >> "$GITHUB_ENV"
+      - id: inventory
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if test "$ORCHESTRATION" = candidate; then
+            # Independently compute initial trust mode in the reviewed workflow,
+            # NOT in the proposed router. No candidate file selects this mode.
+            base=$(git -C policy rev-parse HEAD)
+            git -C candidate merge-base --is-ancestor "$base" "$CANDIDATE_SHA"
+            test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+            mode=ordinary
+            while IFS= read -r -d '' name; do
+              case "$name" in
+                scripts/*|.github/*|tests/ci/*|docs/assets/*|docs/evidence/*|docs/requirements.txt|alire.toml|tests/alire.toml|docs_api.gpr|docs_internal.gpr|docs/gnatdoc-enhancer.toml|docs/gnatdoc-authored.json|docs/gnatdoc-warning-baseline.txt|docs/gnatdoc-coverage-baseline.txt|docs/shared-gnatdoc-shadow.toml) mode=maintenance ;;
+              esac
+            done < <(git -C candidate diff --no-renames --name-only -z "$base" "$CANDIDATE_SHA")
+            echo "mode=$mode" >> "$GITHUB_OUTPUT"
+            echo "base=$base" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 -I "$ORCHESTRATION/scripts/documentation_policy_transition.py" \
             --policy-checkout "$GITHUB_WORKSPACE/policy" \
-            --candidate "$CANDIDATE_SHA" --event "$GITHUB_EVENT_NAME" \
-            --event-path "$GITHUB_EVENT_PATH"
-          echo 'Selection is not a human policy-approval record.'
+            --repository "$GITHUB_WORKSPACE/candidate" --candidate "$CANDIDATE_SHA" \
+            --event "$GITHUB_EVENT_NAME" --event-path "$GITHUB_EVENT_PATH"
+      - name: Check environment configuration or main approval provenance
+        if: github.event_name != 'pull_request'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          POLICY_MODE: ${{ steps.inventory.outputs.mode }}
+        with:
+          script: |
+            const verify = require(`./${process.env.ORCHESTRATION}/.github/scripts/documentation-policy-provenance.cjs`);
+            await verify({github, context, core});
+
+  qualify:
+    name: Policy technical qualification
+    needs: inventory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout exact candidate without credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+      - name: Checkout independently selected base policy
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          fetch-depth: 0
+          path: policy
+          persist-credentials: false
+      - name: Independently recompute mode and compatibility, never approval
+        id: selection
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_MODE: ${{ needs.inventory.outputs.mode }}
+        run: |
+          if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
+            git -C policy checkout --detach "$CANDIDATE_SHA^1"
+          fi
+          orchestration=policy
+          if test ! -f policy/scripts/documentation_policy_transition.py; then
+            test "$(git -C policy rev-parse HEAD)" = 23701d526bd0870de5fb126c2ecdd0b9c24913e2
+            test "$(git -C policy rev-parse HEAD^{tree})" = 04363fb712f15514f7ba11909c595176e4907b62
+            orchestration=candidate
+          fi
+          flags=()
+          if test "$GITHUB_EVENT_NAME" = pull_request && test "$EXPECTED_MODE" = maintenance; then
+            flags+=(--compatibility-workspace /tmp/old-policy)
+          fi
+          python3 -I "$orchestration/scripts/documentation_policy_transition.py" \
+            --policy-checkout "$GITHUB_WORKSPACE/policy" \
+            --repository "$GITHUB_WORKSPACE/candidate" --candidate "$CANDIDATE_SHA" \
+            --event "$GITHUB_EVENT_NAME" --event-path "$GITHUB_EVENT_PATH" "${flags[@]}"
+          echo "TRUSTED_POLICY_SHA=$(git -C policy rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "ORCHESTRATION=$orchestration" >> "$GITHUB_ENV"
+          if test "$GITHUB_EVENT_NAME" != pull_request; then
+            # Inventory job has independently verified merged approval provenance.
+            git -C policy checkout --detach "$CANDIDATE_SHA"
+            echo 'POLICY_REVIEW_FLAG=--policy-review' >> "$GITHUB_ENV"
+          fi
       - name: Validate trusted build inputs before any candidate Alire or pip use
         run: python3 -I policy/scripts/validate_gnatdoc_inputs.py --candidate "$GITHUB_WORKSPACE/candidate"
       - name: Checkout immutable enhancer
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: zackboll/ada-gnatdoc-enhancer
           ref: 426f38852ef7dfff264f73ad01aab458f5e12b23
@@ -67,7 +143,7 @@ jobs:
           path: enhancer
           persist-credentials: false
       - name: Checkout immutable Core documentation source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: zackboll/opencv_core_ada
           ref: f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f
@@ -75,7 +151,7 @@ jobs:
           path: core
           persist-credentials: false
       - name: Checkout matching historical policy test inputs
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: 20d5da104dcb156833e194067979dd6682a6d912
           fetch-depth: 0
@@ -119,17 +195,48 @@ jobs:
           PRODUCTION_DOC_PYTHON: /tmp/production-doc-tools/bin/python
           PRODUCTION_DOC_WHEEL: /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
         run: |
+          repository="$GITHUB_WORKSPACE/candidate"
+          revision="$CANDIDATE_SHA"
+          if test "$GITHUB_EVENT_NAME" = pull_request && test '${{ needs.inventory.outputs.mode }}' = maintenance; then
+            repository=/tmp/old-policy/projection
+            revision='${{ steps.selection.outputs.projection }}'
+          fi
           /tmp/policy-tools/bin/python scripts/run_additive_gnatdoc_review.py \
             --workspace /tmp/additive-review \
-            --candidate-repository "$GITHUB_WORKSPACE/candidate" \
-            --candidate-revision "$CANDIDATE_SHA" \
+            --candidate-repository "$repository" \
+            --candidate-revision "$revision" \
             --enhancer "$GITHUB_WORKSPACE/enhancer" \
             --core "$GITHUB_WORKSPACE/core" --gnatdoc-prefix /tmp/gnatdoc \
             --playwright-module /tmp/doc-browser/node_modules/playwright \
             --chromium "$CHROME" ${POLICY_REVIEW_FLAG:-}
+      - name: Proposed policy tests and executable production preview
+        if: github.event_name == 'pull_request' && needs.inventory.outputs.mode == 'maintenance'
+        working-directory: candidate
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          GEOMETRY_MIGRATION_PREVIEW: /tmp/production-preview
+          PRODUCTION_DOC_PYTHON: /tmp/production-doc-tools/bin/python
+          PRODUCTION_DOC_WHEEL: /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
+        run: |
+          /tmp/policy-tools/bin/python -I "../$ORCHESTRATION/scripts/challenge_documentation_policy.py" \
+            --candidate "$GITHUB_WORKSPACE/candidate" --policy "$GITHUB_WORKSPACE/policy"
+          /tmp/policy-tools/bin/python scripts/run_additive_gnatdoc_review.py \
+            --workspace /tmp/proposed-review --policy-review \
+            --candidate-repository "$GITHUB_WORKSPACE/candidate" --candidate-revision "$CANDIDATE_SHA" \
+            --enhancer "$GITHUB_WORKSPACE/enhancer" --core "$GITHUB_WORKSPACE/core" \
+            --gnatdoc-prefix /tmp/gnatdoc --playwright-module /tmp/doc-browser/node_modules/playwright \
+            --chromium "$CHROME"
+          /tmp/production-doc-tools/bin/python scripts/preview_gnatdoc_migration.py \
+            --workspace /tmp/production-preview --policy-revision "$CANDIDATE_SHA" \
+            --core "$GITHUB_WORKSPACE/core" --gnatdoc-prefix /tmp/gnatdoc \
+            --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl \
+            --playwright-module /tmp/doc-browser/node_modules/playwright
+          /tmp/production-doc-tools/bin/python -m unittest discover -s scripts -p 'test_*.py' -v
+          /tmp/production-doc-tools/bin/python -m unittest discover -s tests/ci -v
+          node --test tests/ci/test_policy_provenance.cjs
       - name: Upload offline-only review evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NON-DEPLOYABLE-additive-policy-${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
@@ -143,4 +250,91 @@ jobs:
             /tmp/additive-review/fixture/*.log
             /tmp/additive-review/fixture/*.zip
             /tmp/additive-review/historical-qualification/*.json
+            /tmp/old-policy/compatibility.json
+            /tmp/production-preview/*.json
+            /tmp/production-preview/*.log
+            /tmp/proposed-review/campaign.json
+            /tmp/proposed-review/*/*.json
+            /tmp/proposed-review/*.log
           if-no-files-found: warn
+
+  approval-configuration:
+    name: External approval configuration
+    needs: inventory
+    if: github.event_name == 'pull_request' && needs.inventory.outputs.mode == 'maintenance'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const {data: environment} = await github.rest.repos.getEnvironment({
+              owner, repo, environment_name: 'documentation-policy-maintenance'});
+            const rule = environment.protection_rules.find(r => r.type === 'required_reviewers');
+            if (!rule || !rule.reviewers.length || environment.can_admins_bypass !== false) {
+              throw new Error('Configure mandatory maintainer reviewers and disable environment bypass externally');
+            }
+
+  approval:
+    name: Maintainer policy approval
+    needs: [inventory, qualify, approval-configuration]
+    if: github.event_name == 'pull_request' && needs.inventory.outputs.mode == 'maintenance'
+    runs-on: ubuntu-24.04
+    environment: documentation-policy-maintenance
+    steps:
+      - name: Record explicit approval scope without executing PR source
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ needs.inventory.outputs.base }}
+        run: printf 'Maintainer approval for candidate %s against base %s, run %s\n' "$CANDIDATE_SHA" "$BASE_SHA" "$GITHUB_RUN_ID"
+
+  acceptance:
+    name: Policy qualification and approval
+    if: always()
+    needs: [inventory, qualify, approval]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require technical success and approval, never a skipped protected gate
+        env:
+          INVENTORY: ${{ needs.inventory.result }}
+          TECHNICAL: ${{ needs.qualify.result }}
+          APPROVAL: ${{ needs.approval.result }}
+          MODE: ${{ needs.inventory.outputs.mode }}
+        run: |
+          test "$INVENTORY" = success
+          test "$TECHNICAL" = success
+          if test "$GITHUB_EVENT_NAME" = pull_request && test "$MODE" = maintenance; then
+            test "$APPROVAL" = success
+          else
+            test "$APPROVAL" = skipped
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.inventory.outputs.base }}
+          path: policy
+          persist-credentials: false
+      - name: One-time reviewed orchestration boundary
+        run: |
+          if test ! -f policy/.github/scripts/documentation-policy-provenance.cjs; then
+            test "$(git -C policy rev-parse HEAD)" = 23701d526bd0870de5fb126c2ecdd0b9c24913e2
+            test "$(git -C policy rev-parse HEAD^{tree})" = 04363fb712f15514f7ba11909c595176e4907b62
+            echo 'ORCHESTRATION=candidate' >> "$GITHUB_ENV"
+          else
+            echo 'ORCHESTRATION=policy' >> "$GITHUB_ENV"
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: env.ORCHESTRATION == 'candidate'
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Verify exact live PR and server-side approval history
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          POLICY_MODE: ${{ needs.inventory.outputs.mode }}
+          VERIFY_APPROVAL: 'true'
+        with:
+          script: |
+            const verify = require(`./${process.env.ORCHESTRATION}/.github/scripts/documentation-policy-provenance.cjs`);
+            await verify({github, context, core});

@@ -45,11 +45,13 @@ def routed(expression, event, ref):
     return context.ref == "refs/heads/main" and context.event_name != "pull_request"
 
 
-class DocumentationRoutingTests(unittest.TestCase):
+class HistoricalDocumentationRoutingTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.workflow = (ROOT / WORKFLOW).read_text()
-        cls.policy = (ROOT / POLICY).read_text()
+        # Preserve the complete prior routing campaign on its actual immutable
+        # workflow, not on a successor expected to have different routing.
+        cls.workflow = git(ROOT, "show", "6af0b1aaee9d37239d1babc238fcb22c6093348a:" + WORKFLOW) + "\n"
+        cls.policy = git(ROOT, "show", BASE + ":" + POLICY) + "\n"
         cls.reviewed = git(ROOT, "show", BASE + ":" + WORKFLOW) + "\n"
 
     def test_only_current_trust_job_changes(self):
@@ -61,8 +63,8 @@ class DocumentationRoutingTests(unittest.TestCase):
         self.assertNotIn("continue-on-error", after)
 
     def test_independent_pr_policy_is_byte_identical_and_unfiltered(self):
-        self.assertEqual((ROOT / POLICY).read_bytes(), subprocess.check_output(
-            ["git", "-C", str(ROOT), "show", BASE + ":" + POLICY]))
+        self.assertEqual(self.policy.rstrip().encode(), subprocess.check_output(
+            ["git", "-C", str(ROOT), "show", BASE + ":" + POLICY]).rstrip())
         self.assertIn("on:\n  pull_request:\n  workflow_call:\n", self.policy)
         self.assertNotIn("paths-ignore:", self.policy)
         self.assertIsNone(re.search(r"^    if:", job(self.policy, "qualify"), re.MULTILINE))
@@ -72,7 +74,8 @@ class DocumentationRoutingTests(unittest.TestCase):
         for name in ("scripts/select_gnatdoc_policy.py", "scripts/run_additive_gnatdoc_review.py",
                      "scripts/adversarial_additive_gnatdoc.py"):
             with self.subTest(name=name):
-                self.assertEqual((ROOT / name).read_bytes(), subprocess.check_output(
+                self.assertEqual(subprocess.check_output(
+                    ["git", "-C", str(ROOT), "show", "6af0b1a:" + name]), subprocess.check_output(
                     ["git", "-C", str(ROOT), "show", BASE + ":" + name]))
         self.assertIn("test_shared_gnatdoc_shadow.py -v", self.policy)
         self.assertIn("test_additive_gnatdoc_policy.py -v", self.policy)
@@ -132,6 +135,48 @@ class DocumentationRoutingTests(unittest.TestCase):
         self.assertEqual(job(self.workflow, "build"), job(self.reviewed, "build"))
         self.assertEqual(job(self.workflow, "deploy"), job(self.reviewed, "deploy"))
         self.assertEqual(self.workflow.count("if: " + MAIN_ONLY), 4)
+
+
+class CurrentDocumentationRoutingTests(unittest.TestCase):
+    def setUp(self):
+        self.workflow = (ROOT / WORKFLOW).read_text()
+        self.policy = (ROOT / POLICY).read_text()
+
+    def test_pages_gate_and_actions_unchanged(self):
+        reviewed = git(ROOT, "show", "23701d5:" + WORKFLOW) + "\n"
+        self.assertEqual(job(self.workflow, "deploy"), job(reviewed, "deploy"))
+        self.assertEqual(condition(job(self.workflow, "current-trust")), MAIN_ONLY)
+        self.assertIn("needs: current-trust", job(self.workflow, "build"))
+        self.assertIn("needs.current-trust.result == 'success'", job(self.workflow, "build"))
+        self.assertEqual(self.workflow.count("if: " + MAIN_ONLY), 4)
+
+    def test_no_privileged_candidate_execution_or_failure_suppression(self):
+        self.assertNotIn("continue-on-error", self.policy)
+        self.assertNotIn("pull_request_target", self.policy)
+        self.assertNotIn("pages: write", self.policy)
+        self.assertNotIn("id-token: write", self.policy)
+        self.assertIn("contents: read", self.policy)
+        self.assertNotIn("checkout", job(self.policy, "approval"))
+        self.assertIn("environment: documentation-policy-maintenance", job(self.policy, "approval"))
+        self.assertIn("if: always()", job(self.policy, "acceptance"))
+        self.assertIn('test "$APPROVAL" = success', job(self.policy, "acceptance"))
+        self.assertIn("VERIFY_APPROVAL: 'true'", job(self.policy, "acceptance"))
+
+    def test_every_pr_gets_independent_inventory_and_technical_qualification(self):
+        for name in ("inventory", "qualify"):
+            self.assertIsNone(re.search(r"^    if:", job(self.policy, name), re.MULTILINE))
+        self.assertIn("--compatibility-workspace /tmp/old-policy", self.policy)
+        self.assertIn("/tmp/old-policy/projection", self.policy)
+        self.assertIn("challenge_documentation_policy.py", self.policy)
+        self.assertIn("preview_gnatdoc_migration.py", self.policy)
+        self.assertIn("--workspace /tmp/proposed-review --policy-review", self.policy)
+
+    def test_pages_failure_is_not_reclassified_as_success(self):
+        deploy = job(self.workflow, "deploy")
+        self.assertIn("needs: [build, current-trust]", deploy)
+        self.assertNotIn("continue-on-error", deploy)
+        self.assertNotIn("always()", deploy)
+        self.assertIn("uses: actions/deploy-pages@v4", deploy)
 
 
 class IndependentPolicyTests(unittest.TestCase):

@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  deployments: read
 
 # Serialize main publication; cancel superseded runs before they can deploy.
 concurrency:
@@ -18,6 +20,8 @@ concurrency:
 
 jobs:
   build:
+    needs: current-trust
+    if: always() && (github.event_name == 'pull_request' || needs.current-trust.result == 'success')
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -49,7 +53,11 @@ jobs:
           git merge-base --is-ancestor "$base" "$CANDIDATE_SHA"
           if test "$GITHUB_EVENT_NAME" = push; then
             test "$GITHUB_REF" = refs/heads/main
-            test "$(git rev-parse "$CANDIDATE_SHA^1")" = "$base"
+          fi
+          if test "$GITHUB_EVENT_NAME" != pull_request; then
+            # current-trust has checked the merged-policy approval provenance.
+            test "$GITHUB_REF" = refs/heads/main
+            git -C ../build-policy checkout --detach "$CANDIDATE_SHA"
           fi
           if test -f ../build-policy/scripts/validate_gnatdoc_inputs.py; then
             # Only the independently selected base provides executable preflight.
@@ -210,9 +218,26 @@ jobs:
         with:
           path: geometry/_site/
 
+  pr-trust:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/documentation-additive-policy.yml
+
+  acceptance:
+    name: Documentation policy acceptance
+    if: always() && github.event_name == 'pull_request'
+    needs: [build, pr-trust]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require documentation build and independent policy acceptance
+        env:
+          BUILD: ${{ needs.build.result }}
+          TRUST: ${{ needs.pr-trust.result }}
+        run: |
+          test "$BUILD" = success
+          test "$TRUST" = success
+
   current-trust:
-    # PR policy qualification belongs to the independent additive-policy workflow.
-    # Main push/manual publication still requires exact-candidate qualification.
+    # Main push/manual publication requires approved merged-policy provenance.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     uses: ./.github/workflows/documentation-additive-policy.yml
 
