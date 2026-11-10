@@ -93,6 +93,18 @@ jobs:
           /tmp/production-doc-tools/bin/pip install -r baseline/docs/requirements.txt
           curl --fail --location --output /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl https://github.com/zackboll/ada-gnatdoc-enhancer/releases/download/v0.1.5/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl
           /tmp/production-doc-tools/bin/python -I baseline/scripts/gnatdoc_migration_policy.py --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl --install
+      - name: Execute real production migration preview
+        if: steps.selection.outputs.mode == 'maintenance'
+        working-directory: candidate
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          /tmp/production-doc-tools/bin/python scripts/preview_gnatdoc_migration.py \
+            --workspace /tmp/production-preview --policy-revision "$CANDIDATE_SHA" \
+            --core "$GITHUB_WORKSPACE/core" --gnatdoc-prefix /tmp/gnatdoc \
+            --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl \
+            --playwright-module /tmp/doc-browser/node_modules/playwright
       - name: One historical, exact-current and synthetic technical campaign
         working-directory: policy
         env:
@@ -113,18 +125,6 @@ jobs:
             --enhancer "$GITHUB_WORKSPACE/enhancer" --core "$GITHUB_WORKSPACE/core" \
             --gnatdoc-prefix /tmp/gnatdoc --playwright-module /tmp/doc-browser/node_modules/playwright \
             --chromium "$CHROME" "${flags[@]}"
-      - name: Execute real production migration preview
-        if: steps.selection.outputs.mode == 'maintenance'
-        working-directory: candidate
-        env:
-          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          /tmp/production-doc-tools/bin/python scripts/preview_gnatdoc_migration.py \
-            --workspace /tmp/production-preview --policy-revision "$CANDIDATE_SHA" \
-            --core "$GITHUB_WORKSPACE/core" --gnatdoc-prefix /tmp/gnatdoc \
-            --wheel /tmp/ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl \
-            --playwright-module /tmp/doc-browser/node_modules/playwright
       - name: Run proposed documentation tests on actual generated output
         working-directory: candidate
         env:
