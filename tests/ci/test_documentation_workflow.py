@@ -4,6 +4,7 @@ Run: python3 -m unittest discover -s tests/ci -v
 These are local routing simulations, not hosted push/deployment approval.
 """
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -241,7 +242,12 @@ class IndependentPolicyTests(unittest.TestCase):
         tree = git(self.candidate, "write-tree")
         candidate = subprocess.check_output(
             ["git", "-C", str(self.candidate), "commit-tree", tree, "-p", BASE],
-            input="Disposable protected workflow transition\n", text=True).strip()
+            input="Disposable protected workflow transition\n", text=True,
+            env={**os.environ,
+                 "GIT_AUTHOR_NAME": "Documentation test fixture",
+                 "GIT_AUTHOR_EMAIL": "documentation-test@invalid.example",
+                 "GIT_COMMITTER_NAME": "Documentation test fixture",
+                 "GIT_COMMITTER_EMAIL": "documentation-test@invalid.example"}).strip()
         program = ("import sys,json; from pathlib import Path; sys.path.insert(0, sys.argv[1]); "
                    "from select_gnatdoc_policy import select; "
                    "print(json.dumps(select(Path(sys.argv[2]), sys.argv[3], "
