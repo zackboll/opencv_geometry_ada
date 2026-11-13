@@ -411,6 +411,13 @@ def validate(site, root=ROOT, declarations=DECLARATIONS, rendered=RENDERED,
     site = Path(site).resolve()
     root = Path(root).resolve()
     core = root.parent / "core" if core is None else Path(core)
+    if enhanced and (root / "docs/gnatdoc-enhancer.toml").is_file():
+        # Local release-format validation is not independent policy approval.
+        from gnatdoc_migration_policy import validate_local_site
+        try:
+            return validate_local_site(root, site, core)
+        except (ValueError, OSError, KeyError, ImportError) as error:
+            raise DocumentationError(f"released enhancer integrity: {error}") from error
     errors = []
     expected = public_specifications(root)
     api = site / "api"

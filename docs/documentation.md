@@ -15,14 +15,16 @@ the remaining roadmap are kept in
 
 ## Reproduce on Linux — pinned generation environment
 
-### Official v0.1.5 migration — blocked at the first compatibility gate
+### Official v0.1.5 production integration
 
-PR #58's migration candidate uses the production configuration and authored
-manifest independently derived from selected main
-`05c6680cdf4f9fe544cfbbab21cf13eab41d0112`. Its generator and documentation
-workflow are the exact outputs of that base's `migration_generator` and
-`migration_workflow`, including the main-only `current-trust` routing and
-unchanged Pages dependencies. This is **not a qualified production migration**.
+PR #58 preserves its previous commits and normally merges main
+`49afc3285d4e5e3d93c0f67cedd93c77eb0ffad3` (PR #64). Its generator follows
+that base's `STAGING` and `generator_contract()`; its documentation workflow
+satisfies `migration_workflow()` and `workflow_contract()`. Native generation,
+toolchain and Core checks, warning/coverage ratchets, independent source checks,
+main-only publication and Pages dependencies remain unchanged. Technical
+qualification and Documentation policy acceptance are required; no reviewer or
+approval environment is added.
 
 The official, non-editable wheel is `ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl`,
 SHA-256 `d712d330f213fc1909a66c47bc2c7e5e15d5ec687222bea3c4922f5243db4247`.
@@ -40,32 +42,30 @@ deployment `7507096111`, review artifact `13193622594` and Pages artifact
 `13193152869`; both referenced live pages matched authenticated artifact bytes.
 These observations are qualification evidence, not future acceptance pins.
 
-Fresh native generation and source checks pass: two public packages,
-138 declarations, 481/481 documented elements, zero warnings, and eight exact
-Core source/native identities. Both configuration files match the independent
-derivation, and the selected-base changed-file envelope accepts this candidate.
-However, the standard generator stops at enhancer inventory:
+Before enhancer inventory, the generator recreates `qualification-public` from
+exactly the two public specifications. It rejects a symlink staging directory
+and symlink source files, removes stale staging contents, and checks each copied
+file's type and bytes. The independent policy additionally rejects unexpected
+staging inventory, substituted paths, byte mismatches and committed staging.
+Never add generated staging files to Git.
 
-```text
-gnatdoc-enhancer: missing source directory: qualification-public
-```
+The release-format validator delegates to the policy's local reconstruction
+checks. This is not independent approval: the separately selected policy still
+regenerates native output, authenticates the live Core publisher, reconstructs
+the entire enhanced site and checks source/native identities. The authored
+landing page, five guides and Geometry-specific CSS remain source-owned inputs.
 
-The base-owned finite configuration requires
-`[sources] directories = ["qualification-public"]`. Neither the exact generator
-template nor its workflow stages that directory. A clean checkout therefore
-cannot execute the approved enhancement sequence. Changing the configuration to
-`src` would violate `direct_configuration`; adding a staging command is rejected
-as `production generator is not the release-backed template`; committing staged
-sources is outside the finite migration allowlist. No such bypass is applied.
+Qualification must cover fresh and repeated generation, byte-idempotent
+enhancement, independent native reconstruction, declaration coverage, zero
+warning regressions, six compiled examples, registered AUnit cases, browser
+matrices and the historical/current/synthetic security campaigns. Readiness is
+reported against the exact final commit and tree only after hosted build,
+Policy technical qualification, Documentation policy acceptance and other
+required checks pass. Local success alone does not establish that disposition.
 
-Status: **CORRECTIVE_WORK_REQUIRED**. The selected-base staging/template
-incompatibility needs an authorized resolution before implementation can
-continue. The candidate validator has not been adapted, and enhancer dry-run,
-enhancement, verification, full-site reconstruction, determinism/idempotence,
-current/historical/synthetic campaigns and browser qualification are not claimed.
-No full campaigns should run while this early compatibility gate remains blocked.
-The legacy reproduction notes below describe the prior pipeline, not a passing
-invocation of this unfinished candidate.
+The reproduction notes below also retain the historical pipeline and its
+symbol-router qualification for regression testing; production v0.1.5 links use
+the authenticated native declaration destinations described above.
 
 ### Cross-repository declaration bookmarks
 

@@ -74,7 +74,18 @@ echo "GNATdoc: $warnings documentation warnings (see obj/docs/gnatdoc.log)"
 # Ratchet: new warnings fail, and so does a baseline that still lists fixed ones.
 python3 scripts/compare_gnatdoc_warnings.py --fail-on-removed \
     docs/gnatdoc-warning-baseline.txt obj/docs/gnatdoc.log
-cp docs/index.html _site/index.html
+# Generated build input: recreate exactly the two public specifications.
+test ! -L "$root/qualification-public"
+rm -rf -- "$root/qualification-public"
+mkdir "$root/qualification-public"
+for name in opencv-geometry.ads opencv-geometry-subdiv2d.ads; do
+    test ! -L "src/$name"
+    test -f "src/$name"
+    cp -- "src/$name" "qualification-public/$name"
+    test ! -L "qualification-public/$name"
+    test -f "qualification-public/$name"
+    cmp -- "src/$name" "qualification-public/$name"
+done
 # The independent policy workflow supplies the verified official wheel environment.
 "$python" -m ada_gnatdoc_enhancer inventory --config docs/gnatdoc-enhancer.toml --source-root . --site _site
 "$python" -m ada_gnatdoc_enhancer enhance --dry-run --config docs/gnatdoc-enhancer.toml --source-root . --site _site
