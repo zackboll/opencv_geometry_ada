@@ -115,10 +115,15 @@ def exact_snapshot(source, repository, revision, pins=False):
             "candidate revision must be an exact SHA")
     names = git(repository, "ls-tree", "-r", "--name-only", revision).decode().splitlines()
     ignored = {"alire.toml", "tests/alire.toml"} if pins else set()
+    missing = []
     for name in names:
         if name not in ignored:
+            if not (source / name).exists() and not (source / name).is_symlink():
+                missing.append(name)
+                continue
             require(regular(source / name) == git(repository, "show", f"{revision}:{name}"),
                     "candidate snapshot changed: " + name)
+    require(not missing, "candidate snapshot changed: missing files " + repr(missing))
     for prefix in ("src", "cpp", "tests/src", "docs/guides", "docs/examples", "scripts"):
         found = {p.relative_to(source).as_posix() for p in (source / prefix).rglob("*")
                  if p.is_file() and "__pycache__" not in p.parts}

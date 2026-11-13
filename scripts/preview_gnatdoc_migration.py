@@ -16,7 +16,7 @@ import sys
 
 from gnatdoc_migration_policy import (
     ROOT, CONFIGURATION, WORKFLOW, installed_wheel, migration_generator,
-    staged_public, validate_migration_site, envelope, regular, git, require,
+    staged_public, validate_migration_site, envelope, regular, git, require, migration_workflow,
 )
 from additive_gnatdoc_policy import policy_identity, candidate_rules, exact_snapshot, coverage
 from compare_shared_gnatdoc_geometry import file_hashes, write
@@ -48,22 +48,26 @@ def run(args):
         session.clone(ROOT, args.policy_revision, source)
         session.clone(args.core, CORE, core)
         git(ROOT, "merge-base", "--is-ancestor", MAIN, args.policy_revision)
-        for name in sorted(CONFIGURATION | {WORKFLOW, "docs/documentation.md"}):
-            (source / name).write_bytes(git(ROOT, "show", MIGRATION + ":" + name))
-        (source / "scripts/generate_docs.sh").write_text(
-            migration_generator(regular(ROOT / "scripts/generate_docs.sh").decode()))
-        path = source / "scripts/validate_docs.py"
-        text = path.read_text()
-        marker = "    errors = []\n    expected = public_specifications(root)"
-        require(text.count(marker) == 1, "preview validator adapter boundary changed")
-        path.write_text(text.replace(marker, ADAPTER + marker))
-        session.run(["git", "add", "."], source)
-        # A reproducible commit object bound to both the policy and migration.
-        session.run(["git", "-c", "user.name=Geometry preview",
-                     "-c", "user.email=preview@invalid.example", "commit", "-m",
-                     "Disposable production preview of " + MIGRATION], source,
-                    env={"GIT_AUTHOR_DATE": "2026-11-08T00:00:00Z",
-                         "GIT_COMMITTER_DATE": "2026-11-08T00:00:00Z"})
+        if not (source / "docs/gnatdoc-enhancer.toml").is_file():
+            for name in sorted(CONFIGURATION | {"docs/documentation.md"}):
+                (source / name).write_bytes(git(ROOT, "show", MIGRATION + ":" + name))
+            # Apply migration bodies to the CURRENT security skeleton rather
+            # than restoring obsolete workflow gates from a historical PR.
+            (source / WORKFLOW).write_text(migration_workflow(regular(ROOT / WORKFLOW).decode()))
+            (source / "scripts/generate_docs.sh").write_text(
+                migration_generator(regular(ROOT / "scripts/generate_docs.sh").decode()))
+            path = source / "scripts/validate_docs.py"
+            text = path.read_text()
+            marker = "    errors = []\n    expected = public_specifications(root)"
+            require(text.count(marker) == 1, "preview validator adapter boundary changed")
+            path.write_text(text.replace(marker, ADAPTER + marker))
+            session.run(["git", "add", "."], source)
+            # A reproducible commit object bound to both policy and migration.
+            session.run(["git", "-c", "user.name=Geometry preview",
+                         "-c", "user.email=preview@invalid.example", "commit", "-m",
+                         "Disposable production preview of " + MIGRATION], source,
+                        env={"GIT_AUTHOR_DATE": "2026-11-08T00:00:00Z",
+                             "GIT_COMMITTER_DATE": "2026-11-08T00:00:00Z"})
         report["candidate"] = git(source, "rev-parse", "HEAD").decode().strip()
         report["candidate_tree"] = git(source, "rev-parse", "HEAD^{tree}").decode().strip()
         report["files"] = sorted(envelope(ROOT, source))
@@ -135,7 +139,7 @@ def run(args):
                 server.server_close()
             report["authored_browser_cells"] = 8
         report["status"] = "pass"
-        report["disposition"] = "PRODUCTION_PREVIEW_ONLY_NOT_BOOTSTRAP_APPROVAL"
+        report["disposition"] = "PRODUCTION_TECHNICAL_PREVIEW"
     except Exception as error:
         report["failure"] = {"type": type(error).__name__, "reason": str(error)}
         raise
