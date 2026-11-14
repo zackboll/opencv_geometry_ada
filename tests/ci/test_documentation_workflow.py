@@ -184,6 +184,16 @@ class CurrentDocumentationRoutingTests(unittest.TestCase):
         self.assertLess(self.policy.index("name: Execute real production migration preview"),
                         self.policy.index("name: One historical, exact-current and synthetic technical campaign"))
 
+    def test_actual_legacy_and_released_generated_tests_both_execute(self):
+        body = self.policy.split("      - name: Run proposed documentation tests on actual generated output\n", 1)[1]
+        body = body.split("      - name:", 1)[0]
+        command = "python -m unittest discover -s scripts -p 'test_*.py' -v"
+        self.assertEqual(body.count(command), 2)
+        self.assertIn("cp -a /tmp/technical-review/current/source/_site _site", body)
+        self.assertIn("cp -a /tmp/production-preview/candidate/_site _site", body)
+        self.assertNotIn("continue-on-error", body)
+        self.assertNotIn("|| true", body)
+
     def test_single_technical_acceptance_and_pages_event_matrix(self):
         self.assertEqual(self.workflow.count("name: Documentation policy acceptance"), 1)
         for event in ("pull_request", "push", "workflow_dispatch"):

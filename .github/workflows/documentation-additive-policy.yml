@@ -136,6 +136,13 @@ jobs:
             unset GEOMETRY_MIGRATION_PREVIEW
           fi
           /tmp/production-doc-tools/bin/python -m unittest discover -s scripts -p 'test_*.py' -v
+          if test -d /tmp/production-preview; then
+            # Preserve the current/legacy pass above, then exercise every
+            # generated-site mutation against actual released output too.
+            rm -rf _site
+            cp -a /tmp/production-preview/candidate/_site _site
+            /tmp/production-doc-tools/bin/python -m unittest discover -s scripts -p 'test_*.py' -v
+          fi
           /tmp/production-doc-tools/bin/python -m unittest discover -s tests/ci -v
       - name: Upload technical diagnostics
         if: always()
