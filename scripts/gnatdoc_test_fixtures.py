@@ -34,18 +34,27 @@ def released(site):
 
 def release_source(root):
     import os
-    if (root / "docs/gnatdoc-enhancer.toml").is_file():
+    if (root / "docs/gnatdoc-enhancer.toml").is_file() and (root / "qualification-public").is_dir():
         return root
     preview = os.environ.get("GEOMETRY_MIGRATION_PREVIEW")
     if not preview:
         raise ValueError("released test output requires its real production preview")
-    return Path(preview) / "candidate"
+    source = Path(preview) / "candidate"
+    if (root / "docs/gnatdoc-enhancer.toml").is_file():
+        from gnatdoc_migration_policy import CONFIGURATION, regular, require
+        for name in CONFIGURATION | {
+                "src/opencv-geometry.ads", "src/opencv-geometry-subdiv2d.ads"}:
+            require(regular(root / name) == regular(source / name),
+                    "released test preview source differs: " + name)
+    return source
 
 
 def validate_generated(site, root):
     if not released(site):
         from validate_docs import validate
-        return validate(site, root)
+        # The hosted legacy pass runs in the actual migrated checkout too.
+        # Its configuration must not select the released-output validator.
+        return validate(site, root, legacy_fixture=True)
     from gnatdoc_migration_policy import validate_local_site
     from validate_docs import DocumentationError
     source = release_source(root)
