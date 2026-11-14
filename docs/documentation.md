@@ -18,7 +18,9 @@ the remaining roadmap are kept in
 ### Official v0.1.5 production integration
 
 PR #58 preserves its previous commits and normally merges main
-`49afc3285d4e5e3d93c0f67cedd93c77eb0ffad3` (PR #64). Its generator follows
+`13d5a65d284a1117272e53c6e12cecf24643b286` (PR #65), including the corrected
+qualification fixture and released-output compatibility described in
+[the R3 correction](geometry-gnatdoc-001r3.md). Its generator follows
 that base's `STAGING` and `generator_contract()`; its documentation workflow
 satisfies `migration_workflow()` and `workflow_contract()`. Native generation,
 toolchain and Core checks, warning/coverage ratchets, independent source checks,
