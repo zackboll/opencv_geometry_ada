@@ -42,7 +42,17 @@ including its exact parent, and that parent independently passes the production
 migration envelope. Only the exact fixture delta is separated from that parent;
 new verifier files, dependency changes, altered historical evidence and arbitrary
 source/category/guide/test mutations remain rejected. Ordinary candidates do not
-receive this path.
+receive this path. Migrated synthetic sources use a disposable production
+projection: only independently derived authored/native hashes are rebound there.
+The fixture commit and its inherited configuration bytes remain unchanged. The
+standard production generator and independent official-wheel/native verifier
+both run on the projection; it is not release output.
+
+An additional hosted-only fixture defect was found after the R2 reproduction:
+the native-declaration mutation selected the first filesystem glob result and
+assumed it was Geometry rather than Subdiv2D. It now selects the unique native
+package owner and mutates the specific Contour declaration heading, independent
+of filesystem order.
 
 ## Qualification
 
