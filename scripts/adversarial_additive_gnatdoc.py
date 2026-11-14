@@ -89,7 +89,7 @@ def qualify(workspace, repository, revision, policy_revision, synthetic=False):
             allowed = ADDITIONS | {NAME}
         for attack in ATTACKS:
             report["attacks"].append(observe(root, lambda: candidate_rules(
-                workspace / "baseline", root, allowed), attack))
+                workspace / "baseline", root, allowed, synthetic=synthetic), attack))
             write(workspace / "negative-progress.json", report)
         require(check() == initial, "trusted-input campaign restoration differs")
         mutation("published signature modification", {spec: lambda b: b.replace(

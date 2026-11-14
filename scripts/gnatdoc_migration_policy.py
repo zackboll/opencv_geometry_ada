@@ -262,7 +262,33 @@ def verify_current_commit(source, revision):
             "stale/substituted candidate commit")
 
 
-def envelope(policy, candidate, qualification_pins=False):
+def envelope(policy, candidate, qualification_pins=False, synthetic=False):
+    if synthetic:
+        # No path-wide exemption: authenticate every synthetic byte against its
+        # exact immutable parent, then qualify that parent's migration separately.
+        from additive_gnatdoc_fixture import validate
+        validate(candidate, policy)
+        parent = git(candidate, "rev-parse", "HEAD^1").decode().strip()
+        with tempfile.TemporaryDirectory(prefix="migration-fixture-parent-") as folder:
+            original = Path(folder) / "parent"
+            subprocess.run(["git", "clone", "--quiet", "--shared", str(candidate),
+                            str(original)], check=True)
+            subprocess.run(["git", "checkout", "--quiet", "--detach", parent],
+                           cwd=original, check=True)
+            authorized = envelope(policy, original)
+            from additive_gnatdoc_fixture import expected
+            fixture = set(expected(original))
+            changed = changes(policy, candidate)
+            if qualification_pins:
+                from validate_gnatdoc_inputs import validate as inputs
+                inputs(candidate, policy, qualification_pins=True)
+                changed -= {"alire.toml", "tests/alire.toml"}
+            require(changed <= changes(policy, original) | fixture,
+                    "synthetic fixture includes unrelated working-tree changes")
+            for name in changed - fixture:
+                require(regular(candidate / name) == regular(original / name),
+                        "synthetic fixture changed parent input: " + name)
+            return authorized
     changed = changes(policy, candidate)
     if qualification_pins:
         # validate_gnatdoc_inputs must check the exact disposable pin suffixes.

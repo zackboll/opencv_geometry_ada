@@ -32,10 +32,15 @@ class ProductionMutations(unittest.TestCase):
         self.assertEqual(validate_local_site(self.source, self.site, self.core)["sections"], 138)
 
     def test_native_declaration_changed(self):
-        path = next(p for p in (self.site / "api").glob("*.html") if '<h4 id=' in p.read_text())
+        pages = [p for p in (self.site / "api").glob("*.html")
+                 if '<h1>OpenCV.Geometry</h1>' in p.read_text()]
+        self.assertEqual(len(pages), 1, "native package owner must be unique")
+        path = pages[0]
         text = path.read_text()
-        self.assertIn('Contour', text)
-        path.write_text(text.replace('Contour', 'Forged_Contour', 1))
+        self.assertIn('>Contour</h4>', text)
+        changed = text.replace('>Contour</h4>', '>Forged_Contour</h4>', 1)
+        self.assertNotEqual(changed, text)
+        path.write_text(changed)
         self.reject()
 
     def test_fake_external_destination(self):

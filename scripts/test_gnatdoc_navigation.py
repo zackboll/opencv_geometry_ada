@@ -139,6 +139,9 @@ class GeneratedNavigationTest(unittest.TestCase):
         shutil.copytree(ROOT / "_site", self.site)
         self.api = self.site / "api"
         self.index = self.api / "index.html"
+        from gnatdoc_test_fixtures import released, validate_generated
+        self.released = released(self.site)
+        self.validate_site = lambda: validate_generated(self.site, ROOT)
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -149,6 +152,12 @@ class GeneratedNavigationTest(unittest.TestCase):
         self.index.write_text(text.replace(old, new, 1), encoding="utf-8")
 
     def assertRejected(self, fragment="unapproved navigation"):
+        if self.released:
+            with self.assertRaises(DocumentationError) as caught:
+                self.validate_site()
+            self.assertIn("published file differs from reconstructed output: api/",
+                          str(caught.exception))
+            return
         with self.assertRaises(CrossReferenceError) as caught:
             check_navigation(self.api)
         self.assertIn(fragment, str(caught.exception))
@@ -174,13 +183,16 @@ class GeneratedNavigationTest(unittest.TestCase):
                                   if k not in {"category_id", "native_text"}} for row in expected])
         self.assertEqual(total, len(expected))
         index = self.index.read_text(encoding="utf-8")
-        self.assertEqual(index.count("<li data-package="), len(expected))
+        if self.released:
+            self.assertEqual(index.count('<li><a href="'), len(expected))
+        else:
+            self.assertEqual(index.count("<li data-package="), len(expected))
         geometry = [item for _, _, groups in packages[:1] for _, _, group in groups
                     for item in group]
         hulls = [i for i in geometry if i["name"] == "Convex_Hull"]
         self.assertEqual([(i["overload"], i["overloads"]) for i in hulls],
                          [(1, 2), (2, 2)])
-        self.assertIn("overload 2 of 2", index)
+        self.assertIn("Convex_Hull (2)" if self.released else "overload 2 of 2", index)
 
     def test_source_native_oracle_rejects_declaration_mutations(self):
         native = sections(self.site)
@@ -217,11 +229,27 @@ class GeneratedNavigationTest(unittest.TestCase):
     def test_enhancement_is_idempotent(self):
         before = {p.name: p.read_bytes() for p in self.api.iterdir()}
         with contextlib.redirect_stdout(io.StringIO()):
-            enhance(self.api)
+            if self.released:
+                from gnatdoc_test_fixtures import release_source
+                from ada_gnatdoc_enhancer.config import load
+                from ada_gnatdoc_enhancer.pipeline import enhance as release_enhance
+                release_enhance(load(release_source(ROOT), "docs/gnatdoc-enhancer.toml"),
+                                self.site)
+            else:
+                enhance(self.api)
         self.assertEqual({p.name: p.read_bytes() for p in self.api.iterdir()}, before)
 
     def test_wrong_but_existing_destination_is_rejected(self):
         index = self.index.read_text(encoding="utf-8")
+        if self.released:
+            rows = [r for r in expected_inventory(self.site)
+                    if r["package"] == "OpenCV.Geometry" and
+                    r["name"] in ("Contour_Area", "Arc_Length")]
+            self.assertEqual(len(rows), 4)
+            self.edit('href="' + rows[0]["href"] + '"',
+                      'href="' + rows[2]["href"] + '"')
+            self.assertRejected()
+            return
         hrefs = re.findall(r'<li data-package="OpenCV.Geometry" '
                            r'data-op="(?:Contour_Area|Arc_Length)"[^>]*><a href=([^ >]+)',
                            index)
@@ -230,11 +258,26 @@ class GeneratedNavigationTest(unittest.TestCase):
         self.assertRejected()
 
     def test_entry_moved_to_the_other_package_is_rejected(self):
+        if self.released:
+            row = next(r for r in expected_inventory(self.site)
+                       if r["package"] == "OpenCV.Geometry.Subdiv2D" and r["name"] == "Insert")
+            wrong = next(r for r in expected_inventory(self.site)
+                         if r["package"] == "OpenCV.Geometry")
+            self.edit('href="' + row["href"] + '"', 'href="' + wrong["href"] + '"')
+            self.assertRejected()
+            return
         self.edit('<li data-package="OpenCV.Geometry.Subdiv2D" data-op="Insert"',
                   '<li data-package="OpenCV.Geometry" data-op="Insert"')
         self.assertRejected()
 
     def test_missing_entry_is_rejected(self):
+        if self.released:
+            row = next(r for r in expected_inventory(self.site) if r["name"] == "Find_Nearest")
+            entry = re.search(r'<li><a href="' + re.escape(row["href"]) + r'".*?</a></li>',
+                              self.index.read_text())[0]
+            self.edit(entry, "")
+            self.assertRejected()
+            return
         entry = re.search(r'<li data-package="OpenCV.Geometry.Subdiv2D" '
                           r'data-op="Find_Nearest".*?</a>',
                           self.index.read_text(encoding="utf-8"))[0]
@@ -242,8 +285,9 @@ class GeneratedNavigationTest(unittest.TestCase):
         self.assertRejected()
 
     def test_inline_handler_is_rejected(self):
-        self.edit("<button id=api-clear type=button>",
-                  "<button id=api-clear type=button onclick=alert(1)>")
+        button = ('<button id="package-clear" type="button">' if self.released
+                  else '<button id=api-clear type=button>')
+        self.edit(button, button[:-1] + ' onclick=alert(1)>')
         self.assertRejected()
 
     def test_second_script_is_rejected(self):
@@ -256,8 +300,9 @@ class GeneratedNavigationTest(unittest.TestCase):
         page.write_text(text.replace("<h1>", '<script src="gnatdoc-navigation.js" '
                                      'defer></script><h1>', 1), encoding="utf-8")
         with self.assertRaises(DocumentationError) as caught:
-            validate(self.site, ROOT)
-        self.assertIn("unapproved active content", str(caught.exception))
+            self.validate_site()
+        self.assertIn("published file differs from reconstructed output: api/"
+                      if self.released else "unapproved active content", str(caught.exception))
 
     def test_tampered_script_asset_is_rejected(self):
         asset = self.api / "gnatdoc-navigation.js"
@@ -265,14 +310,21 @@ class GeneratedNavigationTest(unittest.TestCase):
         self.assertRejected("navigation asset differs")
 
     def test_changed_frame_target_is_rejected(self):
-        self.edit("target=document-content title=", "target=_blank title=")
+        if self.released:
+            self.edit('target=document-content>', 'target=_blank>')
+        else:
+            self.edit("target=document-content title=", "target=_blank title=")
         self.assertRejected()
 
     def test_package_heading_link_redirected_is_rejected(self):
         packages = entries(self.api)
         pages = [page for _, page, _ in packages]
-        self.edit(f'<h3><a href={pages[1]} target=document-content>',
-                  f'<h3><a href={pages[0]} target=document-content>')
+        if self.released:
+            self.edit(f'<a href={pages[1]} target=document-content>',
+                      f'<a href={pages[0]} target=document-content>')
+        else:
+            self.edit(f'<h3><a href={pages[1]} target=document-content>',
+                      f'<h3><a href={pages[0]} target=document-content>')
         self.assertRejected()
 
 
