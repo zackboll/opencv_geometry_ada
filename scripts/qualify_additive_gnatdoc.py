@@ -24,7 +24,8 @@ def source_rules(baseline, source, synthetic, qualification_pins=False):
         from additive_gnatdoc_fixture import validate, NAME
         validate(source, ROOT)
         from additive_gnatdoc_policy import ADDITIONS
-        return candidate_rules(baseline, source, ADDITIONS | {NAME}, qualification_pins)
+        return candidate_rules(baseline, source, ADDITIONS | {NAME}, qualification_pins,
+                               synthetic=True)
     return candidate_rules(baseline, source, qualification_pins=qualification_pins)
 
 
