@@ -45,9 +45,25 @@ def record(workspace, repository, revision, policy_revision, historical_workspac
         expected_examples |= {str(workspace / "source/obj/docs-examples" / name) for name in EXAMPLES}
         require(expected_examples <= {c["argv"][0] for c in commands if len(c["argv"]) == 1},
                 "compiled example execution missing")
-        require(sum(c["argv"] == ["sh", "scripts/generate_docs.sh"] and
-                    c["cwd"] == str(workspace / "source") for c in commands) == 2,
-                "standard current generation/determinism evidence missing")
+        from gnatdoc_migration_policy import CONFIGURATION
+        projected = synthetic and all((workspace / "source" / name).is_file()
+                                      for name in CONFIGURATION)
+        generators = [c for c in commands if c["argv"] == ["sh", "scripts/generate_docs.sh"]]
+        require(len(generators) == 2, "standard generation execution count differs")
+        for command in generators:
+            cwd = Path(command["cwd"])
+            if projected:
+                # verify() above independently reconstructs the exact fixture,
+                # derived manifests, native acquisition and production output.
+                require(cwd.name == "source" and cwd.parent.name.startswith("synthetic-production-"),
+                        "synthetic production execution path differs")
+                text = regular(workspace / command["log"]).decode()
+                require("GNATdoc warning delta: 0 added, 0 removed" in text and
+                        "Documentation coverage:" in text and '"mode": "verified"' in text,
+                        "synthetic production gate execution missing")
+            else:
+                require(cwd == workspace / "source",
+                        "standard current generation/determinism evidence missing")
         reports = {}
         for name in ("browser", "negative"):
             report = read(workspace / (name + ".json"))

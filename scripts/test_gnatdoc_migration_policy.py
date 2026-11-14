@@ -22,8 +22,12 @@ class MigrationPolicyTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        from gnatdoc_test_fixtures import legacy_policy
+        policy = legacy_policy(ROOT, Path(self.temp.name) / "legacy")
+        self.enterContext(patch(__name__ + ".ROOT", policy))
+        self.enterContext(patch("additive_gnatdoc_policy.ROOT", policy))
         self.candidate = Path(self.temp.name) / "candidate"
-        subprocess.run(["git", "clone", "--quiet", "--shared", str(ROOT),
+        subprocess.run(["git", "clone", "--quiet", "--shared", str(policy),
                         str(self.candidate)], check=True)
 
     def write(self, name, data):
@@ -264,6 +268,38 @@ class MigrationPolicyTests(unittest.TestCase):
         self.mutate("scripts/check_doc_coverage.py")
         with self.assertRaisesRegex(ValueError, "unapproved migration verification files"):
             envelope(ROOT, self.candidate)
+
+    def test_migrated_input_is_not_unconditionally_accepted(self):
+        self.migration()
+        with self.assertRaises(ValueError):
+            migration_generator((self.candidate / "scripts/generate_docs.sh").read_text())
+
+    def test_synthetic_migration_is_exact_parent_bound_not_a_path_exemption(self):
+        from additive_gnatdoc_fixture import create, expected, validate as fixture_validate
+        self.migration()
+        subprocess.run(["git", "-C", str(self.candidate), "-c", "user.name=Fixture",
+                        "-c", "user.email=fixture@invalid.example", "commit", "--quiet",
+                        "-m", "Migration parent"], check=True)
+        revision = subprocess.check_output(["git", "-C", str(self.candidate), "rev-parse", "HEAD"],
+                                           text=True).strip()
+        fixture = Path(self.temp.name) / "synthetic"
+        create(fixture, revision, self.candidate)
+        fixture_validate(fixture, ROOT)
+        self.assertTrue(envelope(ROOT, fixture, synthetic=True))
+        with self.assertRaisesRegex(ValueError, "migration includes unrelated files"):
+            envelope(ROOT, fixture)
+        names = set(expected(self.candidate)) | {"scripts/new_verifier.py", "alire.toml",
+                    "docs/evidence/gnatdoc009/type-link-occurrences.json"}
+        for name in sorted(names):
+            path = fixture / name
+            original = path.read_bytes() if path.exists() else None
+            try:
+                path.write_bytes((original or b"") + b"\nunauthorized\n")
+                with self.subTest(name=name), self.assertRaises(ValueError):
+                    envelope(ROOT, fixture, synthetic=True)
+            finally:
+                path.write_bytes(original) if original is not None else path.unlink()
+        self.assertTrue(envelope(ROOT, fixture, synthetic=True))
 
     def test_10_source_editable_floating_and_wrong_installed_version_rejected(self):
         import json

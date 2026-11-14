@@ -165,12 +165,13 @@ def historical_inputs(root):
     return authority
 
 
-def candidate_rules(baseline, candidate, additions=ADDITIONS, qualification_pins=False):
+def candidate_rules(baseline, candidate, additions=ADDITIONS, qualification_pins=False,
+                    synthetic=False):
     """Candidate hashes never select verifier code or authorize frozen inputs."""
     from validate_gnatdoc_inputs import validate
     from gnatdoc_migration_policy import envelope
     validate(candidate, ROOT, qualification_pins)
-    authorized = envelope(ROOT, candidate, qualification_pins)
+    authorized = envelope(ROOT, candidate, qualification_pins, synthetic=synthetic)
     historical_inputs(candidate)
     # Protect every executable local verifier dependency, not a filename heuristic.
     for name in git(ROOT, "ls-files", "--", "scripts", ".github/workflows").decode().splitlines():

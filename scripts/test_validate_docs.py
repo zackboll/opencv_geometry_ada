@@ -432,14 +432,35 @@ class GeneratedSiteTest(unittest.TestCase):
                 if f"<h1>{name}</h1>" in text:
                     self.pages[name] = path
         self.assertEqual(len(self.pages), 2)
+        from gnatdoc_test_fixtures import released, validate_generated
+        self.released = released(self.site)
+        self.validate_site = lambda: validate_generated(self.site, ROOT)
+        self.original = {p.relative_to(self.site).as_posix(): p.read_bytes()
+                         for p in self.site.rglob("*") if p.is_file()}
 
     def tearDown(self):
         self.temporary.cleanup()
 
     def assertRejected(self, fragment):
         with self.assertRaises(DocumentationError) as caught:
-            validate(self.site, ROOT)
-        self.assertIn(fragment, str(caught.exception))
+            self.validate_site()
+        if not self.released:
+            self.assertIn(fragment, str(caught.exception))
+            return
+        now = {p.relative_to(self.site).as_posix(): p.read_bytes()
+               for p in self.site.rglob("*") if p.is_file()}
+        changed = {name for name in self.original.keys() | now.keys()
+                   if self.original.get(name) != now.get(name)}
+        self.assertTrue(changed, "mutation did not apply")
+        message = str(caught.exception)
+        self.assertIn("released enhancer integrity:", message)
+        # Release diagnostics identify the exact rejected output, not the old
+        # multi-error validator's wording. Setup/authority faults must not count.
+        if changed == {"api/presentation.json"}:
+            expected = {"migration authored contract differs", "presentation counts mismatch"}
+            self.assertIn(message.removeprefix("released enhancer integrity: "), expected)
+        else:
+            self.assertTrue(any(name in message for name in changed), message)
 
     def mutate(self, package, old, new, count=1):
         page = self.pages[package]
@@ -459,7 +480,7 @@ class GeneratedSiteTest(unittest.TestCase):
         return text[begin:end]
 
     def test_generated_site_is_accepted(self):
-        summary = validate(self.site, ROOT)
+        summary = self.validate_site()
         self.assertEqual(summary["packages"], 2)
         # Landing page, native index, two package pages and five guides.
         self.assertEqual(summary["pages"], 9)
@@ -556,8 +577,9 @@ class GeneratedSiteTest(unittest.TestCase):
     def test_wrong_but_existing_type_destination_is_rejected(self):
         contour = self.anchor("OpenCV.Geometry", "Contour")
         other = self.anchor("OpenCV.Geometry", "Float32_Point_Array")
-        self.mutate_section("OpenCV.Geometry", "Convex_Hull", f'href="#{contour}"',
-                            f'href="#{other}"')
+        page = self.pages["OpenCV.Geometry"].name if self.released else ""
+        self.mutate_section("OpenCV.Geometry", "Convex_Hull", f'href="{page}#{contour}"',
+                            f'href="{page}#{other}"')
         self.assertRejected("type identity/destination/markup mismatch: Convex_Hull")
 
     def test_wrong_but_existing_cross_page_destination_is_rejected(self):
@@ -575,19 +597,36 @@ class GeneratedSiteTest(unittest.TestCase):
                             f'href="{page}#{right}"', f'href="#{right}"')
         self.assertRejected("missing anchor")
 
+    def core_mat_url(self):
+        if not self.released:
+            return "?symbol=OpenCV.Core.Mat"
+        from gnatdoc_test_fixtures import release_source
+        import tomllib
+        config = tomllib.loads((release_source(ROOT) / "docs/gnatdoc-enhancer.toml").read_text())
+        return config["external_types"]["opencv.core.mat"]
+
     def test_fabricated_core_fragment_is_rejected(self):
+        url = self.core_mat_url()
         self.mutate_section("OpenCV.Geometry", "Get_Rotation_Matrix_2D",
-                            "?symbol=OpenCV.Core.Mat\"", "?symbol=OpenCV.Core.Mat#mat\"")
+                            url + '"', url.split('#')[0] + '#fabricated"')
         self.assertRejected("unapproved link")
 
     def test_core_package_only_link_is_rejected(self):
         self.mutate_section("OpenCV.Geometry", "Get_Rotation_Matrix_2D",
-                            "?symbol=OpenCV.Core.Mat\"", "?package=OpenCV.Core\"")
+                            self.core_mat_url() + '"', '?package=OpenCV.Core"')
         self.assertRejected("unapproved link")
 
     def test_wrong_existing_core_symbol_is_rejected(self):
+        if self.released:
+            from gnatdoc_test_fixtures import release_source
+            import tomllib
+            config = tomllib.loads((release_source(ROOT) / "docs/gnatdoc-enhancer.toml").read_text())
+            wrong = config["external_types"]["opencv.rect"]
+        else:
+            wrong = "?symbol=OpenCV.Rect"
         self.mutate_section("OpenCV.Geometry", "Get_Rotation_Matrix_2D",
-                            "?symbol=OpenCV.Core.Mat\"", "?symbol=OpenCV.Rect\"")
+                            self.core_mat_url() + '"',
+                            wrong + '"')
         self.assertRejected("type identity/destination/markup mismatch")
 
     def test_removed_type_link_is_rejected(self):
@@ -611,6 +650,14 @@ class GeneratedSiteTest(unittest.TestCase):
         self.assertRejected("theme asset differs from repository stylesheet")
 
     def test_corrupted_link_manifest_is_rejected(self):
+        if self.released:
+            manifest = self.site / "api/presentation.json"
+            data = json.loads(manifest.read_text())
+            page = "api/" + self.pages["OpenCV.Geometry.Subdiv2D"].name
+            data["original_api_html"][page] += "<!-- forged native -->"
+            manifest.write_text(json.dumps(data))
+            self.assertRejected("presentation.json")
+            return
         manifest = self.site / "api/type-crossrefs.json"
         data = json.loads(manifest.read_text(encoding="utf-8"))
         entry = data["pages"][self.pages["OpenCV.Geometry.Subdiv2D"].name]
@@ -619,6 +666,13 @@ class GeneratedSiteTest(unittest.TestCase):
         self.assertRejected("presentation integrity")
 
     def test_removed_highlighting_qualification_is_rejected(self):
+        if self.released:
+            manifest = self.site / "api/presentation.json"
+            data = json.loads(manifest.read_text())
+            del data["counts"]["linked_types"]
+            manifest.write_text(json.dumps(data))
+            self.assertRejected("presentation.json")
+            return
         manifest = self.site / "api/type-crossrefs.json"
         data = json.loads(manifest.read_text(encoding="utf-8"))
         data["highlighting"] = 0

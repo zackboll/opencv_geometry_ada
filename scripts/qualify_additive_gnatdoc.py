@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only successor review driver; candidate code never supplies validators."""
 import argparse
+from contextlib import contextmanager
 import json
 from pathlib import Path
 import shutil
@@ -24,7 +25,8 @@ def source_rules(baseline, source, synthetic, qualification_pins=False):
         from additive_gnatdoc_fixture import validate, NAME
         validate(source, ROOT)
         from additive_gnatdoc_policy import ADDITIONS
-        return candidate_rules(baseline, source, ADDITIONS | {NAME}, qualification_pins)
+        return candidate_rules(baseline, source, ADDITIONS | {NAME}, qualification_pins,
+                               synthetic=True)
     return candidate_rules(baseline, source, qualification_pins=qualification_pins)
 
 
@@ -77,14 +79,60 @@ def verify(workspace, repository, revision, policy_revision, synthetic=False):
     cov = coverage(source, site, workspace / "native-first.log")
     executed = aunit_results(source, regular(workspace / "aunit.log").decode())
     require(executed["registered"] == rules["aunit_registered"], "AUnit source/execution mismatch")
-    production = verify_production(workspace, source)
+    production = verify_production(workspace, source, synthetic)
     return {"policy_revision": policy_revision, "policy_tree": policy_tree,
             "candidate": revision, "candidate_tree": tree, "rules": rules,
             "coverage": cov, "aunit": executed, "comparison": comparison,
             "production": production}
 
 
-def production_generate(session, source, prefix):
+@contextmanager
+def synthetic_production(source, prefix):
+    """Rebind only derived manifests in a disposable, non-release projection.
+
+    The immutable synthetic commit is never edited. Its parent/envelope and
+    exact fixture bytes are checked before this projection can be constructed.
+    Standard generation and independent release verification still execute.
+    """
+    source_rules(ROOT, source, True, qualification_pins=True)
+    with tempfile.TemporaryDirectory(prefix="synthetic-production-") as folder:
+        work = Path(folder)
+        projection, core = work / "source", work / "core"
+        session = Session(work)
+        session.clone(source, git(source, "rev-parse", "HEAD").decode().strip(), projection)
+        session.clone(source.parent / "core", CORE, core)
+        for name in ("alire.toml", "tests/alire.toml"):
+            (projection / name).write_bytes(regular(source / name))
+        session.run(["alr", "-n", "build"], projection)
+        native(session, projection, prefix / "bin/gnatdoc", work / "native", work / "native.log")
+        shutil.copyfile(work / "native.log", projection / "obj/docs/gnatdoc.log")
+        payload, _ = authored_contract(projection, work / "native")
+        original = regular(source / "docs/gnatdoc-authored.json")
+        configuration = regular(source / "docs/gnatdoc-enhancer.toml")
+        require(configuration.count(sha(original).encode()) == 1,
+                "synthetic parent manifest digest is not unique")
+        (projection / "docs/gnatdoc-authored.json").write_bytes(payload)
+        (projection / "docs/gnatdoc-enhancer.toml").write_bytes(
+            configuration.replace(sha(original).encode(), sha(payload).encode()))
+        from gnatdoc_migration_policy import PUBLIC, staged_public
+        (projection / "qualification-public").mkdir()
+        for name in PUBLIC:
+            (projection / "qualification-public" / name).write_bytes(
+                regular(projection / "src" / name))
+        staged_public(projection)
+        yield projection
+
+
+def production_generate(session, source, prefix, synthetic=False):
+    from gnatdoc_migration_policy import CONFIGURATION
+    if synthetic and all((source / name).is_file() for name in CONFIGURATION):
+        with synthetic_production(source, prefix) as projection:
+            observed = production_generate(session, projection, prefix)
+            shutil.rmtree(source / "_site", ignore_errors=True)
+            shutil.copytree(projection / "_site", source / "_site")
+            (source / "obj/docs").mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(projection / "obj/docs/gnatdoc.log", source / "obj/docs/gnatdoc.log")
+            return observed
     # The historical shadow tool environment is never the production release.
     import os
     from gnatdoc_migration_policy import CONFIGURATION
@@ -104,12 +152,12 @@ def production_generate(session, source, prefix):
     return file_hashes(source / "_site")
 
 
-def verify_production(workspace, source):
+def verify_production(workspace, source, synthetic=False):
     """Regenerate actual deployable output, never substitute offline shadow."""
     expected = read(workspace / "production-sha256.json")
     require(file_hashes(source / "_site") == expected, "production site changed")
     with tempfile.TemporaryDirectory(prefix="production-recheck-") as folder:
-        observed = production_generate(Session(Path(folder)), source, workspace / "gnatdoc")
+        observed = production_generate(Session(Path(folder)), source, workspace / "gnatdoc", synthetic)
     require(observed == expected, "independent production regeneration differs")
     for name in observed:
         if name.endswith((".html", ".json", ".js", ".css")):
@@ -125,11 +173,17 @@ def verify_production(workspace, source):
         import subprocess
         python = os.environ.get("PRODUCTION_DOC_PYTHON")
         require(python, "independent official-wheel validation environment missing")
-        subprocess.run([python, "-I", ROOT / "scripts/gnatdoc_migration_policy.py",
-                        "--wheel", os.environ["PRODUCTION_DOC_WHEEL"],
-                        "--source", source, "--pristine", workspace / "pristine-first",
-                        "--site", source / "_site", "--core", workspace / "core",
-                        "--core-native", workspace / "core-native"], check=True)
+        def release_check(root):
+            subprocess.run([python, "-I", ROOT / "scripts/gnatdoc_migration_policy.py",
+                            "--wheel", os.environ["PRODUCTION_DOC_WHEEL"],
+                            "--source", root, "--pristine", workspace / "pristine-first",
+                            "--site", source / "_site", "--core", workspace / "core",
+                            "--core-native", workspace / "core-native"], check=True)
+        if synthetic:
+            with synthetic_production(source, workspace / "gnatdoc") as projection:
+                release_check(projection)
+        else:
+            release_check(source)
     else:
         from validate_docs import validate
         validate(source / "_site", root=source, core=workspace / "core")
@@ -200,8 +254,8 @@ def qualify(args):
         shutil.copytree(args.gnatdoc_prefix, workspace / "gnatdoc")
         require(sha(regular(workspace / "gnatdoc/bin/gnatdoc")) == GNATDOC_SHA256,
                 "wrong GNATdoc bytes")
-        production = production_generate(session, source, workspace / "gnatdoc")
-        require(production_generate(session, source, workspace / "gnatdoc") == production,
+        production = production_generate(session, source, workspace / "gnatdoc", args.synthetic)
+        require(production_generate(session, source, workspace / "gnatdoc", args.synthetic) == production,
                 "standard generator is nondeterministic")
         write(workspace / "production-sha256.json", production)
         for label in ("first", "second"):

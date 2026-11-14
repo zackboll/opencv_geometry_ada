@@ -9,10 +9,16 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
-
+import tempfile
+from unittest.mock import patch
 
 def challenge(candidate, policy):
+    # Fixture construction belongs to the selected runner, not candidate modules.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from gnatdoc_test_fixtures import legacy_policy
     sys.path.insert(0, str(candidate / "scripts"))
+    temporary = tempfile.TemporaryDirectory(prefix="baseline-migration-inputs-")
+    legacy = legacy_policy(candidate, Path(temporary.name) / "legacy")
     suite = unittest.TestSuite()
     for name in ("test_gnatdoc_migration_policy", "test_additive_gnatdoc_policy",
                  "test_native_core_policy", "test_select_gnatdoc_policy"):
@@ -23,10 +29,20 @@ def challenge(candidate, policy):
         if hasattr(module, "ROOT"):
             # Old tests must construct their candidate fixtures from the exact
             # proposed tree, rather than inadvertently cloning the old base.
-            module.ROOT = candidate
-        suite.addTests(unittest.defaultTestLoader.loadTestsFromModule(module))
-    result = unittest.TextTestRunner(verbosity=2).run(suite)
-    return result.wasSuccessful() and not result.skipped
+            module.ROOT = legacy if name == "test_gnatdoc_migration_policy" else candidate
+        tests = unittest.defaultTestLoader.loadTestsFromModule(module)
+        if name == "test_gnatdoc_migration_policy":
+            class LegacyInputs(unittest.TestSuite):
+                def run(self, result, debug=False):
+                    with patch("additive_gnatdoc_policy.ROOT", legacy):
+                        return super().run(result, debug)
+            tests = LegacyInputs(tests)
+        suite.addTests(tests)
+    try:
+        result = unittest.TextTestRunner(verbosity=2).run(suite)
+        return result.wasSuccessful() and not result.skipped
+    finally:
+        temporary.cleanup()
 
 
 if __name__ == "__main__":
