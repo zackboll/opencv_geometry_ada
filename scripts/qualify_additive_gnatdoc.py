@@ -105,6 +105,7 @@ def synthetic_production(source, prefix):
             (projection / name).write_bytes(regular(source / name))
         session.run(["alr", "-n", "build"], projection)
         native(session, projection, prefix / "bin/gnatdoc", work / "native", work / "native.log")
+        shutil.copyfile(work / "native.log", projection / "obj/docs/gnatdoc.log")
         payload, _ = authored_contract(projection, work / "native")
         original = regular(source / "docs/gnatdoc-authored.json")
         configuration = regular(source / "docs/gnatdoc-enhancer.toml")
