@@ -15,6 +15,60 @@ the remaining roadmap are kept in
 
 ## Reproduce on Linux — pinned generation environment
 
+### Official v0.1.5 production integration
+
+PR #58 preserves its previous commits and normally merges main
+`13d5a65d284a1117272e53c6e12cecf24643b286` (PR #65), including the corrected
+qualification fixture and released-output compatibility described in
+[the R3 correction](geometry-gnatdoc-001r3.md). Its generator follows
+that base's `STAGING` and `generator_contract()`; its documentation workflow
+satisfies `migration_workflow()` and `workflow_contract()`. Native generation,
+toolchain and Core checks, warning/coverage ratchets, independent source checks,
+main-only publication and Pages dependencies remain unchanged. Technical
+qualification and Documentation policy acceptance are required; no reviewer or
+approval environment is added.
+
+The official, non-editable wheel is `ada_gnatdoc_enhancer-0.1.5-py3-none-any.whl`,
+SHA-256 `d712d330f213fc1909a66c47bc2c7e5e15d5ec687222bea3c4922f5243db4247`.
+The selected-base installer checks its archive digest, installed origin, version
+and all installed module/asset bytes. Production must not use an editable or
+development-source installation.
+
+The candidate maps all eight referenced Core types to authenticated native HTTPS
+declaration pages/fragments with `target="_top"`, not symbol queries or the
+historical shadow's offline `.invalid` destinations. Source authority remains
+exact Core 0.5.0, `f8aef00c5366b4275ccd3d934f9c73ea5b83cd4f`.
+The fresh publisher check authenticated source
+`b4253d4af31f0bacd6c6e2828d4657a9842cb71e`, documentation run `41549115123`,
+deployment `7507096111`, review artifact `13193622594` and Pages artifact
+`13193152869`; both referenced live pages matched authenticated artifact bytes.
+These observations are qualification evidence, not future acceptance pins.
+
+Before enhancer inventory, the generator recreates `qualification-public` from
+exactly the two public specifications. It rejects a symlink staging directory
+and symlink source files, removes stale staging contents, and checks each copied
+file's type and bytes. The independent policy additionally rejects unexpected
+staging inventory, substituted paths, byte mismatches and committed staging.
+Never add generated staging files to Git.
+
+The release-format validator delegates to the policy's local reconstruction
+checks. This is not independent approval: the separately selected policy still
+regenerates native output, authenticates the live Core publisher, reconstructs
+the entire enhanced site and checks source/native identities. The authored
+landing page, five guides and Geometry-specific CSS remain source-owned inputs.
+
+Qualification must cover fresh and repeated generation, byte-idempotent
+enhancement, independent native reconstruction, declaration coverage, zero
+warning regressions, six compiled examples, registered AUnit cases, browser
+matrices and the historical/current/synthetic security campaigns. Readiness is
+reported against the exact final commit and tree only after hosted build,
+Policy technical qualification, Documentation policy acceptance and other
+required checks pass. Local success alone does not establish that disposition.
+
+The reproduction notes below also retain the historical pipeline and its
+symbol-router qualification for regression testing; production v0.1.5 links use
+the authenticated native declaration destinations described above.
+
 ### Cross-repository declaration bookmarks
 
 Core references now use stable, fully qualified symbol URLs, for example

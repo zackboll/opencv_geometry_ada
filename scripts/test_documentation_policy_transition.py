@@ -181,5 +181,65 @@ class IndependentCompatibilityTests(unittest.TestCase):
                 compatibility(self.candidate, self.selection, self.folder / "crash", self.policy)
 
 
+class IndependentChallengeTests(unittest.TestCase):
+    def test_legacy_output_explicitly_selects_legacy_fixture_validation(self):
+        from unittest.mock import patch
+        from gnatdoc_test_fixtures import validate_generated
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            with patch("validate_docs.validate", return_value={}) as validate:
+                self.assertEqual(validate_generated(root / "site", root), {})
+            validate.assert_called_once_with(root / "site", root, legacy_fixture=True)
+
+    def test_released_preview_requires_matching_migration_sources(self):
+        from unittest.mock import patch
+        from gnatdoc_test_fixtures import release_source
+        from gnatdoc_migration_policy import CONFIGURATION
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "root"
+            preview = Path(folder) / "preview"
+            source = preview / "candidate"
+            for name in CONFIGURATION | {
+                    "src/opencv-geometry.ads", "src/opencv-geometry-subdiv2d.ads"}:
+                for target in (root, source):
+                    path = target / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(name)
+            with patch.dict(os.environ, GEOMETRY_MIGRATION_PREVIEW=str(preview)):
+                self.assertEqual(release_source(root), source)
+                (source / "src/opencv-geometry.ads").write_text("substituted")
+                with self.assertRaisesRegex(ValueError, "preview source differs"):
+                    release_source(root)
+
+    def test_baseline_module_local_patches_resolve_loaded_test_bytes(self):
+        import sys
+        from unittest.mock import patch
+        from challenge_documentation_policy import challenge
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            candidate, policy = root / "candidate", root / "policy"
+            (candidate / "scripts").mkdir(parents=True)
+            (policy / "scripts").mkdir(parents=True)
+            test = (
+                "import unittest\n"
+                "from unittest.mock import patch\n"
+                "ROOT = None\n"
+                "class BaselineTest(unittest.TestCase):\n"
+                "    def test_module_local_fixture(self):\n"
+                "        with patch(__name__ + '.ROOT', 'baseline fixture'):\n"
+                "            self.assertEqual(ROOT, 'baseline fixture')\n"
+            )
+            for name in ("test_gnatdoc_migration_policy",
+                         "test_additive_gnatdoc_policy", "test_native_core_policy",
+                         "test_select_gnatdoc_policy"):
+                (policy / "scripts" / (name + ".py")).write_text(test)
+            with patch("gnatdoc_test_fixtures.legacy_policy", return_value=candidate), \
+                    patch.dict(sys.modules), patch.object(sys, "path", sys.path.copy()):
+                self.assertTrue(challenge(candidate, policy))
+
+
 if __name__ == "__main__":
     unittest.main()
