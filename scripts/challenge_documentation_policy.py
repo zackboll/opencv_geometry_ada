@@ -25,6 +25,9 @@ def challenge(candidate, policy):
         spec = importlib.util.spec_from_file_location("independent_" + name,
                                                      policy / "scripts" / (name + ".py"))
         module = importlib.util.module_from_spec(spec)
+        # Match normal import semantics: baseline fixtures patch module-local
+        # inputs by __name__, which must resolve to this exact loaded module.
+        sys.modules[spec.name] = module
         spec.loader.exec_module(module)
         if hasattr(module, "ROOT"):
             # Old tests must construct their candidate fixtures from the exact
